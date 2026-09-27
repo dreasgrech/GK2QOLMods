@@ -135,6 +135,46 @@ unobserved but their handling is the same flag mechanism.
   front, lantern lit at night. Worth offering as a second style (`Ride` / `Cart`) in the mod.
 - Cart parts toggled: 12 hidden, 11 shown (the corpse-shroud body stays off).
 
-### Still open (round 4)
+## Round 4 (2026-09-27): first mod build in play
 
-Confirm the riding silhouette with centering on, depth −0.15 and seat 0.5 (and fine-tune both), then build the mod.
+- Centering had to read the donkey's real facing: straight up and straight down both resolve to the left-facing
+  sprite, so predicting from the last horizontal direction doubled the offset when walking down. Fixed by measuring
+  the body sprite's offset from the root each frame in LateUpdate (also fixes the one-frame flash on a facing flip,
+  since the animator mirrors one evaluation after the direction changes).
+- Following `PlayerData.position` (50 Hz physics value) made the donkey stutter against the Rigidbody-interpolated
+  keeper; following the body transform in LateUpdate and snapping to the same pixel grid fixed it.
+- The donkey has no up/down art, so the keeper is locked to a side view while mounted (`SideViewOnly`).
+
+## Round 5 (2026-09-27): sprite sheets, for the seated pose
+
+The probe now dumps the character atlases (three 2048² textures: `MainCharacter`, `Characters` ×2) and a CSV of all
+9,734 sprites on them (`tools/GK2MountProbe/sprites-round5.csv`; the next dump also has the trimmed-rect offsets).
+What the pixels say:
+
+- **Keeper art is palette-indexed.** `9008_bdy_static_left` is 20×37 px of flat index colours: tunic `5bab01` /
+  `376701` / `132301`, trousers `b801c8` / `eb07ff` / `3e0144`, boots `0e01c9`, belt and soles `533320`, skin
+  `b26845`. The `Custom/3D Sprite` material maps them to the outfit palette (32×2 texture, `USE_PALETTE_COLOR_REPLACE`).
+  Anything drawn in those index colours and rendered with the keeper's body material recolours itself to the outfit.
+- **The keeper's legs are baked into the body sprite** (rows 27–34 of 37, only 8 px tall in side view). The separate
+  `leg` layer (`9019_leg_*`) is the armour set and is off in normal play. The keeper has **no right-facing frames**
+  at all: facing right is a mirrored parent transform, like the donkey's `Base`.
+- **No seated keeper pose exists.** `bath` is a naked front-facing tub pose; `organ`/`choir` clips are zombie church
+  animations; `custom_loop_*` are cutscene placeholders. One NPC (`0920`) has a side-view `sitting_left` frame, but it
+  is a pure black silhouette (shadow character), useful only as a pose reference.
+- **Donkey geometry** (`0301_bdy_static_left`, 50×47 with a 2 px transparent border on every frame): ground at row 44,
+  back line at row 20 (24 px above the ground), body 18 px thick (rows 20–38), legs 6 px. Walk frames bob the back by
+  1–2 px. Head is a separate `hed_static_down` sprite; only left-facing frames exist.
+
+**Seated design that follows from this** (mock-ups from the real frames in `tools/GK2MountProbe/frames/`):
+
+1. Raise the keeper so the hip (7 px above the feet) sits on the donkey's back line. With the donkey drawn in front,
+   the 8 px standing legs disappear inside the donkey's 18 px body. The mod computes this from both sprites'
+   trimmed-rect offsets along the camera's screen-up axis (`Ride.AutoSeat`), instead of a guessed constant.
+2. Draw a **near leg**: a 12×14 px sprite, thigh along the back, knee forward, shin down the flank, boot at the belly
+   line, in the trouser/boot index colours, rendered with the keeper's body material. It is parented under the
+   donkey's body sprite so it mirrors with the donkey's facing, sits on the donkey's depth plane (drawn over the
+   donkey, in front of the hidden real legs), and its hip is placed at "back line, frame centre + 2 px to the rear"
+   every frame from the current frame's offset.
+3. Cart style keeps the standing keeper (no leg, no auto seat).
+
+Round 6 will tune the seat and leg by a pixel or two in game (`Debug.TuningKeys`).

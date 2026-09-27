@@ -43,6 +43,7 @@ namespace GK2MountProbe
         internal static ConfigEntry<float> FollowDepthOffset;
         internal static ConfigEntry<float> SeatHeight;
         internal static ConfigEntry<bool> LogStateChanges;
+        internal static ConfigEntry<bool> DumpSprites;
         internal static ConfigEntry<bool> DisableOnGameUpdate;
 
         private Harmony harmony;
@@ -68,6 +69,8 @@ namespace GK2MountProbe
                 "World-unit spacing between spawned samples, to the right of the player.");
             LogStateChanges = Config.Bind("General", "LogStateChanges", true,
                 "Log player state-machine and animation-state transitions to the BepInEx log.");
+            DumpSprites = Config.Bind("General", "DumpSprites", true,
+                "Dump the character sprite atlases as PNG plus a CSV index of all sprites (name, rect, pivot) and the skin palettes to BepInEx/GK2-sprites.");
 
             ReportKey = Config.Bind("Keys", "Report", KeyCode.F8, "Write the report again (spawns samples again).");
             SpeedKey = Config.Bind("Keys", "SpeedTest", KeyCode.F9, "Toggle the speed multiplier experiment.");

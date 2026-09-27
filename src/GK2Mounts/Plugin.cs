@@ -13,6 +13,23 @@ namespace GK2Mounts
         Cart,
     }
 
+    // Animator states the keeper can be held in while riding (values = the game's AnimationState enum).
+    public enum RiderPose
+    {
+        Walk = 1,
+        Idle = 0,
+        WorkHands = 29,
+        FishingIdle = 203,
+        FishingCast = 202,
+        FishingPull = 204,
+        FocusedWalk = 41,
+        ToolHammer = 23,
+        ToolShovel = 21,
+        ToolAxe = 20,
+        Planting = 100,
+        FlagCapture = 35,
+    }
+
     // A rideable mount for Graveyard Keeper 2. Press the mount key and a donkey appears under the keeper; you walk
     // faster while riding. The donkey is a temporary view only (the game's build-preview mechanism): it is never
     // added to the world data, so nothing about it is saved. See README.md and FEASIBILITY.md.
@@ -34,9 +51,16 @@ namespace GK2Mounts
         internal static ConfigEntry<bool> StayMountedThroughDoors;
         internal static ConfigEntry<bool> ShowMessages;
         internal static ConfigEntry<bool> SideViewOnly;
+        internal static ConfigEntry<RiderPose> Pose;
         internal static ConfigEntry<float> RideSeatOffset;
         internal static ConfigEntry<float> RideDepth;
         internal static ConfigEntry<float> RideCenterOffset;
+        internal static ConfigEntry<bool> AutoSeat;
+        internal static ConfigEntry<int> SeatAdjustPx;
+        internal static ConfigEntry<bool> NearLeg;
+        internal static ConfigEntry<int> LegAdjustXPx;
+        internal static ConfigEntry<int> LegAdjustYPx;
+        internal static ConfigEntry<bool> TuningKeys;
         internal static ConfigEntry<float> CartSeatOffset;
         internal static ConfigEntry<float> CartDepth;
         internal static ConfigEntry<float> CartCenterOffset;
@@ -59,6 +83,8 @@ namespace GK2Mounts
                 "World object id used for the mount's looks. Only npc_donkey has been tested.");
             StayMountedThroughDoors = Config.Bind("General", "StayMountedThroughDoors", true,
                 "Keep riding after a scene change (the donkey is re-summoned in the new scene). Off: dismount at every door.");
+            Pose = Config.Bind("Ride", "Pose", RiderPose.FishingIdle,
+                "Keeper's body pose while riding. Idle: standing still (no walk cycle). FishingIdle / WorkHands / etc.: the game's animator state of that name, for poses with the hands forward. Walk: unchanged (arms swing while riding).");
             SideViewOnly = Config.Bind("General", "SideViewOnly", true,
                 "The donkey only has left/right art. On: while mounted the keeper also only faces left or right (walking up/down keeps the last horizontal facing), so rider and mount match. Off: the keeper turns as usual and the donkey shows its side.");
             ShowMessages = Config.Bind("General", "ShowMessages", true,
@@ -71,10 +97,24 @@ namespace GK2Mounts
             RideCenterOffset = Config.Bind("Ride", "CenterOffset", 0.48f,
                 "The donkey sprite is drawn this far to its facing side of its position (prefab offset). The mount is shifted back by this amount so the body sits under the keeper.");
 
+            AutoSeat = Config.Bind("Ride", "AutoSeat", true,
+                "Compute the seat height from the sprites themselves (rider's hip on the donkey's back line). Off: use Ride.SeatOffset.");
+            SeatAdjustPx = Config.Bind("Ride", "SeatAdjustPx", -3,
+                "Fine adjustment of the automatic seat, in art pixels (positive = higher).");
+            NearLeg = Config.Bind("Ride", "NearLeg", true,
+                "Draw the rider's near leg hanging down the donkey's flank, in the keeper's outfit colours.");
+            LegAdjustXPx = Config.Bind("Ride", "LegAdjustXPx", 0,
+                "Fine adjustment of the leg's hip position along the donkey, in art pixels (positive = towards the rear).");
+            LegAdjustYPx = Config.Bind("Ride", "LegAdjustYPx", 0,
+                "Fine adjustment of the leg's hip height, in art pixels (positive = higher).");
+
             CartSeatOffset = Config.Bind("Cart", "SeatOffset", 0f, "Vertical offset of the keeper's sprite in cart style.");
             CartDepth = Config.Bind("Cart", "Depth", 0f, "Donkey depth offset in cart style (see Ride.Depth).");
             CartCenterOffset = Config.Bind("Cart", "CenterOffset", 0f,
                 "Centering in cart style. 0 leaves the donkey ahead of the keeper, who then stands in the cart.");
+
+            TuningKeys = Config.Bind("Debug", "TuningKeys", true,
+                "While mounted: PageUp/PageDown move the seat, Home/End the leg sideways, Insert/Delete the leg up/down, one art pixel per press; values are logged so they can be copied into the Ride settings. Development aid, turn off for normal play.");
 
             DisableOnGameUpdate = Config.Bind("Safety", "DisableOnGameUpdate", true,
                 "Do not patch anything if the game's code has changed since this mod was audited. Rebuild/re-audit after game updates.");

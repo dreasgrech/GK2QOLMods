@@ -23,7 +23,13 @@ NPC and its schedule are untouched.
 | `General.StayMountedThroughDoors` | true | After a scene change the donkey is re-summoned and you keep riding. |
 | `General.SideViewOnly` | true | The donkey only has left/right art, so while mounted the keeper also faces only left or right; walking up or down keeps the last horizontal facing. Off: the keeper turns as usual and the donkey shows its side. |
 | `General.ShowMessages` | true | Thought bubble when you cannot mount ("I'm busy.", "Not in a co-op game."). |
-| `Ride.SeatOffset` | -0.15 | Vertical shift of the keeper's sprite; negative hides the legs behind the donkey. |
+| `Ride.Pose` | `FishingIdle` | Keeper's body pose while riding. `FishingIdle` (default): hands forward as if holding reins, legs still, no rod (the rod is a separate layer only fishing turns on). Others: `Idle` (standing still), `WorkHands`, `FishingCast`, `FishingPull`, `FocusedWalk`, `ToolHammer`, `ToolShovel`, `ToolAxe`, `Planting`, `FlagCapture` (the game's animator states), or `Walk` (unchanged). |
+| `Ride.AutoSeat` | true | Seat height computed from the sprites: the rider's hip lands on the donkey's back line, so the real legs hide inside the donkey's body. Off: use `Ride.SeatOffset`. |
+| `Ride.SeatAdjustPx` | -3 | Fine adjustment of the automatic seat in art pixels (positive = higher). Default from in-game tuning. |
+| `Ride.NearLeg` | true | Draws the rider's near leg down the donkey's flank in the keeper's outfit colours. |
+| `Ride.LegAdjustXPx` / `LegAdjustYPx` | 0 / 0 | Fine adjustment of the leg's hip, in art pixels (X positive = towards the rear, Y positive = higher). |
+| `Ride.SeatOffset` | -0.15 | Vertical shift of the keeper's sprite when `AutoSeat` is off. |
+| `Debug.TuningKeys` | true | While mounted: PageUp/PageDown seat, Home/End leg sideways, Insert/Delete leg up/down, one pixel per press, values logged. Turn off for normal play. |
 | `Ride.Depth` | -0.15 | Donkey shift towards (negative) or away from the camera. |
 | `Ride.CenterOffset` | 0.48 | Compensates the prefab's sideways sprite offset so the body sits under the keeper. |
 | `Cart.SeatOffset` / `Cart.Depth` / `Cart.CenterOffset` | 0 / 0 / 0 | Same three for cart style. With centering 0 the donkey walks ahead and the keeper stands in the cart. |

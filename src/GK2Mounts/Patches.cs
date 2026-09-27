@@ -18,6 +18,7 @@ namespace GK2Mounts
             Require(AccessTools.Method(typeof(WgoData), nameof(WgoData.SetStateToAnimator)), "WgoData.SetStateToAnimator");
             Require(AccessTools.Method(typeof(AnimationComponentBase), nameof(AnimationComponentBase.SetWalkAnimationSpeedMultiplier)), "AnimationComponentBase.SetWalkAnimationSpeedMultiplier");
             Require(AccessTools.Method(typeof(AnimationComponentBase), nameof(AnimationComponentBase.SetDirection), new[] { typeof(UnityEngine.Vector2) }), "AnimationComponentBase.SetDirection(Vector2)");
+            Require(AccessTools.Method(typeof(AnimationComponentBase), nameof(AnimationComponentBase.SetState), new[] { typeof(AnimationState) }), "AnimationComponentBase.SetState");
             Require(typeof(PlayerAnimation).IsSubclassOf(typeof(AnimationComponentBase)) ? typeof(PlayerAnimation) : null, "PlayerAnimation : AnimationComponentBase");
         }
 
@@ -43,6 +44,30 @@ namespace GK2Mounts
             if (Mount.IsMounted && Plugin.SideViewOnly.Value && __instance is PlayerAnimation)
             {
                 direction = Mount.RiderFacing(direction);
+            }
+        }
+    }
+
+    // While mounted the keeper's body should not play the walk cycle (arms swinging, legs stepping under the
+    // donkey). The game drives the keeper's animator with SetState(Walk|Idle) every physics step; this prefix
+    // replaces those two with the configured riding pose (any other state, e.g. death, is left alone and dismounts
+    // anyway). PlayerData.charState is unaffected, so the donkey still knows when the keeper walks.
+    [HarmonyPatch(typeof(AnimationComponentBase), nameof(AnimationComponentBase.SetState))]
+    internal static class AnimationComponentBase_SetState_Patch
+    {
+        private static void Prefix(AnimationComponentBase __instance, ref AnimationState animationState)
+        {
+            if (!Mount.IsMounted || !(__instance is PlayerAnimation))
+            {
+                return;
+            }
+            if (animationState == AnimationState.Walk || animationState == AnimationState.Idle)
+            {
+                AnimationState pose = Mount.RiderPoseState;
+                if (pose != AnimationState.Walk)
+                {
+                    animationState = pose;
+                }
             }
         }
     }

@@ -28,3 +28,12 @@ right of the player, dumps each prefab the same way and destroys them after 25 s
 
 State-machine, animation-state and control-flag transitions are logged as they happen (`LogStateChanges`).
 Config: `BepInEx\config\anvil.gk2.mountprobe.cfg`.
+
+## Animation viewer (`viewer/keeper-animations.html`)
+
+A browser page that plays every keeper (and donkey) animation family from the dumped atlases: body, arm, head,
+hair and beard composited with their real frame offsets, recoloured through the dumped outfit palette, with skin,
+facing, layer, zoom, speed, mirror and name filter controls. After a probe run, execute `viewer/make-viewer-data.sh`
+inside `BepInEx\GK2-sprites` (it writes `sprites-data.js` and `atlases-data.js`, the atlases embedded as data URIs
+so the page works from a local file), copy `keeper-animations.html` next to them and open it. The red dot in each
+frame is the character's pivot.

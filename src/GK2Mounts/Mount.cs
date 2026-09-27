@@ -31,10 +31,18 @@ namespace GK2Mounts
         private static float facingSign = 1f; // +1 when the donkey shows its right-facing sprite, -1 for left
         private static AnimationState lastMirrored = (AnimationState)(-1);
         private static Transform bodySprite; // the donkey's "bdy" sprite; its offset from the root is what centering cancels
+        private static SpriteRenderer donkeyBodyRenderer;
+        private static SpriteRenderer keeperBodyRenderer;
+        private static int seatAdjustPx; // live adjustment from the tuning keys, in art pixels
+        private static bool seatPending;
         private static Transform seatRoot;
         private static float seatApplied;
 
         public static bool IsMounted => mounted;
+
+        // The animator state the keeper is held in while riding (see the SetState prefix); Cart keeps the walk.
+        public static AnimationState RiderPoseState =>
+            activeStyle == MountStyle.Cart ? AnimationState.Walk : (AnimationState)(int)Plugin.Pose.Value;
 
         // Horizontal facing shared by rider and mount while SideViewOnly is on: +1 right, -1 left.
         private static float riderFacingX = 1f;
@@ -82,6 +90,11 @@ namespace GK2Mounts
                 return;
             }
 
+            if (Plugin.TuningKeys.Value)
+            {
+                TuningKeys(pc);
+            }
+
             string why = WhyMustDismount(pc);
             if (why != null)
             {
@@ -122,6 +135,50 @@ namespace GK2Mounts
             }
 
             Follow(pc);
+            if (seatPending && partsReady)
+            {
+                seatPending = false;
+                ApplyAutoSeat(pc);
+            }
+            HideFishingGear(pc);
+        }
+
+        // The fishing animator states switch on the keeper's rod sprite layer ("tol_rod") and the game's fishing
+        // container (rod, line, bob). A rider holds reins, not a rod: keep both off while mounted. Runs in LateUpdate,
+        // after the animation has written its values for the frame; both objects are off by default when on foot.
+        private static SpriteRenderer rodLayer;
+        private static void HideFishingGear(PlayerController pc)
+        {
+            try
+            {
+                if (rodLayer == null || !rodLayer)
+                {
+                    Animator animator = pc.View?.PlayerAnimation?.Animator;
+                    if (animator != null)
+                    {
+                        foreach (SpriteRenderer sr in animator.GetComponentsInChildren<SpriteRenderer>(includeInactive: true))
+                        {
+                            if (sr.name == "tol_rod")
+                            {
+                                rodLayer = sr;
+                                break;
+                            }
+                        }
+                    }
+                }
+                if (rodLayer != null && rodLayer && rodLayer.gameObject.activeSelf)
+                {
+                    rodLayer.gameObject.SetActive(false);
+                }
+                FishingContainer fc = pc.View?.FishingContainer;
+                if (fc != null && fc.gameObject.activeSelf)
+                {
+                    fc.gameObject.SetActive(false);
+                }
+            }
+            catch
+            {
+            }
         }
 
         // ------------------------------------------------------------------ mount / dismount
@@ -149,7 +206,15 @@ namespace GK2Mounts
                 pc.PhysicalBody.SetFacingDirection(new Vector2(riderFacingX, 0f));
             }
             pc.PhysicalBody.SpeedMultiplier = Plugin.SpeedMultiplier.Value;
-            ApplySeat(pc, activeStyle == MountStyle.Cart ? Plugin.CartSeatOffset.Value : Plugin.RideSeatOffset.Value);
+            // Ride with AutoSeat computes the seat once the donkey's sprite is loaded (PrepareParts).
+            if (activeStyle == MountStyle.Cart)
+            {
+                ApplySeat(pc, Plugin.CartSeatOffset.Value);
+            }
+            else if (!Plugin.AutoSeat.Value)
+            {
+                ApplySeat(pc, Plugin.RideSeatOffset.Value);
+            }
             Plugin.Log.LogInfo($"Mounted ({activeStyle}, speed x{Plugin.SpeedMultiplier.Value}).");
         }
 
@@ -211,6 +276,7 @@ namespace GK2Mounts
             DestroyDonkey();
             RestoreSeat();
             RestoreSpeed(pc);
+            RestorePose(pc);
             Plugin.Log.LogInfo("Dismounted (" + reason + ").");
         }
 
@@ -234,6 +300,19 @@ namespace GK2Mounts
             if (was)
             {
                 Plugin.Log.LogInfo("Dismounted (" + reason + ").");
+            }
+        }
+
+        // If the keeper is standing still at dismount, nothing would call SetState again; put the real state back.
+        private static void RestorePose(PlayerController pc)
+        {
+            try
+            {
+                AnimationState real = pc.PlayerData.charState.Value;
+                pc.View?.PlayerAnimation?.SetState(real == AnimationState.Walk ? AnimationState.Walk : AnimationState.Idle);
+            }
+            catch
+            {
             }
         }
 
@@ -328,11 +407,13 @@ namespace GK2Mounts
                 }
                 donkey.MainWgoPart?.AnimationComponent?.SetWalkAnimationSpeedMultiplier(1.5f * pc.PhysicalBody.SpeedMultiplier);
                 bodySprite = null;
+                donkeyBodyRenderer = null;
                 foreach (SpriteRenderer sr in donkey.GetComponentsInChildren<SpriteRenderer>(includeInactive: true))
                 {
                     if (sr.name == "bdy")
                     {
                         bodySprite = sr.transform;
+                        donkeyBodyRenderer = sr;
                         break;
                     }
                 }
@@ -340,11 +421,120 @@ namespace GK2Mounts
                 {
                     Plugin.Log.LogWarning("Mount: body sprite 'bdy' not found on the mount prefab; using the fixed centering offset.");
                 }
+                keeperBodyRenderer = FindKeeperBody(pc);
+
+                if (!cart)
+                {
+                    if (Plugin.AutoSeat.Value)
+                    {
+                        seatPending = true; // computed after the first Follow, once the donkey sits at its offsets
+                    }
+                    if (Plugin.NearLeg.Value)
+                    {
+                        RiderLeg.AdjustX = Plugin.LegAdjustXPx.Value;
+                        RiderLeg.AdjustY = Plugin.LegAdjustYPx.Value;
+                        RiderLeg.Attach(donkeyBodyRenderer, keeperBodyRenderer);
+                        if (!RiderLeg.IsAttached)
+                        {
+                            Plugin.Log.LogWarning("Mount: rider leg not attached (donkey or keeper body sprite missing).");
+                        }
+                    }
+                }
             }
             catch (Exception e)
             {
                 Plugin.Log.LogWarning($"Mount: preparing the donkey view failed: {e.Message}");
             }
+        }
+
+        // The keeper's body sprite layer ("bdy" under the Animator transform): its material carries the outfit
+        // palette, its trimmed rect tells where the feet are.
+        private static SpriteRenderer FindKeeperBody(PlayerController pc)
+        {
+            try
+            {
+                Animator animator = pc.View?.PlayerAnimation?.Animator;
+                if (animator == null)
+                {
+                    return null;
+                }
+                foreach (SpriteRenderer sr in animator.GetComponentsInChildren<SpriteRenderer>(includeInactive: true))
+                {
+                    if (sr.name == "bdy")
+                    {
+                        return sr;
+                    }
+                }
+            }
+            catch
+            {
+            }
+            return null;
+        }
+
+        // Seat height from the art itself: put the rider's hip (7 px above the keeper's feet) on the donkey's back
+        // line (24 px above the donkey's ground) as seen on screen. Both points come from the sprites' trimmed-rect
+        // offsets (2 px transparent border, pivot at the frame centre). The comparison is done along the camera's
+        // screen-up axis, so the donkey's depth offset is accounted for. SeatAdjustPx and the tuning keys refine it.
+        private static void ApplyAutoSeat(PlayerController pc)
+        {
+            RestoreSeat();
+            try
+            {
+                if (keeperBodyRenderer == null || keeperBodyRenderer.sprite == null || donkeyBodyRenderer == null || donkeyBodyRenderer.sprite == null)
+                {
+                    ApplySeat(pc, Plugin.RideSeatOffset.Value);
+                    return;
+                }
+                const float px = 1f / 50f;
+                Sprite k = keeperBodyRenderer.sprite;
+                Sprite d = donkeyBodyRenderer.sprite;
+                float keeperHipLocalY = (k.textureRectOffset.y + 2f + 7f - k.pivot.y) * px;
+                float donkeyBackLocalY = (d.textureRectOffset.y + 2f + 24f - d.pivot.y) * px;
+                Vector3 hipWorld = keeperBodyRenderer.transform.TransformPoint(new Vector3(0f, keeperHipLocalY, 0f));
+                Vector3 backWorld = donkeyBodyRenderer.transform.TransformPoint(new Vector3(0f, donkeyBackLocalY, 0f));
+                Camera cam = Camera.main;
+                Vector3 up = cam != null ? cam.transform.up : Vector3.up;
+                if (Mathf.Abs(up.y) < 0.1f)
+                {
+                    up = Vector3.up;
+                }
+                float seat = Vector3.Dot(backWorld - hipWorld, up) / up.y;
+                seat += (Plugin.SeatAdjustPx.Value + seatAdjustPx) * PxWorldY;
+                ApplySeat(pc, seat);
+                Plugin.Log.LogInfo($"Mount: auto seat {seat:F3} (keeper feet offset {k.textureRectOffset.y:0}, donkey ground offset {d.textureRectOffset.y:0}, adjust {Plugin.SeatAdjustPx.Value + seatAdjustPx} px).");
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"Mount: auto seat failed, using Ride.SeatOffset: {e.Message}");
+                ApplySeat(pc, Plugin.RideSeatOffset.Value);
+            }
+        }
+
+        // One art pixel of vertical movement on screen equals this much world Y (sprites are stretched 1.667x
+        // vertically to counter the 53° camera, so 1 px = 0.02 * 1.667 world units).
+        private const float PxWorldY = 0.02f * 1.6667f;
+
+        // Debug.TuningKeys: PageUp/PageDown seat, Home/End leg X, Insert/Delete leg Y, all in art pixels.
+        private static void TuningKeys(PlayerController pc)
+        {
+            var input = UnityInput.Current;
+            bool changed = false;
+            if (input.GetKeyDown(KeyCode.PageUp)) { seatAdjustPx++; changed = true; }
+            if (input.GetKeyDown(KeyCode.PageDown)) { seatAdjustPx--; changed = true; }
+            if (input.GetKeyDown(KeyCode.End)) { RiderLeg.AdjustX++; changed = true; }
+            if (input.GetKeyDown(KeyCode.Home)) { RiderLeg.AdjustX--; changed = true; }
+            if (input.GetKeyDown(KeyCode.Insert)) { RiderLeg.AdjustY++; changed = true; }
+            if (input.GetKeyDown(KeyCode.Delete)) { RiderLeg.AdjustY--; changed = true; }
+            if (!changed)
+            {
+                return;
+            }
+            if (activeStyle == MountStyle.Ride && Plugin.AutoSeat.Value)
+            {
+                ApplyAutoSeat(pc);
+            }
+            Plugin.Log.LogInfo($"[tune] seat adjust {Plugin.SeatAdjustPx.Value + seatAdjustPx} px (Ride.SeatAdjustPx), leg adjust x {RiderLeg.AdjustX} y {RiderLeg.AdjustY} px (Ride.LegAdjustXPx / LegAdjustYPx)");
         }
 
         private static void Follow(PlayerController pc)
@@ -389,6 +579,12 @@ namespace GK2Mounts
             Vector3 basePos = rb != null ? rb.transform.position : pd.position.Value;
             Vector3 target = basePos + away * depth - right * lateral;
             donkey.Data.Position = VisualConsts.GetRoundedPosXYZ(target, PixelSize());
+
+            // Keep the leg's hip on the back line whatever walk frame the donkey shows (frame offsets differ).
+            if (RiderLeg.IsAttached)
+            {
+                RiderLeg.UpdatePosition(donkeyBodyRenderer);
+            }
             AnimationState state = pd.charState.Value == AnimationState.Walk ? AnimationState.Walk : AnimationState.Idle;
             if (state != lastMirrored)
             {
@@ -422,7 +618,10 @@ namespace GK2Mounts
             }
             donkey = null;
             partsReady = false;
+            seatPending = false;
             bodySprite = null;
+            donkeyBodyRenderer = null;
+            RiderLeg.Detach();
         }
 
         // ------------------------------------------------------------------ rider sprite

@@ -38,6 +38,10 @@ namespace GK2MountProbe
             Safe(sb, "CAMERA", () => DumpCamera(sb));
             Safe(sb, "PLAYER: controller and components", () => DumpPlayer(sb, pc));
             Safe(sb, "PLAYER: hierarchy", () => DumpHierarchy(sb, pc.transform));
+            if (Plugin.DumpSprites.Value)
+            {
+                Safe(sb, "SPRITE DUMP", () => SpriteDump.Run(sb));
+            }
             Safe(sb, "WGO DEFINITIONS", () =>
             {
                 foreach (string id in SampleIdList())
