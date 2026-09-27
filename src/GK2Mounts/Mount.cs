@@ -28,7 +28,7 @@ namespace GK2Mounts
         private static Wgo donkey;
         private static bool partsReady;
         private static MountStyle activeStyle;
-        private static float facingSign = 1f; // +1 facing right, -1 facing left; kept while facing up/down
+        private static float facingSign = 1f; // +1 when the donkey shows its right-facing sprite, -1 for left
         private static AnimationState lastMirrored = (AnimationState)(-1);
         private static Transform seatRoot;
         private static float seatApplied;
@@ -314,22 +314,44 @@ namespace GK2Mounts
         {
             PlayerData pd = pc.PlayerData;
             Vector2 dir = pd.Direction;
-            if (Mathf.Abs(dir.x) > 0.3f)
+            if (dir.sqrMagnitude > 0.0001f)
             {
-                facingSign = dir.x > 0f ? 1f : -1f;
+                donkey.Data.MovableDirection = dir; // applied to the donkey's animator synchronously
             }
+
+            // The donkey has only left/right sprites. Its stepped-rotation preset shows the right-facing one only
+            // when the movement has a rightward component; straight up and straight down both resolve to left.
+            // Read the facing back from its animator so the centering always cancels the sprite's real offset.
+            facingSign = dir.x > 0.0001f ? 1f : -1f;
+            try
+            {
+                AnimationComponentBase anim = donkey.MainWgoPart?.AnimationComponent;
+                if (anim != null && anim.Animator != null && anim.Animator.isActiveAndEnabled)
+                {
+                    Vector2 shown = anim.GetDirection();
+                    if (Mathf.Abs(shown.x) > 0.01f)
+                    {
+                        facingSign = shown.x > 0f ? 1f : -1f;
+                    }
+                }
+            }
+            catch
+            {
+            }
+
             bool cart = activeStyle == MountStyle.Cart;
             float depth = cart ? Plugin.CartDepth.Value : Plugin.RideDepth.Value;
             float center = cart ? Plugin.CartCenterOffset.Value : Plugin.RideCenterOffset.Value;
 
+            // PlayerData.position is the 50 Hz physics value; the body transform is the Rigidbody-interpolated,
+            // per-frame position the keeper is actually drawn at. Snap to the same pixel grid PlayerView uses so
+            // the two sprites never disagree by a sub-pixel amount.
+            Rigidbody rb = pc.PhysicalBody.Rb;
+            Vector3 basePos = rb != null ? rb.transform.position : pd.position.Value;
             Vector3 away = AwayFromCamera();
             Vector3 right = Vector3.Cross(Vector3.up, away).normalized;
-            Vector3 target = pd.position.Value + away * depth - right * (center * facingSign);
-            donkey.Data.Position = target;
-            if (dir.sqrMagnitude > 0.0001f)
-            {
-                donkey.Data.MovableDirection = dir;
-            }
+            Vector3 target = basePos + away * depth - right * (center * facingSign);
+            donkey.Data.Position = VisualConsts.GetRoundedPosXYZ(target, PixelSize());
             AnimationState state = pd.charState.Value == AnimationState.Walk ? AnimationState.Walk : AnimationState.Idle;
             if (state != lastMirrored)
             {
@@ -442,6 +464,19 @@ namespace GK2Mounts
             catch
             {
                 return false;
+            }
+        }
+
+        // Same rounding granularity PlayerView picks (1 in Native render mode, 2 otherwise).
+        private static int PixelSize()
+        {
+            try
+            {
+                return CameraSystem.Instance.MainCamera.GetRenderType() == MainCamera.RenderMode.Native ? 1 : 2;
+            }
+            catch
+            {
+                return 1;
             }
         }
 

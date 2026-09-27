@@ -103,7 +103,8 @@ namespace GK2Mounts
             Log.LogInfo($"GK2 Mounts {Version} loaded. Mount key: {MountKey.Value}, style {Style.Value}, speed x{SpeedMultiplier.Value}.");
         }
 
-        private void Update()
+        // LateUpdate: runs after the game moved the player for this frame, so the donkey follows without lag.
+        private void LateUpdate()
         {
             if (harmony == null || !Enabled.Value)
             {
