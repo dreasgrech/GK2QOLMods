@@ -36,6 +36,23 @@ namespace GK2Mounts
 
         public static bool IsMounted => mounted;
 
+        // Horizontal facing shared by rider and mount while SideViewOnly is on: +1 right, -1 left.
+        private static float riderFacingX = 1f;
+
+        // Called from the SetDirection prefix for the keeper's animation component (see Patches.cs).
+        public static Vector2 RiderFacing(Vector2 requested)
+        {
+            if (requested.sqrMagnitude < 0.0001f)
+            {
+                return requested;
+            }
+            if (Mathf.Abs(requested.x) > 0.05f)
+            {
+                riderFacingX = requested.x > 0f ? 1f : -1f;
+            }
+            return new Vector2(riderFacingX, 0f);
+        }
+
         // ------------------------------------------------------------------ per frame
 
         public static void Tick()
@@ -125,6 +142,12 @@ namespace GK2Mounts
                 return;
             }
             mounted = true;
+            riderFacingX = pc.PlayerData.Direction.x < -0.05f ? -1f : 1f;
+            if (Plugin.SideViewOnly.Value)
+            {
+                // Turn the keeper to the side right away instead of waiting for the next step.
+                pc.PhysicalBody.SetFacingDirection(new Vector2(riderFacingX, 0f));
+            }
             pc.PhysicalBody.SpeedMultiplier = Plugin.SpeedMultiplier.Value;
             ApplySeat(pc, activeStyle == MountStyle.Cart ? Plugin.CartSeatOffset.Value : Plugin.RideSeatOffset.Value);
             Plugin.Log.LogInfo($"Mounted ({activeStyle}, speed x{Plugin.SpeedMultiplier.Value}).");
@@ -327,7 +350,9 @@ namespace GK2Mounts
         private static void Follow(PlayerController pc)
         {
             PlayerData pd = pc.PlayerData;
-            Vector2 dir = pd.Direction;
+            // With SideViewOnly the keeper's sprite is already locked to left/right (SetDirection prefix); give the
+            // donkey that same facing so the two never disagree. Otherwise mirror the keeper's real direction.
+            Vector2 dir = Plugin.SideViewOnly.Value ? new Vector2(riderFacingX, 0f) : pd.Direction;
             if (dir.sqrMagnitude > 0.0001f)
             {
                 donkey.Data.MovableDirection = dir; // applied to the donkey's animator synchronously

@@ -17,6 +17,8 @@ namespace GK2Mounts
             Require(AccessTools.Property(typeof(PlayerController), nameof(PlayerController.Ssm)), "PlayerController.Ssm");
             Require(AccessTools.Method(typeof(WgoData), nameof(WgoData.SetStateToAnimator)), "WgoData.SetStateToAnimator");
             Require(AccessTools.Method(typeof(AnimationComponentBase), nameof(AnimationComponentBase.SetWalkAnimationSpeedMultiplier)), "AnimationComponentBase.SetWalkAnimationSpeedMultiplier");
+            Require(AccessTools.Method(typeof(AnimationComponentBase), nameof(AnimationComponentBase.SetDirection), new[] { typeof(UnityEngine.Vector2) }), "AnimationComponentBase.SetDirection(Vector2)");
+            Require(typeof(PlayerAnimation).IsSubclassOf(typeof(AnimationComponentBase)) ? typeof(PlayerAnimation) : null, "PlayerAnimation : AnimationComponentBase");
         }
 
         private static void Require(object member, string name)
@@ -24,6 +26,23 @@ namespace GK2Mounts
             if (member == null)
             {
                 throw new MissingMemberException("Game member not found: " + name);
+            }
+        }
+    }
+
+    // The donkey has only left- and right-facing art (its own clips are static/walk/graze/ear/lips left|right and its
+    // rotation preset knows only Left and Right). While mounted the keeper is kept in a side view as well, so rider
+    // and mount always face the same way: any facing with a horizontal component becomes pure left or right, a
+    // purely vertical one keeps the last horizontal facing. Every path that sets the keeper's sprite facing (walking,
+    // click-to-move, workbench facing, aiming) ends in this method; NPCs and the donkey itself are untouched.
+    [HarmonyPatch(typeof(AnimationComponentBase), nameof(AnimationComponentBase.SetDirection), typeof(UnityEngine.Vector2))]
+    internal static class AnimationComponentBase_SetDirection_Patch
+    {
+        private static void Prefix(AnimationComponentBase __instance, ref UnityEngine.Vector2 direction)
+        {
+            if (Mount.IsMounted && Plugin.SideViewOnly.Value && __instance is PlayerAnimation)
+            {
+                direction = Mount.RiderFacing(direction);
             }
         }
     }

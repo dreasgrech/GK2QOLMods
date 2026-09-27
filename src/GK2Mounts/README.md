@@ -21,6 +21,7 @@ NPC and its schedule are untouched.
 | `General.SpeedMultiplier` | 1.75 | Walking speed while mounted, times normal. Measured to scale exactly linearly. |
 | `General.MountWgoId` | `npc_donkey` | Which world object's looks to use. Only the donkey is tested. |
 | `General.StayMountedThroughDoors` | true | After a scene change the donkey is re-summoned and you keep riding. |
+| `General.SideViewOnly` | true | The donkey only has left/right art, so while mounted the keeper also faces only left or right; walking up or down keeps the last horizontal facing. Off: the keeper turns as usual and the donkey shows its side. |
 | `General.ShowMessages` | true | Thought bubble when you cannot mount ("I'm busy.", "Not in a co-op game."). |
 | `Ride.SeatOffset` | -0.15 | Vertical shift of the keeper's sprite; negative hides the legs behind the donkey. |
 | `Ride.Depth` | -0.15 | Donkey shift towards (negative) or away from the camera. |
@@ -42,6 +43,13 @@ NPC and its schedule are untouched.
   body sprite is drawn 0.48 units to its facing side, which the centering cancels.
 - **Rider**: the keeper's sprites hang under one transform (the one carrying the Animator); its local height is
   shifted by `SeatOffset` while mounted and restored on dismount.
+- **Side view** (second Harmony patch): the donkey's own clips are only `static/walk/graze/ear/lips` left and right,
+  and its rotation preset knows only Left and Right; there is no up/down donkey art. Every path that sets the
+  keeper's sprite facing ends in `AnimationComponentBase.SetDirection(Vector2)`, so a prefix limited to the
+  keeper's `PlayerAnimation` turns any facing with a horizontal component into pure left/right and keeps the last
+  horizontal facing for vertical movement. The donkey is given the same facing. Side effect: the game places the
+  interaction box on the side the keeper faces, so while riding up or down you interact with things beside you,
+  not above or below. Dismount (or set `SideViewOnly = false`) for the normal behaviour.
 - **Attached script suppression** (the one Harmony patch): `WgoData`'s constructor starts the definition's attached
   flow script, and the donkey's script would teleport it to its delivery point and walk its route. A prefix on
   `WgoDataScriptsManager.CreateScript` skips creation only while the mod is constructing its own `WgoData`.

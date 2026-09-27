@@ -33,6 +33,7 @@ namespace GK2Mounts
         internal static ConfigEntry<string> MountWgoId;
         internal static ConfigEntry<bool> StayMountedThroughDoors;
         internal static ConfigEntry<bool> ShowMessages;
+        internal static ConfigEntry<bool> SideViewOnly;
         internal static ConfigEntry<float> RideSeatOffset;
         internal static ConfigEntry<float> RideDepth;
         internal static ConfigEntry<float> RideCenterOffset;
@@ -58,6 +59,8 @@ namespace GK2Mounts
                 "World object id used for the mount's looks. Only npc_donkey has been tested.");
             StayMountedThroughDoors = Config.Bind("General", "StayMountedThroughDoors", true,
                 "Keep riding after a scene change (the donkey is re-summoned in the new scene). Off: dismount at every door.");
+            SideViewOnly = Config.Bind("General", "SideViewOnly", true,
+                "The donkey only has left/right art. On: while mounted the keeper also only faces left or right (walking up/down keeps the last horizontal facing), so rider and mount match. Off: the keeper turns as usual and the donkey shows its side.");
             ShowMessages = Config.Bind("General", "ShowMessages", true,
                 "Show a thought bubble when the keeper cannot mount and why.");
 
