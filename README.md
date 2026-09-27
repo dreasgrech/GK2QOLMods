@@ -9,8 +9,6 @@ so you can install any subset.
 | [Built Count](#built-count) | 1.0.3 | Build menus show how many of each building you already have in that area. |
 | [Move Building](#move-building) | 1.1.3 | Pick up a built building and put it down somewhere else, contents and all. |
 
-Built and audited against game build **25533739**. See [Game updates](#game-updates) for what happens after a patch.
-
 ## Installing
 
 These are code mods and need **BepInEx 5** (the 5.4.23.x, x64, Mono build). The game's own `Mods` folder
