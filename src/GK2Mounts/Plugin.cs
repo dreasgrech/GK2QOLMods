@@ -13,6 +13,12 @@ namespace GK2Mounts
         Cart,
     }
 
+    public enum LegSource
+    {
+        Body,
+        Drawn,
+    }
+
     // Animator states the keeper can be held in while riding (values = the game's AnimationState enum).
     public enum RiderPose
     {
@@ -58,6 +64,8 @@ namespace GK2Mounts
         internal static ConfigEntry<bool> AutoSeat;
         internal static ConfigEntry<int> SeatAdjustPx;
         internal static ConfigEntry<bool> NearLeg;
+        internal static ConfigEntry<LegSource> LegSourceSetting;
+        internal static ConfigEntry<int> LegHeightPx;
         internal static ConfigEntry<int> LegAdjustXPx;
         internal static ConfigEntry<int> LegAdjustYPx;
         internal static ConfigEntry<bool> TuningKeys;
@@ -103,6 +111,10 @@ namespace GK2Mounts
                 "Fine adjustment of the automatic seat, in art pixels (positive = higher).");
             NearLeg = Config.Bind("Ride", "NearLeg", true,
                 "Draw the rider's near leg hanging down the donkey's flank, in the keeper's outfit colours.");
+            LegSourceSetting = Config.Bind("Ride", "LegSource", LegSource.Body,
+                "Body: the keeper's own trousers and boots, re-sliced from his current body frame (follows the pose, outfit-exact). Drawn: a hand-drawn bent leg in outfit colours.");
+            LegHeightPx = Config.Bind("Ride", "LegHeightPx", 10,
+                "With LegSource=Body: how many bottom rows of the body frame count as legs (feet to belt), in art pixels.");
             LegAdjustXPx = Config.Bind("Ride", "LegAdjustXPx", 0,
                 "Fine adjustment of the leg's hip position along the donkey, in art pixels (positive = towards the rear).");
             LegAdjustYPx = Config.Bind("Ride", "LegAdjustYPx", 0,

@@ -583,7 +583,7 @@ namespace GK2Mounts
             // Keep the leg's hip on the back line whatever walk frame the donkey shows (frame offsets differ).
             if (RiderLeg.IsAttached)
             {
-                RiderLeg.UpdatePosition(donkeyBodyRenderer);
+                RiderLeg.Update(donkeyBodyRenderer, keeperBodyRenderer);
             }
             AnimationState state = pd.charState.Value == AnimationState.Walk ? AnimationState.Walk : AnimationState.Idle;
             if (state != lastMirrored)
