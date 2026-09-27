@@ -22,13 +22,16 @@ namespace GK2Mounts
 
         private static SpriteRenderer renderer;
         private static Sprite currentSource;
+        private static bool loggedSlice;
         private static readonly Dictionary<Sprite, Sprite> sliceCache = new Dictionary<Sprite, Sprite>();
 
-        // Extra offset in art pixels (Ride.LegAdjustXPx / LegAdjustYPx plus the tuning keys).
-        internal static int AdjustX;
-        internal static int AdjustY;
-
         public static bool IsAttached => renderer != null && renderer;
+
+        public static void ClearCache()
+        {
+            sliceCache.Clear();
+            currentSource = null;
+        }
 
         public static void Attach(SpriteRenderer donkeyBody, SpriteRenderer keeperBody)
         {
@@ -68,7 +71,6 @@ namespace GK2Mounts
                     currentSource = body;
                     renderer.sprite = SliceFor(body);
                 }
-                renderer.flipX = keeperBody.flipX;
             }
             else if (renderer.sprite == null || renderer.sprite.name != "mount_rider_leg")
             {
@@ -76,11 +78,31 @@ namespace GK2Mounts
                 renderer.sprite = DrawnLeg.Get();
             }
 
+            // The outfit palette lives on the keeper body renderer's own material instance; track it every frame in
+            // case the game re-instances it (armour, colour change, skin reapply).
+            if (renderer.sharedMaterial != keeperBody.sharedMaterial)
+            {
+                renderer.sharedMaterial = keeperBody.sharedMaterial;
+            }
+
+            // Mirroring: the keeper mirrors with flipX (or a negative parent scale), the donkey with a negative
+            // parent scale, and the two are not the same convention for the same facing. The slice must end up
+            // mirrored exactly like the keeper, so undo the donkey's parent mirroring when it differs.
+            bool keeperMirrored = keeperBody.flipX ^ (keeperBody.transform.lossyScale.x < 0f);
+            bool donkeyMirrored = donkeyBody.transform.lossyScale.x < 0f;
+            renderer.flipX = keeperMirrored ^ donkeyMirrored;
+
+            // Horizontal: anchor to the torso itself (the keeper body renderer's pivot in world space), plus the
+            // pixel adjustment towards the rear (rear = opposite to facing; art faces left, mirrored = faces right).
+            // Vertical: the donkey's back line for the current frame, so the legs bob with it.
             Sprite d = donkeyBody.sprite;
+            float rearSign = keeperMirrored ? -1f : 1f;
+            Vector3 worldRight = Vector3.right;
+            Vector3 anchor = keeperBody.transform.position + worldRight * (rearSign * Plugin.LegAdjustXPx.Value * Px);
+            Vector3 local = donkeyBody.transform.InverseTransformPoint(anchor);
             float groundPx = d.textureRectOffset.y + 2f;
-            float topYPx = groundPx + 24f + AdjustY;
-            float xPx = d.pivot.x + AdjustX; // the slice's own pivot already carries the keeper frame's horizontal offset
-            renderer.transform.localPosition = new Vector3((xPx - d.pivot.x) * Px, (topYPx - d.pivot.y) * Px, -0.01f);
+            float topYPx = groundPx + Mount.BackHeightPx(d) + Plugin.LegAdjustYPx.Value;
+            renderer.transform.localPosition = new Vector3(local.x, (topYPx - d.pivot.y) * Px, -0.01f);
         }
 
         public static void Detach()
@@ -118,8 +140,31 @@ namespace GK2Mounts
             // pivot in the slice's pixel space: frame pivot minus trimmed offset, top edge
             Vector2 pivotPx = new Vector2(body.pivot.x - off.x, h);
             Vector2 pivot = new Vector2(pivotPx.x / rect.width, pivotPx.y / rect.height);
-            Sprite slice = Sprite.Create(body.texture, rect, pivot, body.pixelsPerUnit, 0, SpriteMeshType.FullRect);
+            // Sprites can carry secondary textures the shader samples alongside the main atlas (palette index, light
+            // masks); copy them so the slice renders exactly like the body.
+            SecondarySpriteTexture[] secondary = null;
+            try
+            {
+                int n = body.GetSecondaryTextureCount();
+                if (n > 0)
+                {
+                    secondary = new SecondarySpriteTexture[n];
+                    body.GetSecondaryTextures(secondary);
+                }
+            }
+            catch
+            {
+                secondary = null;
+            }
+            Sprite slice = secondary != null
+                ? Sprite.Create(body.texture, rect, pivot, body.pixelsPerUnit, 0, SpriteMeshType.FullRect, Vector4.zero, false, secondary)
+                : Sprite.Create(body.texture, rect, pivot, body.pixelsPerUnit, 0, SpriteMeshType.FullRect);
             slice.name = "mount_rider_legs:" + body.name;
+            if (!loggedSlice)
+            {
+                loggedSlice = true;
+                Plugin.Log.LogInfo($"Mount: leg slice from {body.name} tex={body.texture?.name} rect={rect} secondaryTextures={(secondary?.Length ?? 0)} material={renderer?.sharedMaterial?.name}/{renderer?.sharedMaterial?.shader?.name}");
+            }
             sliceCache[body] = slice;
             return slice;
         }

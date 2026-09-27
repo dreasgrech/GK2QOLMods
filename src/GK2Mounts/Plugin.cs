@@ -20,20 +20,14 @@ namespace GK2Mounts
     }
 
     // Animator states the keeper can be held in while riding (values = the game's AnimationState enum).
+    // Only states that loop on their own and carry no control-taking behaviour. Tool, work, planting, cast and pull
+    // states either end by forcing Idle (which would re-trigger the pose every frame) or take player control.
     public enum RiderPose
     {
         Walk = 1,
         Idle = 0,
-        WorkHands = 29,
         FishingIdle = 203,
-        FishingCast = 202,
-        FishingPull = 204,
         FocusedWalk = 41,
-        ToolHammer = 23,
-        ToolShovel = 21,
-        ToolAxe = 20,
-        Planting = 100,
-        FlagCapture = 35,
     }
 
     // A rideable mount for Graveyard Keeper 2. Press the mount key and a donkey appears under the keeper; you walk
@@ -69,6 +63,10 @@ namespace GK2Mounts
         internal static ConfigEntry<int> LegAdjustXPx;
         internal static ConfigEntry<int> LegAdjustYPx;
         internal static ConfigEntry<bool> TuningKeys;
+        internal static ConfigEntry<bool> TuningWindowEnabled;
+        internal static ConfigEntry<float> TuningWindowScale;
+        internal static ConfigEntry<int> RiderOffsetPx;
+        internal static Plugin Instance;
         internal static ConfigEntry<float> CartSeatOffset;
         internal static ConfigEntry<float> CartDepth;
         internal static ConfigEntry<float> CartCenterOffset;
@@ -79,6 +77,7 @@ namespace GK2Mounts
         private void Awake()
         {
             Log = Logger;
+            Instance = this;
             Enabled = Config.Bind("General", "Enabled", true,
                 "Master switch. Press the mount key to summon a donkey under the keeper and ride it; press again to dismount.");
             MountKey = Config.Bind("General", "MountKey", KeyCode.H,
@@ -105,9 +104,11 @@ namespace GK2Mounts
             RideCenterOffset = Config.Bind("Ride", "CenterOffset", 0.48f,
                 "The donkey sprite is drawn this far to its facing side of its position (prefab offset). The mount is shifted back by this amount so the body sits under the keeper.");
 
+            RiderOffsetPx = Config.Bind("Ride", "RiderOffsetPx", 0,
+                "Where the keeper sits along the donkey, in art pixels: positive = closer to the head, negative = closer to the rear.");
             AutoSeat = Config.Bind("Ride", "AutoSeat", true,
                 "Compute the seat height from the sprites themselves (rider's hip on the donkey's back line). Off: use Ride.SeatOffset.");
-            SeatAdjustPx = Config.Bind("Ride", "SeatAdjustPx", -3,
+            SeatAdjustPx = Config.Bind("Ride", "SeatAdjustPx", -4,
                 "Fine adjustment of the automatic seat, in art pixels (positive = higher).");
             NearLeg = Config.Bind("Ride", "NearLeg", true,
                 "Draw the rider's near leg hanging down the donkey's flank, in the keeper's outfit colours.");
@@ -115,9 +116,9 @@ namespace GK2Mounts
                 "Body: the keeper's own trousers and boots, re-sliced from his current body frame (follows the pose, outfit-exact). Drawn: a hand-drawn bent leg in outfit colours.");
             LegHeightPx = Config.Bind("Ride", "LegHeightPx", 10,
                 "With LegSource=Body: how many bottom rows of the body frame count as legs (feet to belt), in art pixels.");
-            LegAdjustXPx = Config.Bind("Ride", "LegAdjustXPx", 0,
+            LegAdjustXPx = Config.Bind("Ride", "LegAdjustXPx", 3,
                 "Fine adjustment of the leg's hip position along the donkey, in art pixels (positive = towards the rear).");
-            LegAdjustYPx = Config.Bind("Ride", "LegAdjustYPx", 0,
+            LegAdjustYPx = Config.Bind("Ride", "LegAdjustYPx", 1,
                 "Fine adjustment of the leg's hip height, in art pixels (positive = higher).");
 
             CartSeatOffset = Config.Bind("Cart", "SeatOffset", 0f, "Vertical offset of the keeper's sprite in cart style.");
@@ -125,6 +126,10 @@ namespace GK2Mounts
             CartCenterOffset = Config.Bind("Cart", "CenterOffset", 0f,
                 "Centering in cart style. 0 leaves the donkey ahead of the keeper, who then stands in the cart.");
 
+            TuningWindowEnabled = Config.Bind("Debug", "TuningWindow", true,
+                "Show a tuning panel with sliders for all mount settings in the top-right corner while mounted. Values apply live; Save writes them to this file. Turn off for normal play.");
+            TuningWindowScale = Config.Bind("Debug", "TuningWindowScale", 1.5f,
+                "Size of the tuning panel (1 = Unity default, 1.5 suits 1440p).");
             TuningKeys = Config.Bind("Debug", "TuningKeys", true,
                 "While mounted: PageUp/PageDown move the seat, Home/End the leg sideways, Insert/Delete the leg up/down, one art pixel per press; values are logged so they can be copied into the Ride settings. Development aid, turn off for normal play.");
 
@@ -173,6 +178,22 @@ namespace GK2Mounts
             {
                 Log.LogError($"Mount update failed; dismounting. {e}");
                 Mount.ForceCleanup("error");
+            }
+        }
+
+        private void OnGUI()
+        {
+            if (harmony == null || !Enabled.Value)
+            {
+                return;
+            }
+            try
+            {
+                TuningWindow.Draw();
+            }
+            catch (Exception e)
+            {
+                Log.LogWarning("Tuning window failed: " + e.Message);
             }
         }
 
