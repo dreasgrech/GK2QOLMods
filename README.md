@@ -1,40 +1,108 @@
 # GK2 QOL Mods
 
-Quality-of-life BepInEx plugins for Graveyard Keeper 2. One feature per plugin; each is its own project and DLL.
+Quality-of-life BepInEx plugins for **Graveyard Keeper 2**. One feature per plugin; each is its own project and DLL,
+so you can install any subset.
 
-| Mod | Version | What it does |
+| Mod | Version | In one line |
 |---|---|---|
-| [GK2GlobalStorage](src/GK2GlobalStorage/) | 1.1.2 | Crafting, building and alchemy take materials from chests in every area, not only the one you stand in. Zombies keep using local storage. |
-| [GK2BuiltCount](src/GK2BuiltCount/) | 1.0.3 | Build desk menus show how many of each building already exist in that area, e.g. "Sawhorse (2)". |
-| [GK2MoveBuilding](src/GK2MoveBuilding/) | 1.1.3 | Pick up a built building and put it down elsewhere in the same area. It stays the same object: contents, crafts and links intact. |
+| [Global Storage](#global-storage) | 1.1.2 | Craft and build with materials from chests in every area, not just the one you're standing in. |
+| [Built Count](#built-count) | 1.0.3 | Build menus show how many of each building you already have in that area. |
+| [Move Building](#move-building) | 1.1.3 | Pick up a built building and put it down somewhere else, contents and all. |
 
-## Layout
+Built and audited against game build **25533739**. See [Game updates](#game-updates) for what happens after a patch.
 
-```
-src/     one folder per mod: source, .csproj, README / findings / audit notes
-tests/   verification tools run against the built DLLs and the installed game (see tests/README.md)
-dist/    the built DLLs as installed and tested
-```
+## Installing
 
-Each mod folder has its own README (or FINDINGS) with usage, settings, how it works, the audit notes and the
-in-game test list.
+These are code mods and need **BepInEx 5** (the 5.4.23.x, x64, Mono build). The game's own `Mods` folder
+(`%USERPROFILE%\AppData\LocalLow\Lazy Bear Games\Graveyard Keeper 2\Mods`) only loads translation and voice packs
+and cannot load code, so it is not used.
 
-## Building
+1. **Back up your saves** first: `%USERPROFILE%\AppData\LocalLow\Lazy Bear Games\Graveyard Keeper 2`. The mods are
+   audited not to corrupt saves (see [Safety](#safety)), but a backup costs nothing.
+2. **Install BepInEx 5** (`BepInEx_win_x64_5.4.23.x.zip` from the BepInEx GitHub releases). Unzip it into the game
+   folder, the one that contains `GraveyardKeeper2.exe`, so that `winhttp.dll`, `doorstop_config.ini` and a `BepInEx\`
+   folder sit next to the exe.
+3. **Run the game once** and quit. BepInEx creates `BepInEx\plugins`, `BepInEx\config` and `BepInEx\LogOutput.log`.
+   If none appear, BepInEx isn't being loaded (usually a wrong zip, or the files landed in a subfolder).
+4. **Copy the DLLs you want** from [`dist/`](dist/) into `BepInEx\plugins\`. Any combination works; they don't depend
+   on each other.
+5. **Start the game.** Each mod writes one line to `BepInEx\LogOutput.log` when it loads, for example
+   `GK2 Move Building 1.1.3 loaded.` Settings appear in `BepInEx\config\anvil.gk2.<mod>.cfg` after the first run
+   and are read at game start.
 
-- Requirements: .NET SDK 8, the game installed at `C:\Games\Graveyard Keeper 2` with BepInEx 5.4.23.x (the `.csproj`
-  files reference the game's `Managed` folder and `BepInEx\core` from there; change `GameDir` if yours differs).
-- `dotnet build src/<Mod>/<Mod>.csproj -c Release` builds and copies the DLL into `BepInEx\plugins`. The copy only
-  works while the game is closed (BepInEx keeps plugin DLLs locked). `-p:Deploy=false` skips the copy (Built Count
-  and Move Building).
+To **uninstall** a mod, delete its DLL from `BepInEx\plugins`. To remove BepInEx entirely, delete `winhttp.dll`,
+`doorstop_config.ini` and the `BepInEx` folder. Saves made with the mods load fine without them: none of the mods adds
+anything to the save format.
+
+Notes:
+- The game detects mod loaders and mentions them in its built-in bug reports. If you report a bug to the developers,
+  reproduce it without mods first.
+- Steam may re-verify files after an update; BepInEx's files are not part of the game's manifest and survive that,
+  but check the log after any game update (see [Game updates](#game-updates)).
+
+## The mods
+
+### Global Storage
+
+`GK2GlobalStorage.dll`
+
+The unmodified game lets a workbench, build desk or alchemy table use materials from chests **in the same area** as
+that station. With this mod, they draw from chests in **all** areas, so you don't have to carry stone from the
+quarry chest to the yard. Items are taken from the chest that has them, nearest pool first, exactly as the game does
+within one area.
+
+- Zombies are left alone: a zombie working a station still only uses its own area's storage, so their logistics
+  are unchanged.
+- Settings: `IncludeBuildAndAlchemy` (build desks, town buildings, alchemy, gardens, graves, autopsy pickers and
+  requirement tooltips, on by default); `IncludeFuelContainers` and `IncludeConveyorStorage` (off by default so
+  remote furnaces and conveyor lines aren't starved); `IncludeZombieOrderDelivery` (off); `VerboseLogging`.
+
+### Built Count
+
+`GK2BuiltCount.dll`
+
+- Every row in a build desk's menu shows how many of that building already stand in the desk's area, as
+`Sawhorse (2)`. Rows with none built look unchanged. Buildings the game limits (`x/max`) keep the game's own label.
+- Display only; nothing else changes.
+
+### Move Building
+
+`GK2MoveBuilding.dll`
+
+Adds a **Move** row next to **Remove** in the build desk menu. Pick it and click a building: the game's own build
+preview appears for it, you place it (rotate as usual, overlapping its old spot is fine), and the building is
+relocated. You stay in move mode for the next one; Back returns to the menu. Alternatively hold **Left Ctrl** in the
+game's normal Remove mode and click.
+
+- The building stays **the same object**: chest contents, fuel, running crafts, upgrades and everything that refers
+  to it (orders, porters, quests) are untouched. Nothing is paid or refunded and no build or demolition scripts run.
+- In move mode, movable buildings are tinted light blue (stronger under the cursor); buildings that can't be moved
+  keep the game's red, and the keeper tells you why when you click one (zombie working in it, conveyor, grave,
+  garden bed, villagers' building, other area).
+- Same area only. Workbench extensions (tool racks etc.) re-link by position after a move, as when first placed.
+- Settings: the Move row and its label, the modifier key, stay-in-move-mode, the highlight and its colour.
 
 ## Safety
 
-- Every plugin checks the game assembly's module version id at startup and disables itself after a game update
-  until it has been re-audited and rebuilt (`Safety.DisableOnGameUpdate`, on by default).
-- Patches are applied all-or-nothing; a failure unpatches everything and the game runs unmodified.
-- Move Building's save-safety audit, including the fault-injection test results, is in
-  [src/GK2MoveBuilding/SAVE-SAFETY.md](src/GK2MoveBuilding/SAVE-SAFETY.md).
+- **No save-format changes.** The mods add no serialized types or fields. Saves made with them load without them.
+- **Game-update guard.** Every plugin checks the game code's module version id at startup and disables itself after
+  a game update until it has been re-audited and rebuilt (`Safety.DisableOnGameUpdate`, on by default). You'll see
+  `Game code changed since this mod was audited ... Mod is DISABLED` in the log.
+- **All-or-nothing patching.** If any patch fails to apply, all of that mod's patches are removed and the game runs
+  unmodified.
+- **Move Building** is transactional: an interrupted move puts the building back exactly as it was, verified in-game
+  with fault injection ([results](src/GK2MoveBuilding/SAVE-SAFETY.md)). It refuses to run in co-op.
 
-## Game build
+## Game updates
 
-Current audited game build: 25533739 (Assembly-CSharp MVID `97f92f0d-a093-49fe-ba4d-74aa62fae81e`).
+After a game patch the mods disable themselves (see above) until the game's code has been compared against the
+audited build and the mods rebuilt with the new module version id. Until then the game runs exactly as unmodified.
+Don't set `DisableOnGameUpdate=false` unless you accept running unaudited.
+
+## Building from source
+
+- Requirements: .NET SDK 8, the game installed with BepInEx 5.4.23.x (the `.csproj`
+  files reference the game's `Managed` folder and `BepInEx\core` from there; change `GameDir` if yours differs).
+- `dotnet build src/<Mod>/<Mod>.csproj -c Release` builds and copies the DLL into `BepInEx\plugins`. The copy only
+  works while the game is closed (BepInEx keeps plugin DLLs locked); `-p:Deploy=false` skips it.
+- The verification tools in `tests/` are run after every build; each mod's README lists its in-game tests.
