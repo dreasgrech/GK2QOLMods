@@ -1,0 +1,8 @@
+# Normalise line endings for text, keep binaries untouched
+* text=auto
+*.cs text
+*.csproj text
+*.md text
+*.ps1 text
+*.dll binary
+*.png binary
