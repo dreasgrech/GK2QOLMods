@@ -111,7 +111,7 @@ game's normal Remove mode and click.
 - **All-or-nothing patching.** If any patch fails to apply, all of that mod's patches are removed and the game runs
   unmodified.
 - **Move Building** is transactional: an interrupted move puts the building back exactly as it was, verified in-game
-  with fault injection ([results](src/GK2MoveBuilding/SAVE-SAFETY.md)). It refuses to run in co-op.
+  with fault injection. It refuses to run in co-op.
 
 ## Game updates
 
