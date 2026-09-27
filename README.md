@@ -118,11 +118,3 @@ game's normal Remove mode and click.
 After a game patch the mods disable themselves (see above) until the game's code has been compared against the
 audited build and the mods rebuilt with the new module version id. Until then the game runs exactly as unmodified.
 Don't set `DisableOnGameUpdate=false` unless you accept running unaudited.
-
-## Building from source
-
-- Requirements: .NET SDK 8, the game installed with BepInEx 5.4.23.x (the `.csproj`
-  files reference the game's `Managed` folder and `BepInEx\core` from there; change `GameDir` if yours differs).
-- `dotnet build src/<Mod>/<Mod>.csproj -c Release` builds and copies the DLL into `BepInEx\plugins`. The copy only
-  works while the game is closed (BepInEx keeps plugin DLLs locked); `-p:Deploy=false` skips it.
-- The verification tools in `tests/` are run after every build; each mod's README lists its in-game tests.
