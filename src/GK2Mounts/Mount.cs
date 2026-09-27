@@ -30,6 +30,7 @@ namespace GK2Mounts
         private static MountStyle activeStyle;
         private static float facingSign = 1f; // +1 when the donkey shows its right-facing sprite, -1 for left
         private static AnimationState lastMirrored = (AnimationState)(-1);
+        private static Transform bodySprite; // the donkey's "bdy" sprite; its offset from the root is what centering cancels
         private static Transform seatRoot;
         private static float seatApplied;
 
@@ -303,6 +304,19 @@ namespace GK2Mounts
                     t.gameObject.SetActive(cart);
                 }
                 donkey.MainWgoPart?.AnimationComponent?.SetWalkAnimationSpeedMultiplier(1.5f * pc.PhysicalBody.SpeedMultiplier);
+                bodySprite = null;
+                foreach (SpriteRenderer sr in donkey.GetComponentsInChildren<SpriteRenderer>(includeInactive: true))
+                {
+                    if (sr.name == "bdy")
+                    {
+                        bodySprite = sr.transform;
+                        break;
+                    }
+                }
+                if (bodySprite == null)
+                {
+                    Plugin.Log.LogWarning("Mount: body sprite 'bdy' not found on the mount prefab; using the fixed centering offset.");
+                }
             }
             catch (Exception e)
             {
@@ -319,38 +333,36 @@ namespace GK2Mounts
                 donkey.Data.MovableDirection = dir; // applied to the donkey's animator synchronously
             }
 
-            // The donkey has only left/right sprites. Its stepped-rotation preset shows the right-facing one only
-            // when the movement has a rightward component; straight up and straight down both resolve to left.
-            // Read the facing back from its animator so the centering always cancels the sprite's real offset.
-            facingSign = dir.x > 0.0001f ? 1f : -1f;
-            try
-            {
-                AnimationComponentBase anim = donkey.MainWgoPart?.AnimationComponent;
-                if (anim != null && anim.Animator != null && anim.Animator.isActiveAndEnabled)
-                {
-                    Vector2 shown = anim.GetDirection();
-                    if (Mathf.Abs(shown.x) > 0.01f)
-                    {
-                        facingSign = shown.x > 0f ? 1f : -1f;
-                    }
-                }
-            }
-            catch
-            {
-            }
-
             bool cart = activeStyle == MountStyle.Cart;
             float depth = cart ? Plugin.CartDepth.Value : Plugin.RideDepth.Value;
             float center = cart ? Plugin.CartCenterOffset.Value : Plugin.RideCenterOffset.Value;
+            Vector3 away = AwayFromCamera();
+            Vector3 right = Vector3.Cross(Vector3.up, away).normalized;
+
+            // The donkey has only left/right sprites, drawn 0.48 to the facing side of its root, and the animator
+            // mirrors them one evaluation after the direction changes. We run in LateUpdate, after that evaluation,
+            // and measure where the body sprite actually is relative to the root this frame, so the compensation
+            // always matches what is on screen, including the frames of a facing flip.
+            float lateral = 0f;
+            if (Mathf.Abs(center) > 0.0001f)
+            {
+                if (bodySprite != null && bodySprite)
+                {
+                    lateral = Vector3.Dot(bodySprite.position - donkey.transform.position, right);
+                }
+                else
+                {
+                    facingSign = dir.x > 0.0001f ? 1f : -1f;
+                    lateral = center * facingSign;
+                }
+            }
 
             // PlayerData.position is the 50 Hz physics value; the body transform is the Rigidbody-interpolated,
             // per-frame position the keeper is actually drawn at. Snap to the same pixel grid PlayerView uses so
             // the two sprites never disagree by a sub-pixel amount.
             Rigidbody rb = pc.PhysicalBody.Rb;
             Vector3 basePos = rb != null ? rb.transform.position : pd.position.Value;
-            Vector3 away = AwayFromCamera();
-            Vector3 right = Vector3.Cross(Vector3.up, away).normalized;
-            Vector3 target = basePos + away * depth - right * (center * facingSign);
+            Vector3 target = basePos + away * depth - right * lateral;
             donkey.Data.Position = VisualConsts.GetRoundedPosXYZ(target, PixelSize());
             AnimationState state = pd.charState.Value == AnimationState.Walk ? AnimationState.Walk : AnimationState.Idle;
             if (state != lastMirrored)
@@ -385,6 +397,7 @@ namespace GK2Mounts
             }
             donkey = null;
             partsReady = false;
+            bodySprite = null;
         }
 
         // ------------------------------------------------------------------ rider sprite
