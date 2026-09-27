@@ -1,4 +1,4 @@
-# GK2 QOL Mods
+# GK2 Quality Of Life Mods
 
 Quality-of-life BepInEx plugins for **Graveyard Keeper 2**. One feature per plugin; each is its own project and DLL,
 so you can install any subset.
@@ -81,6 +81,18 @@ Adds a **Move** row next to **Remove** in the build desk menu. Pick it and click
 preview appears for it, you place it (rotate as usual, overlapping its old spot is fine), and the building is
 relocated. You stay in move mode for the next one; Back returns to the menu. Alternatively hold **Left Ctrl** in the
 game's normal Remove mode and click.
+
+<p align="center">
+<img width="720" height="678" alt="image" src="https://github.com/user-attachments/assets/fca2f71b-1339-4d87-9896-561eb2e6cad3" />
+</p>
+
+<img width="2560" height="1440" alt="Graveyard Keeper 2 9_27_2026 3_32_51 PM" src="https://github.com/user-attachments/assets/f928602e-ef05-4e2c-9e4d-9af1294fedeb" />
+
+<img width="2560" height="1440" alt="Graveyard Keeper 2 9_27_2026 3_32_59 PM" src="https://github.com/user-attachments/assets/4d0e7c24-fab4-4abb-9c1c-16ad02842f62" />
+
+<img width="2560" height="1440" alt="Graveyard Keeper 2 9_27_2026 3_33_02 PM" src="https://github.com/user-attachments/assets/36a624d8-143f-47a7-b3ed-67003eda30c4" />
+<br/><br/>
+
 
 - The building stays **the same object**: chest contents, fuel, running crafts, upgrades and everything that refers
   to it (orders, porters, quests) are untouched. Nothing is paid or refunded and no build or demolition scripts run.
