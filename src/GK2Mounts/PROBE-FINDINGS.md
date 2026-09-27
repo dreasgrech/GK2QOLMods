@@ -1,7 +1,7 @@
 # Probe findings
 
-Runtime facts collected with `Probe/GK2MountProbe.dll`. Raw reports are kept next to the probe
-(`Probe/report-round1-RuinedTemple.txt`). Game build 25533739, MVID `97f92f0d-…`.
+Runtime facts collected with the probe plugin in `tools/GK2MountProbe/`. Raw reports and logs are kept next to it
+(`report-round1-RuinedTemple.txt`, `log-round2.txt`, `log-round3.txt`). Game build 25533739, MVID `97f92f0d-…`.
 
 ## Round 1 (2026-09-27, scene RuinedTemple, keeper's yard)
 
@@ -85,7 +85,7 @@ Native). Transparency sort mode CustomAxis (0,0,0), i.e. the game relies on the 
 - The donkey body sprite sits at local y 0.6 like the player's, so the rider's seat will need roughly +0.4 to +0.6
   on `main_character` to sit on its back; to be tuned with `PageUp`/`PageDown`.
 
-## Round 2 (2026-09-27, log in `Probe/log-round2.txt`)
+## Round 2 (2026-09-27, log in `tools/GK2MountProbe/log-round2.txt`)
 
 - **Script suppression works.** Both temp donkeys logged `Skipped attached script`, no exception window, no errors
   in the log.
@@ -103,7 +103,38 @@ Native). Transparency sort mode CustomAxis (0,0,0), i.e. the game relies on the 
 - Visual judgement (sorting at the depth steps, mirrored `Base` when facing flips, cart-less look, seat height) needs
   the screenshots from this run.
 
-### Still open (round 3)
+## Round 3 (2026-09-27, log in `tools/GK2MountProbe/log-round3.txt`, screenshots 22:24–22:26 in the user's Captures folder)
 
-Speed baseline at 1×; control-flag transitions while opening chests, working, climbing, fighting, sleeping and
-teleporting with the follower active; screenshots for the visual questions.
+**Speed is linear in the multiplier.** Steady-state walking speed, measured over 1 s windows:
+
+| Direction | 1.0× | 1.75× | ratio |
+|---|---|---|---|
+| left/right (X) | 3.9 u/s | 6.9 u/s | 1.77 |
+| up/down (Z) | 3.1 u/s | 5.5 u/s | 1.77 |
+
+Z is slower because the game scales the Z input by 0.8. The per-step damping model from round 2 predicted 4.0 / 7.0
+and 3.2 / 5.6, so it holds. A mount multiplier is therefore a direct "times N" on walking speed.
+
+**Control flags.** Opening a chest or the inventory flips `TakenControlType.ByUI`; walking through a scene door
+flips `ByTeleport` (the follower survived both teleports, so they were within the loaded scene). The SSM stayed in
+`FreePlayerState`. No bench, ladder or weapon was used this round, so `ByWork`/`ByLadder`/`ByAttack` remain
+unobserved but their handling is the same flag mechanism.
+
+**Visuals (16 screenshots, cropped and inspected):**
+
+- **The donkey draws about 0.48 units to the side of its data position**, to the right when facing right and to
+  the left when facing left. That is the prefab: the body sprite sits at local x −0.48 under the mirrored `Base`
+  root, so the visual centre flips with facing. A mount must pull the data position back by `0.48 × facingSign`
+  (the probe now does this, `F7` toggles it).
+- **Sorting is clean at every depth step.** No flicker. At depth 0 the donkey already draws over the rider's arm,
+  so a slightly negative depth (towards the camera) puts the donkey in front of the rider's legs while the raised
+  torso stays visible above its back: the classic riding silhouette. New probe defaults: depth −0.15, seat +0.5.
+- **Facing flips correctly** when walking left/right (Base mirrors). Walking up/down shows the side view facing the
+  last horizontal direction; acceptable for a sprite with two facings.
+- **Cart style works too**: with the cart shown the keeper stands where the driver would be, cart behind, donkey in
+  front, lantern lit at night. Worth offering as a second style (`Ride` / `Cart`) in the mod.
+- Cart parts toggled: 12 hidden, 11 shown (the corpse-shroud body stays off).
+
+### Still open (round 4)
+
+Confirm the riding silhouette with centering on, depth −0.15 and seat 0.5 (and fine-tune both), then build the mod.

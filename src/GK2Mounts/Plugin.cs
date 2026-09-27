@@ -1,0 +1,136 @@
+using System;
+using BepInEx;
+using BepInEx.Configuration;
+using BepInEx.Logging;
+using HarmonyLib;
+using UnityEngine;
+
+namespace GK2Mounts
+{
+    public enum MountStyle
+    {
+        Ride,
+        Cart,
+    }
+
+    // A rideable mount for Graveyard Keeper 2. Press the mount key and a donkey appears under the keeper; you walk
+    // faster while riding. The donkey is a temporary view only (the game's build-preview mechanism): it is never
+    // added to the world data, so nothing about it is saved. See README.md and FEASIBILITY.md.
+    [BepInPlugin(Guid, "GK2 Mounts", Version)]
+    public class Plugin : BaseUnityPlugin
+    {
+        public const string Guid = "anvil.gk2.mounts";
+        public const string Version = "0.1.0";
+
+        // Module version id of the Assembly-CSharp.dll this plugin was audited against.
+        private static readonly System.Guid AuditedGameMvid = new System.Guid("97f92f0d-a093-49fe-ba4d-74aa62fae81e");
+
+        internal static ManualLogSource Log;
+        internal static ConfigEntry<bool> Enabled;
+        internal static ConfigEntry<KeyCode> MountKey;
+        internal static ConfigEntry<MountStyle> Style;
+        internal static ConfigEntry<float> SpeedMultiplier;
+        internal static ConfigEntry<string> MountWgoId;
+        internal static ConfigEntry<bool> StayMountedThroughDoors;
+        internal static ConfigEntry<bool> ShowMessages;
+        internal static ConfigEntry<float> RideSeatOffset;
+        internal static ConfigEntry<float> RideDepth;
+        internal static ConfigEntry<float> RideCenterOffset;
+        internal static ConfigEntry<float> CartSeatOffset;
+        internal static ConfigEntry<float> CartDepth;
+        internal static ConfigEntry<float> CartCenterOffset;
+        internal static ConfigEntry<bool> DisableOnGameUpdate;
+
+        private Harmony harmony;
+
+        private void Awake()
+        {
+            Log = Logger;
+            Enabled = Config.Bind("General", "Enabled", true,
+                "Master switch. Press the mount key to summon a donkey under the keeper and ride it; press again to dismount.");
+            MountKey = Config.Bind("General", "MountKey", KeyCode.H,
+                "Key that mounts/dismounts. Pick one the game does not use.");
+            Style = Config.Bind("General", "Style", MountStyle.Ride,
+                "Ride: sit on the donkey's back. Cart: the donkey pulls its cart and the keeper stands in it. Takes effect on the next mount.");
+            SpeedMultiplier = Config.Bind("General", "SpeedMultiplier", 1.75f,
+                new ConfigDescription("Walking speed while mounted, as a multiple of normal (measured: exactly linear).", new AcceptableValueRange<float>(0.5f, 4f)));
+            MountWgoId = Config.Bind("General", "MountWgoId", "npc_donkey",
+                "World object id used for the mount's looks. Only npc_donkey has been tested.");
+            StayMountedThroughDoors = Config.Bind("General", "StayMountedThroughDoors", true,
+                "Keep riding after a scene change (the donkey is re-summoned in the new scene). Off: dismount at every door.");
+            ShowMessages = Config.Bind("General", "ShowMessages", true,
+                "Show a thought bubble when the keeper cannot mount and why.");
+
+            RideSeatOffset = Config.Bind("Ride", "SeatOffset", -0.15f,
+                "Vertical offset of the keeper's sprite while riding. Negative lowers the keeper so the legs hide behind the donkey's body.");
+            RideDepth = Config.Bind("Ride", "Depth", -0.15f,
+                "Donkey offset towards the camera (negative) or away from it (positive), in world units. Negative draws it in front of the keeper's legs.");
+            RideCenterOffset = Config.Bind("Ride", "CenterOffset", 0.48f,
+                "The donkey sprite is drawn this far to its facing side of its position (prefab offset). The mount is shifted back by this amount so the body sits under the keeper.");
+
+            CartSeatOffset = Config.Bind("Cart", "SeatOffset", 0f, "Vertical offset of the keeper's sprite in cart style.");
+            CartDepth = Config.Bind("Cart", "Depth", 0f, "Donkey depth offset in cart style (see Ride.Depth).");
+            CartCenterOffset = Config.Bind("Cart", "CenterOffset", 0f,
+                "Centering in cart style. 0 leaves the donkey ahead of the keeper, who then stands in the cart.");
+
+            DisableOnGameUpdate = Config.Bind("Safety", "DisableOnGameUpdate", true,
+                "Do not patch anything if the game's code has changed since this mod was audited. Rebuild/re-audit after game updates.");
+
+            System.Guid gameMvid = typeof(WgoData).Assembly.ManifestModule.ModuleVersionId;
+            if (gameMvid != AuditedGameMvid)
+            {
+                if (DisableOnGameUpdate.Value)
+                {
+                    Log.LogError($"Game code changed since this mod was audited (MVID {gameMvid}, expected {AuditedGameMvid}). Mod is DISABLED; the game runs unmodified. Set Safety.DisableOnGameUpdate=false to force-enable at your own risk.");
+                    return;
+                }
+                Log.LogWarning($"Game code changed since this mod was audited (MVID {gameMvid}). Running anyway because DisableOnGameUpdate=false.");
+            }
+
+            harmony = new Harmony(Guid);
+            try
+            {
+                Access.Verify();
+                harmony.PatchAll(typeof(Plugin).Assembly);
+            }
+            catch (Exception e)
+            {
+                harmony.UnpatchSelf();
+                harmony = null;
+                Log.LogError($"Patching failed; all patches removed, game runs unmodified. {e}");
+                return;
+            }
+            Log.LogInfo($"GK2 Mounts {Version} loaded. Mount key: {MountKey.Value}, style {Style.Value}, speed x{SpeedMultiplier.Value}.");
+        }
+
+        private void Update()
+        {
+            if (harmony == null || !Enabled.Value)
+            {
+                return;
+            }
+            try
+            {
+                Mount.Tick();
+            }
+            catch (Exception e)
+            {
+                Log.LogError($"Mount update failed; dismounting. {e}");
+                Mount.ForceCleanup("error");
+            }
+        }
+
+        private void OnDestroy()
+        {
+            try
+            {
+                Mount.ForceCleanup("plugin unloaded");
+            }
+            catch
+            {
+            }
+            harmony?.UnpatchSelf();
+            harmony = null;
+        }
+    }
+}

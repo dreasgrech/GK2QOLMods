@@ -12,6 +12,7 @@ launching it. Each is run after every build and after every game update. All pat
 | `HarmonyHarness-BuiltCount` | Built Count | .NET Framework 4.8 process that loads the game assemblies and applies the mod's patches with HarmonyX: MVID match, patch classes construct, `PatchAll` succeeds, lists the patched methods. | `dotnet build -c Release` then run `bin\Release\net48\HarmonyHarness-BuiltCount.exe` |
 | `CecilScan-MoveBuilding` | Move Building | Mono.Cecil: every IL reference into the game assemblies resolves; every by-name reflection target (fields, methods, property setters) exists with the expected type; every patch target is a single non-abstract method. | `dotnet run -c Release` |
 | `CecilScan-OwnedCount` | Owned Count | Mono.Cecil: every IL reference into the game assemblies resolves; `UITooltip.instance`, `smallDescriptionTextStyle` and the `AddItemWidgets` patch target exist. | `dotnet run -c Release` |
+| `CecilScan-Mounts` | Mounts | Mono.Cecil: every IL reference into the game assemblies resolves; the `CreateScript` patch target and the `Wgo`/`WgoData`/animation members the mount calls exist as single overloads. | `dotnet run -c Release` |
 
 Why no Harmony harness for Global Storage and Move Building: both touch game interfaces with default interface
 methods (`IWorker` and others), which the .NET Framework runtime can't load, and BepInEx 5's Harmony build doesn't

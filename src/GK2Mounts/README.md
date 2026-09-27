@@ -1,50 +1,80 @@
-# GK2 Mounts (in design)
+# GK2 Mounts
 
-Goal: a rideable mount for Graveyard Keeper 2. The game has no mount concept of its own; see
-[`FEASIBILITY.md`](FEASIBILITY.md) for what exists, how the player and NPC visuals work, the proposed design
-(temporary donkey view glued to the player + speed multiplier + raised rider) and the risk assessment.
+BepInEx plugin for Graveyard Keeper 2: press a key and the keeper rides a donkey. You walk 1.75× as fast while
+mounted (configurable), the donkey follows your every step, faces the way you walk and animates when you do. Press
+the key again to get off. Two looks: **Ride** (on the donkey's back) and **Cart** (the donkey pulls its cart and you
+stand in it).
 
-Status log:
+Version 0.1.0 (first playable build), built and audited against game build 25533739 (Assembly-CSharp MVID `97f92f0d-…`).
+Design notes: [`FEASIBILITY.md`](FEASIBILITY.md); runtime facts the design rests on: [`PROBE-FINDINGS.md`](PROBE-FINDINGS.md).
 
-- **2026-09-27** Feasibility study done. Probe plugin written (`Probe/`) to collect the runtime facts the design
-  still needs. No mount plugin yet.
-- **2026-09-27** Probe round 1 ran (report archived in `Probe/`). Findings in [`PROBE-FINDINGS.md`](PROBE-FINDINGS.md),
-  including one design change: the donkey's attached flow script starts for every new `WgoData` and must be
-  suppressed for the temp mount. Hotkey experiments still to run (round 2).
+The game has no mount of its own. The donkey you ride is the corpse-delivery donkey's *looks* only; the real donkey
+NPC and its schedule are untouched.
 
-## Probe (`Probe/GK2MountProbe.dll`)
+## Settings (`BepInEx\config\anvil.gk2.mounts.cfg`, read at game start)
 
-A development-only BepInEx plugin. It is not part of `dist/` and is not meant for players. It never changes saved
-data: everything it spawns is a temp object exactly like the game's build preview, and the definition's attached
-flow script is suppressed for those spawns (see the findings for why).
+| Key | Default | Meaning |
+|---|---|---|
+| `General.Enabled` | true | Master switch. |
+| `General.MountKey` | `H` | Mount / dismount. Pick a key the game does not use. |
+| `General.Style` | `Ride` | `Ride` or `Cart`. Applies on the next mount. |
+| `General.SpeedMultiplier` | 1.75 | Walking speed while mounted, times normal. Measured to scale exactly linearly. |
+| `General.MountWgoId` | `npc_donkey` | Which world object's looks to use. Only the donkey is tested. |
+| `General.StayMountedThroughDoors` | true | After a scene change the donkey is re-summoned and you keep riding. |
+| `General.ShowMessages` | true | Thought bubble when you cannot mount ("I'm busy.", "Not in a co-op game."). |
+| `Ride.SeatOffset` | -0.15 | Vertical shift of the keeper's sprite; negative hides the legs behind the donkey. |
+| `Ride.Depth` | -0.15 | Donkey shift towards (negative) or away from the camera. |
+| `Ride.CenterOffset` | 0.48 | Compensates the prefab's sideways sprite offset so the body sits under the keeper. |
+| `Cart.SeatOffset` / `Cart.Depth` / `Cart.CenterOffset` | 0 / 0 / 0 | Same three for cart style. With centering 0 the donkey walks ahead and the keeper stands in the cart. |
+| `Safety.DisableOnGameUpdate` | true | Do nothing if the game's code changed since the audit. |
 
-What it does after a save is loaded (about 6 s later, once per load; `F8` repeats it):
+## How it works
 
-1. Writes `BepInEx\GK2-mount-probe.txt` with: camera setup; the player's controller, physics body, view and
-   animation component fields (including private serialized ones), the player's full GameObject hierarchy with
-   every component, sprite renderer (sprite, sorting layer/order, shader), collider and Rigidbody setting, the
-   player Animator (clips, parameters, layers); the `WGODef` of `npc_donkey`, `cow` and `npc_donkey_test`; every
-   existing instance of those in the world and its view if loaded.
-2. Spawns those three as temporary samples in a row to the right of the player, waits 90 frames for their prefabs,
-   and dumps each one the same way (variations such as with/without cart, animation component, animator clips and
-   parameters, hierarchy). They stay for 25 s so you can screenshot them, then are destroyed.
+- **Speed**: `PlayerPhysicalBody.SpeedMultiplier` is a public property the game itself uses (the bow and sword states
+  set it to 0.5 while aiming). The mod sets it to the configured value while mounted and to 1 on dismount. Movement
+  is force-based with linear damping, and the probe measured top speed scaling exactly with the multiplier.
+- **The donkey** is a temporary world object created the same way as the game's build preview:
+  `new WgoData("npc_donkey", …) { isTempObject = true }` spawned with `Wgo.Spawn`. Temp objects are never added
+  to `WorldData` or to any zone list, so they never reach the save file. Its colliders are disabled (as the game does
+  for the carried fight flag and for the preview), and the cart parts are shown or hidden by name per style.
+- **Following**: every frame the donkey's `Position` is the keeper's position plus the depth and centering offsets,
+  its `MovableDirection` is the keeper's facing, and its animator state mirrors the keeper's walk/idle. The prefab's
+  body sprite is drawn 0.48 units to its facing side, which the centering cancels.
+- **Rider**: the keeper's sprites hang under one transform (the one carrying the Animator); its local height is
+  shifted by `SeatOffset` while mounted and restored on dismount.
+- **Attached script suppression** (the one Harmony patch): `WgoData`'s constructor starts the definition's attached
+  flow script, and the donkey's script would teleport it to its delivery point and walk its route. A prefix on
+  `WgoDataScriptsManager.CreateScript` skips creation only while the mod is constructing its own `WgoData`.
+- **Dismount rules**: anything that takes the keeper out of free walking dismounts automatically: work, ladders,
+  building, planting, fishing, drawing a weapon, sleep, death, cutscenes, co-op. Opening chests or the inventory does
+  not, and doors do not (with `StayMountedThroughDoors` the donkey is re-summoned in the new scene).
 
-Hotkey experiments (all logged to `BepInEx\LogOutput.log`, prefixed `[speed]`, `[follow]`, `[seat]`, `[state]`):
+## Safety
 
-| Key | Experiment |
-|---|---|
-| `F9` | Toggle `SpeedMultiplier` 1.0 ↔ 1.75. Walk in a straight line; measured speed (units/s) is logged every second. Tells us how the force-based movement responds and how it feels. |
-| `F10` | Toggle a temporary `npc_donkey` that follows the player: position, facing, walk/idle mirrored from the player. Colliders disabled. Shows whether the sprites sort correctly and how the animation looks. |
-| `F11` | Cycle the follower's depth offset (-0.3 … +0.3, positive = behind the player). |
-| `F12` | Show/hide the follower's cart, wheels and lantern (the prefab has no cart-less variation, so the parts are toggled by name). Spawns cart-less by default (`FollowWithCart`). |
-| `PageUp` / `PageDown` | Raise/lower the rider (player view) by 0.05 while the follower is active. Tests the `PlayerView.LateUpdate` postfix approach. |
+- **No save changes.** The donkey is a temp object outside `WorldData`; the speed multiplier lives on a
+  MonoBehaviour; the seat offset on a transform. Nothing new is serialized. Saves made while mounted load without
+  the mod exactly as they would otherwise (you are simply on foot).
+- **Worst case** if the plugin crashes mid-ride: a donkey view that lingers until the scene unloads and a faster walk
+  until the next dismount or restart. Nothing persists.
+- The real `npc_donkey` NPC is never touched; the mod only reads its prefab.
+- MVID guard, `Access.Verify()` of every game member used, and all-or-nothing patching as in the other mods.
+  Refuses in co-op.
 
-All keys and the ids/values are in `BepInEx\config\anvil.gk2.mountprobe.cfg`. State-machine and animation-state
-transitions are logged as they happen (`LogStateChanges`), so doing things while the follower is active (open a
-chest, work a bench, climb a ladder, draw a weapon, sleep, teleport) shows exactly which transitions a real mount
-must react to.
+## In-game test list
 
-What to send back: `GK2-mount-probe.txt`, `LogOutput.log`, and screenshots of the samples and of the follower
-with a few depth/seat settings.
+1. Log shows `GK2 Mounts 0.1.0 loaded.`; no errors.
+2. Press `H` in the open: donkey appears under you, you sit on it (legs hidden), thought bubble none. Walk all four
+   directions: donkey faces left/right with you, walk animation runs, speed clearly higher.
+3. Press `H` again: donkey gone, normal speed, keeper at normal height.
+4. Open a chest and your inventory while mounted: still mounted afterwards.
+5. Walk through a door to another scene: donkey re-appears, still fast. (`StayMountedThroughDoors`)
+6. Use a workbench / climb a ladder / draw a weapon while mounted: automatic dismount, normal speed after.
+7. Try to mount while working or in build mode: refused with a bubble.
+8. Sleep while mounted: dismounted; next morning normal.
+9. Set `Style = Cart`, restart, mount: donkey ahead with cart and lantern, keeper standing in the cart.
+10. Quit to menu while mounted, load again: on foot, normal speed, no errors in the log.
 
-Remove `GK2MountProbe.dll` from `BepInEx\plugins` when done; it has no purpose in normal play.
+## Probe (`tools/GK2MountProbe/`)
+
+Development-only plugin used to gather the facts above; it lives outside `src/` with its archived reports and logs.
+Not part of `dist/` and not installed. What it dumps and its hotkeys: [`tools/GK2MountProbe/README.md`](../../tools/GK2MountProbe/README.md).

@@ -31,6 +31,8 @@ namespace GK2MountProbe
         private static bool followerCollidersDone;
         private static int depthIndex = 3;
         private static bool cartVisible;
+        private static bool centering = true;
+        private static float facingSign = 1f; // +1 facing right, -1 facing left; kept while facing up/down
         private static AnimationState lastMirroredState = (AnimationState)(-1);
         internal static float SeatOffset;
 
@@ -120,6 +122,11 @@ namespace GK2MountProbe
             {
                 depthIndex = (depthIndex + 1) % DepthSteps.Length;
                 Plugin.Log.LogInfo($"[follow] depth offset = {DepthSteps[depthIndex]} (positive = away from camera, behind the player)");
+            }
+            if (input.GetKeyDown(Plugin.CenterKey.Value))
+            {
+                centering = !centering;
+                Plugin.Log.LogInfo($"[follow] centering {(centering ? "ON" : "OFF")} (offset {Plugin.FollowCenterOffset.Value} against facing)");
             }
             if (input.GetKeyDown(Plugin.CartKey.Value))
             {
@@ -225,9 +232,20 @@ namespace GK2MountProbe
                 Plugin.Log.LogInfo($"[follow] parts loaded: mainPart={follower.MainWgoPart.name} animComp={(follower.MainWgoPart.AnimationComponent ? follower.MainWgoPart.AnimationComponent.GetType().Name : "null")}. Colliders disabled, cart {(cartVisible ? "shown" : "hidden")} ({cartParts} parts).");
             }
             PlayerData pd = pc.PlayerData;
-            Vector3 target = pd.position.Value + TempSpawner.AwayFromCamera() * DepthSteps[depthIndex];
-            follower.Data.Position = target;
             Vector2 dir = pd.Direction;
+            if (Mathf.Abs(dir.x) > 0.3f)
+            {
+                facingSign = dir.x > 0f ? 1f : -1f;
+            }
+            Vector3 away = TempSpawner.AwayFromCamera();
+            Vector3 right = Vector3.Cross(Vector3.up, away).normalized;
+            Vector3 target = pd.position.Value + away * DepthSteps[depthIndex];
+            if (centering)
+            {
+                // The body sprite is drawn 0.48 to the facing side of the data position; pull the data position back.
+                target -= right * (Plugin.FollowCenterOffset.Value * facingSign);
+            }
+            follower.Data.Position = target;
             if (dir.sqrMagnitude > 0.0001f)
             {
                 follower.Data.MovableDirection = dir;

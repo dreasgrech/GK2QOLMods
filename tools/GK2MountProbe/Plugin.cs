@@ -36,6 +36,8 @@ namespace GK2MountProbe
         internal static ConfigEntry<KeyCode> SeatDownKey;
         internal static ConfigEntry<KeyCode> CartKey;
         internal static ConfigEntry<bool> FollowWithCart;
+        internal static ConfigEntry<float> FollowCenterOffset;
+        internal static ConfigEntry<KeyCode> CenterKey;
         internal static ConfigEntry<float> TestSpeedMultiplier;
         internal static ConfigEntry<string> FollowWgoId;
         internal static ConfigEntry<float> FollowDepthOffset;
@@ -77,9 +79,12 @@ namespace GK2MountProbe
 
             TestSpeedMultiplier = Config.Bind("Experiments", "SpeedMultiplier", 1.75f, "Multiplier applied by the speed experiment.");
             FollowWgoId = Config.Bind("Experiments", "FollowWgoId", "npc_donkey", "WGO id spawned by the follow experiment.");
-            FollowDepthOffset = Config.Bind("Experiments", "FollowDepthOffset", 0.15f, "Initial depth offset of the follower, in world units away from the camera.");
+            FollowDepthOffset = Config.Bind("Experiments", "FollowDepthOffset", -0.15f, "Initial depth offset of the follower, in world units away from the camera (negative = towards the camera, in front of the rider's legs).");
             FollowWithCart = Config.Bind("Experiments", "FollowWithCart", false, "Spawn the follower with its cart, wheels and lantern visible.");
-            SeatHeight = Config.Bind("Experiments", "SeatHeight", 0f, "Initial rider height offset while the follower is active.");
+            FollowCenterOffset = Config.Bind("Experiments", "FollowCenterOffset", 0.48f,
+                "The donkey body sprite sits 0.48 units to the side of its data position (prefab offset, flips with facing). The follower is shifted by this much against the facing so the body is centred under the player. 0 disables.");
+            CenterKey = Config.Bind("Keys", "ToggleCentering", KeyCode.F7, "Toggle the facing-aware centering of the follower.");
+            SeatHeight = Config.Bind("Experiments", "SeatHeight", 0.5f, "Initial rider height offset while the follower is active.");
 
             DisableOnGameUpdate = Config.Bind("Safety", "DisableOnGameUpdate", true,
                 "Do nothing if the game's code has changed since this probe was written.");
@@ -107,7 +112,7 @@ namespace GK2MountProbe
                 Log.LogError($"Patching failed; probe disabled. {e}");
                 return;
             }
-            Log.LogInfo($"GK2 Mount Probe {Version} loaded. Report: {Report.OutputPath}. Keys: {ReportKey.Value}=report, {SpeedKey.Value}=speed x{TestSpeedMultiplier.Value}, {FollowKey.Value}=follow {FollowWgoId.Value}, {DepthKey.Value}=depth, {CartKey.Value}=cart, {SeatUpKey.Value}/{SeatDownKey.Value}=seat.");
+            Log.LogInfo($"GK2 Mount Probe {Version} loaded. Report: {Report.OutputPath}. Keys: {ReportKey.Value}=report, {SpeedKey.Value}=speed x{TestSpeedMultiplier.Value}, {FollowKey.Value}=follow {FollowWgoId.Value}, {DepthKey.Value}=depth, {CartKey.Value}=cart, {CenterKey.Value}=centering, {SeatUpKey.Value}/{SeatDownKey.Value}=seat.");
         }
 
         internal static bool IsInGame(out PlayerController pc, out GameScene scene)
