@@ -1,0 +1,200 @@
+[Message:   BepInEx] BepInEx 5.4.23.5 - GraveyardKeeper2 (9/26/2026 8:51:58 AM)
+[Info   :   BepInEx] Running under Unity v6000.3.9.8034645
+[Info   :   BepInEx] CLR runtime version: 4.0.30319.42000
+[Info   :   BepInEx] Supports SRE: True
+[Info   :   BepInEx] System platform: Bits64, Windows
+[Message:   BepInEx] Preloader started
+[Info   :   BepInEx] Loaded 1 patcher method from [BepInEx.Preloader 5.4.23.5]
+[Info   :   BepInEx] 1 patcher plugin loaded
+[Info   :   BepInEx] Patching [UnityEngine.CoreModule] with [BepInEx.Chainloader]
+[Message:   BepInEx] Preloader finished
+[Message:   BepInEx] Chainloader ready
+[Message:   BepInEx] Chainloader started
+[Info   :   BepInEx] 5 plugins to load
+[Info   :   BepInEx] Loading [GK2 Built Count 1.0.3]
+[Info   :GK2 Built Count] GK2 Built Count 1.0.3 loaded.
+[Info   :   BepInEx] Loading [GK2 Global Storage 1.1.2]
+[Info   :GK2 Global Storage] GK2 Global Storage 1.1.2 loaded.
+[Info   :   BepInEx] Loading [GK2 Mount Probe 0.1.0]
+[Info   :GK2 Mount Probe] GK2 Mount Probe 0.1.0 loaded. Report: C:\Games\Graveyard Keeper 2\BepInEx\GK2-mount-probe.txt. Keys: F8=report, F9=speed x1.75, F10=follow npc_donkey, F11=depth, F12=cart, PageUp/PageDown=seat.
+[Info   :   BepInEx] Loading [GK2 Move Building 1.1.3]
+[Info   :GK2 Move Building] GK2 Move Building 1.1.3 loaded.
+[Info   :   BepInEx] Loading [GK2 Owned Count 1.0.1]
+[Info   :GK2 Owned Count] GK2 Owned Count 1.0.1 loaded.
+[Message:   BepInEx] Chainloader startup complete
+[Info   :GK2 Mount Probe] [state] SSM - -> null  controls=True kinematic=False
+[Info   :GK2 Mount Probe] [state] charState -1 -> Idle
+[Info   :GK2 Mount Probe] [state] SSM null -> FreePlayerState  controls=True kinematic=False
+[Info   :GK2 Mount Probe] [state] charState Idle -> Walk
+[Info   :GK2 Mount Probe] Report: collecting...
+[Info   :GK2 Mount Probe] Skipped attached script [npc_donkey] for temp [npc_donkey].
+[Info   :GK2 Mount Probe] Spawned temp [npc_donkey] uid=dfe2a7c6-c6ab-4fc4-9ebe-ac02a79626e8 at (-97.41, -0.01, -81.22) (isTempObject=True, zone=none)
+[Info   :GK2 Mount Probe] Skipped attached script [npc_donkey_test] for temp [npc_donkey_test].
+[Info   :GK2 Mount Probe] Spawned temp [npc_donkey_test] uid=d77cf6a0-4814-4c83-8c66-bfa745d13959 at (-92.41, -0.01, -81.22) (isTempObject=True, zone=none)
+[Info   :GK2 Mount Probe] [state] charState Walk -> Idle
+[Info   :GK2 Mount Probe] Report written: C:\Games\Graveyard Keeper 2\BepInEx\GK2-mount-probe.txt (532119 chars). Samples stay for 25s.
+[Info   :GK2 Mount Probe] [state] charState Idle -> Walk
+[Info   :GK2 Mount Probe] [state] charState Walk -> Idle
+[Info   :GK2 Mount Probe] [state] charState Idle -> Walk
+[Info   :GK2 Mount Probe] [state] charState Walk -> Idle
+[Info   :GK2 Mount Probe] [state] charState Idle -> Walk
+[Info   :GK2 Mount Probe] [state] charState Walk -> Idle
+[Info   :GK2 Mount Probe] [state] charState Idle -> Walk
+[Info   :GK2 Mount Probe] [state] charState Walk -> Idle
+[Info   :GK2 Mount Probe] [speed] ON SpeedMultiplier=1.75 (physicsConfig.speed=50). Walk in a straight line; measured speed is logged every second.
+[Info   :GK2 Mount Probe] [state] charState Idle -> Walk
+[Info   :GK2 Mount Probe] [speed] mult=1.75 measured=5.17 u/s (moved 0.35s of last second)  rb.horizontalVelocity=6.80  state=FreePlayerState
+[Info   :GK2 Mount Probe] [speed] mult=1.75 measured=5.82 u/s (moved 1.01s of last second)  rb.horizontalVelocity=5.51  state=FreePlayerState
+[Info   :GK2 Mount Probe] [state] charState Walk -> Idle
+[Info   :GK2 Mount Probe] [speed] mult=1.75 measured=6.22 u/s (moved 0.92s of last second)  rb.horizontalVelocity=0.00  state=FreePlayerState
+[Info   :GK2 Mount Probe] [speed] OFF SpeedMultiplier=1 (physicsConfig.speed=50). Walk in a straight line; measured speed is logged every second.
+[Info   :GK2 Mount Probe] [state] charState Idle -> Walk
+[Info   :GK2 Mount Probe] [state] charState Walk -> Idle
+[Info   :GK2 Mount Probe] [state] charState Idle -> Walk
+[Info   :GK2 Mount Probe] [speed] ON SpeedMultiplier=1.75 (physicsConfig.speed=50). Walk in a straight line; measured speed is logged every second.
+[Info   :GK2 Mount Probe] [speed] OFF SpeedMultiplier=1 (physicsConfig.speed=50). Walk in a straight line; measured speed is logged every second.
+[Info   :GK2 Mount Probe] [state] charState Walk -> Idle
+[Info   :GK2 Mount Probe] [state] charState Idle -> Walk
+[Info   :GK2 Mount Probe] [state] charState Walk -> Idle
+[Info   :GK2 Mount Probe] Skipped attached script [npc_donkey] for temp [npc_donkey].
+[Info   :GK2 Mount Probe] Spawned temp [npc_donkey] uid=29fe8f47-f972-47bc-908f-cd4431f1a013 at (12.24, 5.99, 15.78) (isTempObject=True, zone=none)
+[Info   :GK2 Mount Probe] [follow] ON id=npc_donkey depth=0.15 seat=0
+[Info   :GK2 Mount Probe] [follow] parts loaded: mainPart=npc_donkey(Clone) animComp=AnimationComponent. Colliders disabled, cart hidden (12 parts).
+[Info   :GK2 Mount Probe] [state] charState Idle -> Walk
+[Info   :GK2 Mount Probe] [state] charState Walk -> Idle
+[Info   :GK2 Mount Probe] [state] charState Idle -> Walk
+[Info   :GK2 Mount Probe] [state] charState Walk -> Idle
+[Info   :GK2 Mount Probe] [state] charState Idle -> Walk
+[Info   :GK2 Mount Probe] [state] charState Walk -> Idle
+[Info   :GK2 Mount Probe] [follow] depth offset = 0.3 (positive = away from camera, behind the player)
+[Info   :GK2 Mount Probe] [state] charState Idle -> Walk
+[Info   :GK2 Mount Probe] [follow] depth offset = -0.3 (positive = away from camera, behind the player)
+[Info   :GK2 Mount Probe] [follow] depth offset = -0.15 (positive = away from camera, behind the player)
+[Info   :GK2 Mount Probe] [follow] depth offset = 0 (positive = away from camera, behind the player)
+[Info   :GK2 Mount Probe] [follow] depth offset = 0.15 (positive = away from camera, behind the player)
+[Info   :GK2 Mount Probe] [follow] depth offset = 0.3 (positive = away from camera, behind the player)
+[Info   :GK2 Mount Probe] [follow] depth offset = -0.3 (positive = away from camera, behind the player)
+[Info   :GK2 Mount Probe] [follow] depth offset = -0.15 (positive = away from camera, behind the player)
+[Info   :GK2 Mount Probe] [follow] depth offset = 0 (positive = away from camera, behind the player)
+[Info   :GK2 Mount Probe] [follow] depth offset = 0.15 (positive = away from camera, behind the player)
+[Info   :GK2 Mount Probe] [follow] depth offset = 0.3 (positive = away from camera, behind the player)
+[Info   :GK2 Mount Probe] [state] charState Walk -> Idle
+[Info   :GK2 Mount Probe] [state] charState Idle -> Walk
+[Info   :GK2 Mount Probe] [state] charState Walk -> Idle
+[Info   :GK2 Mount Probe] [state] charState Idle -> Walk
+[Info   :GK2 Mount Probe] [state] charState Walk -> Idle
+[Info   :GK2 Mount Probe] [follow] depth offset = -0.3 (positive = away from camera, behind the player)
+[Info   :GK2 Mount Probe] [follow] cart shown (11 parts)
+[Info   :GK2 Mount Probe] [state] charState Idle -> Walk
+[Info   :GK2 Mount Probe] [state] charState Walk -> Idle
+[Info   :GK2 Mount Probe] [state] charState Idle -> Walk
+[Info   :GK2 Mount Probe] [state] charState Walk -> Idle
+[Info   :GK2 Mount Probe] [state] charState Idle -> Walk
+[Info   :GK2 Mount Probe] [state] charState Walk -> Idle
+[Info   :GK2 Mount Probe] [seat] rider offset = -0.05
+[Info   :GK2 Mount Probe] [seat] rider offset = -0.10
+[Info   :GK2 Mount Probe] [seat] rider offset = -0.05
+[Info   :GK2 Mount Probe] [seat] rider offset = 0.00
+[Info   :GK2 Mount Probe] [seat] rider offset = 0.05
+[Info   :GK2 Mount Probe] [seat] rider offset = 0.10
+[Info   :GK2 Mount Probe] [seat] rider offset = 0.15
+[Info   :GK2 Mount Probe] [seat] rider offset = 0.20
+[Info   :GK2 Mount Probe] [seat] rider offset = 0.25
+[Info   :GK2 Mount Probe] [seat] rider offset = 0.30
+[Info   :GK2 Mount Probe] [seat] rider offset = 0.35
+[Info   :GK2 Mount Probe] [seat] rider offset = 0.40
+[Info   :GK2 Mount Probe] [seat] rider offset = 0.45
+[Info   :GK2 Mount Probe] [seat] rider offset = 0.50
+[Info   :GK2 Mount Probe] [seat] rider offset = 0.55
+[Info   :GK2 Mount Probe] [seat] rider offset = 0.60
+[Info   :GK2 Mount Probe] [seat] rider offset = 0.55
+[Info   :GK2 Mount Probe] [seat] rider offset = 0.50
+[Info   :GK2 Mount Probe] [seat] rider offset = 0.45
+[Info   :GK2 Mount Probe] [seat] rider offset = 0.40
+[Info   :GK2 Mount Probe] [seat] rider offset = 0.35
+[Info   :GK2 Mount Probe] [seat] rider offset = 0.30
+[Info   :GK2 Mount Probe] [seat] rider offset = 0.25
+[Info   :GK2 Mount Probe] [seat] rider offset = 0.20
+[Info   :GK2 Mount Probe] [seat] rider offset = 0.15
+[Info   :GK2 Mount Probe] [seat] rider offset = 0.10
+[Info   :GK2 Mount Probe] [seat] rider offset = 0.05
+[Info   :GK2 Mount Probe] [seat] rider offset = 0.00
+[Info   :GK2 Mount Probe] [seat] rider offset = -0.05
+[Info   :GK2 Mount Probe] [seat] rider offset = -0.10
+[Info   :GK2 Mount Probe] [seat] rider offset = -0.15
+[Info   :GK2 Mount Probe] [seat] rider offset = -0.20
+[Info   :GK2 Mount Probe] [seat] rider offset = -0.25
+[Info   :GK2 Mount Probe] [seat] rider offset = -0.30
+[Info   :GK2 Mount Probe] [seat] rider offset = -0.35
+[Info   :GK2 Mount Probe] [seat] rider offset = -0.40
+[Info   :GK2 Mount Probe] [seat] rider offset = -0.45
+[Info   :GK2 Mount Probe] [seat] rider offset = -0.50
+[Info   :GK2 Mount Probe] [seat] rider offset = -0.55
+[Info   :GK2 Mount Probe] [state] charState Idle -> Walk
+[Info   :GK2 Mount Probe] [state] charState Walk -> Idle
+[Info   :GK2 Mount Probe] [state] charState Idle -> Walk
+[Info   :GK2 Mount Probe] [state] charState Walk -> Idle
+[Info   :GK2 Mount Probe] [state] charState Idle -> Walk
+[Info   :GK2 Mount Probe] [state] charState Walk -> Idle
+[Info   :GK2 Mount Probe] [state] charState Idle -> Walk
+[Info   :GK2 Mount Probe] [state] charState Walk -> Idle
+[Info   :GK2 Mount Probe] [follow] depth offset = -0.15 (positive = away from camera, behind the player)
+[Info   :GK2 Mount Probe] [follow] depth offset = 0 (positive = away from camera, behind the player)
+[Info   :GK2 Mount Probe] [follow] depth offset = 0.15 (positive = away from camera, behind the player)
+[Info   :GK2 Mount Probe] [state] charState Idle -> Walk
+[Info   :GK2 Mount Probe] [state] charState Walk -> Idle
+[Info   :GK2 Mount Probe] [state] charState Idle -> Walk
+[Info   :GK2 Mount Probe] [state] charState Walk -> Idle
+[Info   :GK2 Mount Probe] [seat] rider offset = -0.50
+[Info   :GK2 Mount Probe] [seat] rider offset = -0.45
+[Info   :GK2 Mount Probe] [seat] rider offset = -0.40
+[Info   :GK2 Mount Probe] [seat] rider offset = -0.35
+[Info   :GK2 Mount Probe] [seat] rider offset = -0.30
+[Info   :GK2 Mount Probe] [seat] rider offset = -0.25
+[Info   :GK2 Mount Probe] [seat] rider offset = -0.20
+[Info   :GK2 Mount Probe] [seat] rider offset = -0.15
+[Info   :GK2 Mount Probe] [seat] rider offset = -0.10
+[Info   :GK2 Mount Probe] [seat] rider offset = -0.05
+[Info   :GK2 Mount Probe] [seat] rider offset = 0.00
+[Info   :GK2 Mount Probe] [seat] rider offset = 0.05
+[Info   :GK2 Mount Probe] [state] charState Idle -> Walk
+[Info   :GK2 Mount Probe] [state] charState Walk -> Idle
+[Info   :GK2 Mount Probe] [seat] rider offset = 0.00
+[Info   :GK2 Mount Probe] [seat] rider offset = -0.05
+[Info   :GK2 Mount Probe] [state] charState Idle -> Walk
+[Info   :GK2 Mount Probe] [state] charState Walk -> Idle
+[Info   :GK2 Mount Probe] [state] charState Idle -> Walk
+[Info   :GK2 Mount Probe] [state] charState Walk -> Idle
+[Info   :GK2 Mount Probe] [state] charState Idle -> Walk
+[Info   :GK2 Mount Probe] [state] charState Walk -> Idle
+[Info   :GK2 Mount Probe] [state] charState Idle -> Walk
+[Info   :GK2 Mount Probe] [state] charState Walk -> Idle
+[Info   :GK2 Mount Probe] [state] charState Idle -> Walk
+[Info   :GK2 Mount Probe] [state] charState Walk -> Idle
+[Info   :GK2 Mount Probe] [state] charState Idle -> Walk
+[Info   :GK2 Mount Probe] [state] charState Walk -> Idle
+[Info   :GK2 Mount Probe] [state] charState Idle -> Walk
+[Info   :GK2 Mount Probe] [state] charState Walk -> Idle
+[Info   :GK2 Mount Probe] [state] charState Idle -> Walk
+[Info   :GK2 Mount Probe] [state] charState Walk -> Idle
+[Info   :GK2 Mount Probe] [state] charState Idle -> Walk
+[Info   :GK2 Mount Probe] [state] charState Walk -> Idle
+[Info   :GK2 Mount Probe] [state] charState Idle -> Walk
+[Info   :GK2 Mount Probe] [state] charState Walk -> Idle
+[Info   :GK2 Mount Probe] [state] charState Idle -> Walk
+[Info   :GK2 Mount Probe] [state] charState Walk -> Idle
+[Info   :GK2 Mount Probe] [state] charState Idle -> Walk
+[Info   :GK2 Mount Probe] [state] charState Walk -> Idle
+[Info   :GK2 Mount Probe] [state] charState Idle -> Walk
+[Info   :GK2 Mount Probe] [state] charState Walk -> Idle
+[Info   :GK2 Mount Probe] [state] charState Idle -> Walk
+[Info   :GK2 Mount Probe] [state] charState Walk -> Idle
+[Info   :GK2 Mount Probe] [state] charState Idle -> Walk
+[Info   :GK2 Mount Probe] [state] charState Walk -> Idle
+[Info   :GK2 Mount Probe] [state] charState Idle -> Walk
+[Info   :GK2 Mount Probe] [state] charState Walk -> Idle
+[Info   :GK2 Mount Probe] [state] charState Idle -> Walk
+[Info   :GK2 Mount Probe] [state] charState Walk -> Idle
+[Info   :GK2 Mount Probe] [state] charState Idle -> Walk
+[Info   :GK2 Mount Probe] [state] charState Walk -> Idle
+[Info   :GK2 Mount Probe] Experiments reset (plugin destroyed).
