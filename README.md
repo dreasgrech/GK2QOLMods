@@ -8,6 +8,7 @@ so you can install any subset.
 | [Global Storage](#global-storage) | 1.1.2 | Craft and build with materials from chests in every area, not just the one you're standing in. |
 | [Built Count](#built-count) | 1.0.3 | Build menus show how many of each building you already have in that area. |
 | [Move Building](#move-building) | 1.1.3 | Pick up a built building and put it down somewhere else, contents and all. |
+| [Owned Count](#owned-count) | 1.0.1 | Item tooltips show how many of that item you own across inventory and every chest. |
 
 ## Installing
 
@@ -101,6 +102,19 @@ game's normal Remove mode and click.
   garden bed, villagers' building, other area).
 - Same area only. Workbench extensions (tool racks etc.) re-link by position after a move, as when first placed.
 - Settings: the Move row and its label, the modifier key, stay-in-move-mode, the highlight and its colour.
+
+### Owned Count
+
+`GK2OwnedCount.dll` · GUID `anvil.gk2.ownedcount` · [source and README](src/GK2OwnedCount/)
+
+Every item tooltip gets a line such as `Owned: 120 · on you 4 · in storage 116 (5 chests)`. "On you" is your
+inventory, bags and tool belt; "in storage" is every storage chest in every area, the same set Global Storage draws
+from. Graded items (the starred ones, e.g. Bones of different skull grades) also show `all grades N`.
+
+- Display only: nothing in the game changes, nothing is written.
+- Settings: own-tooltip only or also embedded items, breakdown on/off, a per-area second line, other grades,
+  whether fuel containers and conveyor chests count as storage. A debug switch dumps every item definition
+  (stack sizes, grades) to a CSV.
 
 ## Safety
 

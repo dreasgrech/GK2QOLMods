@@ -1,0 +1,815 @@
+id,name,type,stack_count,quality,quality_type,red_skulls,white_skulls,is_fuel,groups
+faith,Faith,None,999,0,None,0,0,False,u_bag
+temptation,Temptation,None,100,0,None,0,0,False,
+fire,Fuel,None,100,0,None,0,0,True,fuel
+alchemy_flask,Alchemy Flasks,None,100,0,None,0,0,True,fuel
+science,Science,None,999,0,None,0,0,True,fuel
+body_corpse,Corpse,None,1,0,None,0,0,False,body;corpse;overhead
+body_zombie,Zombie,None,1,0,None,0,0,False,body;zombie;overhead
+body_wild_zombie,body_wild_zombie,None,1,0,None,0,0,False,body;wild_zombie;overhead
+body_certificate:1,Burial Certificate I,None,30,1,Star,0,0,False,burial_reward;u_bag
+body_certificate:2,Burial Certificate II,None,30,2,Star,0,0,False,burial_reward;u_bag
+body_certificate:3,Burial Certificate III,None,30,3,Star,0,0,False,burial_reward;u_bag
+exhume_certificate,Exhumation Certificate,None,30,0,None,0,0,False,u_bag
+game_res_tech_red,game_res_tech_red,None,1,0,None,0,0,False,
+game_res_tech_green,game_res_tech_green,None,1,0,None,0,0,False,
+game_res_tech_blue,game_res_tech_blue,None,1,0,None,0,0,False,
+wood,Log,None,1,0,None,0,0,False,overhead
+stick,Stick,None,50,0,None,0,0,False,u_bag;buil_bag;alch_bag
+flitch,Board,None,50,0,None,0,0,False,u_bag;buil_bag
+wood1,Short Log,None,50,0,None,0,0,False,u_bag;buil_bag
+firewood,Firewood,None,50,0,None,0,0,False,u_bag;buil_bag
+wood_wedge,Wood wedge,None,50,0,None,0,0,False,u_bag;buil_bag
+wooden_plank,Wooden Plank,None,30,0,None,0,0,False,u_bag;buil_bag
+oiled_plank,Oiled Plank,None,30,0,None,0,0,False,u_bag;buil_bag
+reinforced_plank,Reinforced Plank,None,30,0,None,0,0,False,u_bag;buil_bag
+chisel_basic,Bronze Chisel,None,30,0,None,0,0,False,u_bag;buil_bag
+chisel_iron,Iron Chisel,None,30,0,None,0,0,False,u_bag;buil_bag
+wooden_beam,Wooden beam,None,30,0,None,0,0,False,u_bag;buil_bag
+oiled_beam,Oiled Beam,None,30,0,None,0,0,False,u_bag;buil_bag
+reinforced_beam,Reinforced Beam,None,30,0,None,0,0,False,u_bag;buil_bag
+wood_2,Special Wood,None,30,0,None,0,0,False,u_bag;buil_bag
+wooden_joint,Wooden Joint,None,30,0,None,0,0,False,u_bag;buil_bag
+carved_wood,Carved Wood,None,30,0,None,0,0,False,u_bag;buil_bag
+stone,stone,None,1,0,None,0,0,False,overhead
+marble,marble,None,1,0,None,0,0,False,overhead
+1h_stone,Stone,None,30,0,None,0,0,False,u_bag;buil_bag;alch_bag
+stone_plate_1,Piece of stone,None,30,0,None,0,0,False,u_bag;buil_bag
+stone_plate_2,Polished Stone,None,30,0,None,0,0,False,u_bag;buil_bag
+stone_plate_3,Carved Stone,None,30,0,None,0,0,False,u_bag;buil_bag
+1h_marble,Marble,None,30,0,None,0,0,False,u_bag;buil_bag
+marble_plate_1,Marble Plate,None,30,0,None,0,0,False,u_bag;buil_bag
+marble_plate_2,Polished Marble,None,30,0,None,0,0,False,u_bag;buil_bag
+marble_plate_3,Carved Marble,None,30,0,None,0,0,False,u_bag;buil_bag
+clay,Clay,None,99,0,None,0,0,False,u_bag;buil_bag;alch_bag
+brick,Brick,None,50,0,None,0,0,False,u_bag;buil_bag
+ceramic_1,Clay Plate,None,50,0,None,0,0,False,u_bag;buil_bag
+ceramic_fired_1,Ceramic Plate,None,50,0,None,0,0,False,u_bag
+ceramic_2,Clay Urn,None,50,0,None,0,0,False,u_bag;buil_bag
+ceramic_fired_2,Ceramic Urn,None,50,0,None,0,0,False,u_bag
+ceramic_3,ceramic_3,None,50,0,None,0,0,False,u_bag;buil_bag
+sand,Sand,None,99,0,None,0,0,False,u_bag;buil_bag;alch_bag
+ceramic_broken,Broken ceramic,None,50,0,None,0,0,False,u_bag;buil_bag
+wooden_kit_1,Wooden Kit I,None,30,0,None,0,0,False,u_bag;buil_bag
+stone_kit_1,Stone Kit,None,30,0,None,0,0,False,u_bag;buil_bag
+iron_kit_1,Iron Kit I,None,30,0,None,0,0,False,u_bag;buil_bag
+box_empty,Crate,None,30,0,None,0,0,False,u_bag;buil_bag
+building_kit_1,Building Kit I,None,30,0,None,0,0,False,u_bag;buil_bag
+wooden_kit_2,Wooden Kit II,None,30,0,None,0,0,False,u_bag;buil_bag
+furniture_kit_1,Furniture Kit I,None,30,0,None,0,0,False,u_bag;buil_bag
+furniture_kit_2,Furniture Kit II,None,30,0,None,0,0,False,u_bag;buil_bag
+sculpture_kit_1,Sculpture Kit I,None,30,0,None,0,0,False,u_bag;buil_bag
+sculpture_kit_2,Sculpture Kit II,None,30,0,None,0,0,False,u_bag;buil_bag
+building_kit_2,Building Kit II,None,30,0,None,0,0,False,u_bag;buil_bag
+iron_kit_2,Iron Kit II,None,30,0,None,0,0,False,u_bag;buil_bag
+engineering_kit,Engineering Kit,None,30,0,None,0,0,False,u_bag;buil_bag
+glass_containers,Glass Containers,None,30,0,None,0,0,False,u_bag;buil_bag
+lence,Lens,None,50,0,None,0,0,False,u_bag;buil_bag
+lences,lences,None,30,0,None,0,0,False,u_bag;buil_bag
+clay_molds,Clay Molds,None,30,0,None,0,0,False,u_bag;buil_bag
+tableware,Tableware,None,30,0,None,0,0,False,u_bag;buil_bag
+zombie_mechanism,Zombie Mechanism,None,30,0,None,0,0,False,u_bag;buil_bag
+marble_kit,Marble Kit,None,30,0,None,0,0,False,u_bag;buil_bag
+box_building_kit_1,Supply: Building materials I,None,1,0,None,0,0,False,town_box;overhead
+box_building_kit_2,Supply: Building materials II,None,1,0,None,0,0,False,town_box;overhead
+box_furniture_1,Supply: Furniture I,None,1,0,None,0,0,False,town_box;overhead
+box_furniture_2,Supply: Furniture II,None,1,0,None,0,0,False,town_box;overhead
+box_cutlery_1,Supply: Cutlery I,None,1,0,None,0,0,False,town_box;overhead
+box_cutlery_2,Supply: Cutlery II,None,1,0,None,0,0,False,town_box;overhead
+box_tools_iron,Supply: Iron Tools,None,1,0,None,0,0,False,town_box;overhead
+box_tools_steel,Supply: Steel Tools,None,1,0,None,0,0,False,town_box;overhead
+box_kitchen_utensils,Supply: Kitchen Utensils,None,1,0,None,0,0,False,town_box;overhead
+box_clothes_1,Supply: Clothes I,None,1,0,None,0,0,False,town_box;overhead
+box_clothes_2,Supply: Clothes II,None,1,0,None,0,0,False,town_box;overhead
+box_fabric,Supply: Fabric,None,1,0,None,0,0,False,town_box;overhead
+box_vegetables,Supply: Vegetables,None,1,0,None,0,0,False,town_box;overhead
+box_preserves_1,Supply: Preserves I,None,1,0,None,0,0,False,town_box;overhead
+box_preserves_2,Supply: Preserves II,None,1,0,None,0,0,False,town_box;overhead
+box_flour,Supply: Flour Sack,None,1,0,None,0,0,False,town_box;overhead
+box_appliances_1,Supply: Appliances I,None,1,0,None,0,0,False,town_box;overhead
+box_appliances_2,Supply: Appliances II,None,1,0,None,0,0,False,town_box;overhead
+box_engineering_mechanism,Supply: Engineering Mechanism,None,1,0,None,0,0,False,town_box;overhead
+box_beer,Supply: Beer,None,1,0,None,0,0,False,town_box;overhead
+box_vine,Supply: Wine,None,1,0,None,0,0,False,town_box;overhead
+box_iron_ingot,Supply: Iron,None,1,0,None,0,0,False,town_box;overhead
+cheese,Cheese,None,30,0,None,0,0,False,u_bag;food_bag;alch_bag
+butter,butter,None,30,0,None,0,0,False,u_bag;food_bag
+water,Water,None,999,0,None,0,0,False,u_bag;food_bag;alch_bag
+seed_oil,Seed oil,None,50,0,None,0,0,False,u_bag;food_bag;alch_bag
+flour,Flour,None,50,0,None,0,0,False,u_bag;food_bag;alch_bag
+dough,Dough,None,50,0,None,0,0,False,u_bag;food_bag
+bread,Bread,None,30,0,None,0,0,False,u_bag;food_bag
+egg_chicken,Chicken Egg,None,30,0,None,0,0,False,u_bag;food_bag
+jug_milk,Jug of Milk,None,30,0,None,0,0,False,u_bag;food_bag
+minced_meat,Minced Meat,None,30,0,None,0,0,False,u_bag;food_bag;alch_bag
+cook_smothie,Berry smoothie,None,30,0,None,0,0,False,u_bag;food_bag
+cook_yogurt,Yogurt,None,30,0,None,0,0,False,u_bag;food_bag
+cook_baked_apple,Baked apple,None,30,0,None,0,0,False,u_bag;food_bag
+cook_baked_mushroom,Baked mushrooms,None,30,0,None,0,0,False,u_bag;food_bag
+berry_pie,Berry Pie,None,30,0,None,0,0,False,u_bag;food_bag
+cook_muffin,Muffin,None,30,0,None,0,0,False,u_bag;food_bag
+cook_croissant,Croissant,None,30,0,None,0,0,False,u_bag;food_bag
+cook_carrot_cutlet,Carrot cutlet,None,30,0,None,0,0,False,u_bag;food_bag
+cook_carrot_soup,Carrot soup,None,30,0,None,0,0,False,u_bag;food_bag
+cook_beet_grated,Grated beets,None,30,0,None,0,0,False,u_bag;food_bag
+cook_beet_sliced,Beet slices,None,30,0,None,0,0,False,u_bag;food_bag
+cook_cabbage_bowl:1,Bowl of sauerkraut,None,30,1,Star,0,0,False,u_bag;food_bag
+cook_cabbage_bowl:2,Bowl of sauerkraut,None,30,2,Star,0,0,False,u_bag;food_bag
+cook_cabbage_bowl:3,Bowl of sauerkraut,None,30,3,Star,0,0,False,u_bag;food_bag
+cook_cabbage_soup,Cabbage soup,None,30,0,None,0,0,False,u_bag;food_bag
+cook_onion_rings,Onion rings,None,30,0,None,0,0,False,u_bag;food_bag
+cook_onion_toast,Toast with onions,None,30,0,None,0,0,False,u_bag;food_bag
+cook_pumpkin_soup,Pumpkin soup,None,30,0,None,0,0,False,u_bag;food_bag
+cook_pumpkin_baked,Baked pumpkin,None,30,0,None,0,0,False,u_bag;food_bag
+cook_vegetabe_soup,Vegetable soup,None,30,0,None,0,0,False,u_bag;food_bag
+cook_vegetable_salad:1,Vegetable salad,None,30,1,Star,0,0,False,u_bag;food_bag
+cook_vegetable_salad:2,Vegetable salad,None,30,2,Star,0,0,False,u_bag;food_bag
+cook_vegetable_salad:3,Vegetable salad,None,30,3,Star,0,0,False,u_bag;food_bag
+cook_baked_meat,Baked meat,None,30,0,None,0,0,False,u_bag;food_bag
+cook_sandwich,Sandwich,None,30,0,None,0,0,False,u_bag;food_bag
+cook_burger,Burger,None,30,0,None,0,0,False,u_bag;food_bag
+cook_lasagna,Lasagna,None,30,0,None,0,0,False,u_bag;food_bag
+cook_soldier_ale,Soldier's ale,None,30,0,None,0,0,False,u_bag;food_bag
+cook_soldier_stew,Soldier's stew,None,30,0,None,0,0,False,u_bag;food_bag
+fillet_fish_river,River fish fillet,None,30,0,None,0,0,False,u_bag;food_bag
+cook_fish_nuggets,Fish nuggets,None,30,0,None,0,0,False,u_bag;food_bag
+cook_baked_fish,Baked fish,None,30,0,None,0,0,False,u_bag;food_bag
+fillet_fish_sea,Sea fish fillet,None,30,0,None,0,0,False,u_bag;food_bag
+cook_baked_salmon,Baked salmon,None,30,0,None,0,0,False,u_bag;food_bag
+cook_fish_soup,Fish soup,None,30,0,None,0,0,False,u_bag;food_bag
+fillet_fish_myst,Mysterious fish fillet,None,30,0,None,0,0,False,u_bag;food_bag
+cook_fisherman_pie,Fisherman's pie,None,30,0,None,0,0,False,u_bag;food_bag
+cook_kraken_jr,Kraken steak,None,30,0,None,0,0,False,u_bag;food_bag
+cook_golden_carp,Fried golden carp,None,30,0,None,0,0,False,u_bag;food_bag
+cook_heavenly_salmon,Heavenly salmon,None,30,0,None,0,0,False,u_bag;food_bag
+cook_elder_catfish,Elder's meal,None,30,0,None,0,0,False,u_bag;food_bag
+cook_pasta,Pasta,None,1,0,None,0,0,False,
+cook_vegetable_stew,cook_vegetable_stew,None,30,0,None,0,0,False,
+cook_kebab_fish_pumpkin,Kebab with fish and pumpkin,None,1,0,None,0,0,False,
+cook_kebab_fish_onion,Kebab with fish and onion,None,1,0,None,0,0,False,
+cook_kebab_fish_mushrooms,Kebab with fish and mushrooms,None,1,0,None,0,0,False,
+cook_omelette,Omelet,None,30,0,None,0,0,False,
+fried_egg,Fried egg,None,30,0,None,0,0,False,
+boiled_egg,Boiled Egg,None,30,0,None,0,0,False,
+cook_pancakes,Pancakes,None,30,0,None,0,0,False,
+cook_cake,Cake,None,1,0,None,0,0,False,
+cook_grape_pie,Grape pie,None,1,0,None,0,0,False,
+cook_green_jelly,Green jelly,None,1,0,None,0,0,False,
+cook_red_jelly,Red jelly,None,1,0,None,0,0,False,
+bottle_empty,Empty Bottle,None,50,0,None,0,0,False,u_bag
+apple_juice,Apple Juice,None,50,0,None,0,0,False,u_bag;food_bag
+berry_juice,Berry Juice,None,50,0,None,0,0,False,u_bag;food_bag
+blue_berry_juice,Blueberry Juice,None,50,0,None,0,0,False,u_bag;food_bag
+grape_juice:1,Grape Juice,None,50,1,Star,0,0,False,u_bag;food_bag
+grape_juice:2,Grape Juice,None,50,2,Star,0,0,False,u_bag;food_bag
+grape_juice:3,Grape Juice,None,50,3,Star,0,0,False,u_bag;food_bag
+berry_cider,Berry Cider,None,50,0,None,0,0,False,u_bag;food_bag
+blueberry_cider,Blueberry Cider,None,50,0,None,0,0,False,u_bag;food_bag
+apple_cider,Apple Cider,None,50,0,None,0,0,False,u_bag;food_bag
+mead,Mead,None,50,0,None,0,0,False,u_bag;food_bag
+beer,Beer,None,50,0,None,0,0,False,gr_beer;u_bag;food_bag
+grape_wine:1,Wine,None,50,1,Star,0,0,False,gr_wine;u_bag;food_bag
+grape_wine:2,Wine,None,50,2,Star,0,0,False,gr_wine;u_bag;food_bag
+grape_wine:3,Wine,None,50,3,Star,0,0,False,gr_wine;u_bag;food_bag
+bronze_scrap,Bronze Scrap,None,50,0,None,0,0,False,u_bag;buil_bag
+iron_scrap,Iron Scrap,None,50,0,None,0,0,False,u_bag;buil_bag
+lead,Tin,None,99,0,None,0,0,False,u_bag;buil_bag;alch_bag
+nugget_copper,Copper Nugget,None,50,0,None,0,0,False,u_bag;buil_bag;alch_bag
+iron_ore_2h,iron_ore_2h,None,1,0,None,0,0,False,overhead
+iron_ore,Iron Ore,None,50,0,None,0,0,False,u_bag;buil_bag;alch_bag
+copper_scrap,Copper Scrap,None,50,0,None,0,0,False,
+ingot_copper,Copper Ingot,None,20,0,None,0,0,False,
+nails_copper,Copper Nails,None,50,0,None,0,0,False,
+details_1_copper,Copper Detail,None,50,0,None,0,0,False,
+ingot_bronze,Bronze Ingot,None,30,0,None,0,0,False,u_bag;buil_bag
+details_1_bronze,Bronze Detail,None,30,0,None,0,0,False,u_bag;buil_bag
+nails_bronze,Bronze Nails,None,99,0,None,0,0,False,u_bag;buil_bag
+polished_bronze,Polished Bronze,None,30,0,None,0,0,False,u_bag;buil_bag
+bronze_gear,Bronze Gear,None,30,0,None,0,0,False,u_bag;buil_bag
+ingot_iron,Iron Ingot,None,30,0,None,0,0,False,u_bag;buil_bag
+nails_iron,Iron Nails,None,99,0,None,0,0,False,u_bag;buil_bag
+detail_1_iron,Iron Detail,None,30,0,None,0,0,False,u_bag;buil_bag
+detail_2_iron,Advanced Detail,None,30,0,None,0,0,False,u_bag;buil_bag
+ingot_steel,Steel Ingot,None,30,0,None,0,0,False,u_bag;buil_bag
+detail_1_steel,Steel Detail,None,30,0,None,0,0,False,u_bag;buil_bag
+screw_steel,Steel Screws,None,99,0,None,0,0,False,u_bag;buil_bag
+detail_2_steel,Engineering Details,None,30,0,None,0,0,False,u_bag;buil_bag
+coal,Coal,None,99,0,None,0,0,False,u_bag;buil_bag;alch_bag
+hand_tool,Hands,Hand,1,0,None,0,0,False,tool
+axe_0,Rusty Axe,Axe,1,0,None,0,0,False,u_bag;tool
+axe_1,Bronze Axe,Axe,1,0,None,0,0,False,u_bag;tool
+axe_2,Iron Axe,Axe,1,0,None,0,0,False,u_bag;tool
+axe_3,Steel Axe,Axe,1,0,None,0,0,False,u_bag;tool
+pickaxe_0,Rusty Pickaxe,Pickaxe,1,0,None,0,0,False,u_bag;tool
+pickaxe_1,Bronze Pickaxe,Pickaxe,1,0,None,0,0,False,u_bag;tool
+pickaxe_2,Iron Pickaxe,Pickaxe,1,0,None,0,0,False,u_bag;tool
+pickaxe_3,Steel Pickaxe,Pickaxe,1,0,None,0,0,False,u_bag;tool
+hammer_0,Rusty Hammer,Hammer,1,0,None,0,0,False,u_bag;tool
+hammer_1,Bronze Hammer,Hammer,1,0,None,0,0,False,u_bag;tool
+hammer_2,Iron Hammer,Hammer,1,0,None,0,0,False,u_bag;tool
+hammer_3,Steel Hammer,Hammer,1,0,None,0,0,False,u_bag;tool
+small_instruments_1,Bronze tools,SmallTools,1,0,None,0,0,False,u_bag;tool
+small_instruments_2,Iron tools,SmallTools,1,0,None,0,0,False,u_bag;tool
+small_instruments_3,Steel tools,SmallTools,1,0,None,0,0,False,u_bag;tool
+shovel_0,Rusty Shovel,Shovel,1,0,None,0,0,False,u_bag;tool
+shovel_1,Bronze Shovel,Shovel,1,0,None,0,0,False,u_bag;tool
+shovel_2,Iron Shovel,Shovel,1,0,None,0,0,False,u_bag;tool
+shovel_3,Steel Shovel,Shovel,1,0,None,0,0,False,u_bag;tool
+surgical_kit_1,Butcher's Kit,SurgicalKit,1,0,None,0,0,False,u_bag;tool
+surgical_kit_2,Surgeon's Kit,SurgicalKit,1,0,None,0,0,False,u_bag;tool
+surgical_kit_3,Master Surgeon's Kit,SurgicalKit,1,0,None,0,0,False,u_bag;tool
+alchemy_kit_1,Starter Alchemist's Kit,Reagents,1,0,None,0,0,False,u_bag;tool
+alchemy_kit_2,Alchemist's Kit,Reagents,1,0,None,0,0,False,u_bag;tool
+alchemy_kit_3,Good Alchemist's kit,Reagents,1,0,None,0,0,False,u_bag;tool
+tool_book_1,Primer,Book,1,0,None,0,0,False,u_bag;tool
+tool_book_2,Dictionary,Book,1,0,None,0,0,False,u_bag;tool
+tool_book_3,Glossary,Book,1,0,None,0,0,False,u_bag;tool
+tool_talisman_1,Bronze Talisman,Talisman,1,0,None,0,0,False,u_bag;tool
+tool_talisman_2,Silver Talisman,Talisman,1,0,None,0,0,False,u_bag;tool
+tool_talisman_3,Golden Talisman,Talisman,1,0,None,0,0,False,u_bag;tool
+sword_0,Rusty Sword,Sword,1,1,None,0,0,False,u_bag;weapon;melee
+sword_1,Bronze Sword,Sword,1,2,None,0,0,False,u_bag;weapon;melee
+sword_2,Iron Sword,Sword,1,3,None,0,0,False,u_bag;weapon;melee
+sword_3,Steel Sword,Sword,1,4,None,0,0,False,u_bag;weapon;melee
+sword_4,Master Sword,Sword,1,5,None,0,0,False,u_bag;weapon;melee
+armor_0,Rusty Armor,BodyArmor,1,0,None,0,0,False,u_bag
+armor_1,Bronze Armor,BodyArmor,1,1,None,0,0,False,u_bag
+armor_2,Iron Armor,BodyArmor,1,2,None,0,0,False,u_bag
+armor_3,Steel Armor,BodyArmor,1,3,None,0,0,False,u_bag
+armor_4,Master Armor,BodyArmor,1,4,None,0,0,False,u_bag
+bow_0,Simple Bow,Bow,1,1,None,0,0,False,u_bag;weapon;range
+bow_1,Reinforced Bow,Bow,1,1,None,0,0,False,u_bag;weapon;range
+bow_2,Battle Bow,Bow,1,2,None,0,0,False,u_bag;weapon;range
+bow_3,Heavy Bow,Bow,1,3,None,0,0,False,u_bag;weapon;range
+pike_0,Simple Pike,Pike,1,1,None,0,0,False,u_bag;weapon;melee
+pike_1,Light Pike,Pike,1,1,None,0,0,False,u_bag;weapon;melee
+pike_2,Battle Pike,Pike,1,2,None,0,0,False,u_bag;weapon;melee
+pike_3,Knight's Spear,Pike,1,3,None,0,0,False,u_bag;weapon;melee
+mouth_spit,mouth_spit,Spit,1,0,None,0,0,False,weapon
+npc_town_barracks_mercenary_1_weapon,npc_town_barracks_mercenary_1_weapon,Pike,1,1,None,0,0,False,weapon
+npc_town_barracks_mercenary_2_weapon,npc_town_barracks_mercenary_2_weapon,Pike,1,1,None,0,0,False,weapon
+npc_town_barracks_mercenary_3_weapon,npc_town_barracks_mercenary_3_weapon,Bow,1,1,None,0,0,False,weapon
+npc_town_barracks_mercenary_4_weapon,npc_town_barracks_mercenary_4_weapon,Bow,1,1,None,0,0,False,weapon
+npc_town_barracks_mercenary_1_armor,npc_town_barracks_mercenary_1_armor,BodyArmor,1,1,None,0,0,False,
+npc_town_barracks_mercenary_2_armor,npc_town_barracks_mercenary_2_armor,BodyArmor,1,1,None,0,0,False,
+npc_town_barracks_mercenary_3_armor,npc_town_barracks_mercenary_3_armor,BodyArmor,1,1,None,0,0,False,
+npc_town_barracks_mercenary_4_armor,npc_town_barracks_mercenary_4_armor,BodyArmor,1,1,None,0,0,False,
+leaf,Leaf,None,99,0,None,0,0,False,u_bag;crop;alch_bag
+fertilizer:peat,Peat,None,99,0,None,0,0,False,fertilizer;alch_bag
+fertilizer:start_bonus_1,Headstart Fertilizer I,None,30,0,None,0,0,False,fertilizer
+fertilizer:start_bonus_2,Headstart Fertilizer II,None,30,0,None,0,0,False,fertilizer
+fertilizer:add_cells_1,fertilizer:add_cells_1,None,25,0,None,0,0,False,fertilizer
+fertilizer:add_cells_2,Crop Boosting Fertilizer I,None,30,0,None,0,0,False,fertilizer
+fertilizer:farming_1,fertilizer:farming_1,None,25,0,None,0,0,False,fertilizer
+fertilizer:farming_2,Farming Fertilizer I,None,30,0,None,0,0,False,fertilizer
+fertilizer:farming_3,Farming Fertilizer II,None,30,0,None,0,0,False,fertilizer
+fertilizer:farming_4,fertilizer:farming_4,None,25,0,None,0,0,False,fertilizer
+fertilizer:farming_5,Farming Fertilizer III,None,30,0,None,0,0,False,fertilizer
+wheat_seed,Wheat seed,None,50,0,None,0,0,False,seed;u_bag
+wheat,Wheat,None,50,0,None,0,0,False,u_bag;seedable
+carrot_seed,Carrot seed,None,50,0,None,0,0,False,seed;u_bag
+carrot,Carrot,None,50,0,None,0,0,False,u_bag;seedable;food_bag
+beet_seed,Beet Seed,None,50,0,None,0,0,False,seed;u_bag
+beet,Beet,None,50,0,None,0,0,False,u_bag;seedable;food_bag
+cabbage_seed:1,Cabbage seed,None,50,1,Star,0,0,False,seed;u_bag;gr_cabbage_seed
+cabbage_seed:2,Cabbage seed,None,50,2,Star,0,0,False,seed;u_bag;gr_cabbage_seed
+cabbage_seed:3,Cabbage seed,None,50,3,Star,0,0,False,seed;u_bag;gr_cabbage_seed
+cabbage:1,Cabbage,None,50,1,Star,0,0,False,u_bag;seedable;gr_cabbage
+cabbage:2,Cabbage,None,50,2,Star,0,0,False,u_bag;seedable;gr_cabbage
+cabbage:3,Cabbage,None,50,3,Star,0,0,False,u_bag;seedable;gr_cabbage
+onion_seed:1,Onion seed,None,50,1,Star,0,0,False,seed;u_bag;gr_onion_seed
+onion_seed:2,Onion seed,None,50,2,Star,0,0,False,seed;u_bag;gr_onion_seed
+onion_seed:3,Onion seed,None,50,3,Star,0,0,False,seed;u_bag;gr_onion_seed
+onion:1,Onion,None,50,1,Star,0,0,False,u_bag;seedable;gr_onions;alch_bag
+onion:2,Onion,None,50,2,Star,0,0,False,u_bag;seedable;gr_onions;alch_bag
+onion:3,Onion,None,50,3,Star,0,0,False,u_bag;seedable;gr_onions;alch_bag
+pumpkin_seed:1,Pumpkin Seeds,None,50,1,Star,0,0,False,seed;u_bag;gr_pumpkin_seed
+pumpkin_seed:2,Pumpkin Seeds,None,50,2,Star,0,0,False,seed;u_bag;gr_pumpkin_seed
+pumpkin_seed:3,Pumpkin Seeds,None,50,3,Star,0,0,False,seed;u_bag;gr_pumpkin_seed
+pumpkin:1,Pumpkin,None,50,1,Star,0,0,False,u_bag;seedable;alch_bag;food_bag
+pumpkin:2,Pumpkin,None,50,2,Star,0,0,False,u_bag;seedable;alch_bag;food_bag
+pumpkin:3,Pumpkin,None,50,3,Star,0,0,False,u_bag;seedable;alch_bag;food_bag
+hop_seed,Hop Seeds,None,50,0,None,0,0,False,seed;u_bag;vineyard_seed
+hop,Hops,None,50,0,None,0,0,False,u_bag;seedable;alch_bag
+grape_seed:1,Grape Seeds,None,50,1,Star,0,0,False,seed;u_bag;vineyard_seed
+grape_seed:2,Grape Seeds,None,50,2,Star,0,0,False,seed;u_bag;vineyard_seed
+grape_seed:3,Grape Seeds,None,50,3,Star,0,0,False,seed;u_bag;vineyard_seed
+grape:1,Grapes,None,50,1,Star,0,0,False,u_bag;seedable;food_bag
+grape:2,Grapes,None,50,2,Star,0,0,False,u_bag;seedable;food_bag
+grape:3,Grapes,None,50,3,Star,0,0,False,u_bag;seedable;food_bag
+flax_seed,Flax Seed,None,50,0,None,0,0,False,seed;u_bag
+flax,Flax,None,99,0,None,0,0,False,u_bag;seedable;alch_bag
+thread_flax,Flax Thread,None,50,0,None,0,0,False,u_bag
+fabric_flax,Fabric,None,30,0,None,0,0,False,u_bag
+apple_seedling,Apple Tree Seedling,None,20,0,None,0,0,False,u_bag;farm_bag
+apple,Apple,None,20,0,None,0,0,False,u_bag;food_bag
+berry_seedling,Bush Seedling,None,30,0,None,0,0,False,u_bag;farm_bag
+berry,Berry,None,50,0,None,0,0,False,u_bag;food_bag;alch_bag
+blueberry_seedling,Blueberry Seedling,None,30,0,None,0,0,False,u_bag;farm_bag
+berry_blue,Blueberry,None,50,0,None,0,0,False,u_bag;food_bag;alch_bag
+rhod_seedling,Rhododendron Seedling,None,20,0,None,0,0,False,u_bag;farm_bag
+flower_rhod,Rhododendron,None,50,0,None,0,0,False,u_bag;alch_bag
+flower_night,Night flower,None,50,0,None,0,0,False,u_bag;alch_bag
+mushroom_brown_quest:3,Brown Mushroom,None,20,3,Star,0,0,False,u_bag;food_bag
+mushroom_brown,Brown Mushroom,None,30,0,None,0,0,False,u_bag;food_bag
+mushroom_red,Red Mushroom,None,30,0,None,0,0,False,u_bag;alch_bag;u_bag;food_bag
+mushroom_green,Swamp mushroom,None,20,0,None,0,0,False,u_bag;alch_bag;food_bag
+prayer_base:1,Basic prayer,Preach,1,1,Star,0,0,False,u_bag
+prayer_base:2,Basic prayer,Preach,1,2,Star,0,0,False,u_bag
+prayer_base:3,Basic prayer,Preach,1,3,Star,0,0,False,u_bag
+prayer_faith:1,Faith Prayer,Preach,1,1,Star,0,0,False,u_bag
+prayer_faith:2,Faith Prayer,Preach,1,2,Star,0,0,False,u_bag
+prayer_faith:3,Faith Prayer,Preach,1,3,Star,0,0,False,u_bag
+prayer_money:1,Money Prayer,Preach,1,1,Star,0,0,False,u_bag
+prayer_money:2,Money Prayer,Preach,1,2,Star,0,0,False,u_bag
+prayer_money:3,Money Prayer,Preach,1,3,Star,0,0,False,u_bag
+prayer_combo:1,Combo Prayer,Preach,1,1,Star,0,0,False,u_bag
+prayer_combo:2,Combo Prayer,Preach,1,2,Star,0,0,False,u_bag
+prayer_combo:3,Combo Prayer,Preach,1,3,Star,0,0,False,u_bag
+prayer_protection:1,Prayer for Protection,Preach,1,1,Star,0,0,False,u_bag
+prayer_protection:2,Prayer for Protection,Preach,1,2,Star,0,0,False,u_bag
+prayer_protection:3,Prayer for Protection,Preach,1,3,Star,0,0,False,u_bag
+prayer_combat:1,Combat Prayer,Preach,1,1,Star,0,0,False,u_bag
+prayer_combat:2,Combat Prayer,Preach,1,2,Star,0,0,False,u_bag
+prayer_combat:3,Combat Prayer,Preach,1,3,Star,0,0,False,u_bag
+prayer_prosperity:1,Prayer for Prosperity,Preach,1,1,Star,0,0,False,u_bag
+prayer_prosperity:2,Prayer for Prosperity,Preach,1,2,Star,0,0,False,u_bag
+prayer_prosperity:3,Prayer for Prosperity,Preach,1,3,Star,0,0,False,u_bag
+prayer_harvest:1,Harvest Prayer,Preach,1,1,Star,0,0,False,u_bag
+prayer_harvest:2,Harvest Prayer,Preach,1,2,Star,0,0,False,u_bag
+prayer_harvest:3,Harvest Prayer,Preach,1,3,Star,0,0,False,u_bag
+prayer_repose:1,Prayer for Repose,Preach,1,1,Star,0,0,False,u_bag
+prayer_repose:2,Prayer for Repose,Preach,1,2,Star,0,0,False,u_bag
+prayer_repose:3,Prayer for Repose,Preach,1,3,Star,0,0,False,u_bag
+prayer_excellence:1,Prayer for Excellence,Preach,1,1,Star,0,0,False,u_bag
+prayer_excellence:2,Prayer for Excellence,Preach,1,2,Star,0,0,False,u_bag
+prayer_excellence:3,Prayer for Excellence,Preach,1,3,Star,0,0,False,u_bag
+prayer_imagination:1,Prayer for Imagination,Preach,1,1,Star,0,0,False,u_bag
+prayer_imagination:2,Prayer for Imagination,Preach,1,2,Star,0,0,False,u_bag
+prayer_imagination:3,Prayer for Imagination,Preach,1,3,Star,0,0,False,u_bag
+prayer_insanity:1,Prayer for Insanity,Preach,1,1,Star,0,0,False,u_bag
+prayer_insanity:2,Prayer for Insanity,Preach,1,2,Star,0,0,False,u_bag
+prayer_insanity:3,Prayer for Insanity,Preach,1,3,Star,0,0,False,u_bag
+prayer_purity:1,Prayer for Purity,Preach,1,1,Star,0,0,False,u_bag
+prayer_purity:2,Prayer for Purity,Preach,1,2,Star,0,0,False,u_bag
+prayer_purity:3,Prayer for Purity,Preach,1,3,Star,0,0,False,u_bag
+prayer_speed,Prayer for Speed,Preach,1,0,None,0,0,False,u_bag
+prayer_repentance:1,Prayer for Repentance,Preach,1,1,Star,0,0,False,u_bag
+prayer_repentance:2,Prayer for Repentance,Preach,1,2,Star,0,0,False,u_bag
+prayer_repentance:3,Prayer for Repentance,Preach,1,3,Star,0,0,False,u_bag
+prayer_storms,Prayer for Storms,Preach,1,0,None,0,0,False,u_bag
+prayer_obedience:1,Prayer for Obedience,Preach,1,1,Star,0,0,False,u_bag
+prayer_obedience:2,Prayer for Obedience,Preach,1,2,Star,0,0,False,u_bag
+prayer_obedience:3,Prayer for Obedience,Preach,1,3,Star,0,0,False,u_bag
+prayer_consumption:1,Prayer for Consumption,Preach,1,1,Star,0,0,False,u_bag
+prayer_consumption:2,Prayer for Consumption,Preach,1,2,Star,0,0,False,u_bag
+prayer_consumption:3,Prayer for Consumption,Preach,1,3,Star,0,0,False,u_bag
+prayer_demand:1,Prayer for Demand,Preach,1,1,Star,0,0,False,u_bag
+prayer_demand:2,Prayer for Demand,Preach,1,2,Star,0,0,False,u_bag
+prayer_demand:3,Prayer for Demand,Preach,1,3,Star,0,0,False,u_bag
+prayer_likes:1,Prayer for Likes,Preach,1,1,Star,0,0,False,u_bag
+prayer_likes:2,Prayer for Likes,Preach,1,2,Star,0,0,False,u_bag
+prayer_likes:3,Prayer for Likes,Preach,1,3,Star,0,0,False,u_bag
+prayer_hypno:1,Hypno Prayer,Preach,1,1,Star,0,0,False,u_bag
+prayer_hypno:2,Hypno Prayer,Preach,1,2,Star,0,0,False,u_bag
+prayer_hypno:3,Hypno Prayer,Preach,1,3,Star,0,0,False,u_bag
+prayer_music,Prayer for Music,Preach,1,0,None,0,0,False,u_bag
+prayer_old_god,Prayer for Old God,Preach,1,0,None,0,0,False,u_bag
+prayer_labor:1,Labor Prayer,Preach,1,1,Star,0,0,False,u_bag
+prayer_labor:2,Labor Prayer,Preach,1,2,Star,0,0,False,u_bag
+prayer_labor:3,Labor Prayer,Preach,1,3,Star,0,0,False,u_bag
+prayer_insanity_less,prayer_insanity_less,Preach,1,0,None,0,0,False,u_bag
+prayer_insanity_more,prayer_insanity_more,Preach,1,0,None,0,0,False,u_bag
+prosperity_item,prosperity_item,None,30,0,None,0,0,False,u_bag
+candle_basic,Simple Candle,None,30,0,None,0,0,False,u_bag
+candle_advanced,Pretty Candle,None,30,0,None,0,0,False,u_bag
+candle_master,Magnificent Candle,None,30,0,None,0,0,False,u_bag
+incense_basic,Simple Incense,None,30,0,None,0,0,False,u_bag
+incense_advanced,Fancy Incense,None,30,0,None,0,0,False,u_bag
+carpet,Carpet,None,30,0,None,0,0,False,u_bag
+music_notes,Music Notes,None,30,0,None,0,0,False,u_bag
+grave_top_wd_0,Wooden Sign,None,10,1,None,0,0,False,gravetop;u_bag
+grave_top_wd_1,Wooden Cross I,None,10,2,None,0,0,False,gravetop;u_bag
+grave_top_wd_2,Wooden Cross II,None,10,3,None,0,0,False,gravetop;u_bag
+grave_top_stn_1,Gravestone I,None,10,4,None,0,0,False,gravetop;u_bag
+grave_top_stn_2,Gravestone II,None,10,5,None,0,0,False,gravetop;u_bag
+grave_top_mrb_1,Marble Cross I,None,10,6,None,0,0,False,gravetop;u_bag
+grave_top_mrb_2,Marble Cross II,None,10,7,None,0,0,False,gravetop;u_bag
+grave_bot_wd_1,Wooden Fence I,None,10,1,None,0,0,False,gravebot;u_bag
+grave_bot_wd_2,Wooden Fence II,None,10,2,None,0,0,False,gravebot;u_bag
+grave_bot_stn_1,Stone Fence I,None,10,3,None,0,0,False,gravebot;u_bag
+grave_bot_stn_2,Stone Fence II,None,10,4,None,0,0,False,gravebot;u_bag
+grave_bot_mrb_1,Marble Fence I,None,10,5,None,0,0,False,gravebot;u_bag
+grave_bot_mrb_2,Marble Fence II,None,10,7,None,0,0,False,gravebot;u_bag
+urn_ashes_1,Urn with Ashes I,None,20,0,None,0,0,False,u_bag
+urn_ashes_2,Urn with Ashes II,None,20,0,None,0,0,False,u_bag
+book,Written Softcover Book,None,30,0,None,0,0,False,u_bag
+book_hard:1,Written Hardcover Book,None,30,1,Star,0,0,False,u_bag
+book_hard:2,Written Hardcover Book,None,30,2,Star,0,0,False,u_bag
+book_hard:3,Written Hardcover Book,None,30,3,Star,0,0,False,u_bag
+skroll_skin_pig,Leather Scroll,None,30,0,None,0,0,False,u_bag
+clean_paper,Clean Paper,None,50,0,None,0,0,False,u_bag
+ink,Ink,None,30,0,None,0,0,False,u_bag
+story:1,Story,None,30,1,Star,0,0,False,u_bag;gr_stories
+story:2,Story,None,30,2,Star,0,0,False,u_bag;gr_stories
+story:3,Story,None,30,3,Star,0,0,False,u_bag;gr_stories
+notebook,Blank Softcover Notebook,None,30,0,None,0,0,False,u_bag
+notebook_hard,Blank Hardcover Notebook,None,30,0,None,0,0,False,u_bag
+science_kit_1,Science Kit I,None,50,0,None,0,0,False,u_bag
+science_kit_2,Science Kit II,None,50,0,None,0,0,False,u_bag
+newspaper:1,Newspaper,None,50,1,Star,0,0,False,u_bag;gr_newspapers
+newspaper:2,Newspaper,None,50,2,Star,0,0,False,u_bag;gr_newspapers;gr_good_newspapers
+newspaper:3,Newspaper,None,50,3,Star,0,0,False,u_bag;gr_newspapers;gr_good_newspapers
+paper_liquid,Paper glop,None,99,0,None,0,0,False,u_bag
+techbook_r_1,Red Techbook,None,10,0,None,0,0,False,u_bag
+techbook_g_1,Green Techbook,None,10,0,None,0,0,False,u_bag
+techbook_b_1,Blue Techbook,None,10,0,None,0,0,False,u_bag
+techbook_r_2,Red Techbook II,None,10,0,None,0,0,False,u_bag
+techbook_g_2,Green Techbook II,None,10,0,None,0,0,False,u_bag
+techbook_b_2,Blue Techbook II,None,10,0,None,0,0,False,u_bag
+some_em_1,some_em_1,Embalm,1,0,None,1,1,False,u_bag;alch_bag
+some_em_2,some_em_2,Embalm,1,0,None,0,2,False,u_bag;alch_bag
+krotowuha_potion,Krotowuha,None,50,0,None,0,0,False,u_bag;alch_bag
+bat_wings,bat_wings,None,50,0,None,0,0,False,u_bag;alch_bag
+black_paint,black_paint,None,50,0,None,0,0,False,u_bag;alch_bag
+grow_potion,Grow potion,None,50,0,None,0,0,False,u_bag;alch_bag
+speed_potion,Speed Potion,None,50,0,None,0,0,False,u_bag;alch_bag
+natural_resin,Natural Resin,None,50,0,None,0,0,False,u_bag;alch_bag
+tannin,tannin,None,50,0,None,0,0,False,u_bag;alch_bag
+mwater_drop,Life water,None,50,0,None,0,0,False,u_bag;alch_bag
+resurrection_balm,Reanimation Liquid,None,50,0,None,0,0,False,u_bag;alch_bag
+alchemy_rubedo,Rubedo Crystallis,None,50,0,None,0,0,False,u_bag;alch_bag
+alchemy_albedo,Albedo Tear,None,50,0,None,0,0,False,u_bag;alch_bag
+alchemy_nigredo,Nigredo Ash,None,50,0,None,0,0,False,u_bag;alch_bag
+alchemy_mercurius,Mercurius Vivus,None,50,0,None,0,0,False,u_bag;alch_bag
+alchemy_anima_mundi,Anima Mundi Fragment,None,50,0,None,0,0,False,u_bag;alch_bag
+alchemy_prima_materia,Prima Materia Dust,None,50,0,None,0,0,False,u_bag;alch_bag
+alchemy_sulfur,Philosophic Sulfur,None,50,0,None,0,0,False,u_bag;alch_bag
+alchemy_quintessence,Quintessence Vial,None,50,0,None,0,0,False,u_bag;alch_bag
+alchemy_mortificartio,Mortificatio Oil,None,50,0,None,0,0,False,u_bag;alch_bag
+alchemy_conjunctio,Coniunctio Salt,None,50,0,None,0,0,False,u_bag;alch_bag
+alchemy_spagyric,Chaos Spagyric Root,None,50,0,None,0,0,False,u_bag;alch_bag
+alchemy_separatio,Separatio Membrane,None,50,0,None,0,0,False,u_bag;alch_bag
+alchemy_bottle_1,Alchemy Flasks I,None,99,0,None,0,0,False,u_bag;alch_bag
+alchemy_bottle_2,Alchemy Flasks II,None,99,0,None,0,0,False,u_bag;alch_bag
+tooth,Tooth,None,50,0,None,0,0,False,u_bag;alch_bag
+zombie_goo,Zombie goo,None,99,0,None,0,0,False,u_bag;alch_bag
+powder_r,"Alchemic Powder <sprite name=""rune_r"">",None,99,0,None,0,0,False,u_bag;alch_bag
+powder_r_r,"Alchemic Powder <sprite name=""rune_r""><sprite name=""rune_r"">",None,99,0,None,0,0,False,u_bag;alch_bag
+powder_r_r_r,"Alchemic Powder <sprite name=""rune_r""><sprite name=""rune_r""><sprite name=""rune_r"">",None,99,0,None,0,0,False,u_bag;alch_bag
+powder_g,"Alchemic Powder <sprite name=""rune_g"">",None,99,0,None,0,0,False,u_bag;alch_bag
+powder_g_g,"Alchemic Powder <sprite name=""rune_g""><sprite name=""rune_g"">",None,99,0,None,0,0,False,u_bag;alch_bag
+powder_g_g_g,"Alchemic Powder <sprite name=""rune_g""><sprite name=""rune_g""><sprite name=""rune_g"">",None,99,0,None,0,0,False,u_bag;alch_bag
+powder_b,"Alchemic Powder <sprite name=""rune_b"">",None,99,0,None,0,0,False,u_bag;alch_bag
+powder_b_b,"Alchemic Powder <sprite name=""rune_b""><sprite name=""rune_b"">",None,99,0,None,0,0,False,u_bag;alch_bag
+powder_b_b_b,"Alchemic Powder <sprite name=""rune_b""><sprite name=""rune_b""><sprite name=""rune_b"">",None,99,0,None,0,0,False,u_bag;alch_bag
+powder_r_g,"Alchemic Powder <sprite name=""rune_r""><sprite name=""rune_g"">",None,99,0,None,0,0,False,u_bag;alch_bag
+powder_r_b,"Alchemic Powder <sprite name=""rune_r""><sprite name=""rune_b"">",None,99,0,None,0,0,False,u_bag;alch_bag
+powder_g_b,"Alchemic Powder <sprite name=""rune_g""><sprite name=""rune_b"">",None,99,0,None,0,0,False,u_bag;alch_bag
+powder_r_r_g,"Alchemic Powder <sprite name=""rune_r""><sprite name=""rune_r""><sprite name=""rune_g"">",None,99,0,None,0,0,False,u_bag;alch_bag
+powder_r_g_g,"Alchemic Powder <sprite name=""rune_r""><sprite name=""rune_g""><sprite name=""rune_g"">",None,99,0,None,0,0,False,u_bag;alch_bag
+powder_r_r_b,"Alchemic Powder <sprite name=""rune_r""><sprite name=""rune_r""><sprite name=""rune_b"">",None,99,0,None,0,0,False,u_bag;alch_bag
+powder_r_b_b,"Alchemic Powder <sprite name=""rune_r""><sprite name=""rune_b""><sprite name=""rune_b"">",None,99,0,None,0,0,False,u_bag;alch_bag
+powder_g_g_b,"Alchemic Powder <sprite name=""rune_g""><sprite name=""rune_g""><sprite name=""rune_b"">",None,99,0,None,0,0,False,u_bag;alch_bag
+powder_g_b_b,"Alchemic Powder <sprite name=""rune_g""><sprite name=""rune_b""><sprite name=""rune_b"">",None,99,0,None,0,0,False,u_bag;alch_bag
+powder_r_g_b,"Alchemic Powder <sprite name=""rune_r""><sprite name=""rune_g""><sprite name=""rune_b"">",None,99,0,None,0,0,False,u_bag;alch_bag
+melted_fat,Melted Fat,None,99,0,None,0,0,False,u_bag;alch_bag
+alcohol,Alcohol,None,99,0,None,0,0,False,u_bag;alch_bag
+fragrance,Fragrance,None,99,0,None,0,0,False,u_bag;alch_bag
+weak_growing_elixir,Weak growth elixir,None,20,0,None,0,0,False,u_bag;alch_bag
+rich_growing_elixir,Rich growth elixir,None,20,0,None,0,0,False,u_bag;alch_bag
+miracle_growing_elixir,Miracle growth elixir,None,20,0,None,0,0,False,u_bag;alch_bag
+powder_dreams,Dream Dust,None,20,0,None,0,0,False,u_bag;alch_bag
+quest_paint,Paint,None,20,0,None,0,0,False,u_bag;alch_bag
+lacquer,Lacquer,None,20,0,None,0,0,False,u_bag;alch_bag
+organ_restoration,Organ Restorer,None,20,0,None,0,0,False,u_bag;alch_bag
+organ_randomizer,Organ Randomizer,None,20,0,None,0,0,False,u_bag;alch_bag
+preservative,Preservative,None,20,0,None,0,0,False,u_bag;alch_bag
+third_eye_salt,Third Eye Salt,None,20,0,None,0,0,False,u_bag;alch_bag
+exp_potion_r_1,"Toxic <sprite name=""tech_red""> Potion",None,20,0,None,0,0,False,u_bag;alch_bag
+exp_potion_r_2,"Toxic <sprite name=""tech_red""> Potion II",None,20,0,None,0,0,False,u_bag;alch_bag
+exp_potion_g_1,"Toxic <sprite name=""tech_green""> Potion",None,20,0,None,0,0,False,u_bag;alch_bag
+exp_potion_g_2,"Toxic <sprite name=""tech_green""> Potion II",None,20,0,None,0,0,False,u_bag;alch_bag
+exp_potion_b_1,"Toxic <sprite name=""tech_blue""> Potion",None,20,0,None,0,0,False,u_bag;alch_bag
+exp_potion_b_2,"Toxic <sprite name=""tech_blue""> Potion II",None,20,0,None,0,0,False,u_bag;alch_bag
+quality_food_silver,Spices,None,20,0,None,0,0,False,u_bag;alch_bag
+quality_food_gold,Umami,None,20,0,None,0,0,False,u_bag;alch_bag
+philosopher_stone,Philosopher Stone,None,20,0,None,0,0,False,u_bag;alch_bag
+liquid_harden,Tannin Liquid,None,20,0,None,0,0,False,u_bag;alch_bag
+alkali,Alkali,None,20,0,None,0,0,False,u_bag;alch_bag
+resurrection_liquid,Reanimation Liquid,None,20,0,None,0,0,False,u_bag;alch_bag
+organ_improver_red,"Organ Improver <sprite name=""rskull"">",None,20,0,None,0,0,False,u_bag;alch_bag
+organ_improver_white,"Organ Improver <sprite name=""skull"">",None,20,0,None,0,0,False,u_bag;alch_bag
+heal_potion,Healing Potion,None,20,0,None,0,0,False,battle_potion;pot_bag;u_bag
+heal_potion_2,Healing Potion II,None,20,0,None,0,0,False,battle_potion;pot_bag;u_bag
+heal_potion_3,Healing Potion III,None,20,0,None,0,0,False,battle_potion;pot_bag;u_bag
+damage_potion,Damage Potion,None,20,0,None,0,0,False,battle_potion;pot_bag;u_bag
+damage_potion_2,Damage Potion II,None,20,0,None,0,0,False,battle_potion;pot_bag;u_bag
+damage_potion_3,Damage Potion III,None,20,0,None,0,0,False,battle_potion;pot_bag;u_bag
+berserk_potion,Berserker Potion,None,20,0,None,0,0,False,battle_potion;pot_bag;u_bag
+berserk_potion_2,Berserker Potion II,None,20,0,None,0,0,False,battle_potion;pot_bag;u_bag
+berserk_potion_3,Berserker Potion III,None,20,0,None,0,0,False,battle_potion;pot_bag;u_bag
+motivator_potion,Zombie Motivator Potion,None,20,0,None,0,0,False,battle_potion;pot_bag;u_bag
+motivator_potion_2,Zombie Motivator Potion II,None,20,0,None,0,0,False,battle_potion;pot_bag;u_bag
+motivator_potion_3,Zombie Motivator Potion III,None,20,0,None,0,0,False,battle_potion;pot_bag;u_bag
+energy_potion,Energy Potion,None,20,0,None,0,0,False,
+energy_potion_2,Energy Potion II,None,20,0,None,0,0,False,
+energy_potion_3,Energy Potion III,None,20,0,None,0,0,False,
+embalm_white:1,Solution for Corpses,Embalm,20,1,Star,0,1,False,u_bag;alch_bag
+embalm_white:2,Solution for Corpses,Embalm,20,2,Star,0,2,False,u_bag;alch_bag
+embalm_white:3,Solution for Corpses,Embalm,20,3,Star,0,3,False,u_bag;alch_bag
+embalm_red:1,Solution for Zombies,Embalm,20,1,Star,1,0,False,u_bag;alch_bag
+embalm_red:2,Solution for Zombies,Embalm,20,2,Star,2,0,False,u_bag;alch_bag
+embalm_red:3,Solution for Zombies,Embalm,20,3,Star,3,0,False,u_bag;alch_bag
+embalm_white_red:1,Injection for Corpses,Embalm,20,1,Star,-1,1,False,u_bag;alch_bag
+embalm_white_red:2,Injection for Corpses,Embalm,20,2,Star,-2,2,False,u_bag;alch_bag
+embalm_white_red:3,Injection for Corpses,Embalm,20,3,Star,-3,3,False,u_bag;alch_bag
+embalm_red_white:1,Injection for Zombies,Embalm,20,1,Star,1,-1,False,u_bag;alch_bag
+embalm_red_white:2,Injection for Zombies,Embalm,20,2,Star,2,-2,False,u_bag;alch_bag
+embalm_red_white:3,Injection for Zombies,Embalm,20,3,Star,3,-3,False,u_bag;alch_bag
+quality_items_silver,Transmutation Potion I,None,20,0,None,0,0,False,
+quality_items_gold,Transmutation Potion II,None,20,0,None,0,0,False,
+dust_explosive,Explosive Dust,None,20,0,None,0,0,False,
+catalyst,Catalyst,None,20,0,None,0,0,False,
+powder_gun,Gunpowder,None,20,0,None,0,0,False,
+acid,Acid,None,20,0,None,0,0,False,
+glue,Glue,None,20,0,None,0,0,False,
+black_oil,Black Oil,None,20,0,None,0,0,False,
+resin,Resin,None,20,0,None,0,0,False,
+dye,Dye,None,20,0,None,0,0,False,
+aqua_vitae,Aqua Vitae,None,20,0,None,0,0,False,
+exp_red_potion,"Toxic <sprite name=""talent_red""> Potion",None,20,0,None,0,0,False,
+exp_green_potion,"Toxic <sprite name=""talent_green""> Potion",None,20,0,None,0,0,False,
+exp_blue_potion,"Toxic <sprite name=""talent_blue""> Potion",None,20,0,None,0,0,False,
+exp_orange_potion,"Toxic <sprite name=""talent_orange""> Potion",None,20,0,None,0,0,False,
+exp_yellow_potion,"Toxic <sprite name=""talent_yellow""> Potion",None,20,0,None,0,0,False,
+exp_red_potion_2,"Toxic <sprite name=""talent_red""> Potion II",None,20,0,None,0,0,False,
+exp_green_potion_2,"Toxic <sprite name=""talent_green""> Potion II",None,20,0,None,0,0,False,
+exp_blue_potion_2,"Toxic <sprite name=""talent_blue""> Potion II",None,20,0,None,0,0,False,
+exp_orange_potion_2,"Toxic <sprite name=""talent_orange""> Potion II",None,20,0,None,0,0,False,
+exp_yellow_potion_2,"Toxic <sprite name=""talent_yellow""> Potion II",None,20,0,None,0,0,False,
+comets_tail,Comet's Tail,None,20,0,None,0,0,False,u_bag;alch_bag
+quicksilver,Quicksilver,None,20,0,None,0,0,False,
+brimstone,Brimstone,None,20,0,None,0,0,False,
+cinnabar,Cinnabar,None,20,0,None,0,0,False,
+alum,Alum,None,20,0,None,0,0,False,
+camphor,Camphor,None,20,0,None,0,0,False,
+crystal_goddess,Blue Crystal,None,20,0,None,0,0,False,u_bag;alch_bag
+collar_bronze,Bronze Zombie Collar,Collar,10,0,None,0,0,False,u_bag
+collar_gold,Golden Zombie Collar,Collar,10,0,None,0,0,False,u_bag
+collar_steel,Steel Zombie Collar,Collar,10,0,None,0,0,False,u_bag
+ash,Ash,None,99,0,None,0,0,False,u_bag;alch_bag
+salt,Salt,None,99,0,None,0,0,False,u_bag;alch_bag
+surgeon_mistake_skin,Surgeon's Error,Skin,1,0,None,-1,-1,False,bodypart;mistake
+surgeon_mistake_bones,Surgeon's Error,Bones,1,0,None,-1,-1,False,bodypart;mistake
+surgeon_mistake_skull,Surgeon's Error,Skull,1,0,None,-1,-1,False,bodypart;mistake
+surgeon_mistake_guts,Surgeon's Error,Guts,1,0,None,-1,-1,False,bodypart;mistake
+surgeon_mistake_brain,Surgeon's Error,Brain,1,0,None,-1,-1,False,bodypart;mistake
+surgeon_mistake_heart,Surgeon's Error,Heart,1,0,None,-1,-1,False,bodypart;mistake
+skin_0_0:1,Skin,Skin,20,1,Star,0,0,False,bodypart;gr_skin;u_bag
+skin_1_0:1,Skin,Skin,20,1,Star,1,0,False,bodypart;gr_skin;u_bag
+skin_2_0:2,Skin,Skin,20,2,Star,2,0,False,bodypart;gr_skin;u_bag
+skin_1_2:2,Skin,Skin,20,2,Star,1,2,False,bodypart;gr_skin;u_bag
+skin_3_0:3,Skin,Skin,20,3,Star,3,0,False,bodypart;gr_skin;u_bag
+skin_1_3:3,Skin,Skin,20,3,Star,1,3,False,bodypart;gr_skin;u_bag
+bones_0_0:1,Bones,Bones,20,1,Star,0,0,False,bodypart;gr_bones;u_bag
+bones_0_1:1,Bones,Bones,20,1,Star,0,1,False,bodypart;gr_bones;u_bag
+bones_1_1:2,Bones,Bones,20,2,Star,1,1,False,bodypart;gr_bones;u_bag
+bones_2_1:2,Bones,Bones,20,2,Star,2,1,False,bodypart;gr_bones;u_bag
+bones_1_3:3,Bones,Bones,20,3,Star,1,3,False,bodypart;gr_bones;u_bag
+bones_3_1:3,Bones,Bones,20,3,Star,3,1,False,bodypart;gr_bones;u_bag
+skull_0_0:1,Skull,Skull,20,1,Star,0,0,False,bodypart;gr_skulls;u_bag
+skull_0_1:1,Skull,Skull,20,1,Star,0,1,False,bodypart;gr_skulls;u_bag
+skull_0_2:2,Skull,Skull,20,2,Star,0,2,False,bodypart;gr_skulls;u_bag
+skull_2_2:2,Skull,Skull,20,2,Star,2,2,False,bodypart;gr_skulls;u_bag
+skull_0_3:3,Skull,Skull,20,3,Star,0,3,False,bodypart;gr_skulls;u_bag
+skull_3_2:3,Skull,Skull,20,3,Star,3,2,False,bodypart;gr_skulls;u_bag
+heart_0_1:1,Heart,Heart,20,1,Star,0,1,False,bodypart;gr_heart;u_bag
+heart_1_1:1,Heart,Heart,20,1,Star,1,1,False,bodypart;gr_heart;u_bag
+heart_1_2:2,Heart,Heart,20,2,Star,1,2,False,bodypart;gr_heart;u_bag
+heart_2_2:2,Heart,Heart,20,2,Star,2,2,False,bodypart;gr_heart;u_bag
+heart_0_3:3,Heart,Heart,20,3,Star,0,3,False,bodypart;gr_heart;u_bag;alch_bag
+heart_3_1:3,Heart,Heart,20,3,Star,3,1,False,bodypart;gr_heart;u_bag;alch_bag
+brain_1_0:1,Brain,Brain,20,1,Star,1,0,False,bodypart;gr_brain;u_bag
+brain_0_1:1,Brain,Brain,20,1,Star,0,1,False,bodypart;gr_brain;u_bag
+brain_2_1:2,Brain,Brain,20,2,Star,2,1,False,bodypart;gr_brain;u_bag
+brain_0_2:2,Brain,Brain,20,2,Star,0,2,False,bodypart;gr_brain;u_bag
+brain_3_1:3,Brain,Brain,20,3,Star,3,1,False,bodypart;gr_brain;u_bag;alch_bag
+brain_0_3:3,Brain,Brain,20,3,Star,0,3,False,bodypart;gr_brain;u_bag;alch_bag
+guts_0_0:1,Guts,Guts,20,1,Star,0,0,False,bodypart;gr_guts;u_bag
+guts_1_0:1,Guts,Guts,20,1,Star,1,0,False,bodypart;gr_guts;u_bag
+guts_2_1:2,Guts,Guts,20,2,Star,2,1,False,bodypart;gr_guts;u_bag
+guts_2_2:2,Guts,Guts,20,2,Star,1,1,False,bodypart;gr_guts;u_bag
+guts_3_0:3,Guts,Guts,20,3,Star,3,0,False,bodypart;gr_guts;u_bag;alch_bag
+guts_1_3:3,Guts,Guts,20,3,Star,1,3,False,bodypart;gr_guts;u_bag;alch_bag
+flesh,Flesh,Flesh,20,0,None,0,1,False,bodypart;gr_flesh;u_bag;alch_bag;food_bag
+fat,Fat,None,30,0,None,1,0,False,bodypart;gr_fat;u_bag
+blood,Blood,None,99,0,None,1,0,False,bodypart;gr_blood;u_bag;alch_bag
+surgeon_mistake_flesh,surgeon_mistake_flesh,Flesh,1,0,None,1,1,False,bodypart;mistake
+surgeon_mistake_optional,surgeon_mistake_optional,None,1,0,None,0,-1,False,bodypart;mistake
+pseudo_brain,pseudo_brain,None,1,0,None,0,0,False,
+pseudo_heart,pseudo_heart,None,1,0,None,0,0,False,
+pseudo_flesh,pseudo_flesh,None,1,0,None,0,0,False,
+pseudo_bones,pseudo_bones,None,1,0,None,0,0,False,
+pseudo_skin,pseudo_skin,None,1,0,None,0,0,False,
+pseudo_fat,pseudo_fat,None,1,0,None,0,0,False,
+pseudo_blood,pseudo_blood,None,1,0,None,0,0,False,
+pseudo_skull,pseudo_skull,None,1,0,None,0,0,False,
+pseudo_tooth,pseudo_tooth,None,1,0,None,0,0,False,
+pseudo_guts,pseudo_guts,None,1,0,None,0,0,False,
+pseudo_tool,pseudo_tool,None,1,0,None,0,0,False,tool
+bag_alchemy,Alchemist's bag,Bag,1,0,None,0,0,False,
+bag_farming,Farmer's bag,Bag,1,0,None,0,0,False,
+bag_fishing,Fisherman's bag,Bag,1,0,None,0,0,False,
+bag_potions,Potion bag,Bag,1,0,None,0,0,False,
+bag_food,Food bag,Bag,1,0,None,0,0,False,
+bag_tools,Tool bag,Bag,1,0,None,0,0,False,
+bag_builder,Builder's bag,Bag,1,0,None,0,0,False,
+bag_universal,Universal bag,Bag,1,0,None,0,0,False,
+bag_universal_big,Big universal bag,Bag,1,0,None,0,0,False,
+bag_quest,bag_quest,Bag,1,0,None,0,0,False,
+bag_scroll_small,bag_scroll_small,Bag,1,0,None,0,0,False,
+no_bait,No Bait,None,1,0,None,0,0,False,
+breadcrumb_bite,Breadcrumb Bait,Bait,20,0,None,0,0,False,u_bag;fish_bag
+insect_bite,Insect Bait,Bait,20,0,None,0,0,False,u_bag;fish_bag
+ultimate_bite,Live Bait,Bait,20,0,None,0,0,False,u_bag;fish_bag
+worms_bite,Worms Bait,Bait,20,0,None,0,0,False,
+shrimp_bite,Shrimp Bait,Bait,20,0,None,0,0,False,
+basic_rod,Basic Rod,FishingRod,1,0,None,0,0,False,u_bag;tool
+amateur_rod,Amateur Rod,FishingRod,1,0,None,0,0,False,u_bag;tool
+advanced_rod,Advanced Rod,FishingRod,1,0,None,0,0,False,u_bag;tool
+pro_rod,Pro Rod,FishingRod,1,0,None,0,0,False,u_bag;tool
+fishing_rod_0,fishing_rod_0,FishingRod,1,0,None,0,0,False,u_bag;tool
+master_rod,Master Rod,FishingRod,1,0,None,0,0,False,u_bag;tool
+fish_roach,Roach,None,20,0,None,0,0,False,fishes;gr_river_fish_1
+fish_gudgeon,Gudgeon,None,20,0,None,0,0,False,fishes;gr_river_fish_1
+fish_crucian,Crucian,None,20,0,None,0,0,False,fishes;gr_river_fish_2
+fish_dace,Herring,None,20,0,None,0,0,False,fishes;gr_river_fish_2
+fish_bream,Bream,None,20,0,None,0,0,False,fishes;gr_river_fish_3
+fish_carp,Carp,None,20,0,None,0,0,False,fishes;gr_river_fish_3
+fish_pike,Pike,None,20,0,None,0,0,False,fishes;gr_river_fish_4
+fish_catfish,Catfish,None,20,0,None,0,0,False,fishes;gr_river_fish_4
+fish_anchovy,Anchovy,None,20,0,None,0,0,False,fishes;gr_sea_fish_1
+fish_mackerel,Mackerel,None,20,0,None,0,0,False,fishes;gr_sea_fish_1
+fish_tuna,Tuna,None,20,0,None,0,0,False,fishes;gr_sea_fish_2
+fish_salmon,Salmon,None,20,0,None,0,0,False,fishes;gr_sea_fish_2
+fish_eel,Eel,None,20,0,None,0,0,False,fishes;gr_sea_fish_3
+fish_trout,Trout,None,20,0,None,0,0,False,fishes;gr_sea_fish_3
+fish_frog,Frog,None,20,0,None,0,0,False,fishes
+fish_goldfish,Goldfish,None,20,0,None,0,0,False,fishes
+fish_silverfin,Silverfin,None,20,0,None,0,0,False,fishes
+fish_swamp_ghost,Swamp Ghost,None,20,0,None,0,0,False,fishes
+fish_kraken_jr,Kraken Jr,None,20,0,None,0,0,False,fishes
+fish_mythic_carp,Mythic Carp,None,20,0,None,0,0,False,fishes
+fish_celestial_salmon,Celestial Salmon,None,20,0,None,0,0,False,fishes
+fish_elder_catfish,Elder Catfish,None,20,0,None,0,0,False,fishes
+detail_1,Simple iron part,None,10,0,None,0,0,False,
+intro_prison_medallion,Inquisitor's medallion,None,1,0,None,0,0,False,u_bag;quest_bag
+intro_prison_kings_signet,King's signet,None,1,0,None,0,0,False,u_bag;quest_bag
+intro_prison_note,Inquisitor's note,None,1,0,None,0,0,False,u_bag;quest_bag
+intro_prison_key,Key from the Inquisition dungeon,None,1,0,None,0,0,False,u_bag;quest_bag
+quest_bell,Magic bell,None,1,0,None,0,0,False,u_bag;quest_bag
+doctor_meeting_code,Secret combination,None,1,0,None,0,0,False,u_bag;quest_bag
+hypno_device,Hypno-device,None,20,0,None,0,0,False,u_bag;quest_bag
+hypno_device_charged,Charged hypno-device,None,20,0,None,0,0,False,u_bag;quest_bag
+temp_village_head_paper,Temporary Head of the Village Certificate,None,1,0,None,0,0,False,u_bag;quest_bag
+forest_pass,Forest Pass,None,1,0,None,0,0,False,u_bag;quest_bag
+royal_pardon,Royal Pardon,None,1,0,None,0,0,False,u_bag;quest_bag
+violine,Violin,None,1,0,None,0,0,False,u_bag;quest_bag
+book_love,Love Novel,None,1,0,None,0,0,False,u_bag;quest_bag
+card_deck,Deck of Cards,None,1,0,None,0,0,False,u_bag;quest_bag
+keys_looters,Keys for Looters,None,20,0,None,0,0,False,u_bag;quest_bag
+frill,Lace,None,20,0,None,0,0,False,u_bag
+thread_metal,Fishing Line,None,50,0,None,0,0,False,
+book_poetry,Printed Poetry,None,1,0,None,0,0,False,u_bag;quest_bag
+agreement_frontman,PR Agreement,None,1,0,None,0,0,False,u_bag;quest_bag
+agreement_frontman_signed,Signed PR Agreement,None,1,0,None,0,0,False,u_bag;quest_bag
+necromonicon,Necronomicon,None,1,0,None,0,0,False,u_bag;quest_bag
+dynamite,Dynamite,None,1,0,None,0,0,False,u_bag;quest_bag
+note_lab_tower,Alchemist's note,None,1,0,None,0,0,False,u_bag;quest_bag
+flag_reward,Victory Banner,None,50,0,None,0,0,False,u_bag
+shield_squad,Defender's Emblem,None,50,0,None,0,0,False,u_bag
+green_scroll,Green Scroll,None,999,0,None,0,0,False,u_bag
+key_resurrection,Key to the Resurrection Room,None,1,0,None,0,0,False,
+note_resurrection,Resurrection Note,None,1,0,None,0,0,False,u_bag;quest_bag
+zombie_power,Zombie Power,None,20,0,None,0,0,False,u_bag
+potato,Po-ta-to,None,20,0,None,0,0,False,u_bag;quest_bag
+mash,Mash drop,None,50,0,None,0,0,False,
+spices,Spices,None,50,0,None,0,0,False,
+paper_wanted,Wanted Poster,None,10,0,None,0,0,False,
+flag_blue,Victory Flag,None,10,0,None,0,0,False,
+mirror,mirror,None,1,0,None,0,0,False,u_bag;quest_bag
+portal_stone_pride,Portal fragment Pride,None,1,0,None,0,0,False,u_bag;quest_bag
+portal_stone_sloth,Portal fragment Sloth,None,1,0,None,0,0,False,u_bag;quest_bag
+portal_stone_wrath,Portal fragment Wrath,None,1,0,None,0,0,False,u_bag;quest_bag
+portal_stone_envy,Portal fragment Envy,None,1,0,None,0,0,False,u_bag;quest_bag
+portal_stone_gluttony,Portal fragment Gluttony,None,1,0,None,0,0,False,u_bag;quest_bag
+portal_stone_lust,Portal fragment Lust,None,1,0,None,0,0,False,u_bag;quest_bag
+portal_stone_greed,Portal fragment Greed,None,1,0,None,0,0,False,u_bag;quest_bag
+red_eye,Red Eye,None,1,0,None,0,0,False,u_bag;quest_bag
+hand_prothesis,Prosthetic Hand,None,1,0,None,0,0,False,u_bag;quest_bag
+small_printing_press,Small Printing Press,None,1,0,None,0,0,False,u_bag;quest_bag
+trilogy,Trilogy,None,1,0,None,0,0,False,u_bag;quest_bag
+speech_writing_device,Speech Writing Device,None,1,0,None,0,0,False,u_bag;quest_bag
+cacao,Cacao,None,50,0,None,0,0,False,u_bag;quest_bag;alch_bag
+chocolate,Chocolate,None,20,0,None,0,0,False,u_bag;food_bag
+hand_prothesis_elegant,Elegant Prosthetic Hand,None,1,0,None,0,0,False,u_bag;quest_bag
+chair_comfortable,Comfortable Chair,None,1,0,None,0,0,False,u_bag;quest_bag
+drape_luxury,Luxury Drapes,None,1,0,None,0,0,False,u_bag;quest_bag
+printed_money,Printed Money,None,50,0,None,0,0,False,u_bag;quest_bag
+printed_money_signed,Signed Printed Money,None,50,0,None,0,0,False,u_bag;quest_bag
+loot_battle_purse,Battle Loot,None,10,0,None,0,0,False,u_bag
+chest_myst,Mysterious Chest,None,1,0,None,0,0,False,u_bag;quest_bag
+glass,Glass,None,30,0,None,0,0,False,u_bag;buil_bag
+gold_nugget,Golden nugget,None,50,0,None,0,0,False,u_bag;buil_bag;alch_bag
+ingot_gold,Golden ingot,None,20,0,None,0,0,False,u_bag;buil_bag
+beeswax,Beeswax,None,30,0,None,0,0,False,u_bag;alch_bag
+honey,Honey,None,30,0,None,0,0,False,u_bag;food_bag;alch_bag
+slug,Slug,None,20,0,None,0,0,False,u_bag
+fireflight,Firefly,None,20,0,None,0,0,False,u_bag;alch_bag
+mold_green,Green mold,None,20,0,None,0,0,False,u_bag
+homunculus,Homunculus,None,20,0,None,0,0,False,
+glass_bottle_empty,Empty Glass Bottle,None,20,0,None,0,0,False,
+polishing_paste,Polishing Paste,None,20,0,None,0,0,False,
+trinkets_wood,Wooden Trinkets,None,20,0,None,0,0,False,u_bag;buil_bag
+trinkets_bronze,Copper Trinkets,None,20,0,None,0,0,False,u_bag;buil_bag
+trinkets_stone,Stone Marbles,None,20,0,None,0,0,False,u_bag;buil_bag
+trinkets_gold,Precious Trinkets,None,20,0,None,0,0,False,u_bag;buil_bag
+jewelry,Fine Jewelry,None,20,0,None,0,0,False,u_bag;buil_bag
+gem,Gem,None,20,0,None,0,0,False,u_bag;buil_bag
+town_gratitude,Town Gratitude,None,100,0,None,0,0,False,u_bag
+fairy_swamp_map,Fairy's Swamp Map,None,1,0,None,0,0,False,u_bag
+imported_components,Imported Components,None,20,0,None,0,0,False,u_bag
+ev_needles,Everlasting Needles,None,20,0,None,0,0,False,u_bag
+moonshine,Moonshine,None,20,0,None,0,0,False,u_bag
+inq_note_1,Inquisitor's Note I,None,1,0,None,0,0,False,u_bag;quest_bag
+inq_note_2,Inquisitor's Note II,None,1,0,None,0,0,False,u_bag;quest_bag
+barricade_1_pre,Barricade I,None,99,0,None,0,0,False,
+barricade_2_pre,Barricade II,None,99,0,None,0,0,False,
+barricade_3_pre,Barricade III,None,99,0,None,0,0,False,
+barricade_spike_1_pre,Spiked Barricade I,None,99,0,None,0,0,False,
+barricade_spike_2_pre,Spiked Barricade II,None,99,0,None,0,0,False,
+barricade_spike_3_pre,Spiked Barricade III,None,99,0,None,0,0,False,
+barricade_wall_1_pre,Fortified Barricade I,None,99,0,None,0,0,False,
+barricade_wall_2_pre,Fortified Barricade II,None,99,0,None,0,0,False,
+barricade_wall_3_pre,Fortified Barricade III,None,99,0,None,0,0,False,
+tower_1_pre,Archer Tower I,None,99,0,None,0,0,False,
+tower_2_pre,Archer Tower II,None,99,0,None,0,0,False,
+tower_3_pre,Archer Tower III,None,99,0,None,0,0,False,
+test_item_1,test_item_1,None,1,0,None,0,0,False,
+test_item_2,test_item_2,None,2,0,None,0,0,False,
+test_item_3,test_item_3,None,3,0,None,0,0,False,
+test_inventory_1,test_inventory_1,None,1,0,None,0,0,False,
+test_item_insertable_to_u_bag,test_item_insertable_to_u_bag,None,1,0,None,0,0,False,u_bag
+test_weapon,test_weapon,Sword,1,0,None,0,0,False,
+test_armor,test_armor,BodyArmor,1,1,None,0,0,False,
+test_note,Test Note,None,1,0,None,0,0,False,
+test_stick,test_stick,None,50,0,None,0,0,False,
+test_flitch,test_flitch,None,50,0,None,0,0,False,
+test_wooden_plank,test_wooden_plank,None,50,0,None,0,0,False,
+test_firewood,test_firewood,None,50,0,None,0,0,False,
+test_cross,test_cross,None,50,0,None,0,0,False,
+test_ore,test_ore,None,50,0,None,0,0,False,
+test_ingot,test_ingot,None,50,0,None,0,0,False,
+empty,empty,None,1,0,None,0,0,False,
+inventory,Inventory,None,1,0,None,0,0,False,
+toolBeltInventory,toolBeltInventory,None,1,0,None,0,0,False,
+craftInventory,craftInventory,None,1,0,None,0,0,False,
+wood_OLD,wood_OLD,None,1,0,None,0,0,False,
+chair,chair,None,1,0,None,0,0,False,
+saw,saw,None,1,0,None,0,0,False,
+wooden_detail:1,Wooden Detail,None,20,1,Star,0,0,False,u_bag
+wooden_detail:2,Wooden Detail,None,20,2,Star,0,0,False,u_bag
+wooden_detail:3,Wooden Detail,None,20,3,Star,0,0,False,u_bag
+wooden_kit:1,Wood Kit,None,20,1,Star,0,0,False,u_bag
+wooden_kit:2,Wood Kit,None,20,2,Star,0,0,False,u_bag
+wooden_kit:3,Wood Kit,None,20,3,Star,0,0,False,u_bag
+wood_billet,Wooden Billet,None,20,0,None,0,0,False,u_bag
+sinful_idol,Unholy Idol,None,20,0,None,0,0,False,
+scary_idol,Scary Idol,None,20,0,None,0,0,False,
+wooden_figure:1,wooden_figure,None,20,1,Star,0,0,False,
+wooden_figure:2,wooden_figure,None,20,2,Star,0,0,False,
+wooden_figure:3,wooden_figure,None,20,3,Star,0,0,False,
+cognac:1,Cognac,None,20,1,Star,0,0,False,
+cognac:2,Cognac,None,20,2,Star,0,0,False,
+cognac:3,Cognac,None,20,3,Star,0,0,False,
+godbless_potion,godbless_potion,None,20,0,None,0,0,False,
+allahbless_potion_test,allahbless_potion_test,None,20,0,None,0,0,False,
+faith_prayer_tier_1_test,Faith Prayer,Preach,1,0,None,0,0,False,
+money_prayer_tier_1_test,Money Prayer,Preach,1,0,None,0,0,False,
+disco_prayer_test,Disco Prayer,Preach,1,0,None,0,0,False,
+town_happiness,town_happiness,None,999,0,None,0,0,False,
+test_flag_item,test_flag_item,None,1,0,None,0,0,False,
+heal_potion_scroll,Healing Potion Scroll,None,1,0,None,0,0,False,
+energy_potion_scroll,Energy Potion Scroll,None,1,0,None,0,0,False,
+speed_potion_scroll,Speed Potion Scroll,None,1,0,None,0,0,False,
+krotowuha_potion_scroll,Krotowuha Scroll,None,1,0,None,0,0,False,
+grow_potion_scroll,grow_potion_scroll,None,1,0,None,0,0,False,
+fake_porter_slot_filler,fake_porter_slot_filler,None,1,0,None,0,0,False,
+hero_clothes_9001,Keeper's Clothes,None,1,0,None,0,0,False,
+hero_clothes_9002,Farmer's Clothes,None,1,0,None,0,0,False,
+hero_clothes_9004,Alchemist's Clothes,None,1,0,None,0,0,False,
+hero_clothes_9005,Blacksmith's Clothes,None,1,0,None,0,0,False,
+hero_clothes_9006,Pilgrim's Clothes,None,1,0,None,0,0,False,
+hero_clothes_9007,Special Clothes,None,1,0,None,0,0,False,
+hero_clothes_9008,Priest's Clothes,None,1,0,None,0,0,False,
