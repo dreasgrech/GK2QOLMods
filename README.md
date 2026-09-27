@@ -50,6 +50,11 @@ The unmodified game lets a workbench, build desk or alchemy table use materials 
 that station. With this mod, they draw from chests in **all** areas, so you don't have to carry stone from the
 quarry chest to the yard. Items are taken from the chest that has them, nearest pool first, exactly as the game does
 within one area.
+<br/><br/>
+
+<img width="2560" height="1440" alt="image" src="https://github.com/user-attachments/assets/c9d72151-cb13-4a66-be5f-59c820bec989" />
+<i>The red boxes boxes are drawn here to highlight the amount of materials which is the total in all my storages</i>
+<br/><br/>
 
 - Zombies are left alone: a zombie working a station still only uses its own area's storage, so their logistics
   are unchanged.
@@ -60,6 +65,11 @@ within one area.
 ### Built Count
 
 `GK2BuiltCount.dll`
+
+<img width="2560" height="1440" alt="image" src="https://github.com/user-attachments/assets/82272da5-871d-4d77-8b4d-3458d8c98e79" />
+<i>The red boxes boxes are drawn here to highlight the total amount of the specific building built in this area</i>
+<br/><br/>
+
 
 - Every row in a build desk's menu shows how many of that building already stand in the desk's area, as
 `Sawhorse (2)`. Rows with none built look unchanged. Buildings the game limits (`x/max`) keep the game's own label.
