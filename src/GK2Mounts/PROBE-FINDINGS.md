@@ -715,3 +715,187 @@ through the foot (child scale x = −1, origin moved to the mirrored spot; Unity
 mesh), so the foot stays on the rear rail and the pole leans out over the back; tilt and lean turn about the same
 foot; the lamp rig is mirrored in the same plane and follows the mirrored top. Panel wording: "Mirror the pole (foot
 stays; it leans out over the back instead of over the donkey)".
+
+## Round 9 (2026-09-28 23:00): how big items reach the keeper's head, and how they leave it (source reading)
+
+Goal: while mounted in Cart style a picked-up item must land on the cart at once, with no head stage and no L key.
+Everything below is from the decompiled build 25533739 (`decomp_new/`).
+
+**One sink.** Every path that puts a big item on the head ends in `PlayerData.AddOverheadItem(Item)`:
+`BigDropInteractionHandler.Interact` (a big drop on the ground: `dropSystem.RemoveDrop` then `AddOverheadItem`, no
+free-slot check; a full head drops what it held, `AddOverheadItem` line 306), `ConveyorCellInteractionHandler.Interact`
+(taking from a pile/palette: `RemoveItemById` then `TryAddOverheadItemNoReplace`, else `MakeDrop`), the script
+functions `TakeOvrhdItem` / `TakeOvrhdItemByGroup` (`LazyExpression.cs:842/856`), the autopsy / embalming /
+resurrection windows when a body is taken off the table (`UI*WindowData.AddOverheadItem(bodyItem)`),
+`ZombieSystemData.PutZombieFromGameSceneToStoreForPlayer` (zombies), and the mod's own unload. `AddOverheadItem`
+also fires the global trigger `AddOverhead` (quests) and plays the grab sound (`PlayOverheadItemTakeSound`, private).
+
+**One gate.** `PlayerData.HasFreeOverheadSlot` (= `OverheadCount < 1 + extra_overhead`) is what the conveyor's
+`HasInteraction` and the script Take functions check before taking; the big-drop pickup checks nothing.
+
+**One lookup.** Every path that consumes from the head asks `PlayerData.TryGetOverheadItem(Predicate<Item>, out Item)`
+(scans the head list last-to-first): palettes and piles (`TownPaletteInteractionHandler`: `CanAddItemToInventory`
+predicate, then `InsertOverheadItemTo(wgo, item)`), autopsy, embalming, crematorium, river dump, resurrection, choir,
+fighters' container, zombie clay/sand stations, quest orders (`PlayerOrderExecutor.HasItem/RemoveItem`), and every
+script condition (`HasPlayerOvrhdItem`, `HasPlayerOvrhdItemByGrp`, `PlayerHasOvrhdAndCanInsert`,
+`HasOverheadWithSkulls` via `LazyExpressionEvaluationScope.AnyOverheadItem`). The mutations that follow are
+`RemoveOverheadItem(Item)` and `InsertOverheadItemTo(WgoData, Item)`; script mutations (`InsertOvrhdItem`) take the
+item from `GetOverheadItemForMutation()`, which is the `OverheadCandidate` (set only when the head holds several
+items) or else the `overheadItem` getter (last head item).
+
+**What must stay untouched.** `HasOverheadItem`, `HasMultipleOverheadItems`, `OverheadCount`, `OverheadItems` drive
+the head *visuals* (`RefreshOverheadVisuals`, `MainGame.cs:731` on load), the drop-on-interact behaviour
+(`PlayerInputHandler`: interact with nothing in reach drops the head item), the start of work (`WorkPlayerState.OnEnter`
+drops the head item), fight starts (`FightingGameController`, `Flow_StartFightById`), and the tool hints. If those saw
+the cart as the head, the cargo would be drawn on the keeper and dropped on the ground whenever he starts work.
+
+**Design that follows (cart = the hands, only while mounted in Cart style):**
+
+1. Prefix `AddOverheadItem`: for an allowed item (not a zombie) with room on the cart, add it to the cart inventory,
+   fire the `AddOverhead` trigger, play the grab sound, skip the original. Cart full: drop the item at the keeper's
+   drop position (the big drop was already removed from the world, so the item must reappear somewhere) and say
+   "The cart is full.". Zombies keep the original path (head), as the cart refuses them today.
+2. Prefix `HasFreeOverheadSlot`: mounted → "the cart has a free slot". Piles then show no take hint when the cart is
+   full, and the script Take functions refuse, exactly as they do for a full head.
+3. Prefix `TryGetOverheadItem`: run the original (the head, normally empty while mounted); if nothing, scan the cart
+   inventory last-to-first with the same predicate.
+4. Prefix `RemoveOverheadItem(Item)` and `InsertOverheadItemTo(WgoData, Item)`: if the item sits in the cart
+   inventory, remove it there (and for Insert, add it to the target inventory and fire
+   `PlayerInsertOverheadToWgoAnItem`), skip the original.
+5. Postfix `overheadItem` getter: null while mounted → the last cart item, so script custom interactions
+   (`InsertOvrhdItem`) mutate the cart item they matched in their condition.
+6. The cargo key no longer moves items to the head: it takes the last item off the cart onto the ground in front.
+   Mounting with items on the head moves them onto the cart; dismounting unloads as now (to the hands, then the ground).
+
+### Round 9, second pass (23:20): everything else that touches the head, and what changes the design
+
+- **Adding to an inventory makes a new Item object.** `Item.AddItemToInventory` (Item.cs:369) for stack-1 items
+  (all 29 big items have stackCount 1, GK2-carry-facts) does `sourceItem.Split(1, transferInternalData: true)`, gives
+  the new object the source's GUID (`UniqueId.SetGuid`) and inserts *that*; the source is left with count 0
+  (`IsEmpty`). Corpse organs and properties travel with the split (inventory moved, properties cloned). So the Item
+  that ends up on the cart is never the reference the caller passed; identity is the GUID. `RemoveItemFromInventoryByUID`
+  (Item.cs:716) matches by GUID and, with count −1, uses the *stored* item's count, so an emptied reference still
+  removes its entry. `PlayerData.IndexOfOverheadItem` has the same GUID fallback, which is why the game's own
+  `InsertOverheadItemTo` (add first, then remove from the head) works. Consequence for a cart insert: remove from the
+  cart **first** (by GUID), then add to the target, or the emptied reference is handed on.
+- **`HasFreeOverheadSlot` gates more than piles:** every zombie station (clay, sand, mine, sawmill, carrier, porter,
+  power source), the choir, the resurrection table, the autopsy / embalming / resurrection windows (a body taken from
+  the table with no free slot is dropped at the keeper's feet instead), and the script function `NoOvhdItem`. All of
+  them then go through `AddOverheadItem` / `TryAddOverheadItemNoReplace`, so the gate and the sink stay consistent.
+- **Zombies** reach the head through `ZombieSystemData.PutZombieFromGameSceneToStoreForPlayer` → `AddOverheadItem`,
+  and leave through `ResolveOverheadZombieItem` → `TryGetOverheadItem(zombie)` → `RemoveOverheadItem`. The cart
+  refuses zombies (linked world objects, no cart mesh), so they keep the head while mounted. With the gate reporting
+  the cart's room, the head's own limit must still be honoured for them (the prefix drops a zombie already held
+  before taking another, as the original would have).
+- **Script mutations** (`InsertOvrhdItem`, `InsertOvrhdItemWithSkulls`) take their item from
+  `LazyExpressionEvaluationScope.GetOverheadItemForMutation()` (public static): `OverheadCandidate` when the head holds
+  several items, else `PlayerData.overheadItem` (the last head item). Custom interactions with a single head item
+  therefore mutate "the last item", which equals the matched one. With two different cart items that is no longer
+  true, so the mod patches `GetOverheadItemForMutation` (not the `overheadItem` getter, which
+  `ZombieSystemData.ResolveOverheadZombieItem` also falls back to) and returns the cart item the condition matched
+  last (`TryGetOverheadItem` remembers it), else the last cart item.
+- **Draw and drop logic stays on the real head** (`HasOverheadItem`, counts, `OverheadItems`): `RefreshOverheadVisuals`,
+  `MainGame.cs:731` on load, `PlayerInputHandler` (interact on nothing drops the head item), `WorkPlayerState.OnEnter`
+  (drops the head item when work starts), fight starts, `SetInteractingItem`, `CustomInteraction.TryGetInteractable`'s
+  candidate. None of these is patched.
+- **`AddOverheadItem` side effects to reproduce on the cart path:** `RemoveInteractingItem()` if `HasInteractingItem`,
+  the `AddOverhead` global trigger (quests), and the grab sound (`PlayOverheadItemTakeSound`, private: corpse / wood /
+  zombie). Not reproduced: `RefreshOverheadVisuals` (that is the point) and `OnOverheadItemAdded` (no subscribers
+  found in the game code).
+- **Save is synchronous.** `SaveSystem.Save` (SaveSystem.cs:878) calls `PrepareToSave`, serializes and writes before
+  returning. The mod's prefix unloads the cart to the head before that; a postfix can put the head items back onto the
+  cart right after, so a save during a ride costs nothing visible. The mod's own unload paths (`Cargo.Unload`,
+  `Attach` re-adding carried items) must bypass the reroute (`Cargo.unloading` flag), or the unload would put the
+  items straight back on the cart.
+- **Mount with items on the head:** `Cargo.Attach` runs when the cart parts are ready; it is the place to move the
+  head's allowed items onto the cart (`InsertOverheadItemTo(donkey.Data, item)` per item while there is room).
+- **Existing gap, unchanged:** starting work ends the ride and the unload puts items in the hands *after*
+  `WorkPlayerState.OnEnter` has already run its drop, so the keeper works with an item on his head. Death ends the ride
+  the same way. Neither is new.
+
+### Round 9, third pass (2026-09-28 23:50): from scratch, fresh decompile, independent second reader
+
+- **The source folder was stale.** `decomp_new/` dated from 2026-09-25; the installed `Assembly-CSharp.dll` is from
+  2026-09-26 (same MVID `97f92f0d-…`, so the mod's guard passes). A fresh `ilspycmd` run (2040 files vs 2016; 108
+  differences) is now the working folder. In the head-item area only these changed: `TownPaletteInteractionHandler`
+  calls `vendorSystem.TryResolveOrders()` after an insert (new vendor-order system: `VendorSystem`,
+  `WorldZoneData.RemoveItemsFromTownPalettes`, reads palettes only, never the head); `ItemDef.isQuestItem` (drop
+  visuals only); `SaveSystem.RelevantSlot`; a bug-report screen on pause; `ModLoaderDetection` (logs only). Every
+  other file cited in Rounds 7–9 is byte-identical between the two decompiles, so the earlier line numbers hold.
+- **Independent map (second reader, no access to my notes) agrees** on: the single sink `AddOverheadItem`, the gate
+  `HasFreeOverheadSlot`, the lookup `TryGetOverheadItem`, no subscribers to `OnOverheadItemAdded/Removed`, the
+  quest triggers, `Split` creating a new object with the same GUID and an emptied source, no generic inventory walk
+  reading the head except `PlayerOrderExecutor` (and the pre-1004 save fix), nothing touching the head on save /
+  teleport / death, no head check before a big-drop pickup. It also found what I had missed:
+  1. **Three consumers do not use `InsertOverheadItemTo`.** Crematorium (`CrematoriumInteractionHandler.cs:11-12`),
+     autopsy (`AutopsyInteractionHandler.cs:90-92`) and embalming call `wgo.Inventory.AddItemToInventory(item)` and
+     then `RemoveOverheadItem(item)` themselves. With a cart item that add *splits* it (the cart's stored object
+     drops to count 0) before the remove arrives. `Item.RemoveItemFromInventoryByUID` still deletes the entry by GUID
+     (stored count 0 ≤ 0), but `Inventory.RemoveItemFromInventoryByUID` sees an empty returned item and **fires no
+     `OnItemsRemove`** (Inventory.cs:389-396). So the cart's own remove path must resync and redraw itself after
+     every removal instead of relying on the inventory event.
+  2. **Take-from-table paths add first, remove second.** `UIAutopsyWindowData.TakeBody` (78 then 80), embalming,
+     resurrection windows, `ChoirPlaceInteractionHandler.Interact2` and `ResurrectionInteractionHandler.Interact`
+     call `AddOverheadItem` and *then* `table.Inventory.RemoveItemFromInventoryByUID(bodyItem)`. Today head and table
+     share one object. If the cart path split the item, the table's object would be count 0 at removal time: the
+     entry still goes (by GUID) but the table's `OnItemsRemove` would not fire, so its drawer would keep showing a
+     body. Remedy verified in source: `Item.Count` has a public setter (Item.cs:42-51), so after the split into the
+     cart the source shell can be given its count back (the organs already moved to the cart object, properties were
+     cloned); the caller's removal then finds a non-empty object and fires normally, and the shell is garbage. Every
+     non-zombie caller either detaches the item before the add (big drop, conveyor, script Take) or removes it by
+     GUID right after (the three windows), so no live duplicate survives.
+  3. **`RiverDumpInteractionHandler`** starts the dump animation from `PlayerAnimation.OverheadItemWorldPosition`
+     (the visual head) and calls `riverDropSystem.BeginDump(item, …)` before `RemoveOverheadItem` — from the cart the
+     body would fly off from the empty head's spot (cosmetic; the item leaves the cart correctly).
+  4. **Corpses on the ground are `ZombieDropInteractionHandler` drops** (DropView.cs:483-484 assigns it for the `body`
+     group and for zombies; it shows `hint_take` / inspect and then runs the same base `Interact` → `AddOverheadItem`).
+     Same sink, so nothing changes; `ZombieInteractionHandler.Interact` (a walking zombie) has no slot check at all.
+  5. **Saves happen only at the end of sleep** (`EnergySystem.StopSleeping`, 75) besides import. Sleeping ends the ride
+     (state change) long before that save, so the `SaveSystem.Save` prefix is a safety net, not a normal path.
+  6. **`DropSystem.DropItem` keeps the reference for count 1** (the mod's drop-at-keeper hands the cart object on).
+- **Open risk, to verify in game, not in source:** `HasFreeOverheadSlot` and `GetOverheadItemForMutation` are tiny
+  methods (13 bytes of IL for the getter). Mono's JIT inlines small methods into callers compiled after them, and an
+  inlined call never reaches a Harmony patch. Most BepInEx mods patch small getters without trouble, but the build
+  must include a check: with the cart full and the head empty, call the game's own `TryAddOverheadItemNoReplace`
+  from the panel; it returns false only if the getter patch is in effect. If it is inlined, the fallback is to
+  patch the few callers that matter (`ConveyorCellInteractionHandler.HasInteraction`, the three `TakeBody`
+  methods) instead of the getter.
+
+**Design after three passes:** unchanged in shape (six `PlayerData` patches + one on the script scope + save
+postfix + cargo key + move head items to the cart at attach), with these corrections: the cart-side add restores the
+source's count after the split; the cart-side remove always resyncs the mirror and redraws; a `GetOverheadItemForMutation`
+postfix returns the last matched cart item; an in-game inlining check on the first build.
+
+### Round 9, in-game probe results (23:28, `GK2-head-facts.txt`, `HeadProbe.cs`)
+
+- **A. Patches are honoured by the game's own callers.** The getter patch on `HasFreeOverheadSlot` made
+  `TryAddOverheadItemNoReplace` refuse an item with an empty head (not inlined); the `TryGetOverheadItem` prefix was
+  seen by the script function `HasPlayerOvrhdItem('wood')`; the `GetOverheadItemForMutation` postfix made the script
+  function `InsertOvrhdItem()` insert the overridden item into the cart's WgoData. So the design can patch the getter
+  and the static helper directly; no caller patching needed. Expressive string literals take single quotes.
+- **B. Quests.** 538 quests; five head-related checks: `0_tut_take_wood_start` finishes on trigger `AddOverhead`
+  id `wood` (the tutorial's "pick up a log"; the reroute must fire that trigger with the item id, as planned);
+  `5_intro_graveyard_enter_morgue_with_body` and `…_enter_graveyard_with_body` start on a teleport / zone trigger
+  with condition `HasPlayerOvrhdItem("body_corpse")` (goes through `TryGetOverheadItem`, so the cart counts);
+  `5_intro_graveyard_place_body` finishes on `PlayerInsertBodyToAutopsy` (fired by the autopsy handler itself);
+  `71_doctor_sister_corpse` on `PlayerInsertBodyWithSkulls` (fired by the script function). No quest listens to
+  `PlayerInsertOverheadToWgoAnItem`. No condition needs the item to be on the head in the same frame as the pickup.
+- **C. Game data (13 843 definitions walked, 94 hits).** Every pile and pallet is script-driven with the same
+  four functions: put = condition `PlayerHasOvrhdAndCanInsert()` + execution `InsertOvrhdItem()`; take = condition
+  `NoOvhdItem() && HasItemInInv(...)` + execution `TakeOvrhdItem("wood")` / `TakeOvrhdItemByGroup("town_box" |
+  "corpse")`. Owners: `wood_container` (+ `_town_workshop`, `_conveyor`, both `_TOP` variants), `stone_container`,
+  `marble_container`, `sawmill_wood_container`, `conveyor_storage_t1/t2`, `pallet_corpse_1/2`. `grave_empty` buries
+  with `HasPlayerOvrhdItemByGrp("body") && !…zombie` + `InsertOvrhdItem()`, so a corpse can be buried straight from
+  the cart. `autopsy_table_quest` uses `HasOverheadWithSkulls("red","8")` (reads the item's inner inventory, which
+  the split moves along) + `InsertOvrhdItemWithSkulls()`. The rest of the hits are item group ids (`overhead`),
+  the `conveyor_chest*` blacklist of that group, and the `extra_overhead` perk. All of it goes through the patched
+  lookup, the patched gate and the patched mutation source, with the mutation using the item the condition matched.
+- **D. Flow scripts.** 111 scripts on world-object definitions, 109 loadable (`dungeon_rat`, `npc_wispy` missing);
+  only `fight_point_starter_test` mentions the head (`Flow_PlayerDropOverhead`). Nothing to handle.
+- **E. Mechanics, live on the cart inventory.** Add stores a *new* object with the same GUID and leaves the source at
+  count 0 (E1). After a consumer adds the cart object to its own inventory, the cart's remove by GUID deletes the
+  entry but returns false and fires **no** `OnItemsRemove` (E2) — the reroute must resync after every removal. The
+  take-from-table order without the remedy leaves the table's remove silent (E3a); with `Count = 1` restored on the
+  shell the table's remove returns true and fires, and the cart holds the item with count 1 (E3b).
+
+**Verdict:** every open question from the three source passes is answered; nothing contradicts the design. Build it.

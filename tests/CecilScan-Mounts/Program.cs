@@ -46,6 +46,20 @@ Method("Inventory", "RemoveItemFromInventoryByUID", 2);
 Method("SpecialPhysicsCastUtils", "GetPlayerDropPosition", 3);
 Method("DropSystem", "DropItem", 4);
 Method("DropViewAtomMesh", "Activate", 1);
+Method("PlayerData", "get_HasFreeOverheadSlot", 0);
+Method("PlayerData", "TryGetOverheadItem", 2);
+Method("PlayerData", "AddOverheadItem", 1);
+{ var td = game.GetType("PlayerData"); var ms = td?.Methods.Where(x => x.Name == "RemoveOverheadItem").ToList(); bool good = ms != null && ms.Count == 2 && ms.Any(m => m.Parameters.Count == 1 && m.Parameters[0].ParameterType.Name == "Item" && m.HasBody); Console.WriteLine((good?"PASS":"FAIL") + $" method PlayerData.RemoveOverheadItem overloads={ms?.Count} (need 0 and Item)"); if (!good) fails++; }
+Method("LazyExpressionEvaluationScope", "GetOverheadItemForMutation", 0);
+Method("Inventory", "Create", 5);
+{ var td = game.GetType("Inventory"); var ms = td?.Methods.Where(x => x.Name == "AddItemToInventory").ToList(); bool good = ms != null && ms.Count == 2 && ms.Any(m => m.Parameters.Count == 3 && m.HasBody); Console.WriteLine((good?"PASS":"FAIL") + $" method Inventory.AddItemToInventory overloads={ms?.Count} (need the 3-param one)"); if (!good) fails++; }
+Method("Item", "set_Count", 1);
+Method("FlowScriptAssetLoadPolicy", "Load", 1);
+Method("FlowScriptAssetLoadPolicy", "ReleaseGraph", 1);
+Field("QuestCheck", "triggerType", "GlobalEventsSystem/Event/Type");
+Field("QuestCheck", "condExpressions", "System.Collections.Generic.List`1<LazyExpression>");
+Field("GameBalance", "questDefs", "System.Collections.Generic.List`1<QuestDef>");
+Field("WGODef", "attachedScript", "System.String");
 // Inventory.CanAddItemToInventory and PlayerData.InsertOverheadItemTo have two overloads each; the IL scan above covers them.
 { var pa = game.GetType("PlayerAnimation"); bool good = pa?.BaseType?.Name == "AnimationComponent" && game.GetType("AnimationComponent")?.BaseType?.Name == "AnimationComponentBase"; Console.WriteLine((good?"PASS":"FAIL") + " PlayerAnimation : AnimationComponent : AnimationComponentBase"); if (!good) fails++; }
 Console.WriteLine(fails == 0 ? "ALL PASS" : "FAILURES: " + fails);

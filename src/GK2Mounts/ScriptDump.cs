@@ -70,7 +70,7 @@ namespace GK2Mounts
 
         // NodeCanvas graphs keep their content as a serialized JSON string field; find the longest JSON-looking
         // string on the instance without depending on the private field's name.
-        private static string FindSerializedJson(object graph)
+        internal static string FindSerializedJson(object graph)
         {
             string best = null;
             for (Type t = graph.GetType(); t != null && t != typeof(object); t = t.BaseType)

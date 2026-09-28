@@ -27,6 +27,12 @@ namespace GK2Mounts
             Require(AccessTools.Method(typeof(PlayerData), nameof(PlayerData.InsertOverheadItemTo), new[] { typeof(WgoData), typeof(Item) }), "PlayerData.InsertOverheadItemTo(WgoData, Item)");
             Require(AccessTools.Method(typeof(Inventory), nameof(Inventory.RemoveItemFromInventoryByUID)), "Inventory.RemoveItemFromInventoryByUID");
             Require(AccessTools.Method(typeof(SpecialPhysicsCastUtils), nameof(SpecialPhysicsCastUtils.GetPlayerDropPosition)), "SpecialPhysicsCastUtils.GetPlayerDropPosition");
+            Require(AccessTools.PropertyGetter(typeof(PlayerData), nameof(PlayerData.HasFreeOverheadSlot)), "PlayerData.HasFreeOverheadSlot getter");
+            Require(AccessTools.Method(typeof(PlayerData), nameof(PlayerData.TryGetOverheadItem)), "PlayerData.TryGetOverheadItem");
+            Require(AccessTools.Method(typeof(PlayerData), nameof(PlayerData.AddOverheadItem)), "PlayerData.AddOverheadItem");
+            Require(AccessTools.Method(typeof(PlayerData), nameof(PlayerData.RemoveOverheadItem), new[] { typeof(Item) }), "PlayerData.RemoveOverheadItem(Item)");
+            Require(AccessTools.Method(typeof(LazyExpressionEvaluationScope), nameof(LazyExpressionEvaluationScope.GetOverheadItemForMutation)), "LazyExpressionEvaluationScope.GetOverheadItemForMutation");
+            Require(AccessTools.Method(typeof(Inventory), nameof(Inventory.Create)), "Inventory.Create");
         }
 
         private static void Require(object member, string name)

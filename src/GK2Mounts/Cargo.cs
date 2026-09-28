@@ -49,6 +49,21 @@ namespace GK2Mounts
 
         public static int Count => mirror.Count;
         public static bool Attached => inv != null;
+        internal static Inventory Inv => inv;
+        internal static WgoData DonkeyData => donkey != null ? donkey.Data : null;
+
+        // Re-read the cart inventory and redraw, for changes the inventory did not announce (an entry emptied by a
+        // split elsewhere is removed silently, see Round 9 of the findings) and for probes that bypass the events.
+        internal static void Resync(string why)
+        {
+            if (inv == null)
+            {
+                return;
+            }
+            SyncMirror();
+            Mount.OnCargoChanged();
+            Plugin.Log.LogInfo($"Cargo: resynced ({why}); {mirror.Count} item(s) on the cart.");
+        }
 
         // Called once the cart parts are prepared (cart style only). Items carried over from the previous view go
         // back onto the new inventory.

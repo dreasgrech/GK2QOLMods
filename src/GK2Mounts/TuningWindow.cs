@@ -338,6 +338,11 @@ namespace GK2Mounts
                 Plugin.Log.LogInfo("[cargo] " + CarryProbe.DumpFacts());
             }
             GUILayout.Label("Writes BepInEx/GK2-carry-facts.txt: the donkey prefab's ConditionalDrawer rules (what switches the loaded-cart mesh), the npc_donkey definition's inventory size and item filters, every item with itemSize Big, and the mesh elements the keeper's overhead view can show. Mount first for the drawer rules.", small);
+            if (GUILayout.Button("Dump head-item facts (patch checks, quest listeners, script expressions, item mechanics)"))
+            {
+                Plugin.Log.LogInfo("[head] " + HeadProbe.Dump());
+            }
+            GUILayout.Label("Writes BepInEx/GK2-head-facts.txt for routing pickups straight onto the cart: whether patches on the game's small head methods take effect when the game calls them, which quests listen to the head triggers, every expression in the game data and every world-object script that mentions the head, and a live test of the item mechanics on the cart's inventory. Mount in Cart style with empty hands and one free cart slot for the full set. " + HeadProbe.Status, small);
             GUILayout.BeginHorizontal();
             GUILayout.Label("Test item id", label, GUILayout.Width(100f));
             cargoItemId = GUILayout.TextField(cargoItemId, GUILayout.Width(110f));
