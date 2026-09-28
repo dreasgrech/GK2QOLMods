@@ -51,6 +51,7 @@ namespace GK2Mounts
         public static void Attach(SpriteRenderer donkeyBody, SpriteRenderer keeperBody)
         {
             Detach();
+            sliceCache.Clear(); // slices depend on the style's LegHeightPx; never reuse them across a style switch
             if (donkeyBody == null || keeperBody == null)
             {
                 return;

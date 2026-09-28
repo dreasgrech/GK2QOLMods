@@ -740,10 +740,19 @@ namespace GK2Mounts
             if (!wantFreeze)
             {
                 idleSince = -1f;
-                if (riderFrozen)
+                riderFrozen = false;
+                // Playback speed of the pose: PoseSpeed while moving (optionally scaled by the riding speed so it keeps
+                // pace with the donkey's walk animation), the clip's own speed otherwise. Game poses (Idle/Walk) untouched.
+                float target = 1f;
+                if (S.Pose.Value != RiderPose.Idle && S.Pose.Value != RiderPose.Walk)
                 {
-                    a.speed = 1f;
-                    riderFrozen = false;
+                    target = state == AnimationState.Walk
+                        ? S.PoseSpeed.Value * (S.PoseSpeedFollowsDonkey.Value ? S.SpeedMultiplier.Value : 1f)
+                        : S.PoseSpeed.Value;
+                }
+                if (Mathf.Abs(a.speed - target) > 0.001f)
+                {
+                    a.speed = target;
                 }
                 return;
             }

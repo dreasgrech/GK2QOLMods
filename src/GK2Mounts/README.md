@@ -28,7 +28,10 @@ NPC and its schedule are untouched.
 ### `[Ride]` and `[Cart]`: position, pose, animation, legs, speed
 
 Both sections hold the same keys; the values differ because the two looks differ. The tuning panel edits the
-section of the style you are currently mounted on. Defaults in the order Ride / Cart.
+section of the style you are currently mounted on. The defaults come from `defaults.cfg` next to the sources, embedded into the DLL at
+build time; the panel's "Export current values as mod defaults" (Debug tab) writes the current values into that
+file, so tuning never needs a code edit: tune, export, rebuild. The table shows the values shipped at the time of
+writing, Ride / Cart.
 
 | Key | Ride | Cart | Meaning |
 |---|---|---|---|
@@ -43,6 +46,8 @@ section of the style you are currently mounted on. Defaults in the order Ride / 
 | `Bob` | true | false | Rider moves up and down with the donkey's back through its walk cycle (1 px). |
 | `Pose` | `FishingIdle` | `Walk` | Keeper's body pose: `FishingIdle` (hands forward as if holding reins, legs still), `Idle`, `FocusedWalk`, `Walk` (unchanged). Tool, work and planting states are not offered: they take player control and force Idle on exit, which would loop. |
 | `FreezePoseWhenIdle` | true | false | Pause the keeper's animation while standing still so the arms stop moving; resumes when moving. |
+| `PoseSpeed` | 1 | 1 | Playback speed of the pose animation while the donkey moves (1 = the clip's own speed). |
+| `PoseSpeedFollowsDonkey` | true | true | Also multiply the pose speed by the riding speed multiplier, so it keeps pace with the donkey's walk animation. |
 | `NearLeg` | false | false | Draw the rider's legs in front of the donkey while his own (baked-in) legs are hidden inside it. |
 | `LegSource` | `Body` | `Body` | `Body`: his own trousers and boots re-sliced from the current body frame (outfit-exact, follows the pose). `Drawn`: a hand-drawn bent leg in outfit colours. |
 | `LegHeightPx` | 15 | 10 | With `Body`: how many bottom rows of the body frame are legs (feet to belt). |

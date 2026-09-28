@@ -149,6 +149,8 @@ namespace GK2Mounts
                 GUILayout.Label("This pose makes the game take control: the keeper cannot move while it plays. Choose another.", small);
             }
             Toggle("Freeze the pose while standing still (arms stop moving)", s.FreezePoseWhenIdle, null);
+            FloatSlider("Pose animation speed while moving (x clip speed)", s.PoseSpeed, 0.1f, 4f, 2, null);
+            Toggle("Scale pose animation speed with the riding speed", s.PoseSpeedFollowsDonkey, null);
 
             GUILayout.Label("Rider legs (drawn on the donkey's side)", header);
             Toggle("Show legs on the donkey's side", s.NearLeg, Mount.RefreshLeg);
@@ -188,6 +190,25 @@ namespace GK2Mounts
             }
             GUILayout.EndHorizontal();
             GUILayout.Label("Both write one line to BepInEx/LogOutput.log. Geometry: press once per facing (and once while walking) when reporting a placement problem.", small);
+
+            GUILayout.Label("Mod defaults", header);
+            if (GUILayout.Button("Export current values as mod defaults"))
+            {
+                try
+                {
+                    string path = Plugin.DefaultsExportPath.Value;
+                    if (string.IsNullOrWhiteSpace(path))
+                    {
+                        path = System.IO.Path.Combine(BepInEx.Paths.ConfigPath, "GK2Mounts.defaults.cfg");
+                    }
+                    Plugin.Log.LogInfo("Mod defaults exported to " + Defaults.Export(path) + " (rebuild the mod to embed them).");
+                }
+                catch (Exception e)
+                {
+                    Plugin.Log.LogWarning("Defaults export failed: " + e.Message);
+                }
+            }
+            GUILayout.Label("Writes both styles' values (and the General look settings) to defaults.cfg, the file the build embeds as the mod's defaults: no code edits needed. Path: Debug.DefaultsExportPath (empty = BepInEx/config).", small);
         }
 
         // ------------------------------------------------------------------ controls

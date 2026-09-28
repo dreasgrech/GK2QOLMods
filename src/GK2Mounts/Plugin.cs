@@ -47,6 +47,8 @@ namespace GK2Mounts
         public readonly ConfigEntry<bool> Bob;
         public readonly ConfigEntry<RiderPose> Pose;
         public readonly ConfigEntry<bool> FreezePoseWhenIdle;
+        public readonly ConfigEntry<float> PoseSpeed;
+        public readonly ConfigEntry<bool> PoseSpeedFollowsDonkey;
         public readonly ConfigEntry<bool> NearLeg;
         public readonly ConfigEntry<LegSource> LegSource;
         public readonly ConfigEntry<int> LegHeightPx;
@@ -55,41 +57,45 @@ namespace GK2Mounts
 
         public StyleSettings(ConfigFile cfg, string section, float speed, float depth, float center, int riderPx, int torsoPx,
             bool autoSeat, int seatAdjustPx, float seatOffset, bool bob, RiderPose pose, bool freeze,
-            bool legs, LegSource legSource, int legHeight, int legX, int legY)
+            bool legs, LegSource legSource, int legHeight, int legX, int legY, float poseSpeed = 1f, bool poseSpeedFollows = true)
         {
             Section = section;
             string who = section == "Cart" ? "in cart style" : "while riding";
-            SpeedMultiplier = cfg.Bind(section, "SpeedMultiplier", speed,
+            SpeedMultiplier = cfg.Bind(section, "SpeedMultiplier", Defaults.Get(section, "SpeedMultiplier", speed),
                 new ConfigDescription($"Walking speed {who}, as a multiple of normal (measured: exactly linear).", new AcceptableValueRange<float>(0.5f, 4f)));
-            Depth = cfg.Bind(section, "Depth", depth,
+            Depth = cfg.Bind(section, "Depth", Defaults.Get(section, "Depth", depth),
                 "Donkey offset towards the camera (negative, drawn in front of the keeper) or away from it (positive, behind), in world units.");
-            CenterOffset = cfg.Bind(section, "CenterOffset", center,
+            CenterOffset = cfg.Bind(section, "CenterOffset", Defaults.Get(section, "CenterOffset", center),
                 "Above 0: keep the donkey centred under the rider (its sprite's built-in sideways offset is measured and cancelled every frame). 0: leave the donkey where the game draws it, half a body to the side.");
-            RiderOffsetPx = cfg.Bind(section, "RiderOffsetPx", riderPx,
+            RiderOffsetPx = cfg.Bind(section, "RiderOffsetPx", Defaults.Get(section, "RiderOffsetPx", riderPx),
                 "Where the keeper stands or sits along the donkey, in art pixels: positive = closer to the head, negative = closer to the rear.");
-            TorsoOffsetPx = cfg.Bind(section, "TorsoOffsetPx", torsoPx,
+            TorsoOffsetPx = cfg.Bind(section, "TorsoOffsetPx", Defaults.Get(section, "TorsoOffsetPx", torsoPx),
                 "Shifts only the keeper's upper body along the donkey, in art pixels (positive = towards the head); the legs stay where they are.");
-            AutoSeat = cfg.Bind(section, "AutoSeat", autoSeat,
+            AutoSeat = cfg.Bind(section, "AutoSeat", Defaults.Get(section, "AutoSeat", autoSeat),
                 "Compute the torso height from the sprites (rider's hip on the donkey's back line). Off: use SeatOffset.");
-            SeatAdjustPx = cfg.Bind(section, "SeatAdjustPx", seatAdjustPx,
+            SeatAdjustPx = cfg.Bind(section, "SeatAdjustPx", Defaults.Get(section, "SeatAdjustPx", seatAdjustPx),
                 "With AutoSeat: fine adjustment of the automatic height, in art pixels (positive = higher).");
-            SeatOffset = cfg.Bind(section, "SeatOffset", seatOffset,
+            SeatOffset = cfg.Bind(section, "SeatOffset", Defaults.Get(section, "SeatOffset", seatOffset),
                 "Without AutoSeat: torso height in world units (0 = standing on the ground).");
-            Bob = cfg.Bind(section, "Bob", bob,
+            Bob = cfg.Bind(section, "Bob", Defaults.Get(section, "Bob", bob),
                 "Move the rider up and down with the donkey's back through its walk cycle (1 px).");
-            Pose = cfg.Bind(section, "Pose", pose,
+            Pose = cfg.Bind(section, "Pose", Defaults.Get(section, "Pose", pose),
                 "Keeper's body pose. FishingIdle: hands forward as if holding reins, legs still (left/right frames only). Idle: standing still. FocusedWalk: the combat-focus walk. Walk: unchanged (arms swing).");
-            FreezePoseWhenIdle = cfg.Bind(section, "FreezePoseWhenIdle", freeze,
+            FreezePoseWhenIdle = cfg.Bind(section, "FreezePoseWhenIdle", Defaults.Get(section, "FreezePoseWhenIdle", freeze),
                 "Pause the keeper's animation while standing still, so the arms stop moving; resumes when moving. Not used for the Idle and Walk poses.");
-            NearLeg = cfg.Bind(section, "NearLeg", legs,
+            PoseSpeed = cfg.Bind(section, "PoseSpeed", Defaults.Get(section, "PoseSpeed", poseSpeed),
+                new ConfigDescription("Playback speed of the keeper's pose animation while the donkey moves (1 = the clip's own speed).", new AcceptableValueRange<float>(0.1f, 4f)));
+            PoseSpeedFollowsDonkey = cfg.Bind(section, "PoseSpeedFollowsDonkey", Defaults.Get(section, "PoseSpeedFollowsDonkey", poseSpeedFollows),
+                "Also multiply the pose animation speed by the riding speed multiplier, so it keeps pace with the donkey's walk animation.");
+            NearLeg = cfg.Bind(section, "NearLeg", Defaults.Get(section, "NearLeg", legs),
                 "Draw the rider's legs in front of the donkey while his real (baked-in) legs are hidden inside it.");
-            LegSource = cfg.Bind(section, "LegSource", legSource,
+            LegSource = cfg.Bind(section, "LegSource", Defaults.Get(section, "LegSource", legSource),
                 "Body: the keeper's own trousers and boots, re-sliced from his current body frame (outfit-exact, follows the pose). Drawn: a hand-drawn bent leg in outfit colours.");
-            LegHeightPx = cfg.Bind(section, "LegHeightPx", legHeight,
+            LegHeightPx = cfg.Bind(section, "LegHeightPx", Defaults.Get(section, "LegHeightPx", legHeight),
                 "With LegSource=Body: how many bottom rows of the body frame count as legs (feet to belt), in art pixels.");
-            LegAdjustXPx = cfg.Bind(section, "LegAdjustXPx", legX,
+            LegAdjustXPx = cfg.Bind(section, "LegAdjustXPx", Defaults.Get(section, "LegAdjustXPx", legX),
                 "Fine adjustment of the legs along the donkey, relative to the torso, in art pixels (positive = towards the rear).");
-            LegAdjustYPx = cfg.Bind(section, "LegAdjustYPx", legY,
+            LegAdjustYPx = cfg.Bind(section, "LegAdjustYPx", Defaults.Get(section, "LegAdjustYPx", legY),
                 "Fine adjustment of the legs' height, relative to the donkey's back line, in art pixels (positive = higher).");
         }
 
@@ -97,7 +103,7 @@ namespace GK2Mounts
         {
             Reset(SpeedMultiplier); Reset(Depth); Reset(CenterOffset); Reset(RiderOffsetPx); Reset(TorsoOffsetPx);
             Reset(AutoSeat); Reset(SeatAdjustPx); Reset(SeatOffset); Reset(Bob); Reset(Pose); Reset(FreezePoseWhenIdle);
-            Reset(NearLeg); Reset(LegSource); Reset(LegHeightPx); Reset(LegAdjustXPx); Reset(LegAdjustYPx);
+            Reset(PoseSpeed); Reset(PoseSpeedFollowsDonkey); Reset(NearLeg); Reset(LegSource); Reset(LegHeightPx); Reset(LegAdjustXPx); Reset(LegAdjustYPx);
         }
 
         private static void Reset<T>(ConfigEntry<T> e)
@@ -137,6 +143,7 @@ namespace GK2Mounts
 
         // [Debug]
         internal static ConfigEntry<bool> TuningKeys;
+        internal static ConfigEntry<string> DefaultsExportPath;
         internal static ConfigEntry<bool> TuningWindowEnabled;
         internal static ConfigEntry<float> TuningWindowScale;
 
@@ -157,11 +164,11 @@ namespace GK2Mounts
                 "Ride: sit on the donkey's back. Cart: the donkey pulls its cart and the keeper stands in it. Each style has its own [Ride] / [Cart] settings section.");
             MountWgoId = Config.Bind("General", "MountWgoId", "npc_donkey",
                 "World object id used for the mount's looks. Only npc_donkey has been tested.");
-            StayMountedThroughDoors = Config.Bind("General", "StayMountedThroughDoors", true,
+            StayMountedThroughDoors = Config.Bind("General", "StayMountedThroughDoors", Defaults.Get("General", "StayMountedThroughDoors", true),
                 "Keep riding after a scene change (the donkey is re-summoned in the new scene). Off: dismount at every door.");
-            ShowMessages = Config.Bind("General", "ShowMessages", true,
+            ShowMessages = Config.Bind("General", "ShowMessages", Defaults.Get("General", "ShowMessages", true),
                 "Show a thought bubble when the keeper cannot mount and why.");
-            SideViewOnly = Config.Bind("General", "SideViewOnly", false,
+            SideViewOnly = Config.Bind("General", "SideViewOnly", Defaults.Get("General", "SideViewOnly", false),
                 "The donkey only has left/right art. On: while mounted the keeper also only faces left or right (walking up/down keeps the last horizontal facing). Off: the keeper turns as usual and the donkey shows its side. Forced on for poses that only have left/right frames.");
 
             Ride = new StyleSettings(Config, "Ride",
@@ -179,6 +186,8 @@ namespace GK2Mounts
                 "Size of the tuning panel (1 = Unity default, 1.5 suits 1440p).");
             TuningKeys = Config.Bind("Debug", "TuningKeys", true,
                 "While mounted: PageUp/PageDown move the torso, Home/End the legs sideways, Insert/Delete the legs up/down, one art pixel per press, editing the current style's values. Development aid, turn off for normal play.");
+            DefaultsExportPath = Config.Bind("Debug", "DefaultsExportPath", "",
+                "Where the panel's \"Export current values as mod defaults\" button writes defaults.cfg. Point it at src/GK2Mounts/defaults.cfg in the repo; the next build embeds it. Empty: BepInEx/config/GK2Mounts.defaults.cfg.");
 
             DisableOnGameUpdate = Config.Bind("Safety", "DisableOnGameUpdate", true,
                 "Do not patch anything if the game's code has changed since this mod was audited. Rebuild/re-audit after game updates.");
