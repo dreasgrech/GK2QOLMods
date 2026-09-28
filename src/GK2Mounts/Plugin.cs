@@ -58,6 +58,7 @@ namespace GK2Mounts
         public readonly ConfigEntry<bool> CartFollowsGround;
         public readonly ConfigEntry<float> CartGroundMaxShift;
         public readonly ConfigEntry<bool> CargoAutoFit;
+        public readonly ConfigEntry<bool> CargoDrawCorpse;
         public readonly ConfigEntry<float> Cargo1Along, Cargo1Up, Cargo1Across;
         public readonly ConfigEntry<float> Cargo2Along, Cargo2Up, Cargo2Across;
 
@@ -122,7 +123,9 @@ namespace GK2Mounts
             CartGroundMaxShift = cfg.Bind(section, "CartGroundMaxShift", Defaults.Get(section, "CartGroundMaxShift", 0.8f),
                 "Largest shift the cart may get from CartFollowsGround, in world units, either way.");
             CargoAutoFit = cfg.Bind(section, "CargoAutoFit", Defaults.Get(section, "CargoAutoFit", true),
-                "Cart style only: place each cargo mesh by its measured size: bottom on the bed, footprint centre on its slot (the models' pivots sit 0.02 to 0.19 off centre), a second item pushed aside when the two would overlap across the bed, or put on top of the first when the two are wider than the bed together (two crates). Off: the model's pivot goes to the slot point.");
+                "Cart style only: place each cargo mesh by its measured size: bottom on the bed, footprint centre on its slot (the models' pivots sit 0.02 to 0.19 off centre), and a second item put on top of the first when the two are wider than the bed together (two crates; up to 0.12 of overhang is allowed). Off: the model's pivot goes to the slot point.");
+            CargoDrawCorpse = cfg.Bind(section, "CargoDrawCorpse", Defaults.Get(section, "CargoDrawCorpse", true),
+                "Cart style only: the mod draws every corpse on the cart itself (same placement rule and sliders as any other item) and keeps the game's loaded-cart body off. Off: the first corpse is shown by the game's own loaded cart body with the shroud, which the sliders cannot move.");
             Cargo1Along = cfg.Bind(section, "Cargo1Along", Defaults.Get(section, "Cargo1Along", 0f),
                 "Cart style only: first cargo item, shift along the cart from the bed's centre, world units (the cart's local x axis).");
             Cargo1Up = cfg.Bind(section, "Cargo1Up", Defaults.Get(section, "Cargo1Up", 0f),
@@ -141,7 +144,7 @@ namespace GK2Mounts
         {
             Reset(SpeedMultiplier); Reset(Depth); Reset(CenterOffset); Reset(RiderOffsetPx); Reset(TorsoOffsetPx);
             Reset(AutoSeat); Reset(SeatAdjustPx); Reset(SeatOffset); Reset(Bob); Reset(Pose); Reset(FreezePoseWhenIdle);
-            Reset(PoseSpeed); Reset(PoseSpeedFollowsDonkey); Reset(NearLeg); Reset(LegSource); Reset(LegHeightPx); Reset(LegAdjustXPx); Reset(LegAdjustYPx); Reset(SnapToGround); Reset(CartFollowsGround); Reset(CartGroundMaxShift); Reset(CargoAutoFit); Reset(Cargo1Along); Reset(Cargo1Up); Reset(Cargo1Across); Reset(Cargo2Along); Reset(Cargo2Up); Reset(Cargo2Across);
+            Reset(PoseSpeed); Reset(PoseSpeedFollowsDonkey); Reset(NearLeg); Reset(LegSource); Reset(LegHeightPx); Reset(LegAdjustXPx); Reset(LegAdjustYPx); Reset(SnapToGround); Reset(CartFollowsGround); Reset(CartGroundMaxShift); Reset(CargoAutoFit); Reset(CargoDrawCorpse); Reset(Cargo1Along); Reset(Cargo1Up); Reset(Cargo1Across); Reset(Cargo2Along); Reset(Cargo2Up); Reset(Cargo2Across);
         }
 
         private static void Reset<T>(ConfigEntry<T> e)

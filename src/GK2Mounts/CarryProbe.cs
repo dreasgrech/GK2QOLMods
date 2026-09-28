@@ -184,6 +184,82 @@ namespace GK2Mounts
             }
         }
 
+        // Every big (overhead) item id the game defines, minus the zombies, which are items linked to a zombie world
+        // object and cannot be conjured from an id. Cached after the first call.
+        private static List<string> bigIds;
+
+        public static List<string> BigItemIds()
+        {
+            if (bigIds != null)
+            {
+                return bigIds;
+            }
+            var list = new List<string>();
+            try
+            {
+                foreach (ItemDef d in GameBalance.Me.itemDefs)
+                {
+                    if (d.itemSize == ItemSize.Big && !d.itemGroupIds.Contains("zombie"))
+                    {
+                        list.Add(d.id);
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning("Cargo: listing big items failed: " + e.Message);
+            }
+            list.Sort(string.CompareOrdinal);
+            bigIds = list;
+            return list;
+        }
+
+        // Puts one item on the ground in front of the keeper with the game's own drop routine (what Flow_DropItem and
+        // the keeper's own drop key use), so every carryable item can be tried on the cart. A corpse is generated
+        // from the same body definition the delivery script uses (body_0_1: parts, pockets, zombie skin), so it is a
+        // real corpse. Test aid: the drop is a normal world drop and is saved like any other.
+        public static string SpawnDrop(string itemId)
+        {
+            try
+            {
+                PlayerData pd = MainGame.PlayerData;
+                if (pd == null || MainGame.Instance?.dropSystem == null)
+                {
+                    return "no game loaded";
+                }
+                ItemDef def = GameBalance.Me.GetDataOrNull<ItemDef>(itemId);
+                if (def == null)
+                {
+                    return "unknown item id: " + itemId;
+                }
+                if (def.itemGroupIds.Contains("zombie"))
+                {
+                    return "zombies are world objects linked to their item; they cannot be spawned from an id";
+                }
+                Item item;
+                if (def.itemGroupIds.Contains("body"))
+                {
+                    BodyDef body = GameBalance.Me.GetDataOrNull<BodyDef>("body_0_1");
+                    item = body != null ? body.GenerateItem() : new Item(itemId);
+                }
+                else
+                {
+                    item = new Item(itemId);
+                }
+                Vector3 pos;
+                if (!SpecialPhysicsCastUtils.GetPlayerDropPosition(pd.position.Value, pd.Direction, out pos))
+                {
+                    pos = pd.position.Value + new Vector3(pd.Direction.x, 0f, pd.Direction.y);
+                }
+                bool ok = MainGame.Instance.dropSystem.DropItem(item, pd.currentGameSceneId, pos);
+                return $"{(ok ? "dropped" : "drop REFUSED")} {item.id} (size {def.itemSize}, icon {def.iconId}) at {pos}";
+            }
+            catch (Exception e)
+            {
+                return "spawn failed: " + e;
+            }
+        }
+
         private static void DumpDrawers(Wgo donkey, StringBuilder sb)
         {
             ConditionalDrawer[] drawers = donkey.GetComponentsInChildren<ConditionalDrawer>(includeInactive: true);

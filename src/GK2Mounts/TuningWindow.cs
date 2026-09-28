@@ -17,6 +17,7 @@ namespace GK2Mounts
         private static int tab;
         private static string donkeyEvent = "";
         private static string cargoItemId = "wood";
+        private static string spawnItemId = "wood";
         private static readonly string[] TabNames = { "General", "Riding", "Debug" };
 
         public static void Draw()
@@ -167,8 +168,9 @@ namespace GK2Mounts
             if (Mount.CurrentStyle == MountStyle.Cart)
             {
                 GUILayout.Label("Cart cargo (proof of concept)", header);
-                Toggle("Place items by their measured size (bottom on the bed, footprint on the slot; push apart or stack)", s.CargoAutoFit, Cargo.RefreshViews);
-                GUILayout.Label("The corpse is the game's own loaded-cart mesh and is not moved by these; the sliders move the items the mod draws (logs, stone, ore, crates). With a corpse aboard they ride on top of the shroud.", small);
+                Toggle("Place items by their measured size (bottom on the bed, footprint on the slot; stack when too wide)", s.CargoAutoFit, Cargo.RefreshViews);
+                Toggle("Mod draws corpses too (sliders move them; off = the game's own shroud for the first corpse)", s.CargoDrawCorpse, Cargo.RefreshViews);
+                GUILayout.Label("With the corpse toggle off, the first corpse is the game's loaded-cart mesh, which the sliders cannot move; other items then ride on top of the shroud.", small);
                 GUILayout.Label("First item on the cart", small);
                 FloatSlider("Slot 1: along the cart (tail - / head +)", s.Cargo1Along, -0.6f, 0.6f, 2, Cargo.RefreshViews);
                 FloatSlider("Slot 1: height above the bed", s.Cargo1Up, -0.5f, 0.8f, 2, Cargo.RefreshViews);
@@ -282,6 +284,26 @@ namespace GK2Mounts
             }
             GUILayout.EndHorizontal();
             GUILayout.Label("Adds a plain item to our donkey's inventory exactly as the delivery script does, and logs whether the game's drawer switched the cart meshes. Test items vanish; the donkey is a temp object, nothing is saved.", small);
+
+            GUILayout.Label("Spawn a carryable item in front of the keeper (test)", header);
+            GUILayout.BeginHorizontal();
+            System.Collections.Generic.List<string> big = CarryProbe.BigItemIds();
+            int at = big.IndexOf(spawnItemId);
+            if (GUILayout.Button("<", GUILayout.Width(28f)) && big.Count > 0)
+            {
+                spawnItemId = big[(at <= 0 ? big.Count : at) - 1];
+            }
+            spawnItemId = GUILayout.TextField(spawnItemId, GUILayout.Width(200f));
+            if (GUILayout.Button(">", GUILayout.Width(28f)) && big.Count > 0)
+            {
+                spawnItemId = big[(at + 1) % big.Count];
+            }
+            if (GUILayout.Button("Drop it here", GUILayout.Width(120f)))
+            {
+                Plugin.Log.LogInfo("[cargo] " + CarryProbe.SpawnDrop(spawnItemId));
+            }
+            GUILayout.EndHorizontal();
+            GUILayout.Label($"Uses the game's own drop routine at the keeper's drop position, so the item is a normal world drop (it is saved like any other; pick it up with the interaction key). < and > cycle through the {big.Count} big items the game defines (zombies excluded, they are linked world objects). A corpse is generated from the delivery script's body definition.", small);
 
             GUILayout.Label("Mod defaults", header);
             if (GUILayout.Button("Export current values as mod defaults"))

@@ -256,18 +256,35 @@ namespace GK2Mounts
                 {
                     return;
                 }
-                var shown = new List<Item>();
-                foreach (Item it in inv.Data.Inventory)
-                {
-                    if (it != null && !it.IsEmpty && it.id != CorpseId && it.Definition != null)
-                    {
-                        shown.Add(it);
-                    }
-                }
+                // Items the mod draws, with the inventory slot each occupies. The game's drawer shows one shroud while
+                // any corpse is aboard (its rule is "body_corpse count > 0"), so the first corpse is the game's and
+                // keeps its slot (a log loaded after it takes slot 2); every further corpse is drawn by the mod with
+                // the corpse mesh, which the auto-fit stacks on the shroud (two corpses are wider than the bed).
+                // With CargoDrawCorpse the mod draws every corpse itself (same rule and sliders as any item) and keeps
+                // the game's loaded body off; otherwise the game's shroud stands for the first corpse.
                 StyleSettings s = Mount.S;
+                bool modDrawsCorpse = s.CargoDrawCorpse.Value;
+                var shown = new List<Item>();
+                var slotOf = new List<int>();
+                bool gameCorpse = false;
+                for (int k = 0; k < inv.Data.Inventory.Count; k++)
+                {
+                    Item it = inv.Data.Inventory[k];
+                    if (it == null || it.IsEmpty || it.Definition == null)
+                    {
+                        continue;
+                    }
+                    if (it.id == CorpseId && !gameCorpse && !modDrawsCorpse)
+                    {
+                        gameCorpse = true;
+                        continue;
+                    }
+                    shown.Add(it);
+                    slotOf.Add(k);
+                }
+                SetGameLoadedBody(!modDrawsCorpse);
                 int n = shown.Count;
-                bool corpseAboard = shown.Count < inv.Data.Inventory.Count;
-                float floor = corpseAboard ? LoadedBodyExtra() : 0f; // items ride on the shroud while a corpse is aboard
+                float floor = gameCorpse ? LoadedBodyExtra() : 0f; // items ride on the shroud while a corpse is aboard
                 var placed = new List<Bounds>(); // footprints already laid out, container space, auto-fit only
                 for (int i = 0; i < n; i++)
                 {
@@ -301,7 +318,7 @@ namespace GK2Mounts
                     }
                     // Items lie along the cart (local x, the log's long axis) in tunable slots: slot 1 for the first
                     // item, slot 2 for the second (Cargo1*/Cargo2*; local z is the width, +z away from the camera).
-                    Vector3 slot = s.CargoSlot(i) + Vector3.up * floor;
+                    Vector3 slot = s.CargoSlot(slotOf[i]) + Vector3.up * floor;
                     if (!s.CargoAutoFit.Value || !MeasureMeshes(view.transform, view.transform, out Bounds b))
                     {
                         view.transform.localPosition = slot; // raw: the pivot goes to the slot point
@@ -316,20 +333,18 @@ namespace GK2Mounts
                     {
                         Bounds first = placed[0];
                         float across = b.size.z + first.size.z;
-                        if (across > bedWidth + 0.02f)
+                        // Up to 0.12 of overhang over the rails is fine (corpse + log = 0.78 on the 0.75 bed); two
+                        // crates (1.0) stack. When stacked, slot 2's values act as offsets from the first item.
+                        if (across > bedWidth + 0.12f)
                         {
-                            pos = new Vector3(first.center.x - b.center.x, first.max.y - b.min.y, first.center.z - b.center.z);
+                            // Stacked: this slot's values minus the first slot's act as offsets from the first item;
+                            // across is limited so the item stays on top of the one below.
+                            Vector3 rel = s.CargoSlot(slotOf[i]) - s.CargoSlot(0);
+                            float m = Mathf.Max(0f, (first.size.z - b.size.z) * 0.5f);
+                            rel.z = Mathf.Clamp(rel.z, -m, m);
+                            pos = new Vector3(first.center.x + rel.x - b.center.x, first.max.y + rel.y - b.min.y, first.center.z + rel.z - b.center.z);
                         }
-                        else
-                        {
-                            float minGap = across * 0.5f;
-                            float dz = slot.z - first.center.z;
-                            if (Mathf.Abs(dz) < minGap)
-                            {
-                                float side = dz < 0f || (Mathf.Approximately(dz, 0f) && i > 0) ? -1f : 1f;
-                                pos.z = first.center.z + side * minGap - b.center.z;
-                            }
-                        }
+                        // Side by side: the slot values rule, no pushing apart (it felt like a collider when tuning).
                     }
                     view.transform.localPosition = pos;
                     placed.Add(new Bounds(b.center + pos, b.size));
@@ -446,6 +461,36 @@ namespace GK2Mounts
                 }
             }
             return any;
+        }
+
+        // allowGame = true: the prefab's own drawer decides (loaded body while a corpse is aboard); false: the empty
+        // body stays on and the game's loaded body off, because the mod draws the corpses itself. The drawer only
+        // re-evaluates on inventory changes, and this runs after each of them, so the override holds.
+        private static void SetGameLoadedBody(bool allowGame)
+        {
+            if (donkey == null)
+            {
+                return;
+            }
+            if (allowGame)
+            {
+                foreach (ConditionalDrawer cd in donkey.GetComponentsInChildren<ConditionalDrawer>(includeInactive: true))
+                {
+                    cd.UpdateVisualsByConditions();
+                }
+                return;
+            }
+            foreach (Transform t in donkey.GetComponentsInChildren<Transform>(includeInactive: true))
+            {
+                if (t.name == "donkey_cart_body_sway" && t.gameObject.activeSelf)
+                {
+                    t.gameObject.SetActive(false);
+                }
+                else if (t.name == "donkey_cart_empty_sway" && !t.gameObject.activeSelf)
+                {
+                    t.gameObject.SetActive(true);
+                }
+            }
         }
 
         // How much higher the loaded cart body (the corpse shroud the game turns on) reaches than the empty bed top,

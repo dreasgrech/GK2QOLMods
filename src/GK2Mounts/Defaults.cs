@@ -110,7 +110,7 @@ namespace GK2Mounts
                 sb.AppendLine("[" + s.Section + "]");
                 Line(sb, s.SpeedMultiplier); Line(sb, s.Depth); Line(sb, s.CenterOffset); Line(sb, s.RiderOffsetPx); Line(sb, s.TorsoOffsetPx);
                 Line(sb, s.AutoSeat); Line(sb, s.SeatAdjustPx); Line(sb, s.SeatOffset); Line(sb, s.Bob); Line(sb, s.Pose); Line(sb, s.FreezePoseWhenIdle); Line(sb, s.PoseSpeed); Line(sb, s.PoseSpeedFollowsDonkey);
-                Line(sb, s.NearLeg); Line(sb, s.LegSource); Line(sb, s.LegHeightPx); Line(sb, s.LegAdjustXPx); Line(sb, s.LegAdjustYPx); Line(sb, s.SnapToGround); Line(sb, s.CartFollowsGround); Line(sb, s.CartGroundMaxShift); Line(sb, s.CargoAutoFit); Line(sb, s.Cargo1Along); Line(sb, s.Cargo1Up); Line(sb, s.Cargo1Across); Line(sb, s.Cargo2Along); Line(sb, s.Cargo2Up); Line(sb, s.Cargo2Across);
+                Line(sb, s.NearLeg); Line(sb, s.LegSource); Line(sb, s.LegHeightPx); Line(sb, s.LegAdjustXPx); Line(sb, s.LegAdjustYPx); Line(sb, s.SnapToGround); Line(sb, s.CartFollowsGround); Line(sb, s.CartGroundMaxShift); Line(sb, s.CargoAutoFit); Line(sb, s.CargoDrawCorpse); Line(sb, s.Cargo1Along); Line(sb, s.Cargo1Up); Line(sb, s.Cargo1Across); Line(sb, s.Cargo2Along); Line(sb, s.Cargo2Up); Line(sb, s.Cargo2Across);
                 sb.AppendLine();
             }
             Directory.CreateDirectory(Path.GetDirectoryName(path));

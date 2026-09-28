@@ -536,3 +536,26 @@ item is pushed across by half the two widths when the slots overlap, or stacked 
 than the measured bed; with a corpse aboard, items sit on the loaded body's measured top. Slot defaults moved to the
 footprint convention (slot 1 across 0, slot 2 −0.3), which reproduces the two-log picture the user approved. The
 corpse itself is the game's mesh and is not moved by the sliders. Panel got a scroll view (Riding tab overflowed).
+
+**Slots follow the inventory order (16:18):** a corpse in inventory slot 1 keeps slot 1 although the game draws it,
+so a log loaded after it takes slot 2. **Several corpses:** the game's rule shows one shroud for any count, so the
+first corpse is the game's, every further corpse is drawn by the mod with the corpse mesh (`i_body`, 0.84 × 0.33 ×
+0.43) and stacked on the shroud by the auto-fit (two corpses, 0.86, are wider than the 0.75 bed). **Spawn button
+(Debug tab):** `dropSystem.DropItem(new Item(id), currentGameSceneId, GetPlayerDropPosition)`, the game's own drop
+path; corpses via `BodyDef body_0_1.GenerateItem()` as the delivery script does; zombies excluded (linked WGOs).
+
+**`CargoDrawCorpse` (16:2x, default on):** the mod draws every corpse itself with the game's corpse mesh (`i_body`),
+so corpses follow the same footprint rule and sliders as any item; after each inventory change the game's loaded
+body (`donkey_cart_body_sway`) is switched off and the empty body on again (the drawer only re-evaluates on
+inventory events, and the mod's refresh runs after each of them). Off: the game's drawer stands, first corpse = the
+shroud, other items ride on its measured top.
+
+**Corpse + log: slot 2 did nothing, slot 1 moved both (16:3x).** 0.43 + 0.35 = 0.78 tripped the "wider than the
+bed, stack" branch at the 0.75 bed + 0.02, and the stacked item ignored its slot. Now up to 0.12 of overhang over the
+rails is allowed before stacking (corpse + log lie side by side, two crates at 1.0 still stack), and a stacked item
+takes (its slot − slot 1) as offsets from the item below, across limited so it stays on top.
+
+**Push-apart removed (16:3x):** while tuning slot 2 across with a corpse in slot 1, the log stopped at the corpse's
+edge as if it had a collider: that was the auto-fit's minimum-gap rule (half the two widths). With two hand-tuned
+slots the rule only fights the sliders, so it is gone; auto-fit now means footprint/bottom alignment plus stacking
+when a pair is wider than the bed + 0.12.
