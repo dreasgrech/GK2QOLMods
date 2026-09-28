@@ -599,3 +599,30 @@ refilled, two frames pass, `ScreenCapture.CaptureScreenshotAsTexture` at end of 
 box ±(1.25, 1.1, 0.9) around the donkey root, PNG per combination, then `index.html` grid (rows slot 1, columns slot
 2, first column alone) with the settings used. Panel hidden and cargo key blocked while running; previous cargo
 restored. Needs UnityEngine.ScreenCaptureModule and ImageConversionModule references (added to the csproj).
+
+### Size buckets of the carryable items (shapes.html, 18:10; boxes within 0.05 in every dimension are one bucket)
+
+| Bucket | Box (long × high × across) | Items | Meshes |
+|---|---|---|---|
+| log | 0.82 × 0.57 × 0.35 | wood | wood_log |
+| flour sack | 0.52 × 0.58 × 0.49 | box_flour | box_flour |
+| tall crate | 0.52 × 0.50 × 0.48 | box_beer, box_clothes_1/2, box_fabric, box_vine | 4 meshes |
+| body | 0.84 × 0.33 × 0.43 | body_corpse, body_wild_zombie | corpse shroud, zombie shroud |
+| low crate | 0.52 × 0.40 × 0.50 | 15 crates incl. preserves | box_crates, box_preserves_1 |
+| slab | 0.74 × 0.33 × 0.35 | stone, iron_ore_2h | stone_block, ore_iron |
+| placeholder | no mesh | marble, box_engineering_mechanism | placeholder |
+
+Seven size classes for 27 items; ordered pairs 49, unordered 28. `box_engineering_mechanism` falls into the
+placeholder bucket only because the game's element is named `i_box_engineering_mec` (truncated) while the item's icon
+id is `i_box_engineering_mechanism`; the mod could match the element by prefix and give it the generic crate mesh.
+Marble genuinely has no overhead mesh in the game; a stand-in (the slab mesh with the stone texture, or the
+placeholder) is a mod decision. The cargo-sheet harness (`index.html`, per mesh) and this page (`shapes.html`, per
+size) are the two views: per-mesh for what is drawn, per-size for what is tuned.
+
+**Bucket check by picture (shapes.html montages, 18:14):** within every size bucket all members sit identically on
+the cart: the 13 generic crates and the two lattice preserves crates (same box, different model) at the same spot and
+height; beer barrel, both clothes bundles, fabric bolts and wine crate all bottom-on-bed at the same height; corpse
+and wild-zombie shrouds identical; stone block and ore heap identical; marble and the engineering crate both show the
+plain white placeholder block. The bucket rule (box within 0.05) therefore holds and one correction per bucket covers
+all its items; per-mesh corrections are not needed for any of the 27. The placeholder block is a blank white box and
+must be replaced (marble: a stand-in mesh; engineering crate: prefix-match the truncated element name).

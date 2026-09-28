@@ -80,6 +80,18 @@ namespace GK2Mounts
             return elementsByIcon;
         }
 
+        private const float SizeTolerance = 0.05f; // boxes within this in every dimension count as one size
+
+        // The item's measured box (long, high, across); zero when it has no element.
+        private static Vector3 ItemBox(ItemDef def, Dictionary<string, Transform> elementsByIcon)
+        {
+            if (def != null && elementsByIcon.TryGetValue(def.iconId, out Transform el) && Cargo.MeasureMeshes(el, el, out Bounds b, includeInactive: true))
+            {
+                return b.size;
+            }
+            return Vector3.zero;
+        }
+
         private static string ShapeKey(ItemDef def, Dictionary<string, Transform> elementsByIcon, out string sizeText)
         {
             sizeText = "no mesh";
@@ -117,7 +129,12 @@ namespace GK2Mounts
                 saved = new List<Item>(inv.Data.Inventory);
                 Dictionary<string, Transform> elements = OverheadElements();
                 List<string> ids = CarryProbe.BigItemIds();
-                var buckets = new SortedDictionary<string, List<string>>(StringComparer.Ordinal); // shape key -> rows
+                // Size buckets: items whose boxes agree within SizeTolerance in every dimension are one bucket (the
+                // first item seen is the bucket's reference). Each bucket lists the meshes it contains, so "same size,
+                // different model" (stone vs ore) is visible as one bucket with two mesh names.
+                var bucketSizes = new List<Vector3>();
+                var bucketRows = new List<List<string>>();
+                var bucketMeshes = new List<HashSet<string>>();
                 int done = 0;
                 Status = $"0 / {ids.Count}";
                 foreach (string id in ids)
@@ -134,19 +151,49 @@ namespace GK2Mounts
                     {
                         log.AppendLine(file + ": " + err);
                     }
-                    string key = ShapeKey(def, elements, out string size);
-                    if (!buckets.TryGetValue(key, out List<string> rows))
+                    string meshKey = ShapeKey(def, elements, out string size);
+                    Vector3 box = ItemBox(def, elements);
+                    int bi = -1;
+                    for (int k = 0; k < bucketSizes.Count; k++)
                     {
-                        buckets[key] = rows = new List<string>();
+                        Vector3 d = bucketSizes[k] - box;
+                        if (Mathf.Abs(d.x) <= SizeTolerance && Mathf.Abs(d.y) <= SizeTolerance && Mathf.Abs(d.z) <= SizeTolerance)
+                        {
+                            bi = k;
+                            break;
+                        }
                     }
-                    rows.Add($"<td><img src=\"{file}\" alt=\"{id}\" title=\"{id}\" onclick=\"show('{file}','{id}')\"><div class=\"cap\"><b>{id}</b><br>icon {def?.iconId}<br>{size}</div></td>");
+                    if (bi < 0)
+                    {
+                        bucketSizes.Add(box);
+                        bucketRows.Add(new List<string>());
+                        bucketMeshes.Add(new HashSet<string>());
+                        bi = bucketSizes.Count - 1;
+                    }
+                    bucketMeshes[bi].Add(meshKey);
+                    bucketRows[bi].Add($"<td><img src=\"{file}\" alt=\"{id}\" title=\"{id}\" onclick=\"show('{file}','{id}')\"><div class=\"cap\"><b>{id}</b><br>icon {def?.iconId}<br>mesh {meshKey}<br>{size}</div></td>");
                     done++;
                     Status = $"{done} / {ids.Count}";
+                }
+                // Largest boxes first, for reading.
+                var order = new List<int>();
+                for (int k = 0; k < bucketSizes.Count; k++)
+                {
+                    order.Add(k);
+                }
+                order.Sort((p, q) => (bucketSizes[q].x * bucketSizes[q].y * bucketSizes[q].z).CompareTo(bucketSizes[p].x * bucketSizes[p].y * bucketSizes[p].z));
+                var buckets = new List<KeyValuePair<string, List<string>>>();
+                foreach (int k in order)
+                {
+                    Vector3 sz = bucketSizes[k];
+                    var meshes = new List<string>(bucketMeshes[k]);
+                    meshes.Sort(string.CompareOrdinal);
+                    buckets.Add(new KeyValuePair<string, List<string>>($"{sz.x:0.00} long × {sz.y:0.00} high × {sz.z:0.00} across (±{SizeTolerance:0.00}); {meshes.Count} mesh(es): {string.Join(", ", meshes)}", bucketRows[k]));
                 }
                 var sb = new StringBuilder();
                 sb.AppendLine("<!doctype html><html><head><meta charset=\"utf-8\"><title>GK2 Mounts cargo shapes</title>");
                 sb.AppendLine("<style>:root{--w:220px}body{font-family:sans-serif;background:#222;color:#ddd;margin:16px}table{border-collapse:collapse;margin-bottom:24px}td{border:1px solid #444;padding:4px;text-align:center;vertical-align:top;font-size:12px}img{display:block;width:var(--w);height:auto;cursor:zoom-in;margin:auto}.cap{color:#bbb;font-size:11px;max-width:var(--w);white-space:normal}h2{margin:18px 0 6px;font-size:15px}h2 span{color:#888;font-weight:normal;font-size:12px}#bar{position:sticky;top:0;background:#222;padding:6px 0;z-index:2;display:flex;gap:8px;align-items:center}#bar button{background:#444;color:#ddd;border:1px solid #666;padding:3px 10px;cursor:pointer}#bar input{width:220px}#big{position:fixed;inset:0;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;flex-direction:column;cursor:zoom-out;z-index:9}#big img{width:auto;max-width:95vw;max-height:88vh;image-rendering:pixelated}#big div{color:#ddd;margin-top:8px}</style></head><body>");
-                sb.AppendLine($"<h1>GK2 Mounts cargo shapes</h1><p>{DateTime.Now:yyyy-MM-dd HH:mm}. Every carryable item alone on the cart, grouped by the shape bucket the mod assigns (the names of the meshes the item's overhead element is made of). Items in one bucket share a mesh and are placed identically; if two pictures in one bucket differ, the bucket rule is wrong. {ids.Count} items, {buckets.Count} buckets. Click a picture for full size.</p>");
+                sb.AppendLine($"<h1>GK2 Mounts cargo shapes</h1><p>{DateTime.Now:yyyy-MM-dd HH:mm}. Every carryable item alone on the cart, grouped into size buckets: items whose measured boxes agree within {SizeTolerance:0.00} in length, height and width are one bucket, whatever their model. A bucket may hold several meshes (stone and ore are the same box). Items in one bucket are placed identically by the layout, so tuning one tunes all; if two pictures in one bucket sit differently on the cart, the bucket rule needs a tighter tolerance or a per-mesh correction. {ids.Count} items, {buckets.Count} buckets, largest first. Click a picture for full size.</p>");
                 sb.AppendLine("<div id=\"bar\"><button onclick=\"zoom(-30)\">&minus;</button><input type=\"range\" id=\"z\" min=\"60\" max=\"600\" value=\"220\" oninput=\"setW(+this.value)\"><button onclick=\"zoom(30)\">+</button><button onclick=\"setW(220)\">Reset</button><span id=\"zl\">220 px</span></div>");
                 sb.AppendLine("<script>function setW(w){w=Math.max(40,Math.min(1200,Math.round(w)));document.documentElement.style.setProperty('--w',w+'px');document.getElementById('z').value=w;document.getElementById('zl').textContent=w+' px';}function zoom(d){setW(+document.getElementById('z').value+d);}function show(src,cap){var b=document.getElementById('big');b.querySelector('img').src=src;b.querySelector('div').textContent=cap;b.style.display='flex';}</script>");
                 sb.AppendLine("<div id=\"big\" onclick=\"this.style.display='none'\"><img alt=\"\"><div></div></div>");
@@ -154,7 +201,7 @@ namespace GK2Mounts
                 foreach (KeyValuePair<string, List<string>> kv in buckets)
                 {
                     n++;
-                    sb.AppendLine($"<h2>Bucket {n}: {kv.Value.Count} item(s) <span>meshes: {kv.Key}</span></h2><table><tr>");
+                    sb.AppendLine($"<h2>Size bucket {n}: {kv.Value.Count} item(s) <span>{kv.Key}</span></h2><table><tr>");
                     foreach (string cell in kv.Value)
                     {
                         sb.Append(cell);
