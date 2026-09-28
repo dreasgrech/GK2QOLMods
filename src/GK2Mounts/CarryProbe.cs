@@ -101,6 +101,17 @@ namespace GK2Mounts
                         }
                         sb.AppendLine($"  elements ({names.Count}): {string.Join(" ", names)}");
                         sb.AppendLine("  big items without an element here: " + MissingElements(bigIds, names));
+                        sb.AppendLine("  mesh sizes per element (shared mesh bounds, element local space: size x/y/z | bottom y .. top y | element lscale):");
+                        if (elements is IEnumerable en2)
+                        {
+                            foreach (object e in en2)
+                            {
+                                if (e is Component c)
+                                {
+                                    sb.AppendLine("    " + MeshExtent(c.transform));
+                                }
+                            }
+                        }
                         break;
                     }
                 }
@@ -280,6 +291,46 @@ namespace GK2Mounts
                 }
             }
             return null;
+        }
+
+        // Union of the mesh bounds under an element, expressed in the element's own space (mesh bounds are valid on
+        // inactive objects, renderer bounds are not). Tells how big each big item is and where its pivot sits.
+        private static string MeshExtent(Transform element)
+        {
+            bool any = false;
+            Bounds union = default;
+            foreach (MeshFilter mf in element.GetComponentsInChildren<MeshFilter>(includeInactive: true))
+            {
+                Mesh mesh = mf.sharedMesh;
+                if (mesh == null)
+                {
+                    continue;
+                }
+                Bounds b = mesh.bounds;
+                Vector3[] corners =
+                {
+                    new Vector3(b.min.x, b.min.y, b.min.z), new Vector3(b.max.x, b.min.y, b.min.z), new Vector3(b.min.x, b.max.y, b.min.z), new Vector3(b.max.x, b.max.y, b.min.z),
+                    new Vector3(b.min.x, b.min.y, b.max.z), new Vector3(b.max.x, b.min.y, b.max.z), new Vector3(b.min.x, b.max.y, b.max.z), new Vector3(b.max.x, b.max.y, b.max.z),
+                };
+                foreach (Vector3 corner in corners)
+                {
+                    Vector3 p = element.InverseTransformPoint(mf.transform.TransformPoint(corner));
+                    if (!any)
+                    {
+                        union = new Bounds(p, Vector3.zero);
+                        any = true;
+                    }
+                    else
+                    {
+                        union.Encapsulate(p);
+                    }
+                }
+            }
+            if (!any)
+            {
+                return element.name + ": no mesh";
+            }
+            return $"{element.name}: {union.size.x:0.00}/{union.size.y:0.00}/{union.size.z:0.00} | {union.min.y:0.00} .. {union.max.y:0.00} | centre ({union.center.x:0.00}, {union.center.z:0.00}) | lscale {element.localScale}";
         }
 
         private static string MissingElements(HashSet<string> bigIds, List<string> elementNames)

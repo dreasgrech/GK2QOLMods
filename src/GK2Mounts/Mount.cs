@@ -22,6 +22,7 @@ namespace GK2Mounts
             "wheel_left", "wheel_right", "light_sway",
             "donkey_cart_wheel_f", "donkey_cart_wheel_b", "donkey_cart_bars",
             "donkey_cart_empty_sway", "donkey_cart_body_sway", "donkey_cart_lantern_sway",
+            Cargo.ContainerName, // the cargo meshes' holder, lifted with the cart on slopes
         };
 
         private static bool mounted;
@@ -48,6 +49,7 @@ namespace GK2Mounts
                     p.T.localPosition = p.Base;
                 }
             }
+            Cargo.RefreshViews();
             cartParts.Clear();
             CollectCartParts();
         }
@@ -185,6 +187,10 @@ namespace GK2Mounts
             if (Plugin.TuningKeys.Value)
             {
                 TuningKeys(pc);
+            }
+            if (activeStyle == MountStyle.Cart && partsReady && UnityInput.Current.GetKeyDown(Plugin.CargoKey.Value))
+            {
+                Cargo.Toggle(pc);
             }
 
             string why = WhyMustDismount(pc);
@@ -406,6 +412,7 @@ namespace GK2Mounts
         private static void Dismount(PlayerController pc, string reason)
         {
             mounted = false;
+            Cargo.Unload(reason); // cargo lives in a temp inventory; hand it back before the view goes
             DestroyDonkey();
             RestoreSeat();
             RestoreSpeed(pc);
@@ -418,6 +425,14 @@ namespace GK2Mounts
         {
             bool was = mounted;
             mounted = false;
+            try
+            {
+                Cargo.Unload(reason);
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning("Cargo: unloading at cleanup failed: " + e.Message);
+            }
             DestroyDonkey();
             RestoreSeat();
             try
@@ -544,6 +559,8 @@ namespace GK2Mounts
                 cartParts.Clear();
                 if (cart)
                 {
+                    Cargo.Attach(donkey); // the cart's inventory is the cargo; creates the cargo holder before the parts are collected
+                    cartParts.Clear();    // (re-adding carried-over cargo may already have collected once)
                     CollectCartParts();
                 }
                 donkey.MainWgoPart?.AnimationComponent?.SetWalkAnimationSpeedMultiplier(1.5f * pc.PhysicalBody.SpeedMultiplier);
@@ -759,6 +776,12 @@ namespace GK2Mounts
             colliderName = "none";
             for (int i = 0; i < n; i++)
             {
+                // The walkable top of a dropped big item (a log lying on the road) is 0.4 above the ground; the keeper
+                // may step on it, the cart must not climb it.
+                if (rayHits[i].collider.name == "BigDropTopSurface")
+                {
+                    continue;
+                }
                 if (float.IsNaN(best) || rayHits[i].point.y > best)
                 {
                     best = rayHits[i].point.y;
@@ -1175,6 +1198,7 @@ namespace GK2Mounts
             donkey = null;
             partsReady = false;
             cartParts.Clear();
+            Cargo.Detach(); // keeps the item list; Unload (called before this on a real dismount) clears it
             seatPending = false;
             bodySprite = null;
             donkeyBodyRenderer = null;
@@ -1583,7 +1607,7 @@ namespace GK2Mounts
             return f.sqrMagnitude < 0.0001f ? Vector3.forward : f.normalized;
         }
 
-        private static void Say(string text)
+        internal static void Say(string text)
         {
             if (!Plugin.ShowMessages.Value || string.IsNullOrEmpty(text))
             {

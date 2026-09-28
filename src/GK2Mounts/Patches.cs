@@ -22,6 +22,11 @@ namespace GK2Mounts
             Require(typeof(PlayerAnimation).IsSubclassOf(typeof(AnimationComponentBase)) ? typeof(PlayerAnimation) : null, "PlayerAnimation : AnimationComponentBase");
             Require(AccessTools.Method(typeof(GK2.FlowCanvasNodes.Flow_Body), "DoAction", new[] { typeof(FlowCanvas.Flow) }), "Flow_Body.DoAction(Flow)");
             Require(AccessTools.Field(typeof(GK2.FlowCanvasNodes.Flow_Body), "success"), "Flow_Body.success");
+            Require(AccessTools.Method(typeof(SaveSystem), nameof(SaveSystem.Save)), "SaveSystem.Save");
+            Require(AccessTools.Method(typeof(PlayerData), nameof(PlayerData.TryAddOverheadItemNoReplace)), "PlayerData.TryAddOverheadItemNoReplace");
+            Require(AccessTools.Method(typeof(PlayerData), nameof(PlayerData.InsertOverheadItemTo), new[] { typeof(WgoData), typeof(Item) }), "PlayerData.InsertOverheadItemTo(WgoData, Item)");
+            Require(AccessTools.Method(typeof(Inventory), nameof(Inventory.RemoveItemFromInventoryByUID)), "Inventory.RemoveItemFromInventoryByUID");
+            Require(AccessTools.Method(typeof(SpecialPhysicsCastUtils), nameof(SpecialPhysicsCastUtils.GetPlayerDropPosition)), "SpecialPhysicsCastUtils.GetPlayerDropPosition");
         }
 
         private static void Require(object member, string name)
@@ -113,6 +118,28 @@ namespace GK2Mounts
             Plugin.Log.LogInfo("[script] Body Roll forced to succeed for the manually started delivery.");
             Success(__instance).Call(flow);
             return false;
+        }
+    }
+
+    // Cargo on the cart lives in the temporary donkey's inventory, which no save contains. Right before the game
+    // serializes a save (every save path ends in this static method, after which PrepareToSave runs) the cargo is
+    // handed back to the keeper (hands, then dropped at his feet), so the drops are part of the save being written.
+    [HarmonyPatch(typeof(SaveSystem), nameof(SaveSystem.Save))]
+    internal static class SaveSystem_Save_Patch
+    {
+        private static void Prefix()
+        {
+            try
+            {
+                if (Mount.IsMounted && Cargo.Count > 0)
+                {
+                    Cargo.Unload("save");
+                }
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning("Cargo: unloading before the save failed: " + e.Message);
+            }
         }
     }
 }

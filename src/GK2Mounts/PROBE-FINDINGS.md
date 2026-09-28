@@ -486,3 +486,53 @@ its size for overhead items; the only limits are the item filters (dump) and slo
   and `box_engineering_mechanism` (the element is named `i_box_engineering_mec`, a truncated name, so the game itself
   would show the placeholder for that crate). Marble on the cart would need a fallback mesh (e.g. the stone element).
 - Player overhead stack limit in this save: 1.
+
+**Proof of concept built (2026-09-28 15:20, `Cargo.cs`):** cargo key (General.CargoKey, L) loads the overhead item
+into the mounted donkey's inventory with `PlayerData.InsertOverheadItemTo` (the pallet path) and takes the last
+item back with `Inventory.RemoveItemFromInventoryByUID` + `TryAddOverheadItemNoReplace`, else drops it at the
+keeper's drop position (the conveyor-cell path). Zombies refused. Non-corpse items are shown by copies of the
+keeper's overhead `DropViewAtomMesh` under a `cart_cargo` holder at the measured top of `donkey_cart_empty`
+(placement: Cart.CargoUp / CargoAlong / CargoSpacing, panel sliders); the holder is a lifted cart part. Cargo is
+handed back on dismount, cleanup and before `SaveSystem.Save` (Harmony prefix), and carried over in memory through
+doors. Untested in game at the time of writing.
+
+**First in-game result of the cargo proof of concept (2026-09-28 15:49, 54-line log, no warnings, errors or missing
+mesh elements):** three Cart mounts; logs loaded to 2/2 each time; "unloaded on dismounted: 1 in hand, 1 dropped"
+and "unloaded on indoors: 1 in hand, 1 dropped" (the indoors auto-dismount hands the cargo back too). Bed top
+measured at local (0.37, 0.53, −0.03) under Base (the sway pivot's 0.36 offset plus the body's half height), cart
+body 0.90 × 0.30 × 0.75. The `cart_cargo` holder is the 9th lifted part.
+
+Correction to Round 6: `BigDropTopSurface` is the walkable top collider of a dropped big item (`DropView.
+bigDropTopSurface`), not a terrain ledge. The two `[cart] target jumped` lines here (±0.400, source
+`BigDropTopSurface/Collider 0`) are the cart point passing over the log the unload had dropped on the road, so the
+cart climbed 0.4 over a dropped log. The cart raycast now skips that collider name; the keeper's own walking is
+untouched.
+
+**Visual result (2026-09-28, screenshots 15:5x):** the cargo mesh sits at the right height on the bed; a log on top
+of a corpse looks right (the game's shroud below, our log centred above). Two logs overlapped: the spread ran along
+the cart (local x), which is the log's own long axis (0.9 of the 0.9 bed). Spread moved to the cart's width (local
+z, bed 0.75 wide), default spacing 0.3, so two items lie side by side.
+
+**Two logs side by side (screenshot 15:5x) look right; a lone log centred on the bed looked floaty over the front
+rim.** Slots are now fixed across the width (count = inventory size): the first item on the far side (+z, away from
+the camera) against the back of the bed, the second towards the camera; a lone item therefore leans on the back wall.
+
+**A lone log in the far slot looked about to fall off the back (screenshot 16:0x); two logs side by side look right.**
+Cargo placement is now per slot: Cargo1Along/Up/Across and Cargo2Along/Up/Across in both style sections (defaults
+0/0/0.15 and 0/0/−0.15), six live sliders in the Riding tab under "Cart cargo", exported with the other defaults.
+The slot values are to be tuned in the panel and exported; the shipped defaults will follow.
+
+**Big-item mesh sizes (dump 16:06, shared-mesh bounds in the element's space, along × high × across; pivot = the
+element's origin):** every pivot is at the bottom (min y 0.00; the clothes crates −0.03). Log 0.82 × 0.57 × 0.35,
+footprint centre 0.15 towards the camera of the pivot; stone and ore 0.74 × 0.33 × 0.35 (−0.13); corpse 0.84 × 0.33
+× 0.43 (−0.06); wild zombie 0.86 × 0.30 × 0.43; crates 0.52–0.56 × 0.40–0.58 × 0.45–0.50 (footprint −0.19 to +0.01).
+Bed 0.90 long × 0.75 wide. Consequences: one height rule serves every item (bottom on the bed); the pivot offsets
+mean slot values must address the footprint, not the pivot; two logs fit across (0.70), two crates do not (1.00), a
+corpse plus anything leaves 0.32. The game never faces this: each of its containers holds one item kind.
+
+Built as `CargoAutoFit` (default on): after `Activate`, the mesh bounds are measured (`Cargo.MeasureMeshes`, mesh
+bounds are valid on inactive objects), the footprint centre goes to the slot and the bottom onto the bed; a second
+item is pushed across by half the two widths when the slots overlap, or stacked on the first when the two are wider
+than the measured bed; with a corpse aboard, items sit on the loaded body's measured top. Slot defaults moved to the
+footprint convention (slot 1 across 0, slot 2 −0.3), which reproduces the two-log picture the user approved. The
+corpse itself is the game's mesh and is not moved by the sliders. Panel got a scroll view (Riding tab overflowed).

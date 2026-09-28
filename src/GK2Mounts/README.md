@@ -19,6 +19,7 @@ NPC and its schedule are untouched.
 |---|---|---|
 | `Enabled` | true | Master switch. |
 | `MountKey` | `H` | Mount / dismount. Pick a key the game does not use. |
+| `CargoKey` | `L` | Cart style, proof of concept: with an item on your head (log, stone, ore, crate, corpse) puts it on the cart; with empty hands takes the last item back (into the hands, or dropped beside you when they are full). The cart holds two items, like the game's own delivery cart. Zombies are refused. Cargo is handed back automatically at every dismount and before every save (it lives in a temporary inventory that no save contains); through doors it stays on the cart. |
 | `Style` | `Ride` | `Ride` (on the donkey's back) or `Cart` (the donkey pulls its cart, the keeper stands in it). Each style has its own section below. |
 | `MountWgoId` | `npc_donkey` | Which world object's looks to use. Only the donkey is tested. |
 | `StayMountedThroughDoors` | true | After a scene change the donkey is re-summoned and you keep riding. Off: dismount at every door. |
@@ -56,6 +57,9 @@ writing, Ride / Cart.
 | `SnapToGround` | true | true | Place the donkey at the ground height under its own position, as the game does for walking objects. Off: it takes the keeper's height and digs into slopes when beside or behind him. |
 | `CartFollowsGround` | true | true | Cart style only: the whole cart (wheels, cart body, lantern) is raised or lowered every frame, as one, by the difference between the ground under the cart body and the ground under the donkey, so the rigid 3D cart no longer sinks into a slope behind the donkey. The bars between donkey and cart take half of that shift. Sprites stay upright; nothing rotates. |
 | `CartGroundMaxShift` | 0.8 | 0.8 | Largest shift the cart may get, in world units, either way. |
+| `CargoAutoFit` | true | true | Cart style only: place each cargo mesh by its measured size: bottom on the bed, footprint centre on its slot (the models' pivots sit 0.02 to 0.19 off centre across), a second item pushed aside when the two would overlap across the 0.75-wide bed, or put on top of the first when the two are wider than the bed together (two crates, 0.5 each). Off: the model's pivot goes to the slot point. |
+| `Cargo1Along` / `Cargo1Up` / `Cargo1Across` | 0 / 0 / 0 | 0 / 0 / 0 | Cart style only: slot of the first cargo item on the cart bed, world units: along the cart from the bed's centre, height above the measured bed top, across the cart's width (positive = away from the camera). Panel sliders under "Cart cargo", live. A corpse is drawn by the game's own loaded-cart mesh and is not moved by these; everything else is a copy of the keeper's overhead mesh atom and rides on top of the shroud while a corpse is aboard. |
+| `Cargo2Along` / `Cargo2Up` / `Cargo2Across` | 0 / 0 / -0.3 | 0 / 0 / -0.3 | Same for the second cargo item. |
 
 ### `[Debug]` and `[Safety]`
 

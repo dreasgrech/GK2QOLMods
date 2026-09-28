@@ -29,11 +29,18 @@ namespace GK2Mounts
             GUI.matrix = Matrix4x4.Scale(new Vector3(scale, scale, 1f));
             EnsureStyles();
             float vw = Screen.width / scale;
+            // The tab contents scroll when they do not fit the screen (the Riding tab is long); the toolbar and the
+            // Save/Reset row stay in view. 130 covers the title bar, the toolbar and the footer.
+            maxContentHeight = Mathf.Max(150f, Screen.height / scale - 32f - 130f);
             rect.x = vw - rect.width - 16f;
             rect.y = 16f;
             rect = GUILayout.Window(WindowId, rect, DrawContents, "GK2 Mounts tuning", GUILayout.Width(470f));
             GUI.matrix = Matrix4x4.identity;
         }
+
+        private static Vector2 scroll;
+        private static float maxContentHeight = 800f;
+        private static readonly float[] contentHeight = new float[3]; // measured per tab, last repaint
 
         private static void EnsureStyles()
         {
@@ -50,14 +57,30 @@ namespace GK2Mounts
 
         private static void DrawContents(int id)
         {
-            tab = GUILayout.Toolbar(tab, TabNames);
+            int newTab = GUILayout.Toolbar(tab, TabNames);
+            if (newTab != tab)
+            {
+                tab = newTab;
+                scroll = Vector2.zero;
+            }
             GUILayout.Space(6f);
+            // An IMGUI scroll view needs an explicit height, or it collapses; the content's height is measured on
+            // each repaint (last frame's value is used) and capped to what fits on the screen.
+            float h = contentHeight[tab] > 0f ? Mathf.Min(contentHeight[tab], maxContentHeight) : maxContentHeight;
+            scroll = GUILayout.BeginScrollView(scroll, false, false, GUILayout.Height(h));
+            GUILayout.BeginVertical();
             switch (tab)
             {
                 case 0: DrawGeneral(); break;
                 case 1: DrawRiding(); break;
                 default: DrawDebug(); break;
             }
+            GUILayout.EndVertical();
+            if (Event.current.type == EventType.Repaint)
+            {
+                contentHeight[tab] = GUILayoutUtility.GetLastRect().height + 6f;
+            }
+            GUILayout.EndScrollView();
 
             GUILayout.Space(8f);
             GUILayout.BeginHorizontal();
@@ -94,6 +117,10 @@ namespace GK2Mounts
             GUILayout.BeginHorizontal();
             GUILayout.Label("Mount / dismount key (change General.MountKey in the cfg)", label, GUILayout.Width(300f));
             GUILayout.Label(Plugin.MountKey.Value.ToString(), label);
+            GUILayout.EndHorizontal();
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Cart cargo key: load what you carry / take the last item (General.CargoKey)", label, GUILayout.Width(300f));
+            GUILayout.Label(Plugin.CargoKey.Value.ToString(), label);
             GUILayout.EndHorizontal();
 
             GUILayout.Label("Behaviour", header);
@@ -136,6 +163,21 @@ namespace GK2Mounts
             {
                 FloatSlider("Cart: largest height shift allowed", s.CartGroundMaxShift, 0f, 1.5f, 2, null);
                 GUILayout.Label("Wheels, cart body and lantern move up or down together by the ground difference between cart and donkey; the bars between them take half of it.", small);
+            }
+            if (Mount.CurrentStyle == MountStyle.Cart)
+            {
+                GUILayout.Label("Cart cargo (proof of concept)", header);
+                Toggle("Place items by their measured size (bottom on the bed, footprint on the slot; push apart or stack)", s.CargoAutoFit, Cargo.RefreshViews);
+                GUILayout.Label("The corpse is the game's own loaded-cart mesh and is not moved by these; the sliders move the items the mod draws (logs, stone, ore, crates). With a corpse aboard they ride on top of the shroud.", small);
+                GUILayout.Label("First item on the cart", small);
+                FloatSlider("Slot 1: along the cart (tail - / head +)", s.Cargo1Along, -0.6f, 0.6f, 2, Cargo.RefreshViews);
+                FloatSlider("Slot 1: height above the bed", s.Cargo1Up, -0.5f, 0.8f, 2, Cargo.RefreshViews);
+                FloatSlider("Slot 1: across the cart (towards camera - / away +)", s.Cargo1Across, -0.5f, 0.5f, 2, Cargo.RefreshViews);
+                GUILayout.Label("Second item on the cart", small);
+                FloatSlider("Slot 2: along the cart (tail - / head +)", s.Cargo2Along, -0.6f, 0.6f, 2, Cargo.RefreshViews);
+                FloatSlider("Slot 2: height above the bed", s.Cargo2Up, -0.5f, 0.8f, 2, Cargo.RefreshViews);
+                FloatSlider("Slot 2: across the cart (towards camera - / away +)", s.Cargo2Across, -0.5f, 0.5f, 2, Cargo.RefreshViews);
+                GUILayout.Label($"Press {Plugin.CargoKey.Value} with a log (or stone, ore, crate) on your head to put it on the cart, and with empty hands to take it back. A corpse is drawn by the game itself; other items by a copy of the keeper's overhead mesh. Right-click a row to reset it; 'Export current values as mod defaults' (Debug tab) keeps them. {Cargo.Summary()}", small);
             }
             IntSlider("Move whole rider along the donkey: tail (-) / head (+)", s.RiderOffsetPx, -16, 16, null);
 

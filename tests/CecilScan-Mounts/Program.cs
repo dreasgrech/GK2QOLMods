@@ -40,6 +40,12 @@ Field("GameBalance", "itemDefs", "System.Collections.Generic.List`1<ItemDef>");
 Method("Inventory", "RemoveItemById", 5);
 Method("PlayerData", "TryAddOverheadItemNoReplace", 1);
 Method("ConditionalDrawer", "UpdateVisualsByConditions", 0);
+// Cargo proof of concept (Cargo.cs, SaveSystem_Save_Patch)
+Method("SaveSystem", "Save", 6);
+Method("Inventory", "RemoveItemFromInventoryByUID", 2);
+Method("SpecialPhysicsCastUtils", "GetPlayerDropPosition", 3);
+Method("DropSystem", "DropItem", 4);
+Method("DropViewAtomMesh", "Activate", 1);
 // Inventory.CanAddItemToInventory and PlayerData.InsertOverheadItemTo have two overloads each; the IL scan above covers them.
 { var pa = game.GetType("PlayerAnimation"); bool good = pa?.BaseType?.Name == "AnimationComponent" && game.GetType("AnimationComponent")?.BaseType?.Name == "AnimationComponentBase"; Console.WriteLine((good?"PASS":"FAIL") + " PlayerAnimation : AnimationComponent : AnimationComponentBase"); if (!good) fails++; }
 Console.WriteLine(fails == 0 ? "ALL PASS" : "FAILURES: " + fails);

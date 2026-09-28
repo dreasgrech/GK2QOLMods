@@ -57,6 +57,21 @@ namespace GK2Mounts
         public readonly ConfigEntry<bool> SnapToGround;
         public readonly ConfigEntry<bool> CartFollowsGround;
         public readonly ConfigEntry<float> CartGroundMaxShift;
+        public readonly ConfigEntry<bool> CargoAutoFit;
+        public readonly ConfigEntry<float> Cargo1Along, Cargo1Up, Cargo1Across;
+        public readonly ConfigEntry<float> Cargo2Along, Cargo2Up, Cargo2Across;
+
+        // Local position of cargo slot i on the cart bed (0 = first item). Along = the cart's length (local x), Up =
+        // height above the measured bed top, Across = the cart's width (local z, positive away from the camera).
+        // Beyond the second slot, items repeat the second slot stacked 0.15 higher each.
+        public UnityEngine.Vector3 CargoSlot(int i)
+        {
+            if (i <= 0)
+            {
+                return new UnityEngine.Vector3(Cargo1Along.Value, Cargo1Up.Value, Cargo1Across.Value);
+            }
+            return new UnityEngine.Vector3(Cargo2Along.Value, Cargo2Up.Value + 0.15f * (i - 1), Cargo2Across.Value);
+        }
 
         public StyleSettings(ConfigFile cfg, string section, float speed, float depth, float center, int riderPx, int torsoPx,
             bool autoSeat, int seatAdjustPx, float seatOffset, bool bob, RiderPose pose, bool freeze,
@@ -106,13 +121,27 @@ namespace GK2Mounts
                 "Cart style only: raise or lower the whole cart (wheels, cart body, lantern) as one, every frame, by the ground difference between the cart and the donkey, so the rigid 3D cart does not sink into a slope behind the donkey. The bars between donkey and cart take half of that shift. Nothing rotates.");
             CartGroundMaxShift = cfg.Bind(section, "CartGroundMaxShift", Defaults.Get(section, "CartGroundMaxShift", 0.8f),
                 "Largest shift the cart may get from CartFollowsGround, in world units, either way.");
+            CargoAutoFit = cfg.Bind(section, "CargoAutoFit", Defaults.Get(section, "CargoAutoFit", true),
+                "Cart style only: place each cargo mesh by its measured size: bottom on the bed, footprint centre on its slot (the models' pivots sit 0.02 to 0.19 off centre), a second item pushed aside when the two would overlap across the bed, or put on top of the first when the two are wider than the bed together (two crates). Off: the model's pivot goes to the slot point.");
+            Cargo1Along = cfg.Bind(section, "Cargo1Along", Defaults.Get(section, "Cargo1Along", 0f),
+                "Cart style only: first cargo item, shift along the cart from the bed's centre, world units (the cart's local x axis).");
+            Cargo1Up = cfg.Bind(section, "Cargo1Up", Defaults.Get(section, "Cargo1Up", 0f),
+                "Cart style only: first cargo item, height above the measured top of the cart bed, world units.");
+            Cargo1Across = cfg.Bind(section, "Cargo1Across", Defaults.Get(section, "Cargo1Across", 0f),
+                "Cart style only: first cargo item, position across the cart's width from its centre, world units (positive = away from the camera).");
+            Cargo2Along = cfg.Bind(section, "Cargo2Along", Defaults.Get(section, "Cargo2Along", 0f),
+                "Cart style only: second cargo item, shift along the cart from the bed's centre, world units.");
+            Cargo2Up = cfg.Bind(section, "Cargo2Up", Defaults.Get(section, "Cargo2Up", 0f),
+                "Cart style only: second cargo item, height above the measured top of the cart bed, world units.");
+            Cargo2Across = cfg.Bind(section, "Cargo2Across", Defaults.Get(section, "Cargo2Across", -0.3f),
+                "Cart style only: second cargo item, position across the cart's width from its centre, world units (positive = away from the camera).");
         }
 
         public void ResetAll()
         {
             Reset(SpeedMultiplier); Reset(Depth); Reset(CenterOffset); Reset(RiderOffsetPx); Reset(TorsoOffsetPx);
             Reset(AutoSeat); Reset(SeatAdjustPx); Reset(SeatOffset); Reset(Bob); Reset(Pose); Reset(FreezePoseWhenIdle);
-            Reset(PoseSpeed); Reset(PoseSpeedFollowsDonkey); Reset(NearLeg); Reset(LegSource); Reset(LegHeightPx); Reset(LegAdjustXPx); Reset(LegAdjustYPx); Reset(SnapToGround); Reset(CartFollowsGround); Reset(CartGroundMaxShift);
+            Reset(PoseSpeed); Reset(PoseSpeedFollowsDonkey); Reset(NearLeg); Reset(LegSource); Reset(LegHeightPx); Reset(LegAdjustXPx); Reset(LegAdjustYPx); Reset(SnapToGround); Reset(CartFollowsGround); Reset(CartGroundMaxShift); Reset(CargoAutoFit); Reset(Cargo1Along); Reset(Cargo1Up); Reset(Cargo1Across); Reset(Cargo2Along); Reset(Cargo2Up); Reset(Cargo2Across);
         }
 
         private static void Reset<T>(ConfigEntry<T> e)
@@ -139,6 +168,7 @@ namespace GK2Mounts
         // [General]: behaviour
         internal static ConfigEntry<bool> Enabled;
         internal static ConfigEntry<KeyCode> MountKey;
+        internal static ConfigEntry<KeyCode> CargoKey;
         internal static ConfigEntry<MountStyle> Style;
         internal static ConfigEntry<string> MountWgoId;
         internal static ConfigEntry<bool> StayMountedThroughDoors;
@@ -170,6 +200,8 @@ namespace GK2Mounts
                 "Master switch. Press the mount key to summon a donkey under the keeper and ride it; press again to dismount.");
             MountKey = Config.Bind("General", "MountKey", KeyCode.H,
                 "Key that mounts/dismounts. Pick one the game does not use.");
+            CargoKey = Config.Bind("General", "CargoKey", KeyCode.L,
+                "Cart style: with an item carried overhead, puts it on the cart; with empty hands, takes the last item off the cart (into the hands, or dropped beside the keeper when they are full). The cart holds two items, like the game's own delivery cart. Pick a key the game does not use.");
             Style = Config.Bind("General", "Style", MountStyle.Ride,
                 "Ride: sit on the donkey's back. Cart: the donkey pulls its cart and the keeper stands in it. Each style has its own [Ride] / [Cart] settings section.");
             MountWgoId = Config.Bind("General", "MountWgoId", "npc_donkey",
