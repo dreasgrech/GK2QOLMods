@@ -40,6 +40,11 @@ namespace GK2Mounts
 
         public static bool IsMounted => mounted;
 
+        // Side view is on when the setting says so, or when the selected pose only exists as left/right art
+        // (FishingIdle): with the keeper facing up or down the animator has no frame and the body renders nothing.
+        public static bool PoseNeedsSideView => Plugin.Pose.Value == RiderPose.FishingIdle;
+        public static bool SideView => Plugin.SideViewOnly.Value || (mounted && PoseNeedsSideView);
+
         // The animator state the keeper is held in while riding (see the SetState prefix); Cart keeps the walk.
         public static AnimationState RiderPoseState =>
             activeStyle == MountStyle.Cart ? AnimationState.Walk : (AnimationState)(int)Plugin.Pose.Value;
@@ -219,7 +224,7 @@ namespace GK2Mounts
             }
             mounted = true;
             riderFacingX = pc.PlayerData.Direction.x < -0.05f ? -1f : 1f;
-            if (Plugin.SideViewOnly.Value)
+            if (Mount.SideView)
             {
                 // Turn the keeper to the side right away instead of waiting for the next step.
                 pc.PhysicalBody.SetFacingDirection(new Vector2(riderFacingX, 0f));
@@ -545,6 +550,22 @@ namespace GK2Mounts
 
         public static MountStyle CurrentStyle => activeStyle;
 
+        // Style switch from the panel: the cart parts and offsets are decided at spawn, so mount again in place.
+        public static void Remount()
+        {
+            if (!mounted)
+            {
+                return;
+            }
+            PlayerController pc = MainGame.PlayerController;
+            if (pc == null || !pc.TryGetCurrentGameScene(out GameScene scene) || scene == null)
+            {
+                return;
+            }
+            Dismount(pc, "style change");
+            TryMount(pc, scene);
+        }
+
         public static void RefreshSeat()
         {
             if (!mounted || activeStyle != MountStyle.Ride)
@@ -602,7 +623,11 @@ namespace GK2Mounts
             PlayerData pd = pc.PlayerData;
             // With SideViewOnly the keeper's sprite is already locked to left/right (SetDirection prefix); give the
             // donkey that same facing so the two never disagree. Otherwise mirror the keeper's real direction.
-            Vector2 dir = Plugin.SideViewOnly.Value ? new Vector2(riderFacingX, 0f) : pd.Direction;
+            if (Mathf.Abs(pd.Direction.x) > 0.05f)
+            {
+                riderFacingX = pd.Direction.x > 0f ? 1f : -1f; // the one facing source for torso shift and legs
+            }
+            Vector2 dir = Mount.SideView ? new Vector2(riderFacingX, 0f) : pd.Direction;
             if (dir.sqrMagnitude > 0.0001f)
             {
                 donkey.Data.MovableDirection = dir; // applied to the donkey's animator synchronously
@@ -640,7 +665,7 @@ namespace GK2Mounts
 
             // Rider fore/aft: RiderOffsetPx > 0 puts the keeper closer to the head, i.e. the donkey shifts towards its
             // rear by that many art pixels (the leg overlay, a child of the donkey, compensates in RiderLeg.Update).
-            float sign = Mathf.Abs(lateral) > 0.001f ? Mathf.Sign(lateral) : (Plugin.SideViewOnly.Value ? riderFacingX : (dir.x >= 0f ? 1f : -1f));
+            float sign = Mathf.Abs(lateral) > 0.001f ? Mathf.Sign(lateral) : (Mount.SideView ? riderFacingX : (dir.x >= 0f ? 1f : -1f));
             float fore = (activeStyle == MountStyle.Ride ? Plugin.RiderOffsetPx.Value : 0) * 0.02f * sign;
 
             Vector3 target = basePos + away * depth - right * (lateral + fore);
@@ -691,6 +716,19 @@ namespace GK2Mounts
 
         // The keeper's sprites hang under one transform (the one with the Animator, "main_character", at a fixed
         // local height). Shifting it is enough; nothing in the game writes that local position at runtime.
+        // World-space shift currently applied to the torso by Ride.TorsoOffsetPx (zero when not riding).
+        internal static Vector3 TorsoShiftWorld;
+
+        // +1 when the keeper faces right (mirrored art), -1 when facing left.
+        // +1 facing right, -1 facing left. Taken from the tracked facing: Unity reports the game's mirroring scales
+        // back inconsistently, so inspecting transforms gave the same sign for both facings.
+        private static float TorsoFacingSign()
+        {
+            return riderFacingX;
+        }
+
+        internal static bool FacingRight => riderFacingX > 0f;
+
         // The sprite root's rest position is remembered once; the seat is always "rest + offset", so repeated
         // updates (every frame while riding, to follow the donkey's back) never accumulate.
         private static void ApplySeat(PlayerController pc, float offset)
@@ -707,7 +745,10 @@ namespace GK2Mounts
                     seatRoot = animator.transform;
                     seatRest = seatRoot.localPosition;
                 }
-                seatRoot.localPosition = seatRest + Vector3.up * offset;
+                // Torso fore/aft: shifts the sprite root sideways (the root sits above the keeper's mirroring, so
+                // this is a world-x shift; +facing = towards the head). The legs subtract it (RiderLeg) and stay.
+                TorsoShiftWorld = Vector3.right * (TorsoFacingSign() * Plugin.TorsoOffsetPx.Value * 0.02f);
+                seatRoot.localPosition = seatRest + Vector3.up * offset + TorsoShiftWorld;
                 seatApplied = offset;
             }
             catch (Exception e)
@@ -724,6 +765,7 @@ namespace GK2Mounts
                 {
                     seatRoot.localPosition = seatRest;
                 }
+                TorsoShiftWorld = Vector3.zero;
             }
             catch
             {
@@ -745,7 +787,8 @@ namespace GK2Mounts
             Sprite k = keeperBodyRenderer.sprite;
             Sprite d = donkeyBodyRenderer.sprite;
             float keeperHipLocalY = (k.textureRectOffset.y + 2f + 7f - k.pivot.y) * px;
-            float donkeyBackLocalY = (d.textureRectOffset.y + 2f + BackHeightPx(d) - d.pivot.y) * px;
+            float back = Plugin.Bob.Value ? BackHeightPx(d) : 25f;
+            float donkeyBackLocalY = (d.textureRectOffset.y + 2f + back - d.pivot.y) * px;
             // Measure with the seat at rest so the result is absolute, not relative to the current seat.
             Vector3 hipWorld = keeperBodyRenderer.transform.TransformPoint(new Vector3(0f, keeperHipLocalY, 0f)) - Vector3.up * seatApplied;
             Vector3 backWorld = donkeyBodyRenderer.transform.TransformPoint(new Vector3(0f, donkeyBackLocalY, 0f));
@@ -781,6 +824,7 @@ namespace GK2Mounts
         // which then raises OnLateUpdate. Legs and seat are updated there, so they always see the clothed frame the
         // player actually sees (a plugin LateUpdate can run before that swap and would read the naked base body).
         private static Action keeperLateUpdate;
+        private static bool warnedNoSprite;
         private static AnimationComponent hookedAnimation;
 
         private static void HookKeeperLateUpdate(PlayerController pc)
@@ -827,9 +871,14 @@ namespace GK2Mounts
             }
             try
             {
+                if (keeperBodyRenderer != null && keeperBodyRenderer.sprite == null && !warnedNoSprite)
+                {
+                    warnedNoSprite = true;
+                    Plugin.Log.LogWarning($"Mount: the keeper body has no sprite this frame (pose {Plugin.Pose.Value}, facing {pc.PlayerData.Direction}); the pose has no frame for this facing.");
+                }
                 if (RiderLeg.IsAttached)
                 {
-                    RiderLeg.Update(donkeyBodyRenderer, keeperBodyRenderer);
+                    RiderLeg.Update(donkeyBodyRenderer, keeperBodyRenderer, riderFacingX > 0f);
                 }
                 if (!seatPending)
                 {
@@ -845,14 +894,69 @@ namespace GK2Mounts
         // Called every frame while riding with AutoSeat: keeps the rider on the back through the walk cycle.
         private static void TickSeat(PlayerController pc)
         {
-            if (activeStyle != MountStyle.Ride || !Plugin.AutoSeat.Value || seatRoot == null || !seatRoot)
+            if (activeStyle != MountStyle.Ride || seatRoot == null || !seatRoot)
             {
                 return;
             }
-            float? seat = ComputeAutoSeat();
-            if (seat.HasValue && Mathf.Abs(seat.Value - seatApplied) > 0.0005f)
+            float? seat;
+            if (Plugin.AutoSeat.Value)
+            {
+                seat = ComputeAutoSeat();
+            }
+            else
+            {
+                // Manual height plus the walk-cycle bob (the back is 24-26 px above the ground depending on frame).
+                float bob = 0f;
+                if (Plugin.Bob.Value && donkeyBodyRenderer != null && donkeyBodyRenderer.sprite != null)
+                {
+                    bob = (BackHeightPx(donkeyBodyRenderer.sprite) - 25f) * PxWorldY;
+                }
+                seat = Plugin.RideSeatOffset.Value + bob;
+            }
+            if (!seat.HasValue)
+            {
+                return;
+            }
+            bool torsoShiftStale = (TorsoShiftWorld - Vector3.right * (TorsoFacingSign() * Plugin.TorsoOffsetPx.Value * 0.02f)).sqrMagnitude > 0.000001f;
+            if (Mathf.Abs(seat.Value - seatApplied) > 0.0005f || torsoShiftStale)
             {
                 ApplySeat(pc, seat.Value);
+            }
+        }
+
+        // Debug: every transform involved in placing rider and donkey, for the current facing. Press in both facings.
+        public static void LogGeometry()
+        {
+            try
+            {
+                PlayerController pc = MainGame.PlayerController;
+                var sb = new System.Text.StringBuilder("[geometry] ");
+                sb.Append($"keeperDir={pc.PlayerData.Direction} riderFacingX={riderFacingX} ");
+                if (keeperBodyRenderer != null)
+                {
+                    Transform t = keeperBodyRenderer.transform;
+                    sb.Append($"| keeperBody: sprite={keeperBodyRenderer.sprite?.name} flipX={keeperBodyRenderer.flipX} pos={t.position:F3} lossyScale={t.lossyScale:F2} localXaxis={t.TransformDirection(Vector3.right):F2} mirrored={RiderLeg.IsMirrored(keeperBodyRenderer)} ");
+                    for (Transform p = t.parent; p != null && p.name != "PlayerPhysicalBody"; p = p.parent)
+                    {
+                        sb.Append($"| {p.name}: lpos={p.localPosition:F3} lrot={p.localEulerAngles:F0} lscale={p.localScale:F2} ");
+                    }
+                }
+                if (donkey != null && donkey && donkeyBodyRenderer != null)
+                {
+                    Transform t = donkeyBodyRenderer.transform;
+                    sb.Append($"| donkeyRoot pos={donkey.transform.position:F3} | donkeyBody: sprite={donkeyBodyRenderer.sprite?.name} flipX={donkeyBodyRenderer.flipX} pos={t.position:F3} lossyScale={t.lossyScale:F2} localXaxis={t.TransformDirection(Vector3.right):F2} mirrored={RiderLeg.IsMirrored(donkeyBodyRenderer)} ");
+                    for (Transform p = t.parent; p != null && p != donkey.transform; p = p.parent)
+                    {
+                        sb.Append($"| {p.name}: lpos={p.localPosition:F3} lrot={p.localEulerAngles:F0} lscale={p.localScale:F2} ");
+                    }
+                }
+                sb.Append($"| seatRoot lpos={(seatRoot ? seatRoot.localPosition.ToString("F3") : "-")} seatRest={seatRest:F3} seatApplied={seatApplied:F3} torsoShift={TorsoShiftWorld:F3} torsoSign={TorsoFacingSign()} ");
+                sb.Append($"| playerBody pos={pc.PhysicalBody.Rb.transform.position:F3}");
+                Plugin.Log.LogInfo(sb.ToString());
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning("geometry log failed: " + e.Message);
             }
         }
 

@@ -41,7 +41,7 @@ namespace GK2Mounts
     {
         private static void Prefix(AnimationComponentBase __instance, ref UnityEngine.Vector2 direction)
         {
-            if (Mount.IsMounted && Plugin.SideViewOnly.Value && __instance is PlayerAnimation)
+            if (Mount.IsMounted && Mount.SideView && __instance is PlayerAnimation)
             {
                 direction = Mount.RiderFacing(direction);
             }

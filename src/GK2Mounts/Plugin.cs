@@ -56,6 +56,7 @@ namespace GK2Mounts
         internal static ConfigEntry<float> RideDepth;
         internal static ConfigEntry<float> RideCenterOffset;
         internal static ConfigEntry<bool> AutoSeat;
+        internal static ConfigEntry<bool> Bob;
         internal static ConfigEntry<int> SeatAdjustPx;
         internal static ConfigEntry<bool> NearLeg;
         internal static ConfigEntry<LegSource> LegSourceSetting;
@@ -66,6 +67,7 @@ namespace GK2Mounts
         internal static ConfigEntry<bool> TuningWindowEnabled;
         internal static ConfigEntry<float> TuningWindowScale;
         internal static ConfigEntry<int> RiderOffsetPx;
+        internal static ConfigEntry<int> TorsoOffsetPx;
         internal static Plugin Instance;
         internal static ConfigEntry<float> CartSeatOffset;
         internal static ConfigEntry<float> CartDepth;
@@ -92,29 +94,33 @@ namespace GK2Mounts
                 "Keep riding after a scene change (the donkey is re-summoned in the new scene). Off: dismount at every door.");
             Pose = Config.Bind("Ride", "Pose", RiderPose.FishingIdle,
                 "Keeper's body pose while riding. Idle: standing still (no walk cycle). FishingIdle / WorkHands / etc.: the game's animator state of that name, for poses with the hands forward. Walk: unchanged (arms swing while riding).");
-            SideViewOnly = Config.Bind("General", "SideViewOnly", true,
+            SideViewOnly = Config.Bind("General", "SideViewOnly", false,
                 "The donkey only has left/right art. On: while mounted the keeper also only faces left or right (walking up/down keeps the last horizontal facing), so rider and mount match. Off: the keeper turns as usual and the donkey shows its side.");
             ShowMessages = Config.Bind("General", "ShowMessages", true,
                 "Show a thought bubble when the keeper cannot mount and why.");
 
-            RideSeatOffset = Config.Bind("Ride", "SeatOffset", -0.15f,
+            RideSeatOffset = Config.Bind("Ride", "SeatOffset", 0.32f,
                 "Vertical offset of the keeper's sprite while riding. Negative lowers the keeper so the legs hide behind the donkey's body.");
-            RideDepth = Config.Bind("Ride", "Depth", -0.15f,
+            RideDepth = Config.Bind("Ride", "Depth", 0.32f,
                 "Donkey offset towards the camera (negative) or away from it (positive), in world units. Negative draws it in front of the keeper's legs.");
             RideCenterOffset = Config.Bind("Ride", "CenterOffset", 0.48f,
                 "The donkey sprite is drawn this far to its facing side of its position (prefab offset). The mount is shifted back by this amount so the body sits under the keeper.");
 
-            RiderOffsetPx = Config.Bind("Ride", "RiderOffsetPx", 0,
+            RiderOffsetPx = Config.Bind("Ride", "RiderOffsetPx", -4,
                 "Where the keeper sits along the donkey, in art pixels: positive = closer to the head, negative = closer to the rear.");
-            AutoSeat = Config.Bind("Ride", "AutoSeat", true,
+            TorsoOffsetPx = Config.Bind("Ride", "TorsoOffsetPx", -3,
+                "Shifts only the keeper's upper body along the donkey, in art pixels (positive = towards the head); the legs stay where they are.");
+            AutoSeat = Config.Bind("Ride", "AutoSeat", false,
                 "Compute the seat height from the sprites themselves (rider's hip on the donkey's back line). Off: use Ride.SeatOffset.");
-            SeatAdjustPx = Config.Bind("Ride", "SeatAdjustPx", -4,
+            Bob = Config.Bind("Ride", "Bob", true,
+                "Move the rider up and down with the donkey's back through its walk cycle (1 px).");
+            SeatAdjustPx = Config.Bind("Ride", "SeatAdjustPx", -6,
                 "Fine adjustment of the automatic seat, in art pixels (positive = higher).");
-            NearLeg = Config.Bind("Ride", "NearLeg", true,
+            NearLeg = Config.Bind("Ride", "NearLeg", false,
                 "Draw the rider's near leg hanging down the donkey's flank, in the keeper's outfit colours.");
             LegSourceSetting = Config.Bind("Ride", "LegSource", LegSource.Body,
                 "Body: the keeper's own trousers and boots, re-sliced from his current body frame (follows the pose, outfit-exact). Drawn: a hand-drawn bent leg in outfit colours.");
-            LegHeightPx = Config.Bind("Ride", "LegHeightPx", 10,
+            LegHeightPx = Config.Bind("Ride", "LegHeightPx", 15,
                 "With LegSource=Body: how many bottom rows of the body frame count as legs (feet to belt), in art pixels.");
             LegAdjustXPx = Config.Bind("Ride", "LegAdjustXPx", 3,
                 "Fine adjustment of the leg's hip position along the donkey, in art pixels (positive = towards the rear).");

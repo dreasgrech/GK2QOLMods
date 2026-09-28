@@ -27,6 +27,21 @@ namespace GK2Mounts
 
         public static bool IsAttached => renderer != null && renderer;
 
+        // Whether a sprite appears mirrored on screen, whatever the mechanism: flipX, a negative scale somewhere up
+        // the hierarchy, or a 180-degree turn about the vertical axis. Geometric test: the sprite's local +x axis
+        // (rotation applied, scale sign folded in) pointing towards world -x means the art is shown mirrored.
+        internal static bool IsMirrored(SpriteRenderer sr)
+        {
+            if (sr == null)
+            {
+                return false;
+            }
+            Transform t = sr.transform;
+            Vector3 lx = t.TransformDirection(Vector3.right) * Mathf.Sign(t.lossyScale.x);
+            bool geometric = lx.x < 0f;
+            return geometric ^ sr.flipX;
+        }
+
         public static void ClearCache()
         {
             sliceCache.Clear();
@@ -51,13 +66,13 @@ namespace GK2Mounts
             renderer.sortingOrder = keeperBody.sortingOrder + 1;
             renderer.drawMode = SpriteDrawMode.Simple;
             currentSource = null;
-            Update(donkeyBody, keeperBody);
+            Update(donkeyBody, keeperBody, Mount.FacingRight);
         }
 
         // Every frame: pick the slice for the keeper's current body frame and place its top edge on the donkey's
         // back line (24 px above the donkey's ground; the frames have a 2 px transparent border, pivot at the frame
         // centre). Horizontally the slice keeps the offset it has in the keeper's frame.
-        public static void Update(SpriteRenderer donkeyBody, SpriteRenderer keeperBody)
+        public static void Update(SpriteRenderer donkeyBody, SpriteRenderer keeperBody, bool facingRight)
         {
             if (!IsAttached || donkeyBody == null || donkeyBody.sprite == null || keeperBody == null || keeperBody.sprite == null)
             {
@@ -88,8 +103,11 @@ namespace GK2Mounts
             // Mirroring: the keeper mirrors with flipX (or a negative parent scale), the donkey with a negative
             // parent scale, and the two are not the same convention for the same facing. The slice must end up
             // mirrored exactly like the keeper, so undo the donkey's parent mirroring when it differs.
-            bool keeperMirrored = keeperBody.flipX ^ (keeperBody.transform.lossyScale.x < 0f);
-            bool donkeyMirrored = donkeyBody.transform.lossyScale.x < 0f;
+            // Both keeper and donkey art face left natively and are mirrored when facing right (the game does it with a
+            // -1 root scale plus flipX for the keeper, a -1 Base scale for the donkey); Unity reports those scales
+            // back inconsistently, so the facing itself is the reliable source.
+            bool keeperMirrored = facingRight;
+            bool donkeyMirrored = facingRight;
             renderer.flipX = keeperMirrored ^ donkeyMirrored;
 
             // Horizontal: anchor to the torso itself (the keeper body renderer's pivot in world space), plus the
@@ -98,7 +116,8 @@ namespace GK2Mounts
             Sprite d = donkeyBody.sprite;
             float rearSign = keeperMirrored ? -1f : 1f;
             Vector3 worldRight = Vector3.right;
-            Vector3 anchor = keeperBody.transform.position + worldRight * (rearSign * Plugin.LegAdjustXPx.Value * Px);
+            // Subtract the torso-only shift so Ride.TorsoOffsetPx moves the upper body and leaves the legs in place.
+            Vector3 anchor = keeperBody.transform.position - Mount.TorsoShiftWorld + worldRight * (rearSign * Plugin.LegAdjustXPx.Value * Px);
             Vector3 local = donkeyBody.transform.InverseTransformPoint(anchor);
             float groundPx = d.textureRectOffset.y + 2f;
             float topYPx = groundPx + Mount.BackHeightPx(d) + Plugin.LegAdjustYPx.Value;
