@@ -19,7 +19,7 @@ namespace GK2Mounts
         private static string cargoItemId = "wood";
         private static string spawnItemId = "wood";
         private static bool pairOffsetsOpen;
-        private static readonly string[] TabNames = { "General", "Riding", "Lantern", "Debug" };
+        private static readonly string[] TabNames = { "General", "Riding", "Lantern", "Debug", "Export" };
 
         public static void Draw()
         {
@@ -51,7 +51,7 @@ namespace GK2Mounts
         private static float maxContentHeight = 800f;
         private static float chromeHeight = 130f;   // measured; 130 is the first-frame guess
         private static float lastScrollHeight;
-        private static readonly float[] contentHeight = new float[4]; // measured per tab, last repaint
+        private static readonly float[] contentHeight = new float[5]; // measured per tab, last repaint
 
         // Panel width in panel units (before the overall scale) and the widths derived from it, so rows shrink and
         // grow with the panel instead of overflowing it.
@@ -115,7 +115,8 @@ namespace GK2Mounts
                 case 0: DrawGeneral(); break;
                 case 1: DrawRiding(); break;
                 case 2: DrawLantern(); break;
-                default: DrawDebug(); break;
+                case 3: DrawDebug(); break;
+                default: DrawExport(); break;
             }
             GUILayout.EndVertical();
             if (Event.current.type == EventType.Repaint)
@@ -476,7 +477,15 @@ namespace GK2Mounts
             GUILayout.EndHorizontal();
             GUILayout.Label($"Uses the game's own drop routine at the keeper's drop position, so the item is a normal world drop (it is saved like any other; pick it up with the interaction key). < and > cycle through the {big.Count} big items the game defines (zombies excluded, they are linked world objects). A corpse is generated from the delivery script's body definition.", small);
 
-            Header("Mod defaults");
+        }
+
+        // Everything that turns tuned values into shipped files lives here, apart from the play controls.
+        private static string exportStatus = "";
+
+        private static void DrawExport()
+        {
+            Header("Mod defaults (all settings)");
+            GUILayout.Label("The values every setting starts with are baked into the DLL from defaults.cfg at build time. This writes the current values of both styles and the General section in that file's format, so tuned values become the mod's defaults with no code edits: export, copy the file over src/GK2Mounts/defaults.cfg, rebuild.", small);
             if (GUILayout.Button("Export current values as mod defaults"))
             {
                 try
@@ -486,14 +495,47 @@ namespace GK2Mounts
                     {
                         path = System.IO.Path.Combine(BepInEx.Paths.ConfigPath, "GK2Mounts.defaults.cfg");
                     }
-                    Plugin.Log.LogInfo("Mod defaults exported to " + Defaults.Export(path) + " (rebuild the mod to embed them).");
+                    exportStatus = "Defaults written to " + Defaults.Export(path);
+                    Plugin.Log.LogInfo(exportStatus + " (rebuild the mod to embed them).");
                 }
                 catch (Exception e)
                 {
-                    Plugin.Log.LogWarning("Defaults export failed: " + e.Message);
+                    exportStatus = "Defaults export failed: " + e.Message;
+                    Plugin.Log.LogWarning(exportStatus);
                 }
             }
-            GUILayout.Label("Writes both styles' values (and the General look settings) to defaults.cfg, the file the build embeds as the mod's defaults: no code edits needed. Path: Debug.DefaultsExportPath (empty = BepInEx/config).", small);
+            GUILayout.Label("Path: Debug.DefaultsExportPath (empty = BepInEx/config/GK2Mounts.defaults.cfg). The \"Save to config file\" button below is different: it saves your own settings for play, not the mod's defaults.", small);
+
+            Header("Cargo layout (item and pair corrections)");
+            GUILayout.Label("The per-size-class and per-pair corrections edited on the Riding tab. Export writes BepInEx/config/GK2Mounts.cargo-layout.cfg, which the mod loads instead of its embedded copy from then on, so no rebuild is needed to iterate; copy it over src/GK2Mounts/cargo-layout.cfg to ship it. Reload re-reads that file (or the embedded one when it is absent).", small);
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Export cargo layout"))
+            {
+                try
+                {
+                    exportStatus = "Cargo layout written to " + CargoLayout.Export();
+                    Plugin.Log.LogInfo(exportStatus + " (copy over src/GK2Mounts/cargo-layout.cfg to ship it).");
+                }
+                catch (Exception e)
+                {
+                    exportStatus = "Cargo layout export failed: " + e.Message;
+                    Plugin.Log.LogWarning(exportStatus);
+                }
+            }
+            if (GUILayout.Button("Reload layout file"))
+            {
+                CargoLayout.Load();
+                Cargo.RefreshViews();
+                exportStatus = "Cargo layout reloaded: " + CargoLayout.Summary();
+            }
+            GUILayout.EndHorizontal();
+            GUILayout.Label("Loaded now: " + CargoLayout.Summary(), small);
+
+            if (!string.IsNullOrEmpty(exportStatus))
+            {
+                Header("Last result");
+                GUILayout.Label(exportStatus, small);
+            }
         }
 
         // ------------------------------------------------------------------ controls
@@ -585,25 +627,7 @@ namespace GK2Mounts
             {
                 Cargo.RefreshViews();
             }
-            GUILayout.BeginHorizontal();
-            if (GUILayout.Button("Export cargo layout"))
-            {
-                try
-                {
-                    Plugin.Log.LogInfo("Cargo layout exported to " + CargoLayout.Export() + " (copy over src/GK2Mounts/cargo-layout.cfg to ship it).");
-                }
-                catch (Exception e)
-                {
-                    Plugin.Log.LogWarning("Cargo layout export failed: " + e.Message);
-                }
-            }
-            if (GUILayout.Button("Reload layout file"))
-            {
-                CargoLayout.Load();
-                Cargo.RefreshViews();
-            }
-            GUILayout.EndHorizontal();
-            GUILayout.Label("Export writes BepInEx/config/GK2Mounts.cargo-layout.cfg, which is loaded instead of the embedded file from then on; no rebuild needed to iterate. Right-click a slider to zero it.", small);
+            GUILayout.Label("Right-click a slider to zero it. Export and reload of the layout file are on the Export tab.", small);
         }
 
         // A - value + row for a float setting, stepping by 'step' within [min, max]; right-click the value resets it.

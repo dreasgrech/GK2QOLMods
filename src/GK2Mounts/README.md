@@ -31,7 +31,7 @@ NPC and its schedule are untouched.
 
 Both sections hold the same keys; the values differ because the two looks differ. The tuning panel edits the
 section of the style you are currently mounted on. The defaults come from `defaults.cfg` next to the sources, embedded into the DLL at
-build time; the panel's "Export current values as mod defaults" (Debug tab) writes the current values into that
+build time; the panel's "Export current values as mod defaults" (Export tab) writes the current values into that
 file, so tuning never needs a code edit: tune, export, rebuild. The table shows the values shipped at the time of
 writing, Ride / Cart.
 
@@ -80,7 +80,7 @@ writing, Ride / Cart.
 
 | Key | Default | Meaning |
 |---|---|---|
-| `TuningWindow` | true | While mounted, a panel in the top-right corner with tabs General / Riding / Lantern / Debug. Changes apply live; "Save to config file" writes them; right-click a row to reset it. `TuningWindowScale` (1.5) sets its overall size, `TuningWindowFontScale` (1) the text size inside it, `TuningWindowWidth` (470) its width; all three have - / + steppers on the Debug tab and the rows scale with the width. Turn off for normal play. |
+| `TuningWindow` | true | While mounted, a panel in the top-right corner with tabs General / Riding / Lantern / Debug / Export. Changes apply live; "Save to config file" writes them; right-click a row to reset it. `TuningWindowScale` (1.5) sets its overall size, `TuningWindowFontScale` (1) the text size inside it, `TuningWindowWidth` (470) its width; all three have - / + steppers on the Debug tab and the rows scale with the width. Turn off for normal play. |
 | `TuningKeys` | true | PageUp/PageDown torso, Home/End legs sideways, Insert/Delete legs up/down, one art pixel per press, editing the current style's values. Turn off for normal play. |
 | (Debug tab buttons) | | "Start a real delivery now" fires the game donkey's own `full_cycle` script event with its body roll forced to pass (a Harmony prefix on `Flow_Body.DoAction`, active for two frames after the press, drop chance untouched), so the real cart can be watched on the same ground as ours. "Dump the game donkey's script" writes the `npc_donkey` flow graph to `BepInEx/GK2-script-npc_donkey.json`; the text field sends any of its events. See `PROBE-FINDINGS.md` for the routine. "Dump carry facts" writes `BepInEx/GK2-carry-facts.txt` (the donkey prefab's drawer rules, its inventory filters, every big item, the overhead mesh elements) and "Put in cart inventory" / "Take first out" add or remove a plain test item on the mounted donkey's own 2-slot inventory to watch the game's loaded-cart mesh react (Round 7 of the findings; groundwork for carrying cargo). "Drop it here" spawns any big item in front of the keeper with the game's own drop routine (a normal, saved world drop; `<` `>` cycle through all of them; a corpse comes from the delivery script's body definition; zombies cannot be spawned from an id). "Photograph all cargo combinations" puts every distinct item shape alone and every ordered pair on the mounted cart in turn, screenshots and crops each, and writes `BepInEx/GK2-cargo-sheet/index.html`, a grid of all pictures (rows: first item, columns: second) with the settings used; the real cargo is put back afterwards. |
 | `DisableOnGameUpdate` | true | Do nothing if the game's code changed since the audit. |
