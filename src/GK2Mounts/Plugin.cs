@@ -57,6 +57,7 @@ namespace GK2Mounts
         internal static ConfigEntry<float> RideCenterOffset;
         internal static ConfigEntry<bool> AutoSeat;
         internal static ConfigEntry<bool> Bob;
+        internal static ConfigEntry<bool> FreezePoseWhenIdle;
         internal static ConfigEntry<int> SeatAdjustPx;
         internal static ConfigEntry<bool> NearLeg;
         internal static ConfigEntry<LegSource> LegSourceSetting;
@@ -114,6 +115,8 @@ namespace GK2Mounts
                 "Compute the seat height from the sprites themselves (rider's hip on the donkey's back line). Off: use Ride.SeatOffset.");
             Bob = Config.Bind("Ride", "Bob", true,
                 "Move the rider up and down with the donkey's back through its walk cycle (1 px).");
+            FreezePoseWhenIdle = Config.Bind("Ride", "FreezePoseWhenIdle", true,
+                "Pause the keeper's animation while standing still on the donkey, so the arms stop moving; resumes when moving.");
             SeatAdjustPx = Config.Bind("Ride", "SeatAdjustPx", -6,
                 "Fine adjustment of the automatic seat, in art pixels (positive = higher).");
             NearLeg = Config.Bind("Ride", "NearLeg", false,

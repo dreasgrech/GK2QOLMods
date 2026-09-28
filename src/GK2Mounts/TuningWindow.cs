@@ -82,6 +82,7 @@ namespace GK2Mounts
 
                 GUILayout.Label("Rider pose and facing", header);
                 EnumCycler("Body pose while riding", Plugin.Pose, Mount.ApplyPoseNow);
+                Toggle("Freeze the pose while standing still (arms stop moving)", Plugin.FreezePoseWhenIdle, null);
                 if (Mount.PoseBlocksMovement)
                 {
                     GUILayout.Label("This pose makes the game take control: the keeper cannot move while it plays. Choose another.", small);
@@ -259,7 +260,7 @@ namespace GK2Mounts
         private static void ResetDefaults()
         {
             Reset(Plugin.SpeedMultiplier); Reset(Plugin.RideDepth); Reset(Plugin.RideCenterOffset); Reset(Plugin.CartDepth); Reset(Plugin.CartCenterOffset);
-            Reset(Plugin.RiderOffsetPx); Reset(Plugin.TorsoOffsetPx); Reset(Plugin.AutoSeat); Reset(Plugin.Bob); Reset(Plugin.SeatAdjustPx); Reset(Plugin.RideSeatOffset); Reset(Plugin.Pose);
+            Reset(Plugin.RiderOffsetPx); Reset(Plugin.TorsoOffsetPx); Reset(Plugin.AutoSeat); Reset(Plugin.Bob); Reset(Plugin.FreezePoseWhenIdle); Reset(Plugin.SeatAdjustPx); Reset(Plugin.RideSeatOffset); Reset(Plugin.Pose);
             Reset(Plugin.NearLeg); Reset(Plugin.LegSourceSetting); Reset(Plugin.LegHeightPx); Reset(Plugin.LegAdjustXPx); Reset(Plugin.LegAdjustYPx); Reset(Plugin.SideViewOnly);
             Mount.RefreshLeg();
             Mount.RefreshSeat();

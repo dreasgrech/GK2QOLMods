@@ -319,6 +319,7 @@ namespace GK2Mounts
                 if (MainGame.Instance != null && MainGame.PlayerController != null)
                 {
                     RestoreSpeed(MainGame.PlayerController);
+                    UnfreezeRider(MainGame.PlayerController);
                 }
             }
             catch
@@ -333,6 +334,7 @@ namespace GK2Mounts
         // If the keeper is standing still at dismount, nothing would call SetState again; put the real state back.
         private static void RestorePose(PlayerController pc)
         {
+            UnfreezeRider(pc);
             try
             {
                 AnimationState real = pc.PlayerData.charState.Value;
@@ -676,14 +678,86 @@ namespace GK2Mounts
             if (state != lastMirrored)
             {
                 lastMirrored = state;
-                donkey.Data.SetStateToAnimator(state);
                 try
                 {
-                    donkey.MainWgoPart?.AnimationComponent?.SetWalkAnimationSpeedMultiplier(1.5f * pc.PhysicalBody.SpeedMultiplier);
+                    AnimationComponentBase anim = donkey.MainWgoPart?.AnimationComponent;
+                    if (state == AnimationState.Walk && anim != null)
+                    {
+                        // The idle graze/ear/lips clips are one-shots the animator finishes before it will walk;
+                        // the game's own reset trigger cuts them so the walk starts at once.
+                        anim.SetTrigger(AnimationComponentBase.RESET_TO_IDLE_TRIGGER);
+                    }
+                    donkey.Data.SetStateToAnimator(state);
+                    anim?.SetWalkAnimationSpeedMultiplier(1.5f * pc.PhysicalBody.SpeedMultiplier);
                 }
                 catch
                 {
+                    donkey.Data.SetStateToAnimator(state);
                 }
+            }
+            FreezeRiderWhenIdle(pc, state);
+        }
+
+        // Ride.FreezePoseWhenIdle: the riding pose is a breathing loop (arms move). Standing still, pause the keeper's
+        // animator once the pose transition has had time to finish; resume as soon as he moves. Restored on dismount.
+        private static float idleSince = -1f;
+        private static bool riderFrozen;
+
+        private static void FreezeRiderWhenIdle(PlayerController pc, AnimationState state)
+        {
+            Animator a = null;
+            try
+            {
+                a = pc.View?.PlayerAnimation?.Animator;
+            }
+            catch
+            {
+            }
+            if (a == null)
+            {
+                return;
+            }
+            bool wantFreeze = Plugin.FreezePoseWhenIdle.Value && activeStyle == MountStyle.Ride && state == AnimationState.Idle
+                              && Plugin.Pose.Value != RiderPose.Idle && Plugin.Pose.Value != RiderPose.Walk;
+            if (!wantFreeze)
+            {
+                idleSince = -1f;
+                if (riderFrozen)
+                {
+                    a.speed = 1f;
+                    riderFrozen = false;
+                }
+                return;
+            }
+            if (idleSince < 0f)
+            {
+                idleSince = Time.unscaledTime;
+            }
+            if (!riderFrozen && Time.unscaledTime - idleSince > 0.35f)
+            {
+                a.speed = 0f;
+                riderFrozen = true;
+            }
+        }
+
+        private static void UnfreezeRider(PlayerController pc)
+        {
+            idleSince = -1f;
+            if (!riderFrozen)
+            {
+                return;
+            }
+            riderFrozen = false;
+            try
+            {
+                Animator a = pc?.View?.PlayerAnimation?.Animator;
+                if (a != null)
+                {
+                    a.speed = 1f;
+                }
+            }
+            catch
+            {
             }
         }
 
@@ -815,9 +889,15 @@ namespace GK2Mounts
             {
                 n = n.Substring(0, clone);
             }
+            // Only the walk cycle moves the back. Graze, ear, lips and turn frames are numbered too but keep the
+            // back where the static frame has it, so they must not bob the rider.
+            if (n.IndexOf("_walk_", StringComparison.Ordinal) < 0)
+            {
+                return 25f;
+            }
             if (n.EndsWith("_01") || n.EndsWith("_05")) return 24f;
             if (n.EndsWith("_03") || n.EndsWith("_07")) return 26f;
-            return 25f; // static, _02, _04, _06, _08
+            return 25f; // _02, _04, _06, _08
         }
 
         // The keeper's clothed sprites are swapped in by the game's skin changer inside PlayerAnimation.LateUpdate,

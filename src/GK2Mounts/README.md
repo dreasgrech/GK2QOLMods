@@ -34,6 +34,7 @@ NPC and its schedule are untouched.
 | `Ride.LegAdjustXPx` / `LegAdjustYPx` | 3 / 1 | Fine adjustment of the legs, in art pixels: X relative to the torso (positive = towards the rear), Y relative to the donkey's back line (positive = higher). |
 | `Ride.SeatOffset` | 0.32 | Torso height when `AutoSeat` is off (0 = standing on the ground). |
 | `Ride.Bob` | true | Move the rider up and down with the donkey's back through its walk cycle (1 px). |
+| `Ride.FreezePoseWhenIdle` | true | Pause the keeper's animation while standing still on the donkey so the arms stop moving; resumes when moving. |
 | `Debug.TuningKeys` | true | While mounted: PageUp/PageDown seat, Home/End leg sideways, Insert/Delete leg up/down, one pixel per press, values logged. Turn off for normal play. |
 | `Debug.TuningWindow` | true | While mounted, a panel in the top-right corner with sliders for speed, depth, centering, fore/aft, seat, pose, legs and side view. Changes apply live; "Save to cfg" writes them to the config file. `Debug.TuningWindowScale` (1.5) sets its size. Turn off for normal play. |
 | `Ride.Depth` | 0.32 | Donkey shift towards (negative) or away from the camera. |
