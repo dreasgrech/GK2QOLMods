@@ -32,28 +32,47 @@ namespace GK2Mounts
             EnsureStyles();
             float vw = Screen.width / scale;
             // The tab contents scroll when they do not fit the screen (the Riding tab is long); the toolbar and the
-            // Save/Reset row stay in view. 130 covers the title bar, the toolbar and the footer.
-            maxContentHeight = Mathf.Max(150f, Screen.height / scale - 32f - 130f);
-            rect.x = vw - rect.width - 16f;
+            // Save/Reset row stay in view. The chrome (title bar, toolbar, footer) is measured from the last frame:
+            // window height minus the scroll view's height, so wrapped footer text at any font or width is counted.
+            maxContentHeight = Mathf.Max(150f, Screen.height / scale - 32f - chromeHeight);
+            rect.x = vw - W - 16f;
             rect.y = 16f;
-            rect = GUILayout.Window(WindowId, rect, DrawContents, "GK2 Mounts tuning", GUILayout.Width(470f));
+            rect.width = W;
+            rect.height = 0f; // a layout window grows to its content but never shrinks unless the height is reset
+            rect = GUILayout.Window(WindowId, rect, DrawContents, "GK2 Mounts tuning", GUILayout.Width(W));
+            if (lastScrollHeight > 0f && rect.height > lastScrollHeight)
+            {
+                chromeHeight = Mathf.Clamp(rect.height - lastScrollHeight, 60f, 600f);
+            }
             GUI.matrix = Matrix4x4.identity;
         }
 
         private static Vector2 scroll;
         private static float maxContentHeight = 800f;
+        private static float chromeHeight = 130f;   // measured; 130 is the first-frame guess
+        private static float lastScrollHeight;
         private static readonly float[] contentHeight = new float[3]; // measured per tab, last repaint
+
+        // Panel width in panel units (before the overall scale) and the widths derived from it, so rows shrink and
+        // grow with the panel instead of overflowing it.
+        private static float W => Mathf.Clamp(Plugin.TuningWindowWidth.Value, 300f, 900f);
+        private static float LabelW => W * 0.62f;
+        private static float SliderW => W * 0.30f;
+
+        private static float appliedFontScale = -1f;
 
         private static void EnsureStyles()
         {
-            if (stylesReady)
+            float fontScale = Mathf.Clamp(Plugin.TuningWindowFontScale.Value, 0.5f, 2f);
+            if (stylesReady && Mathf.Approximately(fontScale, appliedFontScale))
             {
                 return;
             }
-            label = new GUIStyle(GUI.skin.label) { fontSize = 13 };
-            small = new GUIStyle(GUI.skin.label) { fontSize = 11, wordWrap = true };
+            appliedFontScale = fontScale;
+            label = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(13f * fontScale) };
+            small = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(11f * fontScale), wordWrap = true };
             small.normal.textColor = new Color(0.75f, 0.75f, 0.75f);
-            header = new GUIStyle(GUI.skin.label) { fontSize = 13, fontStyle = FontStyle.Bold };
+            header = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(13f * fontScale), fontStyle = FontStyle.Bold };
             var tex = new Texture2D(1, 1);
             tex.SetPixel(0, 0, new Color(1f, 1f, 1f, 0.35f));
             tex.Apply();
@@ -84,8 +103,12 @@ namespace GK2Mounts
             GUILayout.Space(6f);
             // An IMGUI scroll view needs an explicit height, or it collapses; the content's height is measured on
             // each repaint (last frame's value is used) and capped to what fits on the screen.
+            // The vertical scrollbar is always shown so its width never changes how text wraps (an appearing and
+            // disappearing bar changes the content height, which changes whether the bar is needed: a flicker loop).
+            // Small height jitter is ignored for the same reason.
             float h = contentHeight[tab] > 0f ? Mathf.Min(contentHeight[tab], maxContentHeight) : maxContentHeight;
-            scroll = GUILayout.BeginScrollView(scroll, false, false, GUILayout.Height(h));
+            lastScrollHeight = h;
+            scroll = GUILayout.BeginScrollView(scroll, false, true, GUILayout.Height(h));
             GUILayout.BeginVertical();
             switch (tab)
             {
@@ -96,7 +119,11 @@ namespace GK2Mounts
             GUILayout.EndVertical();
             if (Event.current.type == EventType.Repaint)
             {
-                contentHeight[tab] = GUILayoutUtility.GetLastRect().height + 6f;
+                float measured = GUILayoutUtility.GetLastRect().height + 6f;
+                if (Mathf.Abs(measured - contentHeight[tab]) > 3f)
+                {
+                    contentHeight[tab] = measured;
+                }
             }
             GUILayout.EndScrollView();
 
@@ -133,11 +160,11 @@ namespace GK2Mounts
         {
             Header("Controls");
             GUILayout.BeginHorizontal();
-            GUILayout.Label("Mount / dismount key (change General.MountKey in the cfg)", label, GUILayout.Width(300f));
+            GUILayout.Label("Mount / dismount key (change General.MountKey in the cfg)", label, GUILayout.Width(LabelW));
             GUILayout.Label(Plugin.MountKey.Value.ToString(), label);
             GUILayout.EndHorizontal();
             GUILayout.BeginHorizontal();
-            GUILayout.Label("Cart cargo key: load what you carry / take the last item (General.CargoKey)", label, GUILayout.Width(300f));
+            GUILayout.Label("Cart cargo key: load what you carry / take the last item (General.CargoKey)", label, GUILayout.Width(LabelW));
             GUILayout.Label(Plugin.CargoKey.Value.ToString(), label);
             GUILayout.EndHorizontal();
 
@@ -160,8 +187,8 @@ namespace GK2Mounts
 
             Header("Style being tuned: " + (ride ? "riding on the donkey's back" : "the donkey pulling its cart") + "  [" + s.Section + "]");
             GUILayout.BeginHorizontal();
-            GUILayout.Label("Switch style (the donkey is summoned again)", label, GUILayout.Width(300f));
-            if (GUILayout.Button(ride ? "Go to cart" : "Go to riding", GUILayout.Width(150f)))
+            GUILayout.Label("Switch style (the donkey is summoned again)", label, GUILayout.Width(LabelW));
+            if (GUILayout.Button(ride ? "Go to cart" : "Go to riding", GUILayout.Width(SliderW)))
             {
                 Plugin.Style.Value = ride ? MountStyle.Cart : MountStyle.Ride;
                 Mount.Remount();
@@ -240,19 +267,10 @@ namespace GK2Mounts
         private static void DrawDebug()
         {
             Header("This panel");
-            // Stepped, not a slider: dragging a slider that rescales the panel moves the slider under the mouse.
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("Panel size (Debug.TuningWindowScale)", label, GUILayout.Width(300f));
-            if (GUILayout.Button("-", GUILayout.Width(30f)))
-            {
-                Plugin.TuningWindowScale.Value = Mathf.Max(0.75f, (float)Math.Round(Plugin.TuningWindowScale.Value - 0.1f, 2));
-            }
-            GUILayout.Label(Plugin.TuningWindowScale.Value.ToString("0.00"), label, GUILayout.Width(50f));
-            if (GUILayout.Button("+", GUILayout.Width(30f)))
-            {
-                Plugin.TuningWindowScale.Value = Mathf.Min(3f, (float)Math.Round(Plugin.TuningWindowScale.Value + 0.1f, 2));
-            }
-            GUILayout.EndHorizontal();
+            // Stepped, not sliders: dragging a slider that rescales the panel moves the slider under the mouse.
+            Stepper("Panel size, everything (Debug.TuningWindowScale)", Plugin.TuningWindowScale, 0.1f, 0.75f, 3f, "0.00");
+            Stepper("Text size inside the panel (Debug.TuningWindowFontScale)", Plugin.TuningWindowFontScale, 0.05f, 0.5f, 2f, "0.00");
+            Stepper("Panel width (Debug.TuningWindowWidth)", Plugin.TuningWindowWidth, 20f, 300f, 900f, "0");
             Toggle("Tuning keys (PageUp/Down torso, Home/End legs sideways, Insert/Delete legs up/down)", Plugin.TuningKeys, null);
             GUILayout.Label("Debug.TuningWindow=false in the cfg hides this panel for normal play.", small);
 
@@ -281,7 +299,7 @@ namespace GK2Mounts
                 Plugin.Log.LogInfo("[script] " + ScriptDump.DumpWgoScript("npc_donkey"));
             }
             GUILayout.BeginHorizontal();
-            GUILayout.Label("Send event to the real donkey's script", label, GUILayout.Width(300f));
+            GUILayout.Label("Send event to the real donkey's script", label, GUILayout.Width(LabelW));
             donkeyEvent = GUILayout.TextField(donkeyEvent, GUILayout.Width(110f));
             if (GUILayout.Button("Send", GUILayout.Width(50f)))
             {
@@ -312,13 +330,13 @@ namespace GK2Mounts
 
             Header("Cargo sheet: every combination on the cart, as pictures");
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("Photograph all cargo combinations (HTML sheet)", GUILayout.Width(330f)))
+            if (GUILayout.Button("Photograph all cargo combinations (HTML sheet)", GUILayout.ExpandWidth(true)))
             {
                 Plugin.Log.LogInfo("[sheet] " + CargoSheet.Start());
             }
             GUILayout.Label(CargoSheet.Status, small);
             GUILayout.EndHorizontal();
-            if (GUILayout.Button("Photograph every item alone, grouped by shape bucket (shapes.html)", GUILayout.Width(430f)))
+            if (GUILayout.Button("Photograph every item alone, grouped by shape bucket (shapes.html)", GUILayout.ExpandWidth(true)))
             {
                 Plugin.Log.LogInfo("[sheet] " + CargoSheet.StartShapes());
             }
@@ -474,12 +492,35 @@ namespace GK2Mounts
             GUILayout.Label("Export writes BepInEx/config/GK2Mounts.cargo-layout.cfg, which is loaded instead of the embedded file from then on; no rebuild needed to iterate. Right-click a slider to zero it.", small);
         }
 
+        // A - value + row for a float setting, stepping by 'step' within [min, max]; right-click the value resets it.
+        private static void Stepper(string name, ConfigEntry<float> entry, float step, float min, float max, string format)
+        {
+            GUILayout.BeginHorizontal();
+            GUILayout.Label(name, label, GUILayout.Width(LabelW));
+            if (GUILayout.Button("-", GUILayout.Width(30f)))
+            {
+                entry.Value = Mathf.Max(min, (float)Math.Round(entry.Value - step, 2));
+            }
+            GUILayout.Label(entry.Value.ToString(format), label, GUILayout.Width(50f));
+            Rect r = GUILayoutUtility.GetLastRect();
+            if (Event.current.type == EventType.MouseDown && Event.current.button == 1 && r.Contains(Event.current.mousePosition))
+            {
+                entry.Value = (float)entry.DefaultValue;
+                Event.current.Use();
+            }
+            if (GUILayout.Button("+", GUILayout.Width(30f)))
+            {
+                entry.Value = Mathf.Min(max, (float)Math.Round(entry.Value + step, 2));
+            }
+            GUILayout.EndHorizontal();
+        }
+
         // A slider on a plain float (layout-file values). Right-click resets to 0. Returns true when it moved.
         private static bool RawSlider(string name, ref float value, float min, float max)
         {
             GUILayout.BeginHorizontal();
-            GUILayout.Label(name, label, GUILayout.Width(300f));
-            float v = GUILayout.HorizontalSlider(value, min, max, GUILayout.Width(150f));
+            GUILayout.Label(name, label, GUILayout.Width(LabelW));
+            float v = GUILayout.HorizontalSlider(value, min, max, GUILayout.Width(SliderW));
             Rect r = GUILayoutUtility.GetLastRect();
             if (Event.current.type == EventType.MouseDown && Event.current.button == 1 && r.Contains(Event.current.mousePosition))
             {
@@ -500,7 +541,7 @@ namespace GK2Mounts
         private static void FloatSlider(string name, ConfigEntry<float> entry, float min, float max, int decimals, Action onChange)
         {
             GUILayout.BeginHorizontal();
-            GUILayout.Label(name, label, GUILayout.Width(300f));
+            GUILayout.Label(name, label, GUILayout.Width(LabelW));
             float v = GUILayout.HorizontalSlider(entry.Value, min, max, GUILayout.Width(90f));
             v = (float)Math.Round(v, decimals);
             GUILayout.Label(v.ToString("F" + decimals), label, GUILayout.Width(45f));
@@ -516,7 +557,7 @@ namespace GK2Mounts
         private static void IntSlider(string name, ConfigEntry<int> entry, int min, int max, Action onChange)
         {
             GUILayout.BeginHorizontal();
-            GUILayout.Label(name, label, GUILayout.Width(300f));
+            GUILayout.Label(name, label, GUILayout.Width(LabelW));
             // The slider is laid out between the buttons and reads the value before "+" runs; a button press must
             // therefore win over the slider's (stale) value in the same pass.
             bool pressed = false;
@@ -537,7 +578,7 @@ namespace GK2Mounts
         private static bool OnOffRow(string name, bool value)
         {
             GUILayout.BeginHorizontal();
-            GUILayout.Label(name, label, GUILayout.Width(300f));
+            GUILayout.Label(name, label, GUILayout.Width(LabelW));
             bool clicked = GUILayout.Button(value ? "On" : "Off", GUILayout.Width(70f));
             GUILayout.EndHorizontal();
             return clicked;
@@ -559,7 +600,7 @@ namespace GK2Mounts
             T[] values = (T[])Enum.GetValues(typeof(T));
             int idx = Array.IndexOf(values, entry.Value);
             GUILayout.BeginHorizontal();
-            GUILayout.Label(name, label, GUILayout.Width(300f));
+            GUILayout.Label(name, label, GUILayout.Width(LabelW));
             bool changed = false;
             if (GUILayout.Button("<", GUILayout.Width(22f))) { idx = (idx - 1 + values.Length) % values.Length; changed = true; }
             GUILayout.Label(entry.Value.ToString(), label, GUILayout.Width(90f));

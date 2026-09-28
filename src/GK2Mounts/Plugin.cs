@@ -169,6 +169,8 @@ namespace GK2Mounts
         internal static ConfigEntry<string> DefaultsExportPath;
         internal static ConfigEntry<bool> TuningWindowEnabled;
         internal static ConfigEntry<float> TuningWindowScale;
+        internal static ConfigEntry<float> TuningWindowFontScale;
+        internal static ConfigEntry<float> TuningWindowWidth;
 
         // [Safety]
         internal static ConfigEntry<bool> DisableOnGameUpdate;
@@ -210,7 +212,11 @@ namespace GK2Mounts
             TuningWindowEnabled = Config.Bind("Debug", "TuningWindow", true,
                 "Show a tuning panel for all mount settings in the top-right corner while mounted. Values apply live; Save writes them to this file. Turn off for normal play.");
             TuningWindowScale = Config.Bind("Debug", "TuningWindowScale", 1.5f,
-                "Size of the tuning panel (1 = Unity default, 1.5 suits 1440p).");
+                "Overall size of the tuning panel (1 = Unity default, 1.5 suits 1440p). Text and width scale with it.");
+            TuningWindowFontScale = Config.Bind("Debug", "TuningWindowFontScale", 1f,
+                "Text size inside the tuning panel, relative (1 = normal). Lower it so long rows fit.");
+            TuningWindowWidth = Config.Bind("Debug", "TuningWindowWidth", 470f,
+                "Width of the tuning panel in panel units before the overall size is applied (470 = original).");
             TuningKeys = Config.Bind("Debug", "TuningKeys", true,
                 "While mounted: PageUp/PageDown move the torso, Home/End the legs sideways, Insert/Delete the legs up/down, one art pixel per press, editing the current style's values. Development aid, turn off for normal play.");
             DefaultsExportPath = Config.Bind("Debug", "DefaultsExportPath", "",
