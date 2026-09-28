@@ -118,6 +118,21 @@ namespace GK2Mounts
             {
                 return;
             }
+            // Repair: an emptied entry (count 0) on the head draws like the item but can neither be used nor dropped
+            // (the game skips empty items everywhere). The first build of the reroute could leave one behind.
+            int purged = 0;
+            foreach (Item it in new List<Item>(pd.OverheadItems))
+            {
+                if (it != null && it.IsEmpty)
+                {
+                    pd.RemoveOverheadItem(it);
+                    purged++;
+                }
+            }
+            if (purged > 0)
+            {
+                Plugin.Log.LogWarning($"Cargo: removed {purged} emptied item entr{(purged == 1 ? "y" : "ies")} from the head ({reason}).");
+            }
             int moved = 0;
             foreach (Item it in new List<Item>(pd.OverheadItems))
             {

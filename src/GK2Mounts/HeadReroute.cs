@@ -226,13 +226,24 @@ namespace GK2Mounts
     [HarmonyPatch(typeof(PlayerData), nameof(PlayerData.RemoveOverheadItem), typeof(Item))]
     internal static class PlayerData_RemoveOverheadItem_Patch
     {
-        private static bool Prefix(Item item)
+        private static bool Prefix(PlayerData __instance, Item item)
         {
             try
             {
                 if (!Cargo.Attached || item == null)
                 {
                     return true;
+                }
+                // An item that is on the head is the head's business, even when the cart already holds an object
+                // with its GUID: the game's own InsertOverheadItemTo (used by the mod to move hand items onto the
+                // cart) adds to the cart first and then removes from the head, and taking the cart copy here instead
+                // left an emptied entry on the head (seen in game 2026-09-28).
+                foreach (Item h in __instance.OverheadItems)
+                {
+                    if (h != null && (ReferenceEquals(h, item) || (h.UniqueId.Guid == item.UniqueId.Guid && h.id == item.id)))
+                    {
+                        return true;
+                    }
                 }
                 Item stored = HeadReroute.FindOnCart(item);
                 if (stored == null)
