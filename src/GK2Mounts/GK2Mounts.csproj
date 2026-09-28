@@ -20,6 +20,10 @@
     <Reference Include="Assembly-CSharp"><HintPath>$(Managed)\Assembly-CSharp.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="LazyBearTechnology"><HintPath>$(Managed)\LazyBearTechnology.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Sirenix.Serialization"><HintPath>$(Managed)\Sirenix.Serialization.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="AstarPathfindingProject"><HintPath>$(Managed)\AstarPathfindingProject.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="FlowCanvas"><HintPath>$(Managed)/FlowCanvas.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="NodeCanvas"><HintPath>$(Managed)/NodeCanvas.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="ParadoxNotion"><HintPath>$(Managed)/ParadoxNotion.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine"><HintPath>$(Managed)\UnityEngine.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.CoreModule"><HintPath>$(Managed)\UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.PhysicsModule"><HintPath>$(Managed)\UnityEngine.PhysicsModule.dll</HintPath><Private>false</Private></Reference>

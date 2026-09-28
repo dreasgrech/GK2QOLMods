@@ -20,6 +20,8 @@ namespace GK2Mounts
             Require(AccessTools.Method(typeof(AnimationComponentBase), nameof(AnimationComponentBase.SetDirection), new[] { typeof(UnityEngine.Vector2) }), "AnimationComponentBase.SetDirection(Vector2)");
             Require(AccessTools.Method(typeof(AnimationComponentBase), nameof(AnimationComponentBase.SetState), new[] { typeof(AnimationState) }), "AnimationComponentBase.SetState");
             Require(typeof(PlayerAnimation).IsSubclassOf(typeof(AnimationComponentBase)) ? typeof(PlayerAnimation) : null, "PlayerAnimation : AnimationComponentBase");
+            Require(AccessTools.Method(typeof(GK2.FlowCanvasNodes.Flow_Body), "DoAction", new[] { typeof(FlowCanvas.Flow) }), "Flow_Body.DoAction(Flow)");
+            Require(AccessTools.Field(typeof(GK2.FlowCanvasNodes.Flow_Body), "success"), "Flow_Body.success");
         }
 
         private static void Require(object member, string name)
@@ -86,6 +88,30 @@ namespace GK2Mounts
                 return true;
             }
             Plugin.Log.LogInfo($"Mount: skipped attached script [{scriptName}] for the temporary [{wgoData?.id}].");
+            return false;
+        }
+    }
+
+    // Debug aid for the panel's "Start a real delivery" button. The donkey script's "Body Roll" node only lets the
+    // cart drive when the morgue has room and a random drop-chance roll passes; for the two frames after the button
+    // is pressed it is made to take its Success exit without touching the drop-chance resource, so the game's own
+    // cart can be watched on the same ground as ours. Every other Body Roll (the game's scheduled deliveries) runs
+    // untouched.
+    [HarmonyPatch(typeof(GK2.FlowCanvasNodes.Flow_Body), "DoAction")]
+    internal static class Flow_Body_DoAction_Patch
+    {
+        private static readonly AccessTools.FieldRef<GK2.FlowCanvasNodes.Flow_Body, FlowCanvas.FlowOutput> Success =
+            AccessTools.FieldRefAccess<GK2.FlowCanvasNodes.Flow_Body, FlowCanvas.FlowOutput>("success");
+
+        private static bool Prefix(GK2.FlowCanvasNodes.Flow_Body __instance, FlowCanvas.Flow flow)
+        {
+            if (UnityEngine.Time.frameCount > ScriptDump.ForceBodyRollUntilFrame)
+            {
+                return true;
+            }
+            ScriptDump.ForceBodyRollUntilFrame = -1;
+            Plugin.Log.LogInfo("[script] Body Roll forced to succeed for the manually started delivery.");
+            Success(__instance).Call(flow);
             return false;
         }
     }

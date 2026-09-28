@@ -34,6 +34,67 @@ namespace GK2Mounts
         private static SpriteRenderer donkeyBodyRenderer;
         private static SpriteRenderer keeperBodyRenderer;
         private static bool seatPending;
+        private static float groundDelta; // donkey ground height minus the keeper's, world units (slopes)
+        private static string lastDonkeyGroundSource = "-", lastKeeperGroundSource = "-";
+        private static string lastCartGroundSource = "-";
+        private static float lastCartGround;
+        private static Vector4 lastGroundSample;
+
+        // Cart parts, each lifted to the ground under itself (CartFollowsGround). The cart is not a sprite: wheels,
+        // bars, cart body and lantern are separate Object3D meshes (plus two wheel sprites) that extend up to 1.2
+        // units behind the donkey along the ground. A flat, upright donkey sprite touches the ground only along its
+        // bottom row, so it never shows a slope; the cart's rigid extent does, and the terrain mesh depth-tests
+        // over the parts that end up below it. Base = the prefab's local position, Sample = where the part's
+        // renderer sits (parent-local), Weight = how much of the ground difference it takes (bars: half).
+        private sealed class CartPart
+        {
+            public Transform T;
+            public Vector3 Base;
+            public Vector3 Sample;
+            public float Weight;
+            public float LastLift;
+            public float LastGround;
+            public string LastSource = "-";
+        }
+        private static readonly System.Collections.Generic.List<CartPart> cartParts = new System.Collections.Generic.List<CartPart>();
+        private static float lastCartRefGround = float.NaN;
+        private static CartPart cartBodyPart; // the part whose ground sets the whole cart's shift
+
+        // Ground height at a point, the way the game's WgoMovementAdjustComponent finds it: the scene's navigation
+        // mesh first (nearest walkable node as seen from above, accepted if it is under the point), the ground raycast
+        // (walkable layers 11/12) only as a fallback. NaN when neither knows.
+        private static float GroundHeight(Vector3 p, out string source)
+        {
+            try
+            {
+                Pathfinding.RecastGraph graph = MainGame.PlayerController?.SceneRecastGraph;
+                if (graph != null)
+                {
+                    Pathfinding.NearestNodeConstraint c = Pathfinding.NearestNodeConstraint.Walkable;
+                    c.distanceMetric = Pathfinding.DistanceMetric.ClosestAsSeenFromAbove();
+                    Pathfinding.NNInfo nn = graph.GetNearest(p, c);
+                    Vector3 np = nn.position;
+                    float dx = np.x - p.x, dz = np.z - p.z;
+                    if (dx * dx + dz * dz < 0.05f * 0.05f)
+                    {
+                        source = "navmesh";
+                        return np.y;
+                    }
+                }
+                if (Physics.Raycast(new Ray(p + Vector3.up * 1f, Vector3.down), out RaycastHit hit, 10f, 6144))
+                {
+                    source = "raycast:" + hit.collider.name + "@" + LayerMask.LayerToName(hit.collider.gameObject.layer);
+                    return hit.point.y;
+                }
+            }
+            catch (Exception e)
+            {
+                source = "error:" + e.Message;
+                return float.NaN;
+            }
+            source = "none";
+            return float.NaN;
+        }
         private static Transform seatRoot;
         private static Vector3 seatRest;
         private static float seatApplied;
@@ -251,6 +312,10 @@ namespace GK2Mounts
             {
                 return "Not right now.";
             }
+            if (Plugin.DismountIndoors.Value && IsIndoors())
+            {
+                return "Not indoors.";
+            }
             if (!(pc.Ssm?.CurState is FreePlayerState))
             {
                 return "I'm busy.";
@@ -293,7 +358,26 @@ namespace GK2Mounts
             {
                 return "co-op";
             }
+            if (Plugin.DismountIndoors.Value && IsIndoors())
+            {
+                return "indoors";
+            }
             return null;
+        }
+
+        // The game switches its time-of-day lighting preset per area; interiors, the church and dungeons use presets
+        // flagged indoorPreset. Read after teleports settle (the switch is asynchronous, a frame or two).
+        private static bool IsIndoors()
+        {
+            try
+            {
+                TimeOfDayPresets p = EnvironmentEngine.Instance?.TimesOfDay;
+                return p != null && p.indoorPreset;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         private static void Dismount(PlayerController pc, string reason)
@@ -385,6 +469,7 @@ namespace GK2Mounts
                 donkey = Wgo.Spawn(data, scene.transform, registerInChunkManagerIfStatic: true, ignoreChunkRegistration: true, applyDefaultWgoPartState: true);
                 donkey.UpdateChunkVisibility(isVisible: true);
                 partsReady = false;
+                cartParts.Clear();
                 lastMirrored = (AnimationState)(-1);
                 return true;
             }
@@ -433,6 +518,11 @@ namespace GK2Mounts
                     }
                     t.gameObject.SetActive(cart);
                 }
+                cartParts.Clear();
+                if (cart)
+                {
+                    CollectCartParts();
+                }
                 donkey.MainWgoPart?.AnimationComponent?.SetWalkAnimationSpeedMultiplier(1.5f * pc.PhysicalBody.SpeedMultiplier);
                 bodySprite = null;
                 donkeyBodyRenderer = null;
@@ -471,6 +561,231 @@ namespace GK2Mounts
             {
                 Plugin.Log.LogWarning($"Mount: preparing the donkey view failed: {e.Message}");
             }
+        }
+
+        // Top-level cart part transforms (the prefab names, active ones only) with their rest positions. Taken once,
+        // right after spawn, before anything has moved them. The prefab reuses names down the tree (each Object3D's
+        // mesh child is named like its parent, and the far wheel's mesh child is even called donkey_cart_wheel_f), so
+        // a transform with a cart-part ancestor is skipped: moving it as well would shift the mesh twice.
+        private static void CollectCartParts()
+        {
+            cartBodyPart = null;
+            cartShiftTarget = 0f;
+            cartShiftApplied = 0f;
+            hasLastCartPoint = false;
+            foreach (Transform t in donkey.GetComponentsInChildren<Transform>(includeInactive: false))
+            {
+                if (Array.IndexOf(CartPartNames, t.name) < 0 || t.parent == null || HasCartPartAncestor(t))
+                {
+                    continue;
+                }
+                var part = new CartPart { T = t, Base = t.localPosition, Sample = t.localPosition, Weight = t.name == "donkey_cart_bars" ? 0.5f : 1f };
+                Renderer r = t.GetComponentInChildren<Renderer>(includeInactive: false);
+                if (r != null)
+                {
+                    part.Sample = t.parent.InverseTransformPoint(r.bounds.center);
+                }
+                cartParts.Add(part);
+                if (t.name == "donkey_cart_empty_sway" || (t.name == "donkey_cart_body_sway" && cartBodyPart == null))
+                {
+                    cartBodyPart = part;
+                }
+            }
+            if (cartBodyPart == null && cartParts.Count > 0)
+            {
+                cartBodyPart = cartParts.Find(p => p.Weight >= 1f) ?? cartParts[0];
+            }
+            Plugin.Log.LogInfo($"Mount: {cartParts.Count} cart parts follow the ground as one (sampled under {cartBodyPart?.T.name}): " + string.Join(", ", cartParts.ConvertAll(p => p.T.name)));
+        }
+
+        private static bool HasCartPartAncestor(Transform t)
+        {
+            for (Transform p = t.parent; p != null && p != donkey.transform; p = p.parent)
+            {
+                if (Array.IndexOf(CartPartNames, p.name) >= 0)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // Per frame, after the root has been placed: the whole cart moves straight up or down as one by the difference
+        // between the ground under the cart body and the ground under the donkey's body, within the cap; the bars take
+        // half of it. One shift for all parts because the cart's wheels exist twice, as animated sprites at the root and
+        // as meshes on the axle, and any difference between their shifts shows as a second pair of wheels. The ground
+        // is sampled from a point at the root's height plus one, so a slope rising behind the donkey is still hit by
+        // the fallback raycast. With the setting off every part sits at its prefab position.
+        //
+        // Both heights come from the same source (navigation mesh for both, or the ground raycast for both), as the
+        // donkey/keeper delta does, so a height mismatch between the two sources can never move the cart on flat
+        // ground. A difference steeper than any walkable slope (over CartSlopeLimit) is treated as a bad sample and
+        // the previous target is kept. The applied shift then moves towards the target at CartShiftRate, so a
+        // one-frame outlier cannot make the cart jump; a real slope is still followed within a fraction of a second.
+        // Every rejected sample and every jump of the target is written to the log (at most twice a second) with
+        // both samples and their sources, so a flicker can be traced to its cause.
+        private const float CartSlopeLimit = 1.2f;  // world units of height difference between the two samples
+        private const float CartShiftRate = 3f;     // world units per second
+        private static float cartShiftTarget, cartShiftApplied;
+        private static float nextCartAnomalyLog;
+        private static int cartAnomalies;
+        private static Vector3 lastCartPoint;
+        private static bool hasLastCartPoint;
+
+        // levelY is the keeper's own height, i.e. the ground level the cart belongs to: both samples look for ground
+        // near that level, so a walkway or a cellar floor stacked above or below the road can never be picked.
+        private static void FollowCartParts(Vector3 bodyGroundPoint, float levelY)
+        {
+            if (cartParts.Count == 0)
+            {
+                return;
+            }
+            bool on = S.CartFollowsGround.Value;
+            float cap = Mathf.Max(0f, S.CartGroundMaxShift.Value);
+            float target = 0f;
+            string why = null;
+            Vector3 refPoint = new Vector3(bodyGroundPoint.x, levelY, bodyGroundPoint.z);
+            Vector3 cartPoint = refPoint;
+            string src = "-";
+            lastCartRefGround = float.NaN;
+            // When the donkey turns, the cart swaps to its other side in one frame (about 1.7 units): the ground
+            // there is a different place, so the new shift is applied at once instead of glided to. Walking moves
+            // the sample by at most 0.12 per frame, so 0.5 separates the two cleanly.
+            bool sideChange = false;
+            if (on && cartBodyPart != null && cartBodyPart.T != null && cartBodyPart.T)
+            {
+                Vector3 w = cartBodyPart.T.parent.TransformPoint(cartBodyPart.Sample);
+                cartPoint = new Vector3(w.x, levelY, w.z);
+                Vector3 d = cartPoint - lastCartPoint;
+                sideChange = !hasLastCartPoint || d.x * d.x + d.z * d.z > 0.5f * 0.5f;
+                lastCartPoint = cartPoint;
+                hasLastCartPoint = true;
+                GroundHeightPair(refPoint, cartPoint, levelY, out lastCartRefGround, out float g, out src);
+                cartBodyPart.LastGround = g;
+                cartBodyPart.LastSource = src;
+                if (float.IsNaN(lastCartRefGround) || float.IsNaN(g))
+                {
+                    target = cartShiftTarget; // nothing known this frame: keep going as before
+                    why = "no ground sample";
+                }
+                else if (Mathf.Abs(g - lastCartRefGround) > CartSlopeLimit)
+                {
+                    target = cartShiftTarget;
+                    why = "steeper than any slope, sample rejected";
+                }
+                else
+                {
+                    target = Mathf.Clamp(g - lastCartRefGround, -cap, cap);
+                    if (!sideChange && Mathf.Abs(target - cartShiftTarget) > 0.15f)
+                    {
+                        why = "target jumped";
+                    }
+                }
+            }
+            if (why != null && Time.unscaledTime >= nextCartAnomalyLog)
+            {
+                nextCartAnomalyLog = Time.unscaledTime + 0.5f;
+                cartAnomalies++;
+                Plugin.Log.LogInfo($"[cart] {why}: ref={lastCartRefGround:F3} at {refPoint:F2}, cart={cartBodyPart?.LastGround:F3} at {cartPoint:F2} ({src}), target {cartShiftTarget:F3} -> {target:F3}, applied {cartShiftApplied:F3}, root={donkey.transform.position:F2}, frame {Time.frameCount}");
+            }
+            cartShiftTarget = target;
+            cartShiftApplied = sideChange ? cartShiftTarget : Mathf.MoveTowards(cartShiftApplied, cartShiftTarget, CartShiftRate * Time.deltaTime);
+            foreach (CartPart p in cartParts)
+            {
+                if (p.T == null || !p.T)
+                {
+                    continue;
+                }
+                float lift = cartShiftApplied * p.Weight;
+                p.LastLift = lift;
+                p.T.localPosition = Mathf.Abs(lift) < 0.0005f ? p.Base : p.Base + p.T.parent.InverseTransformVector(Vector3.up * lift);
+            }
+        }
+
+        // Ground heights at two points from one source: the navigation mesh when it knows both, otherwise the ground
+        // raycast for both. NaN where neither knows. Only ground within CartLevelWindow of levelY counts.
+        private const float CartLevelWindow = 1.0f;
+
+        private static void GroundHeightPair(Vector3 a, Vector3 b, float levelY, out float ga, out float gb, out string source)
+        {
+            ga = NavmeshHeight(a, levelY);
+            gb = NavmeshHeight(b, levelY);
+            if (!float.IsNaN(ga) && !float.IsNaN(gb))
+            {
+                source = "navmesh";
+                return;
+            }
+            // Raycast for both: the highest walkable-layer hit within the level window at each point, i.e. the
+            // surface. The terrain is layered here and there: walkable mesh tiles (Ground_01, ...) with a flat box
+            // ("Collider 0") about 1.5 below them, sometimes a bridge or a roof above. Two rules tried before failed
+            // on this: "nearest to the keeper's level" chose the box under a rising slope, and "the collider both
+            // points share" chose the box wherever the two points sat on different terrain tiles. The window (1.0
+            // above and below the keeper, more than any walkable slope climbs over the cart's length) keeps the box
+            // and far-away levels out.
+            ga = HighestHitUnder(a, levelY, out string ca);
+            gb = HighestHitUnder(b, levelY, out string cb);
+            source = "raycast:" + ca + "/" + cb;
+        }
+
+        private static readonly RaycastHit[] rayHits = new RaycastHit[16];
+
+        private static float HighestHitUnder(Vector3 p, float levelY, out string colliderName)
+        {
+            int n = Physics.RaycastNonAlloc(new Ray(new Vector3(p.x, levelY + CartLevelWindow, p.z), Vector3.down), rayHits, 2f * CartLevelWindow, 6144);
+            float best = float.NaN;
+            colliderName = "none";
+            for (int i = 0; i < n; i++)
+            {
+                if (float.IsNaN(best) || rayHits[i].point.y > best)
+                {
+                    best = rayHits[i].point.y;
+                    colliderName = rayHits[i].collider.name;
+                }
+            }
+            return best;
+        }
+
+
+        // Nearest walkable node by true 3D distance from a point at the keeper's level (not "as seen from above",
+        // which cannot tell stacked levels apart), accepted when it lies under the point and within the level window.
+        private static float NavmeshHeight(Vector3 p, float levelY)
+        {
+            try
+            {
+                Pathfinding.RecastGraph graph = MainGame.PlayerController?.SceneRecastGraph;
+                if (graph == null)
+                {
+                    return float.NaN;
+                }
+                Pathfinding.NNInfo nn = graph.GetNearest(new Vector3(p.x, levelY, p.z), Pathfinding.NearestNodeConstraint.Walkable);
+                Vector3 np = nn.position;
+                float dx = np.x - p.x, dz = np.z - p.z;
+                return dx * dx + dz * dz < 0.05f * 0.05f && Mathf.Abs(np.y - levelY) <= CartLevelWindow ? np.y : float.NaN;
+            }
+            catch
+            {
+                return float.NaN;
+            }
+        }
+
+
+        private static string CartLiftSummary()
+        {
+            if (cartParts.Count == 0)
+            {
+                return "no cart parts";
+            }
+            var parts = new System.Collections.Generic.List<string>();
+            parts.Add($"refGround={lastCartRefGround:F3} target={cartShiftTarget:F3} applied={cartShiftApplied:F3} anomaliesLogged={cartAnomalies}");
+            foreach (CartPart p in cartParts)
+            {
+                if (p.T == null || !p.T)
+                {
+                    continue;
+                }
+                parts.Add($"{p.T.name}: lift={p.LastLift:F3} ground={p.LastGround:F3} ({p.LastSource}) lpos={p.T.localPosition:F3} base={p.Base:F3} lrot={p.T.localEulerAngles:F0} world={p.T.position:F2}");
+            }
+            return string.Join(" | ", parts);
         }
 
         // The keeper's body sprite layer ("bdy" under the Animator transform): its material carries the outfit
@@ -689,7 +1004,37 @@ namespace GK2Mounts
             float fore = S.RiderOffsetPx.Value * 0.02f * sign;
 
             Vector3 target = basePos + away * depth - right * (lateral + fore);
+
+            // Ground height at the donkey's own position, as the game's WgoMovementAdjustComponent does for walking
+            // objects (our temp donkey never moves through that system). Without it the donkey and cart take the
+            // keeper's height and dig into slopes. The rider follows the donkey's height through groundDelta.
+            groundDelta = 0f;
+            if (S.SnapToGround.Value)
+            {
+                // Difference between the ground under the donkey and under the keeper, both from the same source, so
+                // flat ground is exactly 0 and no absolute mismatch between sources can sink or float the donkey.
+                // Sample under the donkey's feet, i.e. its body sprite, which the prefab draws about half a unit to the
+                // facing side of the root (and a little towards the camera). The root itself may stand on very
+                // different ground on a slope, and lifting the body to that height leaves it floating above the terrain
+                // under it, where the slope in front then occludes its legs.
+                Vector3 bodyOffset = (bodySprite != null && bodySprite) ? bodySprite.position - donkey.transform.position : right * lateral;
+                bodyOffset.y = 0f;
+                float gd = GroundHeight(target + bodyOffset, out lastDonkeyGroundSource);
+                lastCartGround = GroundHeight(target + bodyOffset - right * (sign * 1.2f), out lastCartGroundSource);
+                float gk = GroundHeight(basePos, out lastKeeperGroundSource);
+                if (!float.IsNaN(gd) && !float.IsNaN(gk))
+                {
+                    groundDelta = gd - gk;
+                    target.y = basePos.y + groundDelta;
+                }
+                lastGroundSample = new Vector4(gd, gk, basePos.y, groundDelta);
+            }
             donkey.Data.Position = VisualConsts.GetRoundedPosXYZ(target, PixelSize());
+            if (cartParts.Count > 0)
+            {
+                Vector3 bodyGround = (bodySprite != null && bodySprite) ? bodySprite.position : donkey.transform.position + right * lateral;
+                FollowCartParts(bodyGround, basePos.y);
+            }
 
             // Legs and seat are updated from the keeper's OnLateUpdate (after the skin swap), see OnKeeperLateUpdate.
             AnimationState state = pd.charState.Value == AnimationState.Walk ? AnimationState.Walk : AnimationState.Idle;
@@ -806,6 +1151,7 @@ namespace GK2Mounts
             }
             donkey = null;
             partsReady = false;
+            cartParts.Clear();
             seatPending = false;
             bodySprite = null;
             donkeyBodyRenderer = null;
@@ -1018,7 +1364,7 @@ namespace GK2Mounts
                 {
                     bob = (BackHeightPx(donkeyBodyRenderer.sprite) - 25f) * PxWorldY;
                 }
-                seat = S.SeatOffset.Value + bob;
+                seat = S.SeatOffset.Value + bob + groundDelta;
             }
             if (!seat.HasValue)
             {
@@ -1028,6 +1374,79 @@ namespace GK2Mounts
             if (Mathf.Abs(seat.Value - seatApplied) > 0.0005f || torsoShiftStale)
             {
                 ApplySeat(pc, seat.Value);
+            }
+        }
+
+        // The game's own donkey, if its view is loaded in this scene: the same measurements as for ours, so the two
+        // can be compared on the same slope (root, body sprite, cart parts, and the ground under each).
+        private static string RealDonkeySummary()
+        {
+            try
+            {
+                var list = MainGame.WorldData.GetWgoDataList("npc_donkey");
+                if (list == null || list.Count == 0)
+                {
+                    return "no npc_donkey in world data";
+                }
+                var sb = new System.Text.StringBuilder();
+                foreach (WgoData d in list)
+                {
+                    Wgo view = GameScene.GetWgoViewGlobal(d.UniqueId);
+                    sb.Append($"data pos={d.Position:F3} world={d.WorldId} moving={d.MovementComponent?.IsMoving} ");
+                    if (view == null || !view)
+                    {
+                        sb.Append("(no view loaded) ");
+                        continue;
+                    }
+                    string src;
+                    Vector3 root = view.transform.position;
+                    sb.Append($"| view root={root:F3} groundAtRoot={GroundHeight(root, out src):F3} ({src}) ");
+                    foreach (SpriteRenderer sr in view.GetComponentsInChildren<SpriteRenderer>(includeInactive: false))
+                    {
+                        if (sr.name == "bdy")
+                        {
+                            Vector3 bp = sr.transform.position;
+                            sb.Append($"| body={bp:F3} groundAtBody={GroundHeight(bp, out src):F3} ");
+                            break;
+                        }
+                    }
+                    foreach (Transform t in view.GetComponentsInChildren<Transform>(includeInactive: false))
+                    {
+                        if (t.name.StartsWith("donkey_cart_") && t.parent != null && !t.parent.name.StartsWith("donkey_cart_"))
+                        {
+                            sb.Append($"| {t.name}={t.position:F2} ground={GroundHeight(t.position, out src):F2} ");
+                        }
+                    }
+                }
+                return sb.ToString();
+            }
+            catch (Exception e)
+            {
+                return "err " + e.Message;
+            }
+        }
+
+        private static string CartPartsSummary()
+        {
+            try
+            {
+                if (donkey == null || !donkey)
+                {
+                    return "-";
+                }
+                var parts = new System.Collections.Generic.List<string>();
+                foreach (Transform t in donkey.GetComponentsInChildren<Transform>(includeInactive: true))
+                {
+                    if (t.name.StartsWith("donkey_cart_") && t.parent != null && !t.parent.name.StartsWith("donkey_cart_"))
+                    {
+                        parts.Add(t.name + "@" + t.position.ToString("F2"));
+                    }
+                }
+                return string.Join(" ", parts);
+            }
+            catch (Exception e)
+            {
+                return "err " + e.Message;
             }
         }
 
@@ -1059,6 +1478,12 @@ namespace GK2Mounts
                 }
                 sb.Append($"| seatRoot lpos={(seatRoot ? seatRoot.localPosition.ToString("F3") : "-")} seatRest={seatRest:F3} seatApplied={seatApplied:F3} torsoShift={TorsoShiftWorld:F3} torsoSign={TorsoFacingSign()} ");
                 sb.Append($"| playerBody pos={pc.PhysicalBody.Rb.transform.position:F3}");
+                sb.Append($" | ground: donkey={lastGroundSample.x:F3} ({lastDonkeyGroundSource}) keeper={lastGroundSample.y:F3} ({lastKeeperGroundSource}) keeperY={lastGroundSample.z:F3} delta={lastGroundSample.w:F3} cartRear={lastCartGround:F3} ({lastCartGroundSource}) snap={S.SnapToGround.Value}");
+                sb.Append(" | cart lift: " + CartLiftSummary());
+                sb.Append(" | REAL DONKEY: " + RealDonkeySummary());
+                Vector3 kp = pc.PhysicalBody.Rb.transform.position;
+                string src;
+                sb.Append($" | slope around keeper (ground at +-0.5): x+={GroundHeight(kp + Vector3.right * 0.5f, out src):F3} x-={GroundHeight(kp - Vector3.right * 0.5f, out src):F3} z+={GroundHeight(kp + Vector3.forward * 0.5f, out src):F3} z-={GroundHeight(kp - Vector3.forward * 0.5f, out src):F3} | cart parts: {CartPartsSummary()}");
                 Animator ka = pc.View?.PlayerAnimation?.Animator;
                 if (ka != null && ka.isActiveAndEnabled)
                 {

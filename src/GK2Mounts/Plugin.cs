@@ -54,6 +54,9 @@ namespace GK2Mounts
         public readonly ConfigEntry<int> LegHeightPx;
         public readonly ConfigEntry<int> LegAdjustXPx;
         public readonly ConfigEntry<int> LegAdjustYPx;
+        public readonly ConfigEntry<bool> SnapToGround;
+        public readonly ConfigEntry<bool> CartFollowsGround;
+        public readonly ConfigEntry<float> CartGroundMaxShift;
 
         public StyleSettings(ConfigFile cfg, string section, float speed, float depth, float center, int riderPx, int torsoPx,
             bool autoSeat, int seatAdjustPx, float seatOffset, bool bob, RiderPose pose, bool freeze,
@@ -97,13 +100,19 @@ namespace GK2Mounts
                 "Fine adjustment of the legs along the donkey, relative to the torso, in art pixels (positive = towards the rear).");
             LegAdjustYPx = cfg.Bind(section, "LegAdjustYPx", Defaults.Get(section, "LegAdjustYPx", legY),
                 "Fine adjustment of the legs' height, relative to the donkey's back line, in art pixels (positive = higher).");
+            SnapToGround = cfg.Bind(section, "SnapToGround", Defaults.Get(section, "SnapToGround", true),
+                "Place the donkey at the ground height under its own position (the game does this for every walking object). Off: it takes the keeper's height, which digs it into slopes when it stands beside or behind him.");
+            CartFollowsGround = cfg.Bind(section, "CartFollowsGround", Defaults.Get(section, "CartFollowsGround", true),
+                "Cart style only: raise or lower the whole cart (wheels, cart body, lantern) as one, every frame, by the ground difference between the cart and the donkey, so the rigid 3D cart does not sink into a slope behind the donkey. The bars between donkey and cart take half of that shift. Nothing rotates.");
+            CartGroundMaxShift = cfg.Bind(section, "CartGroundMaxShift", Defaults.Get(section, "CartGroundMaxShift", 0.8f),
+                "Largest shift the cart may get from CartFollowsGround, in world units, either way.");
         }
 
         public void ResetAll()
         {
             Reset(SpeedMultiplier); Reset(Depth); Reset(CenterOffset); Reset(RiderOffsetPx); Reset(TorsoOffsetPx);
             Reset(AutoSeat); Reset(SeatAdjustPx); Reset(SeatOffset); Reset(Bob); Reset(Pose); Reset(FreezePoseWhenIdle);
-            Reset(PoseSpeed); Reset(PoseSpeedFollowsDonkey); Reset(NearLeg); Reset(LegSource); Reset(LegHeightPx); Reset(LegAdjustXPx); Reset(LegAdjustYPx);
+            Reset(PoseSpeed); Reset(PoseSpeedFollowsDonkey); Reset(NearLeg); Reset(LegSource); Reset(LegHeightPx); Reset(LegAdjustXPx); Reset(LegAdjustYPx); Reset(SnapToGround); Reset(CartFollowsGround); Reset(CartGroundMaxShift);
         }
 
         private static void Reset<T>(ConfigEntry<T> e)
@@ -133,6 +142,7 @@ namespace GK2Mounts
         internal static ConfigEntry<MountStyle> Style;
         internal static ConfigEntry<string> MountWgoId;
         internal static ConfigEntry<bool> StayMountedThroughDoors;
+        internal static ConfigEntry<bool> DismountIndoors;
         internal static ConfigEntry<bool> ShowMessages;
         internal static ConfigEntry<bool> SideViewOnly;
 
@@ -166,6 +176,8 @@ namespace GK2Mounts
                 "World object id used for the mount's looks. Only npc_donkey has been tested.");
             StayMountedThroughDoors = Config.Bind("General", "StayMountedThroughDoors", Defaults.Get("General", "StayMountedThroughDoors", true),
                 "Keep riding after a scene change (the donkey is re-summoned in the new scene). Off: dismount at every door.");
+            DismountIndoors = Config.Bind("General", "DismountIndoors", Defaults.Get("General", "DismountIndoors", true),
+                "Dismount automatically when entering a building, church or dungeon (the game's indoor lighting presets), and refuse to mount while indoors. The cart cannot avoid furniture and door frames inside.");
             ShowMessages = Config.Bind("General", "ShowMessages", Defaults.Get("General", "ShowMessages", true),
                 "Show a thought bubble when the keeper cannot mount and why.");
             SideViewOnly = Config.Bind("General", "SideViewOnly", Defaults.Get("General", "SideViewOnly", false),

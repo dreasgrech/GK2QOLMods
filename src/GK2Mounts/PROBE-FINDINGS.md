@@ -178,3 +178,142 @@ What the pixels say:
 3. Cart style keeps the standing keeper (no leg, no auto seat).
 
 Round 6 will tune the seat and leg by a pixel or two in game (`Debug.TuningKeys`).
+
+## Round 6 (2026-09-28): the game donkey's own delivery routine (`npc_donkey` flow script)
+
+Dumped with the Debug tab's "Dump the game donkey's script" button to `BepInEx/GK2-script-npc_donkey.json`
+(65 kB, 178 nodes, 17 custom events). Read with a small graph printer (nodes + `BinderConnection` edges).
+
+Events and what they do (`->` is the flow order; `GoTo` is the game's `Flow_GoTo` with `MovementType` GDGraph):
+
+| Event | Chain |
+|---|---|
+| `full_cycle` | GetGameRes `global_lock_on_drop_bodies` (player res; true = stop) -> quest `33_base_complain_go` InProgress? yes: fire `move_to_morgue` on itself; no: **Body Roll** -> FX `puff_npc` at `donkey_01` -> SetDirection -> AddItem body (`body_0_1`, never auto-destroy) -> SetWgoInteractableState -> SetWGOPosition to GD point `donkey_01` -> GoTo GD point `donkey_05`, on finish `full_cycle_back` -> FireEventTrigger 41 |
+| `full_cycle_back` | loop over `Flow_GetCorpseDropAmount` bodies: `morgue_entrance_door` exists? -> trigger `action` on it, wait 0.25 s, `puff` FX at `morgue_entrance_fx_spawn` -> per body: TryToAddCorpseToPallet (GenerateBody at `RT_morgue_body_spawn`), else DropItem at `RT_morgue_body_spawn` / `RT_body_spawn`; `cur_bodies_count += 1` -> sound `donkey_bell` -> quest checks (`21_base_donkey_nun` Available, `137_base_resurrection_donkey` InProgress, `165/166/167_base_donkey*_speak` InProgress) -> either stay (dialogue events) or GoTo `donkey_01`, on finish `Disable` -> FireEventTrigger 42 |
+| `move_to_morgue` | SetDirection -> SetWgoInteractableState -> teleport to `donkey_01` -> GoTo `donkey_05`, on finish `stay_morgue` |
+| `stay_morgue` | interactable on, direction, `donkey_bell`, FireEventTrigger 42 |
+| `move_from_morgue` | EnableLazyAnimationController -> interactable off -> GoTo `donkey_01`, on finish `Disable` |
+| `Disable` | teleport to GD point `RT_spot` (its parking place, off screen) |
+| `add_body` / `drop_body` | put a `body_corpse` on the cart / drop every carried body at `RT_body_spawn` and count it |
+| `SetInteractive` / `SetNonInteractive` / `interaction` | interactable flag; `interaction` opens the multi-answer dialogue |
+| `21_base_donkey_1`, `137_base_resurrection_donkey_1`, `165/166/167_base_donkey*_1` | quest dialogues: StopGoTo, face the player, dialogue lines, then `move_from_morgue` |
+
+**Body Roll** (`GK2.FlowCanvasNodes.Flow_Body.DoAction`): fails when `cur_bodies_count >= morgue.GetTotalQuality()`
+(morgue full) or when `donkey_body_drop_chance` (player res) loses against `Random.Range(0,100)`; each outcome
+moves the drop chance by a `ConstDef` (`donkey_drop_chance_*`, or `nun_many_drop_chance_*` when
+`nun_many_body_drop` is 1). Only the Success exit drives the cart.
+
+So the route the user sees is **`donkey_01` -> `donkey_05`** (GDGraph navigation), then back. The view height along
+it comes from `WgoMovementAdjustComponent.UpdatePos` (root sampling), see round 5 notes and `Mount.GroundHeight`.
+
+**Cross-check with the Nexus mod "Trigger Donkey Delivery" (nizy.gk2.triggerdonkeydelivery 1.0.0, decompiled from
+the DLL in the user's Downloads):** it does the same thing on a key press: `GetWgoDataByCustomTag("npc_donkey")`
+-> `FireEvent("full_cycle")`, gated on the player res `donkey_ready > 0`, plus a Harmony prefix on
+`Flow_Body.DoAction` that repeats the roll without the morgue-capacity check. Our button differs in three ways:
+it looks the donkey up by wgo id first (custom tag as fallback), it forces the Success exit outright and leaves
+`donkey_body_drop_chance` alone (debug tool, no economy side effect), and it logs the preconditions
+(`global_lock_on_drop_bodies`, the complain quest, body count vs morgue capacity, `donkey_ready`) so a no-show is
+explained. `donkey_ready` is not read by the script itself; the Nexus mod treats it as "the donkey has been
+unlocked", which is a sensible reading and is why we print it.
+
+How to use it for the slope comparison: stand where the cart clips, press "Start a real delivery now", watch the
+game's cart cross the same ground, and press "Write geometry to log" while it is on the slope so the `REAL DONKEY:`
+line (root, body sprite, cart parts, ground samples) can be set against ours.
+
+### Why the donkey alone is fine on slopes and the cart is not (2026-09-28)
+
+From the round-1 hierarchy dump of the `npc_donkey` prefab:
+
+- The donkey itself is flat art: upright `SpriteRenderer`s (`bdy`, `hed`, ...) under `gfx`, scale (1, 1.667, 1),
+  drawn 0.48 to the facing side of the root. A vertical sprite touches the ground along its bottom pixel row only, so
+  once that row sits at the ground height under the body (SnapToGround samples exactly there) the terrain can never
+  cut into it, whatever the slope.
+- The cart is **3D geometry**, not sprites: `donkey_cart_wheel_f`, `donkey_cart_wheel_b`, `donkey_cart_bars`,
+  `donkey_cart_empty_sway/donkey_cart_empty/donkey_cart_body` (and the off-by-default loaded body) are `Object3D`
+  components with `-MERGE S_OBJ` meshes (wheel 0.52×0.5×0.2, bars 0.76×0.17×0.88, body 0.9×0.3×0.75), laid out
+  0.3 to 1.15 units behind the root along the ground. Two wheel sprites (`wheel_left`, `wheel_right`,
+  `0301_wheel_walk_*`) sit at the root, and the lantern (`light_sway` -> sprites + two `Light`s) at the cart.
+- Rigid body meshes with that much ground extent meet a slope the way any 3D object does: the end that is uphill
+  sits below the terrain surface and the terrain, which depth-tests against the meshes, hides it. On the Inquisition
+  Base slope the ground rises about 0.5 over the cart's length (samples in the geometry log), and the parts sat at
+  4.97–5.33 with ground 5.51 behind them.
+- The game never draws a cart on such ground: the delivery route (`donkey_01` -> `donkey_05`) avoids that hill, the
+  user confirmed the real donkey does not cross it. `WgoMovementAdjustComponent` only sets the root height.
+
+Fix taken (option A, `CartFollowsGround`, per style, default on): every frame after the root is placed, each
+top-level cart part is moved straight up or down by (ground under its renderer − ground under the donkey body) ×
+weight, capped by `CartGroundMaxShift` (0.8). Weight 1 for wheels, cart body and lantern, 0.5 for the bars so they
+split the difference between donkey and cart. Rest positions are the prefab's local positions taken at spawn; the
+`_sway` nodes carry a pivot offset (0.36, 0.267) that their child cancels, so any sway the animator adds should be a
+rotation about the axle, which a local-position write does not disturb. The geometry log's new `cart lift:` block
+prints, per part, lift, ground sample and source, local position vs rest, local rotation and world position, so this
+assumption and the visible result can be checked in one press. Because the parts are meshes, tilting them (option B)
+would not have the pixel-art rotation problem noted earlier; it stays the fallback if the stepped look is not
+acceptable.
+
+**First in-game result of option A (2026-09-28, Inquisition Base slope, geometry log lines 31–32):** the cart body
+no longer sank, but a second pair of wheels floated above the cart. Two causes, both from the log:
+
+1. The prefab reuses names down the tree: each `Object3D` root has a mesh child of the same name, and the far wheel's
+   mesh child is itself called `donkey_cart_wheel_f`. The collector took 11 "parts" instead of 6 and moved parent
+   and child both, so the wheel meshes went up twice (0.396 + 0.396) and the bars 0.046 + 0.046. Fixed: a transform
+   with a cart-part ancestor is skipped.
+2. The wheels exist twice: as animated sprites (`wheel_left`, `wheel_right`, `0301_wheel_walk_*`) at the root and as
+   meshes on the axle. Per-part sampling gave the sprites 0.23 and the meshes 0.40, and any difference between the
+   two shows as a second pair of wheels. Fixed: one shift for the whole cart, sampled under the cart body
+   (`donkey_cart_empty_sway`), bars at half.
+
+Also learned: the cart parts' transform offsets (z 0.3, 0.85) are lateral, across the cart's width; the length of the
+cart along the travel axis lives inside the mesh geometry (body 0.9, shafts 0.76 long), so "ground under the part"
+has to be sampled under the renderer bounds centre, not at the transform. And the `_sway` nodes stayed at
+`lrot=(0,0,0)` in both readings, so the animator does not move them while the donkey is idle; a reading while
+walking is still wanted.
+
+**Second in-game result (2026-09-28, video `2026-09-28 13-56-30.mp4`, 120 fps):** on the slope the cart now rises
+with the ground and the wheels stay with the body (the shafts split the gap, accepted for now). On flat-ish ground
+near the Inquisition Base ruins, at night, the cart flickered. Frame by frame the cart is not culled: it drops below
+the terrain for 1–3 rendered frames at a time, wheels first, then the whole cart, while the lantern's light keeps
+lighting the grass (a Unity light is not occluded). That is the whole-cart shift hitting its negative cap, so one
+of the two ground samples was intermittently wrong by more than half a unit. Both samplers ignored height:
+`ClosestAsSeenFromAbove` on the navigation mesh cannot tell stacked levels apart (the ruins have walkways and floors
+above and below the road), and the single ground raycast from 1 above took the first walkable-layer collider it met.
+
+Changes made, all in `Mount.FollowCartParts` and its helpers:
+
+1. Both samples come from one source (navmesh for both or raycast for both), as the donkey/keeper delta already
+   did, so a height mismatch between the two sources can never move the cart on flat ground.
+2. Both samples look for ground at the keeper's own level: the navmesh query uses true 3D distance from a point at
+   the keeper's height and accepts a node only within 1.5 of it; the raycast collects every walkable-layer hit
+   between 1.5 above and 1.5 below and keeps the one nearest the keeper's height.
+3. A height difference over 1.2 between the two samples (steeper than any walkable slope) is rejected and the
+   previous target kept.
+4. The applied shift moves towards the target at 3 units/s, so a one-frame outlier cannot make the cart jump.
+5. Every rejected sample and every target jump over 0.15 is logged as `[cart] ...` (at most twice a second) with
+   both samples, their sources and positions; the geometry log's `cart lift:` block shows target, applied shift and
+   the anomaly count.
+
+**Third in-game result (2026-09-28, video `2026-09-28 14-05-52.mp4`):** the flat-ground flicker is gone. Turning on
+the slope made the cart dip into it. The `[cart] target jumped` log lines show why: at each turn the target flips
+sign (+0.38 -> -0.38) because the cart swaps to the donkey's other side in one frame (the sample point moves about
+1.7 units), while the applied shift glided there at 3 units/s, leaving the cart a quarter second on the new side with
+the old side's shift. Fixed: a sample point that moves more than 0.5 in one frame (walking moves it at most 0.12) is
+a side change, and the new shift is applied at once; the glide only smooths sample noise. Side changes are not
+logged as anomalies any more.
+
+**Fourth in-game result (2026-09-28, video `2026-09-28 14-07-02.mp4`, recorded with the build before the side-change
+fix):** going down the road at Inquisition Base the cart, uphill behind the donkey, sank instead of rising. The
+`[cart]` lines show the cause: at x≈21.1 the cart sample hit "Collider 0" at exactly 3.595 (a flat box under the
+terrain) while the reference hit the terrain mesh "Ground_01" at 3.78; the terrain surface under the cart was higher
+than the keeper's level by more than the box was below it, so "nearest to the keeper's level" chose the box, and the
+cart got -0.19 where +0.38 was right. The terrain is layered in places: a walkable mesh with a flat box under it,
+sometimes a bridge or roof above. Fixed in `GroundHeightPair`: when both points hit the same collider, that
+collider's (highest) hits are used for both; otherwise the highest walkable hit within the level window at each
+point. The level window (1.5 above and below the keeper) still keeps far-away levels out.
+
+**Fifth in-game result (2026-09-28, video `2026-09-28 14-10-49.mp4`):** with the "collider both points share" rule
+the cart sank on the same slope as at the very start. The `[cart]` lines show `ref=3.595 cart=3.595 (Collider 0)`
+with the keeper at 5.09: the terrain is made of tiles (Ground_01, Ground_02, ...), so the two sample points often sit
+on different tiles and the only collider they share is the flat box 1.5 below, which gave a shift of 0. Rule
+replaced by the plain one: the highest walkable hit within the level window at each point is the surface; the
+window is now 1.0 above and below the keeper (a 45° slope climbs 1.0 over the cart's length; the box sits 1.5 below
+the surface here, so it is outside the window).

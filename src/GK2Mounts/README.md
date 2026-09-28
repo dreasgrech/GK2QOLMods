@@ -22,6 +22,7 @@ NPC and its schedule are untouched.
 | `Style` | `Ride` | `Ride` (on the donkey's back) or `Cart` (the donkey pulls its cart, the keeper stands in it). Each style has its own section below. |
 | `MountWgoId` | `npc_donkey` | Which world object's looks to use. Only the donkey is tested. |
 | `StayMountedThroughDoors` | true | After a scene change the donkey is re-summoned and you keep riding. Off: dismount at every door. |
+| `DismountIndoors` | true | Dismount automatically when entering a building, church or dungeon (the game's indoor lighting presets), and refuse to mount indoors. The cart is a 3D object that would cut through furniture and door frames inside. |
 | `ShowMessages` | true | Thought bubble when you cannot mount ("I'm busy.", "Not in a co-op game."). |
 | `SideViewOnly` | false | While mounted the keeper only faces left or right (the donkey has no up/down art). Forced on for poses that only have left/right frames (`FishingIdle`). |
 
@@ -52,6 +53,9 @@ writing, Ride / Cart.
 | `LegSource` | `Body` | `Body` | `Body`: his own trousers and boots re-sliced from the current body frame (outfit-exact, follows the pose). `Drawn`: a hand-drawn bent leg in outfit colours. |
 | `LegHeightPx` | 15 | 10 | With `Body`: how many bottom rows of the body frame are legs (feet to belt). |
 | `LegAdjustXPx` / `LegAdjustYPx` | 3 / 1 | 0 / 0 | Legs along the donkey relative to the torso (positive = towards the rear) and up/down relative to the back line (positive = higher). |
+| `SnapToGround` | true | true | Place the donkey at the ground height under its own position, as the game does for walking objects. Off: it takes the keeper's height and digs into slopes when beside or behind him. |
+| `CartFollowsGround` | true | true | Cart style only: the whole cart (wheels, cart body, lantern) is raised or lowered every frame, as one, by the difference between the ground under the cart body and the ground under the donkey, so the rigid 3D cart no longer sinks into a slope behind the donkey. The bars between donkey and cart take half of that shift. Sprites stay upright; nothing rotates. |
+| `CartGroundMaxShift` | 0.8 | 0.8 | Largest shift the cart may get, in world units, either way. |
 
 ### `[Debug]` and `[Safety]`
 
@@ -59,6 +63,7 @@ writing, Ride / Cart.
 |---|---|---|
 | `TuningWindow` | true | While mounted, a panel in the top-right corner with tabs General / Riding / Debug. Changes apply live; "Save to config file" writes them; right-click a row to reset it. `TuningWindowScale` (1.5) sets its size. Turn off for normal play. |
 | `TuningKeys` | true | PageUp/PageDown torso, Home/End legs sideways, Insert/Delete legs up/down, one art pixel per press, editing the current style's values. Turn off for normal play. |
+| (Debug tab buttons) | | "Start a real delivery now" fires the game donkey's own `full_cycle` script event with its body roll forced to pass (a Harmony prefix on `Flow_Body.DoAction`, active for two frames after the press, drop chance untouched), so the real cart can be watched on the same ground as ours. "Dump the game donkey's script" writes the `npc_donkey` flow graph to `BepInEx/GK2-script-npc_donkey.json`; the text field sends any of its events. See `PROBE-FINDINGS.md` for the routine. |
 | `DisableOnGameUpdate` | true | Do nothing if the game's code changed since the audit. |
 
 ## How it works

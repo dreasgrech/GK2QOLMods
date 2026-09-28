@@ -15,6 +15,7 @@ namespace GK2Mounts
         private static GUIStyle label, header, small;
         private static bool stylesReady;
         private static int tab;
+        private static string donkeyEvent = "";
         private static readonly string[] TabNames = { "General", "Riding", "Debug" };
 
         public static void Draw()
@@ -95,7 +96,8 @@ namespace GK2Mounts
             GUILayout.EndHorizontal();
 
             GUILayout.Label("Behaviour", header);
-            Toggle("Stay mounted when going through doors or into buildings", Plugin.StayMountedThroughDoors, null);
+            Toggle("Stay mounted when going through doors (scene changes)", Plugin.StayMountedThroughDoors, null);
+            Toggle("Dismount when entering a building, church or dungeon (no mounting indoors)", Plugin.DismountIndoors, null);
             Toggle("Show a thought bubble when mounting is refused", Plugin.ShowMessages, null);
             Toggle("Keeper only faces left/right while riding", Plugin.SideViewOnly, null);
             if (!Plugin.SideViewOnly.Value && Mount.PoseNeedsSideView)
@@ -127,6 +129,13 @@ namespace GK2Mounts
             GUILayout.Label("Donkey position", header);
             FloatSlider("Donkey in front of (-) / behind (+) the rider", s.Depth, -0.5f, 0.5f, 2, null);
             CenteringToggle(s.CenterOffset);
+            Toggle("Donkey follows the ground height at its own position (slopes)", s.SnapToGround, null);
+            Toggle("Cart follows the ground under the cart (slopes; cart only)", s.CartFollowsGround, null);
+            if (s.CartFollowsGround.Value)
+            {
+                FloatSlider("Cart: largest height shift allowed", s.CartGroundMaxShift, 0f, 1.5f, 2, null);
+                GUILayout.Label("Wheels, cart body and lantern move up or down together by the ground difference between cart and donkey; the bars between them take half of it.", small);
+            }
             IntSlider("Move whole rider along the donkey: tail (-) / head (+)", s.RiderOffsetPx, -16, 16, null);
 
             GUILayout.Label("Rider torso", header);
@@ -190,6 +199,26 @@ namespace GK2Mounts
             }
             GUILayout.EndHorizontal();
             GUILayout.Label("Both write one line to BepInEx/LogOutput.log. Geometry: press once per facing (and once while walking) when reporting a placement problem.", small);
+
+            GUILayout.Label("Game donkey (for comparison)", header);
+            if (GUILayout.Button("Start a real delivery now (the game's own cart brings a body)"))
+            {
+                Plugin.Log.LogInfo("[script] " + ScriptDump.StartDelivery());
+            }
+            GUILayout.Label("Fires the donkey script's 'full_cycle' event with its body roll forced to pass: the cart appears at the road point donkey_01 and drives to the morgue point donkey_05. Nothing happens while global_lock_on_drop_bodies is set or while the quest 33_base_complain_go is in progress (then it walks to the morgue instead); the log line says which.", small);
+            if (GUILayout.Button("Dump the game donkey's script (npc_donkey) to a file"))
+            {
+                Plugin.Log.LogInfo("[script] " + ScriptDump.DumpWgoScript("npc_donkey"));
+            }
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Send event to the real donkey's script", label, GUILayout.Width(300f));
+            donkeyEvent = GUILayout.TextField(donkeyEvent, GUILayout.Width(110f));
+            if (GUILayout.Button("Send", GUILayout.Width(50f)))
+            {
+                Plugin.Log.LogInfo("[script] " + ScriptDump.FireEventOnWgo("npc_donkey", donkeyEvent));
+            }
+            GUILayout.EndHorizontal();
+            GUILayout.Label("Other events from the dumped graph: move_to_morgue, full_cycle_back, move_from_morgue, stay_morgue, Disable, SetInteractive, SetNonInteractive.", small);
 
             GUILayout.Label("Mod defaults", header);
             if (GUILayout.Button("Export current values as mod defaults"))
