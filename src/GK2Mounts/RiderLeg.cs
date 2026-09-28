@@ -79,7 +79,7 @@ namespace GK2Mounts
                 return;
             }
             Sprite body = keeperBody.sprite;
-            if (Plugin.LegSourceSetting.Value == LegSource.Body)
+            if (Mount.S.LegSource.Value == LegSource.Body)
             {
                 if (body != currentSource)
                 {
@@ -117,10 +117,10 @@ namespace GK2Mounts
             float rearSign = keeperMirrored ? -1f : 1f;
             Vector3 worldRight = Vector3.right;
             // Subtract the torso-only shift so Ride.TorsoOffsetPx moves the upper body and leaves the legs in place.
-            Vector3 anchor = keeperBody.transform.position - Mount.TorsoShiftWorld + worldRight * (rearSign * Plugin.LegAdjustXPx.Value * Px);
+            Vector3 anchor = keeperBody.transform.position - Mount.TorsoShiftWorld + worldRight * (rearSign * Mount.S.LegAdjustXPx.Value * Px);
             Vector3 local = donkeyBody.transform.InverseTransformPoint(anchor);
             float groundPx = d.textureRectOffset.y + 2f;
-            float topYPx = groundPx + Mount.BackHeightPx(d) + Plugin.LegAdjustYPx.Value;
+            float topYPx = groundPx + Mount.BackHeightPx(d) + Mount.S.LegAdjustYPx.Value;
             renderer.transform.localPosition = new Vector3(local.x, (topYPx - d.pivot.y) * Px, -0.01f);
         }
 
@@ -153,7 +153,7 @@ namespace GK2Mounts
                 return cached;
             }
             Rect tr = body.textureRect;
-            int h = Mathf.Clamp(Plugin.LegHeightPx.Value, 1, Mathf.RoundToInt(tr.height));
+            int h = Mathf.Clamp(Mount.S.LegHeightPx.Value, 1, Mathf.RoundToInt(tr.height));
             Rect rect = new Rect(tr.x, tr.y, tr.width, h);
             Vector2 off = body.textureRectOffset;
             // pivot in the slice's pixel space: frame pivot minus trimmed offset, top edge

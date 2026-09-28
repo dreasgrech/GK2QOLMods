@@ -13,34 +13,48 @@ NPC and its schedule are untouched.
 
 ## Settings (`BepInEx\config\anvil.gk2.mounts.cfg`, read at game start)
 
+### `[General]`: behaviour
+
 | Key | Default | Meaning |
 |---|---|---|
-| `General.Enabled` | true | Master switch. |
-| `General.MountKey` | `H` | Mount / dismount. Pick a key the game does not use. |
-| `General.Style` | `Ride` | `Ride` or `Cart`. Applies on the next mount. |
-| `General.SpeedMultiplier` | 1.75 | Walking speed while mounted, times normal. Measured to scale exactly linearly. |
-| `General.MountWgoId` | `npc_donkey` | Which world object's looks to use. Only the donkey is tested. |
-| `General.StayMountedThroughDoors` | true | After a scene change the donkey is re-summoned and you keep riding. |
-| `General.SideViewOnly` | false | The donkey only has left/right art, so while mounted the keeper also faces only left or right; walking up or down keeps the last horizontal facing. Off: the keeper turns as usual and the donkey shows its side.  Forced on while the pose is `FishingIdle`, which has no up/down frames. |
-| `General.ShowMessages` | true | Thought bubble when you cannot mount ("I'm busy.", "Not in a co-op game."). |
-| `Ride.Pose` | `FishingIdle` | Keeper's body pose while riding. `FishingIdle` (default): hands forward as if holding reins, legs still, no rod. `Idle`: standing still. `FocusedWalk`: the combat-focus walk. `Walk`: unchanged (arms swing). Tool, work and planting states are not offered: they take player control and force Idle on exit, which would loop. |
-| `Ride.RiderOffsetPx` | -4 | Where the keeper sits along the donkey, in art pixels: positive = closer to the head, negative = closer to the rear. |
-| `Ride.TorsoOffsetPx` | -3 | Shifts only the upper body along the donkey (positive = towards the head); the legs stay put. |
-| `Ride.AutoSeat` | false | Seat height computed from the sprites: the rider's hip lands on the donkey's back line, so the real legs hide inside the donkey's body. Off: use `Ride.SeatOffset`. |
-| `Ride.SeatAdjustPx` | -6 | Fine adjustment of the automatic seat in art pixels (positive = higher). Default from in-game tuning. |
-| `Ride.NearLeg` | false | Draws the rider's legs in front of the donkey while his real (baked-in) legs are hidden inside it. |
-| `Ride.LegSource` | `Body` | `Body`: the keeper's own trousers and boots, re-sliced from his current body frame, so they are outfit-exact and follow the pose. `Drawn`: a hand-drawn bent leg in outfit colours. |
-| `Ride.LegHeightPx` | 15 | With `Body`: how many bottom rows of the body frame are legs (feet to belt). |
-| `Ride.LegAdjustXPx` / `LegAdjustYPx` | 3 / 1 | Fine adjustment of the legs, in art pixels: X relative to the torso (positive = towards the rear), Y relative to the donkey's back line (positive = higher). |
-| `Ride.SeatOffset` | 0.32 | Torso height when `AutoSeat` is off (0 = standing on the ground). |
-| `Ride.Bob` | true | Move the rider up and down with the donkey's back through its walk cycle (1 px). |
-| `Ride.FreezePoseWhenIdle` | true | Pause the keeper's animation while standing still on the donkey so the arms stop moving; resumes when moving. |
-| `Debug.TuningKeys` | true | While mounted: PageUp/PageDown seat, Home/End leg sideways, Insert/Delete leg up/down, one pixel per press, values logged. Turn off for normal play. |
-| `Debug.TuningWindow` | true | While mounted, a panel in the top-right corner with sliders for speed, depth, centering, fore/aft, seat, pose, legs and side view. Changes apply live; "Save to cfg" writes them to the config file. `Debug.TuningWindowScale` (1.5) sets its size. Turn off for normal play. |
-| `Ride.Depth` | 0.32 | Donkey shift towards (negative) or away from the camera. |
-| `Ride.CenterOffset` | 0.48 | Above 0: keep the donkey centred under the rider (the sprite's built-in sideways offset is measured and cancelled every frame). 0: leave the donkey where the game draws it. Shown as a toggle in the panel. |
-| `Cart.SeatOffset` / `Cart.Depth` / `Cart.CenterOffset` | 0 / 0 / 0 | Same three for cart style. With centering 0 the donkey walks ahead and the keeper stands in the cart. |
-| `Safety.DisableOnGameUpdate` | true | Do nothing if the game's code changed since the audit. |
+| `Enabled` | true | Master switch. |
+| `MountKey` | `H` | Mount / dismount. Pick a key the game does not use. |
+| `Style` | `Ride` | `Ride` (on the donkey's back) or `Cart` (the donkey pulls its cart, the keeper stands in it). Each style has its own section below. |
+| `MountWgoId` | `npc_donkey` | Which world object's looks to use. Only the donkey is tested. |
+| `StayMountedThroughDoors` | true | After a scene change the donkey is re-summoned and you keep riding. Off: dismount at every door. |
+| `ShowMessages` | true | Thought bubble when you cannot mount ("I'm busy.", "Not in a co-op game."). |
+| `SideViewOnly` | false | While mounted the keeper only faces left or right (the donkey has no up/down art). Forced on for poses that only have left/right frames (`FishingIdle`). |
+
+### `[Ride]` and `[Cart]`: position, pose, animation, legs, speed
+
+Both sections hold the same keys; the values differ because the two looks differ. The tuning panel edits the
+section of the style you are currently mounted on. Defaults in the order Ride / Cart.
+
+| Key | Ride | Cart | Meaning |
+|---|---|---|---|
+| `SpeedMultiplier` | 1.75 | 1.5 | Walking speed while mounted, times normal (measured to scale exactly linearly). |
+| `Depth` | 0.32 | 0 | Donkey towards the camera (negative, drawn in front of the keeper) or away from it (positive, behind). |
+| `CenterOffset` | 0.48 | 0 | Above 0: keep the donkey centred under the rider (its sprite's sideways offset is measured and cancelled every frame). 0: leave it where the game draws it, half a body to the side. A toggle in the panel. |
+| `RiderOffsetPx` | -4 | 0 | Whole rider along the donkey, in art pixels: positive towards the head, negative towards the rear. |
+| `TorsoOffsetPx` | -3 | 0 | Upper body only along the donkey; the legs stay put. |
+| `AutoSeat` | false | false | Torso height computed from the sprites (hip on the donkey's back line). Off: `SeatOffset`. |
+| `SeatAdjustPx` | -6 | 0 | With `AutoSeat`: fine adjustment in art pixels (positive = higher). |
+| `SeatOffset` | 0.32 | 0 | Without `AutoSeat`: torso height in world units (0 = standing on the ground). |
+| `Bob` | true | false | Rider moves up and down with the donkey's back through its walk cycle (1 px). |
+| `Pose` | `FishingIdle` | `Walk` | Keeper's body pose: `FishingIdle` (hands forward as if holding reins, legs still), `Idle`, `FocusedWalk`, `Walk` (unchanged). Tool, work and planting states are not offered: they take player control and force Idle on exit, which would loop. |
+| `FreezePoseWhenIdle` | true | false | Pause the keeper's animation while standing still so the arms stop moving; resumes when moving. |
+| `NearLeg` | false | false | Draw the rider's legs in front of the donkey while his own (baked-in) legs are hidden inside it. |
+| `LegSource` | `Body` | `Body` | `Body`: his own trousers and boots re-sliced from the current body frame (outfit-exact, follows the pose). `Drawn`: a hand-drawn bent leg in outfit colours. |
+| `LegHeightPx` | 15 | 10 | With `Body`: how many bottom rows of the body frame are legs (feet to belt). |
+| `LegAdjustXPx` / `LegAdjustYPx` | 3 / 1 | 0 / 0 | Legs along the donkey relative to the torso (positive = towards the rear) and up/down relative to the back line (positive = higher). |
+
+### `[Debug]` and `[Safety]`
+
+| Key | Default | Meaning |
+|---|---|---|
+| `TuningWindow` | true | While mounted, a panel in the top-right corner with tabs General / Riding / Debug. Changes apply live; "Save to config file" writes them; right-click a row to reset it. `TuningWindowScale` (1.5) sets its size. Turn off for normal play. |
+| `TuningKeys` | true | PageUp/PageDown torso, Home/End legs sideways, Insert/Delete legs up/down, one art pixel per press, editing the current style's values. Turn off for normal play. |
+| `DisableOnGameUpdate` | true | Do nothing if the game's code changed since the audit. |
 
 ## How it works
 
