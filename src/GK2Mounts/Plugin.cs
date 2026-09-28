@@ -59,6 +59,8 @@ namespace GK2Mounts
         public readonly ConfigEntry<float> CartGroundMaxShift;
         public readonly ConfigEntry<bool> CargoDrawCorpse;
         public readonly ConfigEntry<float> CargoBedDepth, CargoSideGap, CargoOverhang, CargoNestle;
+        public readonly ConfigEntry<float> LanternAlong, LanternUp, LanternAcross, LanternTilt, LanternLean;
+        public readonly ConfigEntry<bool> LanternFlip;
 
         public StyleSettings(ConfigFile cfg, string section, float speed, float depth, float center, int riderPx, int torsoPx,
             bool autoSeat, int seatAdjustPx, float seatOffset, bool bob, RiderPose pose, bool freeze,
@@ -118,6 +120,18 @@ namespace GK2Mounts
                 "Cart style only: how far two side-by-side items may together exceed the bed's measured width before the second one is stacked on the first instead, world units.");
             CargoNestle = cfg.Bind(section, "CargoNestle", Defaults.Get(section, "CargoNestle", 0.03f),
                 "Cart style only: how far an item stacked on another sinks into it, world units (a log on a shroud does not float on the highest point).");
+            LanternAlong = cfg.Bind(section, "LanternAlong", Defaults.Get(section, "LanternAlong", 0f),
+                "Cart style only: move the lantern pole (with its light) along the cart, world units; positive = towards the back of the cart, away from the donkey. The prefab has it at the front rail, where the rider's head hides it.");
+            LanternUp = cfg.Bind(section, "LanternUp", Defaults.Get(section, "LanternUp", 0f),
+                "Cart style only: move the lantern pole up (positive) or down, world units.");
+            LanternAcross = cfg.Bind(section, "LanternAcross", Defaults.Get(section, "LanternAcross", 0f),
+                "Cart style only: move the lantern pole across the cart, world units; positive = towards the camera (in front of the rider), negative = away (behind him).");
+            LanternTilt = cfg.Bind(section, "LanternTilt", Defaults.Get(section, "LanternTilt", 0f),
+                new ConfigDescription("Cart style only: tilt the pole about its foot in the screen plane, degrees; positive = its top leans towards the back of the cart. The lamp and its light follow the top; the cart's walking sway is kept.", new AcceptableValueRange<float>(-60f, 60f)));
+            LanternLean = cfg.Bind(section, "LanternLean", Defaults.Get(section, "LanternLean", 0f),
+                new ConfigDescription("Cart style only: lean the pole about its foot towards the camera (positive) or away from it, degrees. The lamp follows the top; its sprites stay upright.", new AcceptableValueRange<float>(-60f, 60f)));
+            LanternFlip = cfg.Bind(section, "LanternFlip", Defaults.Get(section, "LanternFlip", false),
+                "Cart style only: mirror the pole in the plane through its foot, so the slanted pole leans out over the back of the cart instead of forward over the donkey; the foot stays where it is. The lamp, its glow and its lights are mirrored with it.");
         }
 
         public void ResetAll()
@@ -125,6 +139,7 @@ namespace GK2Mounts
             Reset(SpeedMultiplier); Reset(Depth); Reset(CenterOffset); Reset(RiderOffsetPx); Reset(TorsoOffsetPx);
             Reset(AutoSeat); Reset(SeatAdjustPx); Reset(SeatOffset); Reset(Bob); Reset(Pose); Reset(FreezePoseWhenIdle);
             Reset(PoseSpeed); Reset(PoseSpeedFollowsDonkey); Reset(NearLeg); Reset(LegSource); Reset(LegHeightPx); Reset(LegAdjustXPx); Reset(LegAdjustYPx); Reset(SnapToGround); Reset(CartFollowsGround); Reset(CartGroundMaxShift); Reset(CargoDrawCorpse); Reset(CargoBedDepth); Reset(CargoSideGap); Reset(CargoOverhang); Reset(CargoNestle);
+            Reset(LanternAlong); Reset(LanternUp); Reset(LanternAcross); Reset(LanternTilt); Reset(LanternLean); Reset(LanternFlip);
         }
 
         private static void Reset<T>(ConfigEntry<T> e)

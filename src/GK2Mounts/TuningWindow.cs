@@ -220,7 +220,19 @@ namespace GK2Mounts
                 Toggle("Mod draws corpses too (off = the game's own shroud for the first corpse)", s.CargoDrawCorpse, Cargo.RefreshViews);
                 GUILayout.Label($"Press {Plugin.CargoKey.Value} with an item on your head to put it on the cart, with empty hands to take the last one back. {Cargo.Summary()}", small);
                 DrawCargoCorrections();
+
+                Header("Cart lantern");
+                GUILayout.Label("The prefab puts the pole at the front rail, where the rider's head hides it. Offsets in world units, angles in degrees; the pole turns about its own foot, the lamp and its light follow the top, and the cart's walking sway is kept.", small);
+                FloatSlider("Along the cart: towards the donkey (-) / the back (+)", s.LanternAlong, -0.6f, 0.9f, 2, Lantern.Refresh);
+                FloatSlider("Up (+) / down (-)", s.LanternUp, -0.5f, 0.8f, 2, Lantern.Refresh);
+                FloatSlider("Across: away from the camera (-) / towards it (+)", s.LanternAcross, -0.6f, 0.6f, 2, Lantern.Refresh);
+                FloatSlider("Tilt in the screen plane: top towards the donkey (-) / the back (+)", s.LanternTilt, -60f, 60f, 0, Lantern.Refresh);
+                FloatSlider("Lean: top away from the camera (-) / towards it (+)", s.LanternLean, -60f, 60f, 0, Lantern.Refresh);
+                Toggle("Mirror the pole (foot stays; it leans out over the back instead of over the donkey)", s.LanternFlip, Lantern.Refresh);
+                GUILayout.Label(Lantern.Summary(), small);
             }
+
+            Header("Rider position");
             IntSlider("Move whole rider along the donkey: tail (-) / head (+)", s.RiderOffsetPx, -16, 16, null);
 
             Header("Rider torso");
@@ -287,6 +299,14 @@ namespace GK2Mounts
             }
             GUILayout.EndHorizontal();
             GUILayout.Label("Both write one line to BepInEx/LogOutput.log. Geometry: press once per facing (and once while walking) when reporting a placement problem.", small);
+
+            Header("Lantern pole (investigation)");
+            if (GUILayout.Button("Sample the lantern for 6 s, then write GK2-lantern-facts.txt") && !LanternProbe.Running)
+            {
+                Plugin.Log.LogInfo("[lantern] " + LanternProbe.Start(6f));
+            }
+            GUILayout.Label(LanternProbe.Running ? "Sampling: ride around and turn once, so both facings are seen." : LanternProbe.Status, small);
+            GUILayout.Label("Reads the pole and light nodes at the end of every frame (after the donkey's animator) while you ride, and writes BepInEx/GK2-lantern-facts.txt: whether the animator swings them and about which axis, the pole's foot and head relative to its pivot, the lights, how the root mirrors when turning, and the pole's overlap with the keeper's body on screen. Nothing is moved.", small);
 
             Header("Game donkey (for comparison)");
             if (GUILayout.Button("Start a real delivery now (the game's own cart brings a body)"))

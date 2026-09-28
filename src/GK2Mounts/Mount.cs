@@ -279,6 +279,10 @@ namespace GK2Mounts
 
             Follow(pc);
             RevealDonkeyIfDue();
+            if (activeStyle == MountStyle.Cart && partsReady)
+            {
+                Lantern.Tick();
+            }
             if (seatPending && partsReady)
             {
                 seatPending = false;
@@ -634,6 +638,7 @@ namespace GK2Mounts
                     Cargo.Attach(donkey); // the cart's inventory is the cargo; creates the cargo holder before the parts are collected
                     cartParts.Clear();    // (re-adding carried-over cargo may already have collected once)
                     CollectCartParts();
+                    Lantern.Attach(donkey); // poses the pole's child nodes; the sway parents stay the animator's
                 }
                 donkey.MainWgoPart?.AnimationComponent?.SetWalkAnimationSpeedMultiplier(1.5f * pc.PhysicalBody.SpeedMultiplier);
                 bodySprite = null;
@@ -1272,6 +1277,7 @@ namespace GK2Mounts
             partsReady = false;
             cartParts.Clear();
             Cargo.Detach(); // keeps the item list; Unload (called before this on a real dismount) clears it
+            Lantern.Detach();
             hiddenRenderers.Clear();
             seatPending = false;
             bodySprite = null;

@@ -652,3 +652,66 @@ visually. Borderline: log + crate is 0.35 + 0.02 + 0.50 = 0.87 against bed 0.75 
 stacks while log + barrel (0.85) lies side by side; raising CargoOverhang to about 0.15 would make all crate + narrow
 pairs side by side. The engineering crate shows the generic crate mesh (prefix fix works). Singles sit low in the bed
 with CargoBedDepth −0.26; that is the value the hand-tuned slot had.
+
+## Round 8 (2026-09-28 22:11): the lantern pole, measured while riding (`GK2-lantern-facts.txt`, `LanternProbe.cs`)
+
+Question: can the pole with the lamp be moved and rotated on the cart (it sits at the front rail, hidden by the
+rider's head), and what does the animator do to it? Sampled at the end of every frame for 6 s (702 frames, both
+facings, clips static/walk left/right), i.e. after the donkey's animator evaluated.
+
+- Two sibling nodes under `Base` (the animator root) share one pivot at local (0.36, 0.267, 0):
+  `donkey_cart_lantern_sway` → `donkey_cart_lantern` (Object3D, mesh `donkey_cart_lantern-MERGE S_OBJ`, 135 verts,
+  0.52 × 1.033 × 0.275) and `gfx/light_sway` → `light` → glow sprite `light_lt` (additive, colour 0.53/0.28/0 α 0.18,
+  at (−0.62, 0.57, 0.10) pivot space), lantern-glass sprite `lantern/light_ut` (`donkey_cart_lantern_ut`, unlit), a
+  disabled `light_static_down` sprite, and two point lights: `light_source` (range 4.5, intensity 3, orange
+  1/0.59/0, soft shadows, at (−0.24, 1.55, −0.06) pivot space) and `light_source_self` (range 2, intensity 10,
+  culling mask 1<<20 = CustomLightingObject only, `SyncedLight`, at (−0.11, 1.16, −0.74)). That is what lights the
+  grass at night.
+- **The animator rotates the sway nodes**: `donkey_cart_lantern_sway`, `light_sway` and `donkey_cart_empty_sway`
+  all show identical local z rotation −3.0° … +3.0° while walking (636 of 702 frames changed), `donkey_cart_bars`
+  −4° … 0°, wheels 0. So the "sway" is the whole cart body rocking about the axle pivot, with the pole fixed to
+  it. The sway nodes' local position only changed by our ground lift (−0.12 … 0.65 on the slope ridden). The
+  children (`donkey_cart_lantern`, `light`) are not animated (they read constant in the tree dump; the mod's drift
+  guard would log it otherwise).
+- Pole mesh in pivot space (x along, y up, z across): min (−0.72, 0.033, 0.125), max (−0.20, 1.067, 0.400): foot at
+  y 0.03, head at y 1.07, centre x −0.46, z 0.26. In Base space the model spans x −0.36 … 0.16, i.e. roughly at
+  the root's x, at the front rail; z +0.13 … +0.40 = the far side of the bed (camera forward is +z).
+- Facing: `Base` local scale flips between (−1, 1, 1) (facing right) and (1, 1, 1) (facing left); root and Base
+  rotation stay 0. Local offsets under Base therefore mirror with the facing by themselves.
+- Screen (2560×1440, camera 'Main Camera'): pole rect x 1384–1438, y 766–851; keeper body rect x 1336–1528,
+  y 663–871: the pole lies entirely inside the body's rect, 0.5 world units behind the body in depth. Draw order:
+  pole queue 2010, body 2000, both depth-tested, so the nearer body wins.
+
+**Built (`Lantern.cs`, installed 22:17):** five per-style settings `LanternAlong` (positive = towards the back of
+the cart), `LanternUp`, `LanternAcross` (positive = towards the camera), `LanternTilt` (degrees in the screen plane,
+top towards the back), `LanternLean` (degrees towards the camera), all 0 by default. The mod poses the two *children*
+of the sway nodes once (and again when a value changes), so the animator keeps rocking the posed pole with the cart
+and nothing is reparented (the animator binds by path). Tilt and lean turn the pole about its measured foot; the
+light rig is only translated by the displacement of the pole's head, so the lamp stays on the pole and its pixel-art
+sprites stay upright. "Back" is the sign of the cart body's centre in Base space, "towards the camera" the local z
+direction against the camera's forward, both measured at attach, so the mirrored root changes nothing. A drift
+guard in `Tick` re-applies and logs once if anything else ever moves the children. Panel: Riding tab, "Cart lantern"
+header with the five sliders and a summary line (foot, head, signs, current child pose). Export as defaults covers
+the five keys. Not yet confirmed in game.
+
+**Flip added (22:24):** `LanternFlip` (bool, per style) turns the pole 180° about its own shaft so the lamp arm
+points the other way. The shaft's position inside the mesh box is inferred, not read (GPU-only mesh): the lamp is
+where the game hangs its lit-glass sprite `light_ut` (pivot-space x −0.36, between box centre −0.46 and the +x end
+−0.20, the point light at −0.24 agrees), so the shaft is at the −x end, x ≈ −0.68. Foot and head now sit on that
+shaft axis, so tilt and lean turn about the real shaft too. The lamp rig cannot be yawed (upright sprites), so when
+flipped it is mirrored about the shaft plane instead: node x → 2·shaft − x and local scale x negated, which mirrors
+sprites, glow offset and both light positions together (negative x scale is how the game itself mirrors the donkey,
+so the sprite shader is known to take it). Panel: toggle under the lantern sliders. Also fixed: the "Move whole
+rider along the donkey" row had lost its header when the lantern section was inserted; it now sits under "Rider
+position".
+
+**Flip corrected (screenshots, installed 22:31):** the first flip (a half turn about a shaft inferred from the lamp sprite)
+put the foot at the rider's end: the inference was wrong. The screenshots show the pole is *slanted*: its foot
+stands at the back end of its box and the shaft leans forward over the donkey, hook and lamp at the front end (facing
+right, Base scale −1, screen left = local +x = the back, so the foot is the max.x end of the pivot-space box, the
+top the min.x end). The lit-glass sprite is a 96 px canvas whose centre says nothing about where the lamp is drawn.
+Now: foot = the box end on the cart's back side (backSign), top = the other end; the flip is a mirror in the plane
+through the foot (child scale x = −1, origin moved to the mirrored spot; Unity flips the face winding for a mirrored
+mesh), so the foot stays on the rear rail and the pole leans out over the back; tilt and lean turn about the same
+foot; the lamp rig is mirrored in the same plane and follows the mirrored top. Panel wording: "Mirror the pole (foot
+stays; it leans out over the back instead of over the donkey)".
