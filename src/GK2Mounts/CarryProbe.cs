@@ -109,12 +109,16 @@ namespace GK2Mounts
                                 if (e is Component c)
                                 {
                                     sb.AppendLine("    " + MeshExtent(c.transform));
+                                    MeshDetails(c.transform, sb);
                                 }
                             }
                         }
                         break;
                     }
                 }
+
+                sb.AppendLine();
+                DumpPileLayouts(sb);
 
                 string path = System.IO.Path.Combine(Paths.BepInExRootPath, "GK2-carry-facts.txt");
                 File.WriteAllText(path, sb.ToString());
@@ -407,6 +411,172 @@ namespace GK2Mounts
                 return element.name + ": no mesh";
             }
             return $"{element.name}: {union.size.x:0.00}/{union.size.y:0.00}/{union.size.z:0.00} | {union.min.y:0.00} .. {union.max.y:0.00} | centre ({union.center.x:0.00}, {union.center.z:0.00}) | lscale {element.localScale}";
+        }
+
+        // What the element is made of: every mesh under it with its name (the game's suffixes mark shadow meshes),
+        // vertex and triangle counts, its transform relative to the element, and a vertex-height histogram of the
+        // non-shadow meshes (8 bins from bottom to top) that shows the shape: a lying log fills every bin evenly, a
+        // flat plane tilted for the camera piles up at the ends.
+        private static void MeshDetails(Transform element, StringBuilder sb)
+        {
+            var heights = new List<float>();
+            float minY = float.MaxValue, maxY = float.MinValue;
+            foreach (MeshFilter mf in element.GetComponentsInChildren<MeshFilter>(includeInactive: true))
+            {
+                Mesh mesh = mf.sharedMesh;
+                if (mesh == null)
+                {
+                    continue;
+                }
+                bool shadow = Cargo.IsShadowMesh(mf.gameObject.name);
+                Vector3 lp = element.InverseTransformPoint(mf.transform.position);
+                Quaternion lr = Quaternion.Inverse(element.rotation) * mf.transform.rotation;
+                string topo = "?";
+                try
+                {
+                    topo = $"{mesh.GetTopology(0)} x{mesh.GetIndexCount(0)} idx, {mesh.subMeshCount} submesh";
+                }
+                catch
+                {
+                }
+                sb.AppendLine($"      mesh {mf.gameObject.name}{(shadow ? " [shadow]" : "")}: {mesh.vertexCount} verts, {topo}, readable={mesh.isReadable}, raw bounds {mesh.bounds.size}, at {lp}, rot {lr.eulerAngles}, lossy scale {mf.transform.lossyScale}");
+                if (shadow || !mesh.isReadable)
+                {
+                    continue; // vertex data of a GPU-only mesh reads back empty
+                }
+                foreach (Vector3 v in mesh.vertices)
+                {
+                    float y = element.InverseTransformPoint(mf.transform.TransformPoint(v)).y;
+                    heights.Add(y);
+                    minY = Mathf.Min(minY, y);
+                    maxY = Mathf.Max(maxY, y);
+                }
+            }
+            if (heights.Count == 0 || maxY - minY < 0.001f)
+            {
+                return;
+            }
+            var bins = new int[8];
+            foreach (float y in heights)
+            {
+                int b = Mathf.Clamp((int)((y - minY) / (maxY - minY) * 8f), 0, 7);
+                bins[b]++;
+            }
+            sb.AppendLine($"      vertex heights {minY:0.00}..{maxY:0.00}, share per eighth (bottom to top): {string.Join(" ", Array.ConvertAll(bins, n => (100 * n / heights.Count).ToString()))} %");
+        }
+
+        // The game's own answer to "several big items on one object": every conditional drawer in the loaded scenes
+        // whose action is UpdateDropViewsFromInventory (pallets, piles), with the world object it belongs to, its
+        // inventory, and each mesh slot's transform relative to the object's root.
+        private static void DumpPileLayouts(StringBuilder sb)
+        {
+            ConditionalDrawer[] drawers;
+            try
+            {
+                drawers = UnityEngine.Object.FindObjectsByType<ConditionalDrawer>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            }
+            catch (Exception e)
+            {
+                sb.AppendLine("[piles] scan failed: " + e.Message);
+                return;
+            }
+            int found = 0, drops = 0;
+            var seenIds = new HashSet<string>();
+            foreach (ConditionalDrawer cd in drawers)
+            {
+                bool inventoryDriven = false;
+                foreach (ConditionalDrawerRule rule in cd.Rules)
+                {
+                    if (rule.condition is ItemCountCondition || rule.condition is ItemGroupCountCondition || rule.condition is TotalItemsCountCondition || rule.condition is ItemGroupInventoryIndexCondition)
+                    {
+                        inventoryDriven = true;
+                    }
+                    foreach (IConditionalDrawerAction a in rule.actions)
+                    {
+                        if (a is UpdateDropViewsFromInventory)
+                        {
+                            inventoryDriven = true;
+                            drops++;
+                        }
+                    }
+                }
+                if (!inventoryDriven)
+                {
+                    continue;
+                }
+                Wgo wgo = cd.GetComponentInParent<Wgo>();
+                string id = wgo?.Data?.id ?? cd.name;
+                if (id == "npc_donkey" || !seenIds.Add(id))
+                {
+                    continue; // one example per object kind; the donkey is dumped above
+                }
+                found++;
+                Transform root = wgo != null ? wgo.transform : cd.transform;
+                string items = wgo?.Data != null ? Items(wgo.Data.Inventory.Data.Inventory) : "-";
+                int size = wgo?.Data != null ? wgo.Data.Inventory.Data.InventorySize : -1;
+                sb.AppendLine($"[piles] {id} at {root.position}: inventory {size} slots [{items}], interaction {wgo?.Data?.Definition?.interactionType}, {cd.Rules.Count} rule(s):");
+                foreach (ConditionalDrawerRule rule in cd.Rules)
+                {
+                    sb.AppendLine("    if " + Describe(rule.condition));
+                    foreach (IConditionalDrawerAction a in rule.actions)
+                    {
+                        switch (a)
+                        {
+                            case SetActiveAction sa:
+                                sb.AppendLine($"      SetActive{(sa.invertLogic ? " (inverted)" : "")} {TargetInfo(sa.target, root)}");
+                                break;
+                            case SetActiveManyAction sm:
+                                foreach (GameObject g in sm.targets ?? new List<GameObject>())
+                                {
+                                    sb.AppendLine($"      SetActiveMany{(sm.invertLogic ? " (inverted)" : "")} {TargetInfo(g, root)}");
+                                }
+                                break;
+                            case ApplyVisualStateAction vs:
+                                sb.AppendLine($"      ApplyVisualState '{vs.stateId}'{(vs.applyOnFalse ? " on false" : "")}");
+                                break;
+                            case UpdateDropViewsFromInventory u:
+                                sb.AppendLine($"      UpdateDropViewsFromInventory, {u.bigDrops.Count} mesh slots:");
+                                for (int i = 0; i < u.bigDrops.Count; i++)
+                                {
+                                    DropViewAtomMesh d = u.bigDrops[i];
+                                    sb.AppendLine(d == null ? $"        slot {i}: null" : $"        slot {i}: {TargetInfo(d.gameObject, root)} icon={d.IconId ?? "-"}");
+                                }
+                                break;
+                            default:
+                                sb.AppendLine("      " + Describe(a));
+                                break;
+                        }
+                    }
+                }
+                WgoPart part = wgo?.MainWgoPart;
+                if (part != null && part.Variations != null && part.Variations.Count > 0)
+                {
+                    sb.AppendLine($"    visual states ({part.Variations.Count}), current '{part.WgoPartData?.variationId}':");
+                    foreach (WgoPartState v in part.Variations)
+                    {
+                        sb.AppendLine($"      '{v.variationId}' rot {v.rotationIndex}{(v.isDefault ? " default" : "")} {TargetInfo(v.gameObject, root)}");
+                    }
+                }
+            }
+            sb.AppendLine($"[piles] {found} inventory-driven drawer(s) (one per object kind) in the loaded scenes, {drops} with UpdateDropViewsFromInventory. Stand near the pallets or wood piles when dumping.");
+        }
+
+        // A drawer target relative to its object's root: path, position, rotation, active state and the size and
+        // bottom of the meshes under it.
+        private static string TargetInfo(GameObject g, Transform root)
+        {
+            if (g == null)
+            {
+                return "null";
+            }
+            Vector3 rel = root.InverseTransformPoint(g.transform.position);
+            Vector3 rot = (Quaternion.Inverse(root.rotation) * g.transform.rotation).eulerAngles;
+            string extent = "";
+            if (Cargo.MeasureMeshes(g.transform, g.transform, out Bounds b, includeInactive: true))
+            {
+                extent = $" mesh {b.size.x:0.00}/{b.size.y:0.00}/{b.size.z:0.00} bottom {b.min.y:0.00} top {b.max.y:0.00} centre ({b.center.x:0.00}, {b.center.z:0.00})";
+            }
+            return $"{Path(g.transform)} rel ({rel.x:0.00}, {rel.y:0.00}, {rel.z:0.00}) rot ({rot.x:0}, {rot.y:0}, {rot.z:0}) active={g.activeSelf}{extent}";
         }
 
         private static string MissingElements(HashSet<string> bigIds, List<string> elementNames)

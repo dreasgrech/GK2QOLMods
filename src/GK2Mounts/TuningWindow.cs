@@ -22,9 +22,9 @@ namespace GK2Mounts
 
         public static void Draw()
         {
-            if (!Mount.IsMounted || !Plugin.TuningWindowEnabled.Value)
+            if (!Mount.IsMounted || !Plugin.TuningWindowEnabled.Value || CargoSheet.Running)
             {
-                return;
+                return; // hidden while the cargo sheet photographs the cart
             }
             float scale = Mathf.Clamp(Plugin.TuningWindowScale.Value, 0.75f, 3f);
             GUI.matrix = Matrix4x4.Scale(new Vector3(scale, scale, 1f));
@@ -284,6 +284,16 @@ namespace GK2Mounts
             }
             GUILayout.EndHorizontal();
             GUILayout.Label("Adds a plain item to our donkey's inventory exactly as the delivery script does, and logs whether the game's drawer switched the cart meshes. Test items vanish; the donkey is a temp object, nothing is saved.", small);
+
+            GUILayout.Label("Cargo sheet: every combination on the cart, as pictures", header);
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Photograph all cargo combinations (HTML sheet)", GUILayout.Width(330f)))
+            {
+                Plugin.Log.LogInfo("[sheet] " + CargoSheet.Start());
+            }
+            GUILayout.Label(CargoSheet.Status, small);
+            GUILayout.EndHorizontal();
+            GUILayout.Label("Mount in Cart style, stand still with the cart in view, press. Each distinct item shape alone and every ordered pair is put on the cart in turn, photographed and cropped; BepInEx/GK2-cargo-sheet/index.html shows the grid (rows: first item, columns: second). The panel hides during the run; your real cargo is put back afterwards.", small);
 
             GUILayout.Label("Spawn a carryable item in front of the keeper (test)", header);
             GUILayout.BeginHorizontal();

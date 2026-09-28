@@ -424,15 +424,15 @@ namespace GK2Mounts
         // Union of the mesh bounds under root, in the given transform's space, ignoring the root's own local
         // position so the result describes the model itself. Mesh bounds are valid on inactive objects; renderer
         // bounds are not, which is why meshes are used.
-        internal static bool MeasureMeshes(Transform root, Transform space, out Bounds bounds)
+        internal static bool MeasureMeshes(Transform root, Transform space, out Bounds bounds, bool includeInactive = false)
         {
             bounds = default;
             bool any = false;
             Vector3 rootPos = root.localPosition;
-            foreach (MeshFilter mf in root.GetComponentsInChildren<MeshFilter>(includeInactive: false))
+            foreach (MeshFilter mf in root.GetComponentsInChildren<MeshFilter>(includeInactive))
             {
                 Mesh mesh = mf.sharedMesh;
-                if (mesh == null)
+                if (mesh == null || IsShadowMesh(mf.gameObject.name))
                 {
                     continue;
                 }
@@ -491,6 +491,13 @@ namespace GK2Mounts
                     t.gameObject.SetActive(true);
                 }
             }
+        }
+
+        // The game's own naming rule for shadow meshes (Object3DSubMesh.MeshNameFlags): a flat plane under the object
+        // that must not count towards its size.
+        internal static bool IsShadowMesh(string name)
+        {
+            return name.EndsWith("_sh") || name.EndsWith("-sh") || name.EndsWith("_sh2") || name.EndsWith("-sh2");
         }
 
         // How much higher the loaded cart body (the corpse shroud the game turns on) reaches than the empty bed top,

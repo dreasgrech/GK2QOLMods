@@ -559,3 +559,43 @@ takes (its slot − slot 1) as offsets from the item below, across limited so it
 edge as if it had a collider: that was the auto-fit's minimum-gap rule (half the two widths). With two hand-tuned
 slots the rule only fights the sliders, so it is gone; auto-fit now means footprint/bottom alignment plus stacking
 when a pair is wider than the bed + 0.12.
+
+### How the game shows several items on a pile (dump 17:12, 12 inventory-driven drawers in the yard scenes)
+
+**Nothing is placed procedurally. Every pile is hand-made art switched by count.** No object in the loaded scenes
+uses `UpdateDropViewsFromInventory` (one mesh atom per slot); every one uses `TotalItemsCountCondition` rules with
+`SetActiveAction` on meshes an artist positioned in the prefab:
+
+- `wood_container` (the timber stockpile in the yard): 9 rules "total > n" (n = 0..8), each turning on one baked log
+  mesh `wb_timber_stockpile_log_01..09`. The logs are separate meshes with their placement baked into the geometry:
+  widths 0.26–0.34, heights 0.23–0.27, lengths 0.80–1.05; row 1 bottoms at 0.10 with centres 0.26 apart across
+  (0.33, 0.59, 0.85), row 2 bottoms at 0.33, then 0.43–0.47, 0.57, 0.67: layers one log height apart, logs one log
+  width apart, slightly irregular (an artist's pile, not a grid).
+- Resource containers (`*_container_conveyor_TOP`: coal, stone, marble, clay, sand, iron ore, wood): four stage
+  meshes at 25/50/75/100 % fill, each a differently shaped heap (stone 25 % = 0.44×0.23×0.40 at one corner, 100 % =
+  0.62×0.53×0.47 centred), plus a broken/repaired top switched by `InteractableCondition`.
+- Firewood sheds: three stage meshes (1–49 %, 50–99 %, 100 %) of pre-stacked wood blocks.
+- `grave_ground`: `ItemGroupCountCondition` gravebot == 0 turns the bare ground on.
+
+So there is no game rule for arranging N arbitrary items; the developers author a mesh per fill level per object.
+What the artist data does give us is the intended density: logs packed side by side at one log width, layers one
+log height apart, small irregular offsets. The stockpile logs are 0.23–0.27 high, while the overhead/drop log mesh
+(`drops_item_wood_log`) is 0.57 high for 0.35 wide: the carried log is a different, taller model than a pile log.
+
+**Mesh geometry is not readable:** every big-item mesh reports `readable=False` (GPU-only), so vertices and
+triangles come back empty; only the import-time bounds are available (Triangles topology, 363 indices for the log).
+Reading the vertex buffer back from the GPU (`AsyncGPUReadback`) would work but is not worth it: what matters is how
+stacked items look on screen, and that is best judged from rendered pictures.
+
+**Consequence for the design:** the cart layout must be the mod's own algorithm (nothing to copy), it should pack at
+the artist's density (spacing = width, layer = height), and it must be verified visually across all pairs, which is
+what the planned HTML permutation sheet (in-game screenshots per pair) is for. The screenshot harness should be built
+before the layout algorithm is tuned.
+
+**Cargo sheet harness built (17:17, `CargoSheet.cs`):** Debug-tab button; coroutine on the plugin: for every distinct
+mesh shape (crates sharing `box_crates` collapse to one representative; shape key = the element's non-shadow,
+non-blackout mesh names; marble = placeholder) alone and every ordered pair, the cart inventory is cleared and
+refilled, two frames pass, `ScreenCapture.CaptureScreenshotAsTexture` at end of frame, cropped to the projected world
+box ±(1.25, 1.1, 0.9) around the donkey root, PNG per combination, then `index.html` grid (rows slot 1, columns slot
+2, first column alone) with the settings used. Panel hidden and cargo key blocked while running; previous cargo
+restored. Needs UnityEngine.ScreenCaptureModule and ImageConversionModule references (added to the csproj).
