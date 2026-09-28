@@ -30,6 +30,8 @@ namespace GK2Mounts
         private static bool partsReady;
         private static MountStyle activeStyle;
 
+        private static int gearHideUntilFrame = -1; // frames after a dismount during which the rod stays hidden
+
         // The mounted donkey, for the Debug tab's cargo investigation (null while on foot).
         internal static Wgo Donkey => mounted ? donkey : null;
 
@@ -181,6 +183,12 @@ namespace GK2Mounts
             }
             if (!mounted)
             {
+                // A pose's animator state switches its gear on every frame and needs a frame or two to be left after
+                // a dismount; keep that gear hidden until it has (see PoseGearLayers).
+                if (UnityEngine.Time.frameCount <= gearHideUntilFrame)
+                {
+                    HidePoseGear(pc, lastRiderPose);
+                }
                 return;
             }
 
@@ -238,7 +246,8 @@ namespace GK2Mounts
                 seatPending = false;
                 ApplyAutoSeat(pc);
             }
-            HideFishingGear(pc);
+            lastRiderPose = S.Pose.Value;
+            HidePoseGear(pc, lastRiderPose);
 
             // A pose whose animator state takes control (BySelf) freezes the keeper: the free state goes inactive
             // and no movement is applied. Surface it in the panel and once in the log instead of silently sticking.
@@ -260,37 +269,60 @@ namespace GK2Mounts
         // True while the selected pose's animator state holds player control (see above).
         public static bool PoseBlocksMovement { get; private set; }
 
-        // The fishing animator states switch on the keeper's rod sprite layer ("tol_rod") and the game's fishing
-        // container (rod, line, bob). A rider holds reins, not a rod: keep both off while mounted. Runs in LateUpdate,
-        // after the animation has written its values for the frame; both objects are off by default when on foot.
-        private static SpriteRenderer rodLayer;
-        private static void HideFishingGear(PlayerController pc)
+        // Some animator states used as riding poses switch on gear the pose was made for: the fishing states turn on
+        // the keeper's rod sprite layer ("tol_rod") and the game's fishing container (rod, line, bob), every frame.
+        // A rider holds reins, not a rod, so the gear a pose brings is switched off again every frame while mounted
+        // (this runs after the animation has written its values) and for a few frames after the dismount, until the
+        // animator has left the pose. Which gear a pose brings is this table; a pose with no row brings nothing, a
+        // new pose gets a row with the sprite layer names it turns on (see the sprite dump for the layer names).
+        private static readonly Dictionary<RiderPose, string[]> PoseGearLayers = new Dictionary<RiderPose, string[]>
         {
+            { RiderPose.FishingIdle, new[] { "tol_rod" } },
+        };
+
+        private static readonly Dictionary<string, SpriteRenderer> gearLayers = new Dictionary<string, SpriteRenderer>();
+        private static RiderPose lastRiderPose = RiderPose.Walk;
+
+        private static void HidePoseGear(PlayerController pc, RiderPose pose)
+        {
+            if (!PoseGearLayers.TryGetValue(pose, out string[] names))
+            {
+                return;
+            }
             try
             {
-                if (rodLayer == null || !rodLayer)
+                foreach (string name in names)
                 {
-                    Animator animator = pc.View?.PlayerAnimation?.Animator;
-                    if (animator != null)
+                    if (!gearLayers.TryGetValue(name, out SpriteRenderer layer) || layer == null || !layer)
                     {
-                        foreach (SpriteRenderer sr in animator.GetComponentsInChildren<SpriteRenderer>(includeInactive: true))
+                        layer = null;
+                        Animator animator = pc.View?.PlayerAnimation?.Animator;
+                        if (animator != null)
                         {
-                            if (sr.name == "tol_rod")
+                            foreach (SpriteRenderer sr in animator.GetComponentsInChildren<SpriteRenderer>(includeInactive: true))
                             {
-                                rodLayer = sr;
-                                break;
+                                if (sr.name == name)
+                                {
+                                    layer = sr;
+                                    break;
+                                }
                             }
                         }
+                        gearLayers[name] = layer;
+                    }
+                    if (layer != null && layer && layer.gameObject.activeSelf)
+                    {
+                        layer.gameObject.SetActive(false);
                     }
                 }
-                if (rodLayer != null && rodLayer && rodLayer.gameObject.activeSelf)
+                if (pose == RiderPose.FishingIdle)
                 {
-                    rodLayer.gameObject.SetActive(false);
-                }
-                FishingContainer fc = pc.View?.FishingContainer;
-                if (fc != null && fc.gameObject.activeSelf)
-                {
-                    fc.gameObject.SetActive(false);
+                    // The fishing states also enable the game's fishing container, a separate object under the view.
+                    FishingContainer fc = pc.View?.FishingContainer;
+                    if (fc != null && fc.gameObject.activeSelf)
+                    {
+                        fc.gameObject.SetActive(false);
+                    }
                 }
             }
             catch
@@ -412,6 +444,7 @@ namespace GK2Mounts
         private static void Dismount(PlayerController pc, string reason)
         {
             mounted = false;
+            gearHideUntilFrame = UnityEngine.Time.frameCount + 8;
             Cargo.Unload(reason); // cargo lives in a temp inventory; hand it back before the view goes
             DestroyDonkey();
             RestoreSeat();
@@ -425,6 +458,7 @@ namespace GK2Mounts
         {
             bool was = mounted;
             mounted = false;
+            gearHideUntilFrame = UnityEngine.Time.frameCount + 8;
             try
             {
                 Cargo.Unload(reason);
