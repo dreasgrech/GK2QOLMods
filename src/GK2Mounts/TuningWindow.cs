@@ -240,7 +240,19 @@ namespace GK2Mounts
         private static void DrawDebug()
         {
             Header("This panel");
-            FloatSlider("Panel size", Plugin.TuningWindowScale, 0.75f, 3f, 2, null);
+            // Stepped, not a slider: dragging a slider that rescales the panel moves the slider under the mouse.
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Panel size (Debug.TuningWindowScale)", label, GUILayout.Width(300f));
+            if (GUILayout.Button("-", GUILayout.Width(30f)))
+            {
+                Plugin.TuningWindowScale.Value = Mathf.Max(0.75f, (float)Math.Round(Plugin.TuningWindowScale.Value - 0.1f, 2));
+            }
+            GUILayout.Label(Plugin.TuningWindowScale.Value.ToString("0.00"), label, GUILayout.Width(50f));
+            if (GUILayout.Button("+", GUILayout.Width(30f)))
+            {
+                Plugin.TuningWindowScale.Value = Mathf.Min(3f, (float)Math.Round(Plugin.TuningWindowScale.Value + 0.1f, 2));
+            }
+            GUILayout.EndHorizontal();
             Toggle("Tuning keys (PageUp/Down torso, Home/End legs sideways, Insert/Delete legs up/down)", Plugin.TuningKeys, null);
             GUILayout.Label("Debug.TuningWindow=false in the cfg hides this panel for normal play.", small);
 
