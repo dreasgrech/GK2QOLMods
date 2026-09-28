@@ -32,6 +32,43 @@ namespace GK2Mounts
 
         private static int gearHideUntilFrame = -1; // frames after a dismount during which the rod stays hidden
 
+        // The donkey's renderers are kept off for the first frame after its parts appear: the facing is written to
+        // the animator that frame, but the animator mirrors the sprites one evaluation later, so the prefab's default
+        // facing (left) would show for one frame when the keeper faces right. Only renderers that were on are
+        // restored, so nothing the game keeps off is switched on.
+        private static readonly List<Renderer> hiddenRenderers = new List<Renderer>();
+        private static int revealFrame = -1;
+
+        private static void HideDonkeyForAFrame()
+        {
+            hiddenRenderers.Clear();
+            foreach (Renderer r in donkey.GetComponentsInChildren<Renderer>(includeInactive: true))
+            {
+                if (r.enabled)
+                {
+                    r.enabled = false;
+                    hiddenRenderers.Add(r);
+                }
+            }
+            revealFrame = UnityEngine.Time.frameCount + 1;
+        }
+
+        private static void RevealDonkeyIfDue()
+        {
+            if (hiddenRenderers.Count == 0 || UnityEngine.Time.frameCount <= revealFrame)
+            {
+                return;
+            }
+            foreach (Renderer r in hiddenRenderers)
+            {
+                if (r != null && r)
+                {
+                    r.enabled = true;
+                }
+            }
+            hiddenRenderers.Clear();
+        }
+
         // The mounted donkey, for the Debug tab's cargo investigation (null while on foot).
         internal static Wgo Donkey => mounted ? donkey : null;
 
@@ -241,6 +278,7 @@ namespace GK2Mounts
             }
 
             Follow(pc);
+            RevealDonkeyIfDue();
             if (seatPending && partsReady)
             {
                 seatPending = false;
@@ -630,6 +668,7 @@ namespace GK2Mounts
                         }
                     }
                 }
+                HideDonkeyForAFrame(); // the facing is applied by Follow this frame; the animator shows it next frame
             }
             catch (Exception e)
             {
@@ -1233,6 +1272,7 @@ namespace GK2Mounts
             partsReady = false;
             cartParts.Clear();
             Cargo.Detach(); // keeps the item list; Unload (called before this on a real dismount) clears it
+            hiddenRenderers.Clear();
             seatPending = false;
             bodySprite = null;
             donkeyBodyRenderer = null;
