@@ -1231,9 +1231,39 @@ namespace GK2Mounts
             }
             if (!riderFrozen && Time.unscaledTime - idleSince > 0.35f)
             {
-                a.speed = 0f;
                 riderFrozen = true;
+                fidgetUntil = -1f;
+                nextFidget = Time.unscaledTime + NextFidgetDelay();
             }
+            if (riderFrozen)
+            {
+                // Not a dead stop: a crawl keeps the game's breathing layer barely alive, and now and then the pose
+                // plays for about a second (a fidget), so the rider is never a still image.
+                float now = Time.unscaledTime;
+                float speed = Mathf.Max(0f, S.IdleCrawlSpeed.Value);
+                if (fidgetUntil > now)
+                {
+                    speed = S.IdleFidgetSpeed.Value;
+                }
+                else if (S.IdleFidgetEverySeconds.Value > 0f && now >= nextFidget)
+                {
+                    fidgetUntil = now + UnityEngine.Random.Range(0.6f, 1.2f);
+                    nextFidget = fidgetUntil + NextFidgetDelay();
+                    speed = S.IdleFidgetSpeed.Value;
+                }
+                if (Mathf.Abs(a.speed - speed) > 0.001f)
+                {
+                    a.speed = speed;
+                }
+            }
+        }
+
+        private static float fidgetUntil = -1f, nextFidget;
+
+        private static float NextFidgetDelay()
+        {
+            float every = S.IdleFidgetEverySeconds.Value;
+            return every <= 0f ? float.MaxValue / 4f : every * UnityEngine.Random.Range(0.5f, 1.5f);
         }
 
         private static void UnfreezeRider(PlayerController pc)

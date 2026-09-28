@@ -112,6 +112,7 @@ namespace GK2Mounts
                 Line(sb, s.AutoSeat); Line(sb, s.SeatAdjustPx); Line(sb, s.SeatOffset); Line(sb, s.Bob); Line(sb, s.Pose); Line(sb, s.FreezePoseWhenIdle); Line(sb, s.PoseSpeed); Line(sb, s.PoseSpeedFollowsDonkey);
                 Line(sb, s.NearLeg); Line(sb, s.LegSource); Line(sb, s.LegHeightPx); Line(sb, s.LegAdjustXPx); Line(sb, s.LegAdjustYPx); Line(sb, s.SnapToGround); Line(sb, s.CartFollowsGround); Line(sb, s.CartGroundMaxShift); Line(sb, s.CargoDrawCorpse); Line(sb, s.CargoBedDepth); Line(sb, s.CargoSideGap); Line(sb, s.CargoOverhang); Line(sb, s.CargoNestle);
                 Line(sb, s.LanternAlong); Line(sb, s.LanternUp); Line(sb, s.LanternAcross); Line(sb, s.LanternTilt); Line(sb, s.LanternLean); Line(sb, s.LanternFlip);
+                Line(sb, s.LanternSwayDegrees); Line(sb, s.LanternSwaySeconds); Line(sb, s.IdleFidgetEverySeconds); Line(sb, s.IdleFidgetSpeed); Line(sb, s.IdleCrawlSpeed);
                 sb.AppendLine();
             }
             Directory.CreateDirectory(Path.GetDirectoryName(path));

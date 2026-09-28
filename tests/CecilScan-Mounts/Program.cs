@@ -60,6 +60,8 @@ Field("QuestCheck", "triggerType", "GlobalEventsSystem/Event/Type");
 Field("QuestCheck", "condExpressions", "System.Collections.Generic.List`1<LazyExpression>");
 Field("GameBalance", "questDefs", "System.Collections.Generic.List`1<QuestDef>");
 Field("WGODef", "attachedScript", "System.String");
+Method("WeatherSystem", "get_WindValue", 0);
+Method("WeatherSystem", "get_Instance", 0);
 Method("PlayerData", "PlayOverheadItemTakeSound", 1);
 Method("PlayerData", "RemoveInteractingItem", 0);
 Method("PlayerData", "get_HasInteractingItem", 0);

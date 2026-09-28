@@ -157,6 +157,26 @@ namespace GK2Mounts
                     Apply(true);
                     return;
                 }
+                // The sway: a slow pendulum whose amplitude drifts (two incommensurate sines) and follows the game's
+                // wind value (WeatherSystem.WindValue, the same number its cloth shader reads). The game never sways
+                // the pole itself except by rocking the whole cart while it rolls; this adds to that.
+                StyleSettings s = Mount.S;
+                float degrees = s.LanternSwayDegrees.Value;
+                float newSway = 0f;
+                if (degrees > 0f)
+                {
+                    float period = Mathf.Max(0.5f, s.LanternSwaySeconds.Value);
+                    float t = Time.time;
+                    float drift = 0.65f + 0.35f * Mathf.Sin(t * 0.37f + 1.3f);
+                    float wind = 0.5f + Mathf.Clamp01(WindValue());
+                    newSway = degrees * drift * wind * Mathf.Sin(t * (2f * Mathf.PI / period));
+                }
+                if (Mathf.Abs(newSway - swayTilt) > 0.001f)
+                {
+                    swayTilt = newSway;
+                    Apply(true);
+                    return;
+                }
                 Apply(false);
             }
             catch (Exception e)
@@ -164,6 +184,28 @@ namespace GK2Mounts
                 Plugin.Log.LogWarning("Lantern: tick failed: " + e.Message);
                 pole = light = null;
             }
+        }
+
+        private static float swayTilt;
+        private static float windCached;
+        private static float windCheckedAt = -1f;
+
+        private static float WindValue()
+        {
+            if (Time.unscaledTime - windCheckedAt > 1f)
+            {
+                windCheckedAt = Time.unscaledTime;
+                try
+                {
+                    WeatherSystem w = WeatherSystem.Instance;
+                    windCached = w != null ? w.WindValue : 0.5f;
+                }
+                catch
+                {
+                    windCached = 0.5f;
+                }
+            }
+            return windCached;
         }
 
         private static void Apply(bool force)
@@ -181,7 +223,7 @@ namespace GK2Mounts
             }
             // A rotation about +z moves +y towards -x, so the top leans towards backSign*x with angle -backSign*tilt.
             // A rotation about +x moves +y towards +z, so the top leans towards camSign*z with angle camSign*lean.
-            Quaternion r = Quaternion.AngleAxis(-backSign * tilt, Vector3.forward) * Quaternion.AngleAxis(camSign * lean, Vector3.right);
+            Quaternion r = Quaternion.AngleAxis(-backSign * (tilt + swayTilt), Vector3.forward) * Quaternion.AngleAxis(camSign * lean, Vector3.right);
             Vector3 offset = new Vector3(backSign * along, up, camSign * across);
             // The flip is a mirror in the plane through the foot, across the cart: the slanted pole then leans out
             // over the back instead of forward over the donkey, and the foot stays where it is. For the child that is

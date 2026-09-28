@@ -915,3 +915,21 @@ fired); `GetOverheadItemForMutation` postfix (the remembered match, else the top
 the cargo key now sets the last item down in front of the keeper (no hands while riding). The probe's dormant patches
 were folded into the real ones (their override flags still arm them for the probe). Cecil: 186 refs, all pass.
 Not yet confirmed in game; test list in the report.
+
+## Round 10 (2026-09-29 01:02): idle life while stopped (source reading + build)
+
+- **Why the mounted keeper looked like a still image:** Cart uses Pose = FishingIdle with FreezePoseWhenIdle, and the
+  freeze sets `Animator.speed = 0`. That stops every layer, including the game's own `Breath` layer (layer 2,
+  `AnimationComponent.enableBreathLayer`, weight 1 from init), the keeper's only idle life. The donkey keeps moving
+  because its idle variety (graze, ear, lips, head turns) is random transitions inside its animator controller; no
+  C# code triggers them, and the mod never touches its speed. The keeper has no random idle variants in code
+  (`TalkingHeadPlayer` is dialogue only).
+- **Game sway code:** none for props. The cart rocks ±3° only from the walk clip (Round 8); `WindDependentObject`
+  is a shader wind for cloth meshes (`_WindIntensity`) reading `WeatherSystem.Instance.WindValue`, the one wind
+  number the game has.
+- **Built:** `IdleFidgetEverySeconds` (7; 0 = hard freeze), `IdleFidgetSpeed` (0.45), `IdleCrawlSpeed` (0.05): while
+  frozen the animator runs at the crawl (breath layer barely alive) and every 7 s ×(0.5–1.5) plays the pose for
+  0.6–1.2 s at the fidget speed. `LanternSwayDegrees` (1.5; 0 = off), `LanternSwaySeconds` (2.6): in `Lantern.Tick`
+  a pendulum about the foot, amplitude × (0.65 + 0.35 sin 0.37 t) × (0.5 + clamp01(wind)), on top of tilt; the lamp
+  rig follows the head as before, so the point light moves with it; wind read once a second. Panel: three sliders
+  under the freeze toggle, two under the lantern. Cecil 188 refs, all pass. Installed 01:02, unconfirmed.

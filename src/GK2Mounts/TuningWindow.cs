@@ -227,6 +227,13 @@ namespace GK2Mounts
                 GUILayout.Label("This pose makes the game take control: the keeper cannot move while it plays. Choose another.", small);
             }
             Toggle("Freeze the pose while standing still (arms stop moving)", s.FreezePoseWhenIdle, null);
+            if (s.FreezePoseWhenIdle.Value)
+            {
+                FloatSlider("Fidget: play the pose briefly every N seconds (0 = hard freeze)", s.IdleFidgetEverySeconds, 0f, 30f, 1, null);
+                FloatSlider("Fidget playback speed (x clip speed)", s.IdleFidgetSpeed, 0.05f, 2f, 2, null);
+                FloatSlider("Crawl speed between fidgets (0 = fully still)", s.IdleCrawlSpeed, 0f, 0.5f, 2, null);
+                GUILayout.Label("The freeze stops the whole animator, the game's breathing layer included. The crawl keeps a trace of it; a fidget plays the pose for about a second at the fidget speed.", small);
+            }
             FloatSlider("Pose animation speed while moving (x clip speed)", s.PoseSpeed, 0.1f, 4f, 2, null);
             Toggle("Scale pose animation speed with the riding speed", s.PoseSpeedFollowsDonkey, null);
 
@@ -276,6 +283,8 @@ namespace GK2Mounts
                 FloatSlider("Tilt in the screen plane: top towards the donkey (-) / the back (+)", s.LanternTilt, -60f, 60f, 0, Lantern.Refresh);
                 FloatSlider("Lean: top away from the camera (-) / towards it (+)", s.LanternLean, -60f, 60f, 0, Lantern.Refresh);
                 Toggle("Mirror the pole (foot stays; it leans out over the back instead of over the donkey)", s.LanternFlip, Lantern.Refresh);
+                FloatSlider("Sway: pendulum about the foot, degrees either way (0 = off; scaled by the wind)", s.LanternSwayDegrees, 0f, 10f, 1, Lantern.Refresh);
+                FloatSlider("Sway period, seconds", s.LanternSwaySeconds, 0.5f, 10f, 1, Lantern.Refresh);
                 GUILayout.Label(Lantern.Summary(), small);
             }
         }
