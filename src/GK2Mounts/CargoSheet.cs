@@ -25,6 +25,17 @@ namespace GK2Mounts
 
         public static string Start()
         {
+            return Begin(Run());
+        }
+
+        // Second mode: every spawnable item alone, grouped by the shape bucket the code assigns, to prove the buckets.
+        public static string StartShapes()
+        {
+            return Begin(RunShapes());
+        }
+
+        private static string Begin(IEnumerator routine)
+        {
             if (Running)
             {
                 return "already running";
@@ -37,8 +48,146 @@ namespace GK2Mounts
             {
                 return "plugin instance missing";
             }
-            Plugin.Instance.StartCoroutine(Run());
+            Plugin.Instance.StartCoroutine(routine);
             return "started; stand still until the panel comes back";
+        }
+
+        // The shape key of an item: the names of the non-shadow, non-blackout meshes its overhead element is made of
+        // ("placeholder" when the element is missing, e.g. marble), plus the element it was found under.
+        private static Dictionary<string, Transform> OverheadElements()
+        {
+            var elementsByIcon = new Dictionary<string, Transform>();
+            PlayerController pc = MainGame.PlayerController;
+            if (pc == null)
+            {
+                return elementsByIcon;
+            }
+            foreach (DropViewAtomMesh atom in pc.GetComponentsInChildren<DropViewAtomMesh>(includeInactive: true))
+            {
+                if (atom.transform.parent == null || atom.transform.parent.name != "overhead")
+                {
+                    continue;
+                }
+                foreach (Transform t in atom.GetComponentsInChildren<Transform>(includeInactive: true))
+                {
+                    if (t.GetComponent<DropViewAtomMeshElement>() != null && !elementsByIcon.ContainsKey(t.name))
+                    {
+                        elementsByIcon[t.name] = t;
+                    }
+                }
+                break;
+            }
+            return elementsByIcon;
+        }
+
+        private static string ShapeKey(ItemDef def, Dictionary<string, Transform> elementsByIcon, out string sizeText)
+        {
+            sizeText = "no mesh";
+            if (def == null || !elementsByIcon.TryGetValue(def.iconId, out Transform el))
+            {
+                return "placeholder";
+            }
+            var names = new List<string>();
+            foreach (MeshFilter mf in el.GetComponentsInChildren<MeshFilter>(includeInactive: true))
+            {
+                if (!Cargo.IsShadowMesh(mf.gameObject.name) && !mf.gameObject.name.EndsWith("-blackout"))
+                {
+                    names.Add(mf.gameObject.name);
+                }
+            }
+            names.Sort(string.CompareOrdinal);
+            if (Cargo.MeasureMeshes(el, el, out Bounds b, includeInactive: true))
+            {
+                sizeText = $"{b.size.x:0.00} long, {b.size.y:0.00} high, {b.size.z:0.00} across; bottom {b.min.y:0.00}, footprint centre ({b.center.x:0.00}, {b.center.z:0.00})";
+            }
+            return names.Count == 0 ? "placeholder" : string.Join("|", names);
+        }
+
+        private static IEnumerator RunShapes()
+        {
+            Running = true;
+            string dir = Path.Combine(Paths.BepInExRootPath, "GK2-cargo-sheet");
+            List<Item> saved = null;
+            Inventory inv = null;
+            var log = new StringBuilder();
+            try
+            {
+                Directory.CreateDirectory(dir);
+                inv = Mount.Donkey.Data.Inventory;
+                saved = new List<Item>(inv.Data.Inventory);
+                Dictionary<string, Transform> elements = OverheadElements();
+                List<string> ids = CarryProbe.BigItemIds();
+                var buckets = new SortedDictionary<string, List<string>>(StringComparer.Ordinal); // shape key -> rows
+                int done = 0;
+                Status = $"0 / {ids.Count}";
+                foreach (string id in ids)
+                {
+                    ItemDef def = GameBalance.Me.GetDataOrNull<ItemDef>(id);
+                    inv.Clear();
+                    inv.AddItemToInventory(new Item(id));
+                    yield return null;
+                    yield return null;
+                    yield return new WaitForEndOfFrame();
+                    string file = "shape__" + id + ".png";
+                    string err = Capture(Path.Combine(dir, file));
+                    if (err != null)
+                    {
+                        log.AppendLine(file + ": " + err);
+                    }
+                    string key = ShapeKey(def, elements, out string size);
+                    if (!buckets.TryGetValue(key, out List<string> rows))
+                    {
+                        buckets[key] = rows = new List<string>();
+                    }
+                    rows.Add($"<td><img src=\"{file}\" alt=\"{id}\" title=\"{id}\" onclick=\"show('{file}','{id}')\"><div class=\"cap\"><b>{id}</b><br>icon {def?.iconId}<br>{size}</div></td>");
+                    done++;
+                    Status = $"{done} / {ids.Count}";
+                }
+                var sb = new StringBuilder();
+                sb.AppendLine("<!doctype html><html><head><meta charset=\"utf-8\"><title>GK2 Mounts cargo shapes</title>");
+                sb.AppendLine("<style>:root{--w:220px}body{font-family:sans-serif;background:#222;color:#ddd;margin:16px}table{border-collapse:collapse;margin-bottom:24px}td{border:1px solid #444;padding:4px;text-align:center;vertical-align:top;font-size:12px}img{display:block;width:var(--w);height:auto;cursor:zoom-in;margin:auto}.cap{color:#bbb;font-size:11px;max-width:var(--w);white-space:normal}h2{margin:18px 0 6px;font-size:15px}h2 span{color:#888;font-weight:normal;font-size:12px}#bar{position:sticky;top:0;background:#222;padding:6px 0;z-index:2;display:flex;gap:8px;align-items:center}#bar button{background:#444;color:#ddd;border:1px solid #666;padding:3px 10px;cursor:pointer}#bar input{width:220px}#big{position:fixed;inset:0;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;flex-direction:column;cursor:zoom-out;z-index:9}#big img{width:auto;max-width:95vw;max-height:88vh;image-rendering:pixelated}#big div{color:#ddd;margin-top:8px}</style></head><body>");
+                sb.AppendLine($"<h1>GK2 Mounts cargo shapes</h1><p>{DateTime.Now:yyyy-MM-dd HH:mm}. Every carryable item alone on the cart, grouped by the shape bucket the mod assigns (the names of the meshes the item's overhead element is made of). Items in one bucket share a mesh and are placed identically; if two pictures in one bucket differ, the bucket rule is wrong. {ids.Count} items, {buckets.Count} buckets. Click a picture for full size.</p>");
+                sb.AppendLine("<div id=\"bar\"><button onclick=\"zoom(-30)\">&minus;</button><input type=\"range\" id=\"z\" min=\"60\" max=\"600\" value=\"220\" oninput=\"setW(+this.value)\"><button onclick=\"zoom(30)\">+</button><button onclick=\"setW(220)\">Reset</button><span id=\"zl\">220 px</span></div>");
+                sb.AppendLine("<script>function setW(w){w=Math.max(40,Math.min(1200,Math.round(w)));document.documentElement.style.setProperty('--w',w+'px');document.getElementById('z').value=w;document.getElementById('zl').textContent=w+' px';}function zoom(d){setW(+document.getElementById('z').value+d);}function show(src,cap){var b=document.getElementById('big');b.querySelector('img').src=src;b.querySelector('div').textContent=cap;b.style.display='flex';}</script>");
+                sb.AppendLine("<div id=\"big\" onclick=\"this.style.display='none'\"><img alt=\"\"><div></div></div>");
+                int n = 0;
+                foreach (KeyValuePair<string, List<string>> kv in buckets)
+                {
+                    n++;
+                    sb.AppendLine($"<h2>Bucket {n}: {kv.Value.Count} item(s) <span>meshes: {kv.Key}</span></h2><table><tr>");
+                    foreach (string cell in kv.Value)
+                    {
+                        sb.Append(cell);
+                    }
+                    sb.AppendLine("</tr></table>");
+                }
+                if (log.Length > 0)
+                {
+                    sb.AppendLine("<h2>Problems</h2><pre>").Append(log).AppendLine("</pre>");
+                }
+                sb.AppendLine("</body></html>");
+                File.WriteAllText(Path.Combine(dir, "shapes.html"), sb.ToString());
+                Plugin.Log.LogInfo($"[sheet] {done} items in {buckets.Count} shape buckets written to {dir}\\shapes.html");
+                Status = "done: " + Path.Combine(dir, "shapes.html");
+            }
+            finally
+            {
+                if (inv != null)
+                {
+                    inv.Clear();
+                    if (saved != null)
+                    {
+                        foreach (Item it in saved)
+                        {
+                            if (it != null && !it.IsEmpty)
+                            {
+                                inv.AddItemToInventory(it);
+                            }
+                        }
+                    }
+                }
+                Running = false;
+            }
         }
 
         // One representative item per distinct mesh, by the names of the meshes the overhead element is made of.

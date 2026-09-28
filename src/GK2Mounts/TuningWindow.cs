@@ -293,6 +293,10 @@ namespace GK2Mounts
             }
             GUILayout.Label(CargoSheet.Status, small);
             GUILayout.EndHorizontal();
+            if (GUILayout.Button("Photograph every item alone, grouped by shape bucket (shapes.html)", GUILayout.Width(430f)))
+            {
+                Plugin.Log.LogInfo("[sheet] " + CargoSheet.StartShapes());
+            }
             GUILayout.Label("Mount in Cart style, stand still with the cart in view, press. Each distinct item shape alone and every ordered pair is put on the cart in turn, photographed and cropped; BepInEx/GK2-cargo-sheet/index.html shows the grid (rows: first item, columns: second). The panel hides during the run; your real cargo is put back afterwards.", small);
 
             GUILayout.Label("Spawn a carryable item in front of the keeper (test)", header);
