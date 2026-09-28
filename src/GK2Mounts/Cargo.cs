@@ -4,18 +4,19 @@ using UnityEngine;
 
 namespace GK2Mounts
 {
-    // Cargo on the cart (proof of concept). The cart's cargo is the mounted donkey's own inventory, exactly as in the
-    // game's delivery routine (Flow_AddItem puts the body into npc_donkey's 2-slot inventory; the prefab's
-    // ConditionalDrawer turns the loaded cart body with the corpse shroud on while a body_corpse is inside). Loading
-    // and unloading follow the game's town-pallet and conveyor-cell handlers: the keeper's overhead item goes in with
-    // PlayerData.InsertOverheadItemTo, and comes back out with Inventory.RemoveItemById + TryAddOverheadItemNoReplace,
+    // Cargo on the cart. The cart's cargo is the mounted donkey's own inventory, exactly as in the game's delivery
+    // routine (Flow_AddItem puts the body into npc_donkey's 2-slot inventory). Loading and unloading follow the
+    // game's town-pallet and conveyor-cell handlers: the keeper's overhead item goes in with
+    // PlayerData.InsertOverheadItemTo, and comes back out with the inventory's remove call + TryAddOverheadItemNoReplace,
     // or is dropped beside the keeper when his hands are full.
     //
-    // The game only draws a corpse on the cart. Every other item is shown by a copy of the keeper's own overhead
-    // mesh atom (the DropViewAtomMesh under PlayerView2D/.../overhead/item, which holds a mesh per big item), placed
-    // on the cart bed, one copy per inventory slot; this is what AnimationComponentBase.EnsureExtraOverheadViews
-    // does for a stacked overhead load. Zombies are refused here: they are drawn through a head-id path this proof
-    // of concept does not cover.
+    // Drawing: the game only ever draws a corpse on the cart (its prefab's drawer switches one shroud mesh on while
+    // a body_corpse is aboard) and arranges nothing; every pile in the game is hand-made art switched by item count.
+    // So the mod draws the cargo itself with copies of the keeper's overhead mesh atom (one mesh per big item) and
+    // places them with a size-based packer (RefreshViews): every item's box is measured, the bigger footprint goes to
+    // the bottom or the far side, two items lie side by side across the bed when they fit and stack otherwise, at
+    // the density of the game's own timber stockpile (touching, one width apart, one height up). Corrections come
+    // from cargo-layout.cfg (CargoLayout), keyed by size class, so the 27 items reduce to seven classes.
     //
     // Save safety: the donkey is a temp object, so its inventory never reaches a save. Everything is returned to the
     // keeper (hands first, then dropped at his feet) whenever the ride ends (dismount, cleanup, sleep) and right
@@ -34,6 +35,17 @@ namespace GK2Mounts
         private static readonly List<DropViewAtomMesh> views = new List<DropViewAtomMesh>();
         private static bool subscribed;
         private static bool unloading;
+
+        // What the packer placed last, for the panel: item id and whether it sits on top of another item.
+        public struct PlacedItem
+        {
+            public string Id;
+            public bool OnTop;
+            public Vector3 Box;
+        }
+
+        public static readonly List<PlacedItem> Placed = new List<PlacedItem>();
+        public static string LastLayoutNote { get; private set; } = "";
 
         public static int Count => mirror.Count;
         public static bool Attached => inv != null;
@@ -89,6 +101,7 @@ namespace GK2Mounts
             }
             subscribed = false;
             views.Clear();
+            Placed.Clear();
             container = null;
             donkey = null;
             inv = null;
@@ -239,10 +252,18 @@ namespace GK2Mounts
             MainGame.Instance.dropSystem.DropItem(item, pd.currentGameSceneId, pos);
         }
 
-        // ------------------------------------------------------------------ views
+        // ------------------------------------------------------------------ views and the packer
 
-        // One mesh copy per cargo item that the game does not draw itself (everything but the corpse), on the cart
-        // bed, spread along the cart. Called on every inventory change and when the placement settings move.
+        private class Drawn
+        {
+            public Item Item;
+            public DropViewAtomMesh View;
+            public Bounds Box;      // in the view's own space: size, bottom (min.y) and footprint centre
+            public int LoadOrder;
+        }
+
+        // One mesh copy per cargo item, placed by the size-based packer. Called on every inventory change and when
+        // a setting or a layout entry moves.
         public static void RefreshViews()
         {
             if (inv == null || donkey == null || !donkey)
@@ -256,16 +277,12 @@ namespace GK2Mounts
                 {
                     return;
                 }
-                // Items the mod draws, with the inventory slot each occupies. The game's drawer shows one shroud while
-                // any corpse is aboard (its rule is "body_corpse count > 0"), so the first corpse is the game's and
-                // keeps its slot (a log loaded after it takes slot 2); every further corpse is drawn by the mod with
-                // the corpse mesh, which the auto-fit stacks on the shroud (two corpses are wider than the bed).
-                // With CargoDrawCorpse the mod draws every corpse itself (same rule and sliders as any item) and keeps
-                // the game's loaded body off; otherwise the game's shroud stands for the first corpse.
                 StyleSettings s = Mount.S;
                 bool modDrawsCorpse = s.CargoDrawCorpse.Value;
-                var shown = new List<Item>();
-                var slotOf = new List<int>();
+
+                // Items the mod draws. Without CargoDrawCorpse the game's shroud stands for the first corpse and the
+                // other items ride on top of it.
+                var drawn = new List<Drawn>();
                 bool gameCorpse = false;
                 for (int k = 0; k < inv.Data.Inventory.Count; k++)
                 {
@@ -279,14 +296,12 @@ namespace GK2Mounts
                         gameCorpse = true;
                         continue;
                     }
-                    shown.Add(it);
-                    slotOf.Add(k);
+                    drawn.Add(new Drawn { Item = it, LoadOrder = k });
                 }
                 SetGameLoadedBody(!modDrawsCorpse);
-                int n = shown.Count;
-                float floor = gameCorpse ? LoadedBodyExtra() : 0f; // items ride on the shroud while a corpse is aboard
-                var placed = new List<Bounds>(); // footprints already laid out, container space, auto-fit only
-                for (int i = 0; i < n; i++)
+
+                // Views: one per drawn item, activated with the item's mesh, then measured.
+                for (int i = 0; i < drawn.Count; i++)
                 {
                     DropViewAtomMesh view = i < views.Count ? views[i] : null;
                     if (view == null)
@@ -306,7 +321,7 @@ namespace GK2Mounts
                         }
                     }
                     view.gameObject.SetActive(true);
-                    string icon = shown[i].Definition.iconId;
+                    string icon = ResolveIcon(drawn[i].Item.Definition);
                     if (view.IconId != icon)
                     {
                         view.Activate(icon);
@@ -316,40 +331,13 @@ namespace GK2Mounts
                             c.enabled = false;
                         }
                     }
-                    // Items lie along the cart (local x, the log's long axis) in tunable slots: slot 1 for the first
-                    // item, slot 2 for the second (Cargo1*/Cargo2*; local z is the width, +z away from the camera).
-                    Vector3 slot = s.CargoSlot(slotOf[i]) + Vector3.up * floor;
-                    if (!s.CargoAutoFit.Value || !MeasureMeshes(view.transform, view.transform, out Bounds b))
+                    drawn[i].View = view;
+                    if (!MeasureMeshes(view.transform, view.transform, out drawn[i].Box))
                     {
-                        view.transform.localPosition = slot; // raw: the pivot goes to the slot point
-                        continue;
+                        drawn[i].Box = new Bounds(Vector3.zero, new Vector3(0.5f, 0.4f, 0.5f));
                     }
-                    // Auto-fit: the mesh's footprint centre goes to the slot point and its bottom onto the bed, whatever
-                    // the model's pivot (every big item's pivot is at its bottom, but 0.02 to 0.19 off centre across).
-                    // A second item is pushed away from the first when the two would overlap across the bed, and put on
-                    // top of the first when the two are wider than the bed together (two crates: 1.0 on a 0.75 bed).
-                    Vector3 pos = new Vector3(slot.x - b.center.x, slot.y - b.min.y, slot.z - b.center.z);
-                    if (placed.Count > 0)
-                    {
-                        Bounds first = placed[0];
-                        float across = b.size.z + first.size.z;
-                        // Up to 0.12 of overhang over the rails is fine (corpse + log = 0.78 on the 0.75 bed); two
-                        // crates (1.0) stack. When stacked, slot 2's values act as offsets from the first item.
-                        if (across > bedWidth + 0.12f)
-                        {
-                            // Stacked: this slot's values minus the first slot's act as offsets from the first item;
-                            // across is limited so the item stays on top of the one below.
-                            Vector3 rel = s.CargoSlot(slotOf[i]) - s.CargoSlot(0);
-                            float m = Mathf.Max(0f, (first.size.z - b.size.z) * 0.5f);
-                            rel.z = Mathf.Clamp(rel.z, -m, m);
-                            pos = new Vector3(first.center.x + rel.x - b.center.x, first.max.y + rel.y - b.min.y, first.center.z + rel.z - b.center.z);
-                        }
-                        // Side by side: the slot values rule, no pushing apart (it felt like a collider when tuning).
-                    }
-                    view.transform.localPosition = pos;
-                    placed.Add(new Bounds(b.center + pos, b.size));
                 }
-                for (int j = n; j < views.Count; j++)
+                for (int j = drawn.Count; j < views.Count; j++)
                 {
                     if (views[j] != null)
                     {
@@ -357,11 +345,266 @@ namespace GK2Mounts
                         views[j].gameObject.SetActive(false);
                     }
                 }
+
+                Pack(drawn, s, gameCorpse ? LoadedBodyExtra() : 0f);
             }
             catch (Exception e)
             {
                 Plugin.Log.LogWarning("Cargo: refreshing the cart views failed: " + e);
             }
+        }
+
+        // The packer. Container space: origin at the measured top of the empty cart body, x along the cart, z across
+        // (+z away from the camera), y up. Every item: bottom on the floor (bed top + CargoBedDepth), footprint
+        // centre at its place. Order independent: the larger footprint is placed first (bottom / far side), ties by
+        // load order. Two items lie side by side across the bed, touching within CargoSideGap and centred as a pair,
+        // when their widths fit within the bed plus CargoOverhang; otherwise the second stacks on the first, sunk by
+        // CargoNestle. A third or later item stacks on the previous one. Layout-file corrections apply per size class
+        // (item entry: base or top role) and per pair (mode override and a shift of the second item).
+        private static void Pack(List<Drawn> drawn, StyleSettings s, float floorExtra)
+        {
+            Placed.Clear();
+            if (drawn.Count == 0)
+            {
+                LastLayoutNote = "empty";
+                return;
+            }
+            drawn.Sort((a, b) =>
+            {
+                float areaA = a.Box.size.x * a.Box.size.z, areaB = b.Box.size.x * b.Box.size.z;
+                int c = areaB.CompareTo(areaA);
+                return c != 0 ? c : a.LoadOrder.CompareTo(b.LoadOrder);
+            });
+            float floor = s.CargoBedDepth.Value + floorExtra;
+            var note = new System.Text.StringBuilder();
+
+            // Footprint centres (x, z) and bottoms (y) each item is placed at, before pivot correction.
+            var target = new Vector3[drawn.Count];
+            var onTop = new bool[drawn.Count];
+            Drawn first = drawn[0];
+            CargoLayout.ItemEntry e0 = CargoLayout.ForItem(first.Item.id);
+            target[0] = new Vector3(0f, floor, 0f) + (e0 != null ? e0.Base : Vector3.zero);
+
+            for (int i = 1; i < drawn.Count; i++)
+            {
+                Drawn prev = drawn[i - 1];
+                Drawn cur = drawn[i];
+                CargoLayout.ItemEntry e = CargoLayout.ForItem(cur.Item.id);
+                CargoLayout.PairEntry pair = i == 1 ? CargoLayout.ForPair(first.Item.id, cur.Item.id) : null;
+                string mode = pair != null ? pair.Mode : "auto";
+                float w0 = first.Box.size.z, w1 = cur.Box.size.z;
+                bool side = i == 1 && (mode == "side" || (mode == "auto" && w0 + s.CargoSideGap.Value + w1 <= bedWidth + s.CargoOverhang.Value));
+                if (side)
+                {
+                    float total = w0 + s.CargoSideGap.Value + w1;
+                    target[0].z = total * 0.5f - w0 * 0.5f + (e0 != null ? e0.Base.z : 0f);
+                    target[i] = new Vector3(0f, floor, -total * 0.5f + w1 * 0.5f) + (e != null ? e.Base : Vector3.zero);
+                    note.Append($"{first.Item.id} | {cur.Item.id} side by side ({w0:0.00}+{w1:0.00} on {bedWidth:0.00})");
+                }
+                else
+                {
+                    float prevTop = target[i - 1].y + prev.Box.size.y;
+                    target[i] = new Vector3(target[i - 1].x, prevTop - s.CargoNestle.Value, target[i - 1].z) + (e != null ? e.Top : Vector3.zero);
+                    onTop[i] = true;
+                    note.Append($"{cur.Item.id} on top of {prev.Item.id}{(mode != "auto" ? " (" + mode + ")" : "")}");
+                }
+                if (pair != null)
+                {
+                    target[i] += pair.Second;
+                }
+            }
+            if (drawn.Count == 1)
+            {
+                note.Append(first.Item.id + " alone");
+            }
+
+            for (int i = 0; i < drawn.Count; i++)
+            {
+                Bounds b = drawn[i].Box;
+                drawn[i].View.transform.localPosition = new Vector3(target[i].x - b.center.x, target[i].y - b.min.y, target[i].z - b.center.z);
+                Placed.Add(new PlacedItem { Id = drawn[i].Item.id, OnTop = onTop[i], Box = b.size });
+            }
+            LastLayoutNote = note.ToString();
+        }
+
+        // ------------------------------------------------------------------ meshes
+
+        private static HashSet<string> elementNames;
+        private static readonly Dictionary<string, string> iconFallback = new Dictionary<string, string>
+        {
+            { "i_marble", "i_stone" }, // marble has no overhead mesh in the game; the slab is the nearest shape
+        };
+
+        // The overhead element name to activate for an item: its icon id when an element of that name exists; else
+        // an element whose name is a prefix of the icon id (the game's box_engineering_mechanism element is named
+        // i_box_engineering_mec, truncated); else a stand-in from the table; else the icon id (the game then shows
+        // its placeholder and logs an error, which is the honest outcome for an unknown future item).
+        internal static string ResolveIcon(ItemDef def)
+        {
+            if (def == null)
+            {
+                return "";
+            }
+            HashSet<string> names = ElementNames();
+            if (names.Contains(def.iconId))
+            {
+                return def.iconId;
+            }
+            foreach (string n in names)
+            {
+                if (n.Length >= 8 && def.iconId.StartsWith(n, StringComparison.Ordinal))
+                {
+                    return n;
+                }
+            }
+            if (iconFallback.TryGetValue(def.iconId, out string alt) && names.Contains(alt))
+            {
+                return alt;
+            }
+            return def.iconId;
+        }
+
+        internal static Transform FindOverheadElement(ItemDef def)
+        {
+            DropViewAtomMesh src = FindSourceAtom();
+            if (src == null || def == null)
+            {
+                return null;
+            }
+            string icon = ResolveIcon(def);
+            foreach (Transform t in src.GetComponentsInChildren<Transform>(includeInactive: true))
+            {
+                if (t.name == icon && t.GetComponent<DropViewAtomMeshElement>() != null)
+                {
+                    return t;
+                }
+            }
+            return null;
+        }
+
+        private static HashSet<string> ElementNames()
+        {
+            if (elementNames != null && elementNames.Count > 0)
+            {
+                return elementNames;
+            }
+            elementNames = new HashSet<string>(StringComparer.Ordinal);
+            DropViewAtomMesh src = FindSourceAtom();
+            if (src != null)
+            {
+                foreach (DropViewAtomMeshElement el in src.GetComponentsInChildren<DropViewAtomMeshElement>(includeInactive: true))
+                {
+                    elementNames.Add(el.name);
+                }
+            }
+            return elementNames;
+        }
+
+        // Union of the mesh bounds under root, in the given transform's space, ignoring the root's own local
+        // position so the result describes the model itself. Mesh bounds are valid on inactive objects; renderer
+        // bounds are not, which is why meshes are used. Shadow planes do not count.
+        internal static bool MeasureMeshes(Transform root, Transform space, out Bounds bounds, bool includeInactive = false)
+        {
+            bounds = default;
+            bool any = false;
+            Vector3 rootPos = root.localPosition;
+            foreach (MeshFilter mf in root.GetComponentsInChildren<MeshFilter>(includeInactive))
+            {
+                Mesh mesh = mf.sharedMesh;
+                if (mesh == null || IsShadowMesh(mf.gameObject.name))
+                {
+                    continue;
+                }
+                Bounds b = mesh.bounds;
+                for (int c = 0; c < 8; c++)
+                {
+                    var corner = new Vector3((c & 1) == 0 ? b.min.x : b.max.x, (c & 2) == 0 ? b.min.y : b.max.y, (c & 4) == 0 ? b.min.z : b.max.z);
+                    Vector3 p = space.InverseTransformPoint(mf.transform.TransformPoint(corner));
+                    if (space != root)
+                    {
+                        p -= rootPos;
+                    }
+                    if (!any)
+                    {
+                        bounds = new Bounds(p, Vector3.zero);
+                        any = true;
+                    }
+                    else
+                    {
+                        bounds.Encapsulate(p);
+                    }
+                }
+            }
+            return any;
+        }
+
+        // The game's own naming rule for shadow meshes (Object3DSubMesh.MeshNameFlags): a flat plane under the object
+        // that must not count towards its size.
+        internal static bool IsShadowMesh(string name)
+        {
+            return name.EndsWith("_sh") || name.EndsWith("-sh") || name.EndsWith("_sh2") || name.EndsWith("-sh2");
+        }
+
+        // allowGame = true: the prefab's own drawer decides (loaded body while a corpse is aboard); false: the empty
+        // body stays on and the game's loaded body off, because the mod draws the corpses itself. The drawer only
+        // re-evaluates on inventory changes, and this runs after each of them, so the override holds.
+        private static void SetGameLoadedBody(bool allowGame)
+        {
+            if (donkey == null)
+            {
+                return;
+            }
+            if (allowGame)
+            {
+                foreach (ConditionalDrawer cd in donkey.GetComponentsInChildren<ConditionalDrawer>(includeInactive: true))
+                {
+                    cd.UpdateVisualsByConditions();
+                }
+                return;
+            }
+            foreach (Transform t in donkey.GetComponentsInChildren<Transform>(includeInactive: true))
+            {
+                if (t.name == "donkey_cart_body_sway" && t.gameObject.activeSelf)
+                {
+                    t.gameObject.SetActive(false);
+                }
+                else if (t.name == "donkey_cart_empty_sway" && !t.gameObject.activeSelf)
+                {
+                    t.gameObject.SetActive(true);
+                }
+            }
+        }
+
+        // How much higher the loaded cart body (the corpse shroud the game turns on) reaches than the empty bed top,
+        // so items put on the cart with a game-drawn corpse ride on top of the shroud. 0 when it is not active.
+        private static float LoadedBodyExtra()
+        {
+            if (donkey == null || container == null)
+            {
+                return 0f;
+            }
+            foreach (Transform t in donkey.GetComponentsInChildren<Transform>(includeInactive: false))
+            {
+                if (t.name != "donkey_cart_body_sway")
+                {
+                    continue;
+                }
+                Renderer best = null;
+                foreach (Renderer r in t.GetComponentsInChildren<Renderer>(includeInactive: false))
+                {
+                    if (best == null || r.bounds.max.y > best.bounds.max.y)
+                    {
+                        best = r;
+                    }
+                }
+                if (best == null)
+                {
+                    return 0f;
+                }
+                float top = container.parent.InverseTransformPoint(new Vector3(best.bounds.center.x, best.bounds.max.y, best.bounds.center.z)).y;
+                return Mathf.Max(0f, top - container.localPosition.y);
+            }
+            return 0f;
         }
 
         // The container sits under the cart's parent ("Base") at the top centre of the empty cart body, measured
@@ -421,117 +664,6 @@ namespace GK2Mounts
             go.layer = (emptyBody ?? emptySway).gameObject.layer;
         }
 
-        // Union of the mesh bounds under root, in the given transform's space, ignoring the root's own local
-        // position so the result describes the model itself. Mesh bounds are valid on inactive objects; renderer
-        // bounds are not, which is why meshes are used.
-        internal static bool MeasureMeshes(Transform root, Transform space, out Bounds bounds, bool includeInactive = false)
-        {
-            bounds = default;
-            bool any = false;
-            Vector3 rootPos = root.localPosition;
-            foreach (MeshFilter mf in root.GetComponentsInChildren<MeshFilter>(includeInactive))
-            {
-                Mesh mesh = mf.sharedMesh;
-                if (mesh == null || IsShadowMesh(mf.gameObject.name))
-                {
-                    continue;
-                }
-                Bounds b = mesh.bounds;
-                for (int c = 0; c < 8; c++)
-                {
-                    var corner = new Vector3((c & 1) == 0 ? b.min.x : b.max.x, (c & 2) == 0 ? b.min.y : b.max.y, (c & 4) == 0 ? b.min.z : b.max.z);
-                    Vector3 p = space.InverseTransformPoint(mf.transform.TransformPoint(corner));
-                    if (space == root)
-                    {
-                        // already relative to root
-                    }
-                    else
-                    {
-                        p -= rootPos;
-                    }
-                    if (!any)
-                    {
-                        bounds = new Bounds(p, Vector3.zero);
-                        any = true;
-                    }
-                    else
-                    {
-                        bounds.Encapsulate(p);
-                    }
-                }
-            }
-            return any;
-        }
-
-        // allowGame = true: the prefab's own drawer decides (loaded body while a corpse is aboard); false: the empty
-        // body stays on and the game's loaded body off, because the mod draws the corpses itself. The drawer only
-        // re-evaluates on inventory changes, and this runs after each of them, so the override holds.
-        private static void SetGameLoadedBody(bool allowGame)
-        {
-            if (donkey == null)
-            {
-                return;
-            }
-            if (allowGame)
-            {
-                foreach (ConditionalDrawer cd in donkey.GetComponentsInChildren<ConditionalDrawer>(includeInactive: true))
-                {
-                    cd.UpdateVisualsByConditions();
-                }
-                return;
-            }
-            foreach (Transform t in donkey.GetComponentsInChildren<Transform>(includeInactive: true))
-            {
-                if (t.name == "donkey_cart_body_sway" && t.gameObject.activeSelf)
-                {
-                    t.gameObject.SetActive(false);
-                }
-                else if (t.name == "donkey_cart_empty_sway" && !t.gameObject.activeSelf)
-                {
-                    t.gameObject.SetActive(true);
-                }
-            }
-        }
-
-        // The game's own naming rule for shadow meshes (Object3DSubMesh.MeshNameFlags): a flat plane under the object
-        // that must not count towards its size.
-        internal static bool IsShadowMesh(string name)
-        {
-            return name.EndsWith("_sh") || name.EndsWith("-sh") || name.EndsWith("_sh2") || name.EndsWith("-sh2");
-        }
-
-        // How much higher the loaded cart body (the corpse shroud the game turns on) reaches than the empty bed top,
-        // so items put on the cart with a corpse ride on top of the shroud. 0 when it is not active.
-        private static float LoadedBodyExtra()
-        {
-            if (donkey == null || container == null)
-            {
-                return 0f;
-            }
-            foreach (Transform t in donkey.GetComponentsInChildren<Transform>(includeInactive: false))
-            {
-                if (t.name != "donkey_cart_body_sway")
-                {
-                    continue;
-                }
-                Renderer best = null;
-                foreach (Renderer r in t.GetComponentsInChildren<Renderer>(includeInactive: false))
-                {
-                    if (best == null || r.bounds.max.y > best.bounds.max.y)
-                    {
-                        best = r;
-                    }
-                }
-                if (best == null)
-                {
-                    return 0f;
-                }
-                float top = container.parent.InverseTransformPoint(new Vector3(best.bounds.center.x, best.bounds.max.y, best.bounds.center.z)).y;
-                return Mathf.Max(0f, top - container.localPosition.y);
-            }
-            return 0f;
-        }
-
         private static DropViewAtomMesh MakeView(int index)
         {
             DropViewAtomMesh source = FindSourceAtom();
@@ -558,7 +690,7 @@ namespace GK2Mounts
             return view;
         }
 
-        private static DropViewAtomMesh FindSourceAtom()
+        internal static DropViewAtomMesh FindSourceAtom()
         {
             PlayerController pc = MainGame.PlayerController;
             if (pc == null)
@@ -580,7 +712,7 @@ namespace GK2Mounts
             return first;
         }
 
-        // For the geometry log.
+        // For the panel and the geometry log.
         public static string Summary()
         {
             if (inv == null)
@@ -592,7 +724,7 @@ namespace GK2Mounts
             {
                 l.Add(it.id);
             }
-            return $"cargo {inv.Data.Inventory.Count}/{inv.Data.InventorySize} [{string.Join(" ", l)}], {views.Count} view(s), bed {(container != null ? container.localPosition.ToString() : "-")}";
+            return $"cargo {inv.Data.Inventory.Count}/{inv.Data.InventorySize} [{string.Join(" ", l)}]; layout: {LastLayoutNote}; bed width {bedWidth:0.00}";
         }
     }
 }

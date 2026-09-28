@@ -18,6 +18,7 @@ namespace GK2Mounts
         private static string donkeyEvent = "";
         private static string cargoItemId = "wood";
         private static string spawnItemId = "wood";
+        private static bool pairOffsetsOpen;
         private static readonly string[] TabNames = { "General", "Riding", "Debug" };
 
         public static void Draw()
@@ -53,7 +54,23 @@ namespace GK2Mounts
             small = new GUIStyle(GUI.skin.label) { fontSize = 11, wordWrap = true };
             small.normal.textColor = new Color(0.75f, 0.75f, 0.75f);
             header = new GUIStyle(GUI.skin.label) { fontSize = 13, fontStyle = FontStyle.Bold };
+            var tex = new Texture2D(1, 1);
+            tex.SetPixel(0, 0, new Color(1f, 1f, 1f, 0.35f));
+            tex.Apply();
+            rule = new GUIStyle();
+            rule.normal.background = tex;
+            rule.fixedHeight = 1f;
+            rule.margin = new RectOffset(0, 0, 10, 4);
             stylesReady = true;
+        }
+
+        private static GUIStyle rule;
+
+        // A section title with a rule line above it, so the rows below visibly belong to it.
+        private static void Header(string text)
+        {
+            GUILayout.Box(GUIContent.none, rule, GUILayout.ExpandWidth(true));
+            GUILayout.Label(text, header);
         }
 
         private static void DrawContents(int id)
@@ -114,7 +131,7 @@ namespace GK2Mounts
 
         private static void DrawGeneral()
         {
-            GUILayout.Label("Controls", header);
+            Header("Controls");
             GUILayout.BeginHorizontal();
             GUILayout.Label("Mount / dismount key (change General.MountKey in the cfg)", label, GUILayout.Width(300f));
             GUILayout.Label(Plugin.MountKey.Value.ToString(), label);
@@ -124,7 +141,7 @@ namespace GK2Mounts
             GUILayout.Label(Plugin.CargoKey.Value.ToString(), label);
             GUILayout.EndHorizontal();
 
-            GUILayout.Label("Behaviour", header);
+            Header("Behaviour");
             Toggle("Stay mounted when going through doors (scene changes)", Plugin.StayMountedThroughDoors, null);
             Toggle("Dismount when entering a building, church or dungeon (no mounting indoors)", Plugin.DismountIndoors, null);
             Toggle("Show a thought bubble when mounting is refused", Plugin.ShowMessages, null);
@@ -141,7 +158,7 @@ namespace GK2Mounts
             StyleSettings s = Mount.S;
             bool ride = Mount.CurrentStyle == MountStyle.Ride;
 
-            GUILayout.Label("Style being tuned: " + (ride ? "riding on the donkey's back" : "the donkey pulling its cart") + "  [" + s.Section + "]", header);
+            Header("Style being tuned: " + (ride ? "riding on the donkey's back" : "the donkey pulling its cart") + "  [" + s.Section + "]");
             GUILayout.BeginHorizontal();
             GUILayout.Label("Switch style (the donkey is summoned again)", label, GUILayout.Width(300f));
             if (GUILayout.Button(ride ? "Go to cart" : "Go to riding", GUILayout.Width(150f)))
@@ -152,10 +169,10 @@ namespace GK2Mounts
             GUILayout.EndHorizontal();
             GUILayout.Label("Each style keeps its own values below; they are saved under [" + s.Section + "] in the cfg.", small);
 
-            GUILayout.Label("Speed", header);
+            Header("Speed");
             FloatSlider("Speed (x normal walking)", s.SpeedMultiplier, 0.5f, 4f, 2, Mount.RefreshSpeed);
 
-            GUILayout.Label("Donkey position", header);
+            Header("Donkey position");
             FloatSlider("Donkey in front of (-) / behind (+) the rider", s.Depth, -0.5f, 0.5f, 2, null);
             CenteringToggle(s.CenterOffset);
             Toggle("Donkey follows the ground height at its own position (slopes)", s.SnapToGround, null);
@@ -167,23 +184,19 @@ namespace GK2Mounts
             }
             if (Mount.CurrentStyle == MountStyle.Cart)
             {
-                GUILayout.Label("Cart cargo (proof of concept)", header);
-                Toggle("Place items by their measured size (bottom on the bed, footprint on the slot; stack when too wide)", s.CargoAutoFit, Cargo.RefreshViews);
-                Toggle("Mod draws corpses too (sliders move them; off = the game's own shroud for the first corpse)", s.CargoDrawCorpse, Cargo.RefreshViews);
-                GUILayout.Label("With the corpse toggle off, the first corpse is the game's loaded-cart mesh, which the sliders cannot move; other items then ride on top of the shroud.", small);
-                GUILayout.Label("First item on the cart", small);
-                FloatSlider("Slot 1: along the cart (tail - / head +)", s.Cargo1Along, -0.6f, 0.6f, 2, Cargo.RefreshViews);
-                FloatSlider("Slot 1: height above the bed", s.Cargo1Up, -0.5f, 0.8f, 2, Cargo.RefreshViews);
-                FloatSlider("Slot 1: across the cart (towards camera - / away +)", s.Cargo1Across, -0.5f, 0.5f, 2, Cargo.RefreshViews);
-                GUILayout.Label("Second item on the cart", small);
-                FloatSlider("Slot 2: along the cart (tail - / head +)", s.Cargo2Along, -0.6f, 0.6f, 2, Cargo.RefreshViews);
-                FloatSlider("Slot 2: height above the bed", s.Cargo2Up, -0.5f, 0.8f, 2, Cargo.RefreshViews);
-                FloatSlider("Slot 2: across the cart (towards camera - / away +)", s.Cargo2Across, -0.5f, 0.5f, 2, Cargo.RefreshViews);
-                GUILayout.Label($"Press {Plugin.CargoKey.Value} with a log (or stone, ore, crate) on your head to put it on the cart, and with empty hands to take it back. A corpse is drawn by the game itself; other items by a copy of the keeper's overhead mesh. Right-click a row to reset it; 'Export current values as mod defaults' (Debug tab) keeps them. {Cargo.Summary()}", small);
+                Header("Cart cargo: the packer");
+                GUILayout.Label("Every item's box is measured; the larger footprint goes to the bottom or far side; two items lie side by side when they fit across the bed, else the second stacks. These four values rule every combination.", small);
+                FloatSlider("Cargo floor below the rail top (bed depth)", s.CargoBedDepth, -0.6f, 0.3f, 2, Cargo.RefreshViews);
+                FloatSlider("Gap between side-by-side items", s.CargoSideGap, 0f, 0.3f, 2, Cargo.RefreshViews);
+                FloatSlider("Overhang allowed before stacking", s.CargoOverhang, 0f, 0.5f, 2, Cargo.RefreshViews);
+                FloatSlider("Nestle: how far a stacked item sinks into the one below", s.CargoNestle, 0f, 0.3f, 2, Cargo.RefreshViews);
+                Toggle("Mod draws corpses too (off = the game's own shroud for the first corpse)", s.CargoDrawCorpse, Cargo.RefreshViews);
+                GUILayout.Label($"Press {Plugin.CargoKey.Value} with an item on your head to put it on the cart, with empty hands to take the last one back. {Cargo.Summary()}", small);
+                DrawCargoCorrections();
             }
             IntSlider("Move whole rider along the donkey: tail (-) / head (+)", s.RiderOffsetPx, -16, 16, null);
 
-            GUILayout.Label("Rider torso", header);
+            Header("Rider torso");
             IntSlider("Move torso only along the donkey: tail (-) / head (+)", s.TorsoOffsetPx, -16, 16, Mount.RefreshSeat);
             Toggle("Torso height automatic (hip on the donkey's back)", s.AutoSeat, Mount.RefreshSeat);
             if (s.AutoSeat.Value)
@@ -196,7 +209,7 @@ namespace GK2Mounts
             }
             Toggle("Torso bobs with the donkey's walk", s.Bob, Mount.RefreshSeat);
 
-            GUILayout.Label("Rider pose and animation", header);
+            Header("Rider pose and animation");
             EnumCycler("Body pose", s.Pose, Mount.ApplyPoseNow);
             if (Mount.PoseBlocksMovement)
             {
@@ -206,7 +219,7 @@ namespace GK2Mounts
             FloatSlider("Pose animation speed while moving (x clip speed)", s.PoseSpeed, 0.1f, 4f, 2, null);
             Toggle("Scale pose animation speed with the riding speed", s.PoseSpeedFollowsDonkey, null);
 
-            GUILayout.Label("Rider legs (drawn on the donkey's side)", header);
+            Header("Rider legs (drawn on the donkey's side)");
             Toggle("Show legs on the donkey's side", s.NearLeg, Mount.RefreshLeg);
             if (s.NearLeg.Value)
             {
@@ -226,12 +239,12 @@ namespace GK2Mounts
 
         private static void DrawDebug()
         {
-            GUILayout.Label("This panel", header);
+            Header("This panel");
             FloatSlider("Panel size", Plugin.TuningWindowScale, 0.75f, 3f, 2, null);
             Toggle("Tuning keys (PageUp/Down torso, Home/End legs sideways, Insert/Delete legs up/down)", Plugin.TuningKeys, null);
             GUILayout.Label("Debug.TuningWindow=false in the cfg hides this panel for normal play.", small);
 
-            GUILayout.Label("Diagnostics", header);
+            Header("Diagnostics");
             GUILayout.BeginHorizontal();
             if (GUILayout.Button("Write values to log"))
             {
@@ -245,7 +258,7 @@ namespace GK2Mounts
             GUILayout.EndHorizontal();
             GUILayout.Label("Both write one line to BepInEx/LogOutput.log. Geometry: press once per facing (and once while walking) when reporting a placement problem.", small);
 
-            GUILayout.Label("Game donkey (for comparison)", header);
+            Header("Game donkey (for comparison)");
             if (GUILayout.Button("Start a real delivery now (the game's own cart brings a body)"))
             {
                 Plugin.Log.LogInfo("[script] " + ScriptDump.StartDelivery());
@@ -265,7 +278,7 @@ namespace GK2Mounts
             GUILayout.EndHorizontal();
             GUILayout.Label("Other events from the dumped graph: move_to_morgue, full_cycle_back, move_from_morgue, stay_morgue, Disable, SetInteractive, SetNonInteractive.", small);
 
-            GUILayout.Label("Cart cargo (investigation)", header);
+            Header("Cart cargo (investigation)");
             if (GUILayout.Button("Dump carry facts to a file (drawer rules, inventory filters, big items)"))
             {
                 Plugin.Log.LogInfo("[cargo] " + CarryProbe.DumpFacts());
@@ -285,7 +298,7 @@ namespace GK2Mounts
             GUILayout.EndHorizontal();
             GUILayout.Label("Adds a plain item to our donkey's inventory exactly as the delivery script does, and logs whether the game's drawer switched the cart meshes. Test items vanish; the donkey is a temp object, nothing is saved.", small);
 
-            GUILayout.Label("Cargo sheet: every combination on the cart, as pictures", header);
+            Header("Cargo sheet: every combination on the cart, as pictures");
             GUILayout.BeginHorizontal();
             if (GUILayout.Button("Photograph all cargo combinations (HTML sheet)", GUILayout.Width(330f)))
             {
@@ -299,7 +312,7 @@ namespace GK2Mounts
             }
             GUILayout.Label("Mount in Cart style, stand still with the cart in view, press. Each distinct item shape alone and every ordered pair is put on the cart in turn, photographed and cropped; BepInEx/GK2-cargo-sheet/index.html shows the grid (rows: first item, columns: second). The panel hides during the run; your real cargo is put back afterwards.", small);
 
-            GUILayout.Label("Spawn a carryable item in front of the keeper (test)", header);
+            Header("Spawn a carryable item in front of the keeper (test)");
             GUILayout.BeginHorizontal();
             System.Collections.Generic.List<string> big = CarryProbe.BigItemIds();
             int at = big.IndexOf(spawnItemId);
@@ -319,7 +332,7 @@ namespace GK2Mounts
             GUILayout.EndHorizontal();
             GUILayout.Label($"Uses the game's own drop routine at the keeper's drop position, so the item is a normal world drop (it is saved like any other; pick it up with the interaction key). < and > cycle through the {big.Count} big items the game defines (zombies excluded, they are linked world objects). A corpse is generated from the delivery script's body definition.", small);
 
-            GUILayout.Label("Mod defaults", header);
+            Header("Mod defaults");
             if (GUILayout.Button("Export current values as mod defaults"))
             {
                 try
@@ -353,6 +366,123 @@ namespace GK2Mounts
             {
                 entry.Value = on ? 0f : 0.48f;
             }
+        }
+
+        // Layout-file corrections for what is on the cart right now: one group per item (its size class, in the role
+        // it currently has: base, or top when stacked) and one for the pair. Values live in CargoLayout until
+        // exported; the packer re-runs on every change.
+        private static void DrawCargoCorrections()
+        {
+            Header("Cart cargo: corrections (cargo-layout.cfg)");
+            GUILayout.Label("Each item has one correction per role, shared by every item of its size: 'bottom / beside' when it stands on the bed, 'on top' when it is stacked. A stacked item rides on the one below, so moving the lower item moves both; side by side, each moves alone. " + CargoLayout.Summary(), small);
+            if (Cargo.Placed.Count == 0)
+            {
+                GUILayout.Label("Load items onto the cart to edit the corrections for their size classes.", small);
+            }
+            // Work on a snapshot: a slider change re-runs the packer, which rebuilds Cargo.Placed; re-pack once after.
+            var placed = new System.Collections.Generic.List<Cargo.PlacedItem>(Cargo.Placed);
+            bool refresh = false;
+            var seen = new System.Collections.Generic.HashSet<string>();
+            foreach (Cargo.PlacedItem p in placed)
+            {
+                CargoLayout.ItemEntry e = CargoLayout.EditItem(p.Id);
+                string role = p.OnTop ? "on top" : "bottom / beside";
+                if (!seen.Add(e.Id + role))
+                {
+                    continue;
+                }
+                GUILayout.BeginVertical(GUI.skin.box);
+                GUILayout.Label($"{p.Id} ({role}; class entry '{e.Id}', box {p.Box.x:0.00} × {p.Box.y:0.00} × {p.Box.z:0.00})", label);
+                if (p.OnTop)
+                {
+                    refresh |= RawSlider("  along (tail - / head +)", ref e.Top.x, -0.5f, 0.5f);
+                    refresh |= RawSlider("  up", ref e.Top.y, -0.4f, 0.4f);
+                    refresh |= RawSlider("  across (camera - / away +)", ref e.Top.z, -0.5f, 0.5f);
+                }
+                else
+                {
+                    refresh |= RawSlider("  along (tail - / head +)", ref e.Base.x, -0.5f, 0.5f);
+                    refresh |= RawSlider("  up", ref e.Base.y, -0.4f, 0.4f);
+                    refresh |= RawSlider("  across (camera - / away +)", ref e.Base.z, -0.5f, 0.5f);
+                }
+                GUILayout.EndVertical();
+            }
+            if (placed.Count >= 2)
+            {
+                string a = placed[0].Id, b = placed[1].Id;
+                CargoLayout.PairEntry pair = CargoLayout.EditPair(a, b);
+                GUILayout.BeginVertical(GUI.skin.box);
+                GUILayout.Label($"Pair {pair.A} + {pair.B} (either order): how the two are arranged", label);
+                GUILayout.BeginHorizontal();
+                GUILayout.Label("  mode", label, GUILayout.Width(120f));
+                foreach (string mode in new[] { "auto", "side", "stack" })
+                {
+                    bool on = pair.Mode == mode;
+                    if (GUILayout.Toggle(on, mode, GUI.skin.button, GUILayout.Width(70f)) && !on)
+                    {
+                        pair.Mode = mode;
+                        refresh = true;
+                    }
+                }
+                GUILayout.EndHorizontal();
+                bool hasPairOffsets = pair.Second != Vector3.zero;
+                bool wantPairOffsets = GUILayout.Toggle(hasPairOffsets || pairOffsetsOpen, "  This pair needs its own correction (an exception: extra offsets for the second item, only with this partner)", GUI.skin.toggle);
+                pairOffsetsOpen = wantPairOffsets;
+                if (wantPairOffsets)
+                {
+                    GUILayout.Label($"  Normally the class sliders above are enough: '{placed[1].Id} on top' applies on every partner. Use these only when it is right elsewhere and wrong on {placed[0].Id}.", small);
+                    refresh |= RawSlider("  extra along (tail - / head +)", ref pair.Second.x, -0.5f, 0.5f);
+                    refresh |= RawSlider("  extra up", ref pair.Second.y, -0.4f, 0.4f);
+                    refresh |= RawSlider("  extra across (camera - / away +)", ref pair.Second.z, -0.5f, 0.5f);
+                }
+                GUILayout.EndVertical();
+            }
+            if (refresh)
+            {
+                Cargo.RefreshViews();
+            }
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Export cargo layout"))
+            {
+                try
+                {
+                    Plugin.Log.LogInfo("Cargo layout exported to " + CargoLayout.Export() + " (copy over src/GK2Mounts/cargo-layout.cfg to ship it).");
+                }
+                catch (Exception e)
+                {
+                    Plugin.Log.LogWarning("Cargo layout export failed: " + e.Message);
+                }
+            }
+            if (GUILayout.Button("Reload layout file"))
+            {
+                CargoLayout.Load();
+                Cargo.RefreshViews();
+            }
+            GUILayout.EndHorizontal();
+            GUILayout.Label("Export writes BepInEx/config/GK2Mounts.cargo-layout.cfg, which is loaded instead of the embedded file from then on; no rebuild needed to iterate. Right-click a slider to zero it.", small);
+        }
+
+        // A slider on a plain float (layout-file values). Right-click resets to 0. Returns true when it moved.
+        private static bool RawSlider(string name, ref float value, float min, float max)
+        {
+            GUILayout.BeginHorizontal();
+            GUILayout.Label(name, label, GUILayout.Width(300f));
+            float v = GUILayout.HorizontalSlider(value, min, max, GUILayout.Width(150f));
+            Rect r = GUILayoutUtility.GetLastRect();
+            if (Event.current.type == EventType.MouseDown && Event.current.button == 1 && r.Contains(Event.current.mousePosition))
+            {
+                v = 0f;
+                Event.current.Use();
+            }
+            GUILayout.Label(v.ToString("0.00"), label, GUILayout.Width(50f));
+            GUILayout.EndHorizontal();
+            v = (float)Math.Round(v, 2);
+            if (Mathf.Abs(v - value) > 0.0001f)
+            {
+                value = v;
+                return true;
+            }
+            return false;
         }
 
         private static void FloatSlider(string name, ConfigEntry<float> entry, float min, float max, int decimals, Action onChange)

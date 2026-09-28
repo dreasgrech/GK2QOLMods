@@ -14,6 +14,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="defaults.cfg" LogicalName="GK2Mounts.defaults.cfg" />
+    <EmbeddedResource Include="cargo-layout.cfg" LogicalName="GK2Mounts.cargo-layout.cfg" />
   </ItemGroup>
 
   <ItemGroup>

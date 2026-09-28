@@ -57,22 +57,8 @@ namespace GK2Mounts
         public readonly ConfigEntry<bool> SnapToGround;
         public readonly ConfigEntry<bool> CartFollowsGround;
         public readonly ConfigEntry<float> CartGroundMaxShift;
-        public readonly ConfigEntry<bool> CargoAutoFit;
         public readonly ConfigEntry<bool> CargoDrawCorpse;
-        public readonly ConfigEntry<float> Cargo1Along, Cargo1Up, Cargo1Across;
-        public readonly ConfigEntry<float> Cargo2Along, Cargo2Up, Cargo2Across;
-
-        // Local position of cargo slot i on the cart bed (0 = first item). Along = the cart's length (local x), Up =
-        // height above the measured bed top, Across = the cart's width (local z, positive away from the camera).
-        // Beyond the second slot, items repeat the second slot stacked 0.15 higher each.
-        public UnityEngine.Vector3 CargoSlot(int i)
-        {
-            if (i <= 0)
-            {
-                return new UnityEngine.Vector3(Cargo1Along.Value, Cargo1Up.Value, Cargo1Across.Value);
-            }
-            return new UnityEngine.Vector3(Cargo2Along.Value, Cargo2Up.Value + 0.15f * (i - 1), Cargo2Across.Value);
-        }
+        public readonly ConfigEntry<float> CargoBedDepth, CargoSideGap, CargoOverhang, CargoNestle;
 
         public StyleSettings(ConfigFile cfg, string section, float speed, float depth, float center, int riderPx, int torsoPx,
             bool autoSeat, int seatAdjustPx, float seatOffset, bool bob, RiderPose pose, bool freeze,
@@ -122,29 +108,23 @@ namespace GK2Mounts
                 "Cart style only: raise or lower the whole cart (wheels, cart body, lantern) as one, every frame, by the ground difference between the cart and the donkey, so the rigid 3D cart does not sink into a slope behind the donkey. The bars between donkey and cart take half of that shift. Nothing rotates.");
             CartGroundMaxShift = cfg.Bind(section, "CartGroundMaxShift", Defaults.Get(section, "CartGroundMaxShift", 0.8f),
                 "Largest shift the cart may get from CartFollowsGround, in world units, either way.");
-            CargoAutoFit = cfg.Bind(section, "CargoAutoFit", Defaults.Get(section, "CargoAutoFit", true),
-                "Cart style only: place each cargo mesh by its measured size: bottom on the bed, footprint centre on its slot (the models' pivots sit 0.02 to 0.19 off centre), and a second item put on top of the first when the two are wider than the bed together (two crates; up to 0.12 of overhang is allowed). Off: the model's pivot goes to the slot point.");
             CargoDrawCorpse = cfg.Bind(section, "CargoDrawCorpse", Defaults.Get(section, "CargoDrawCorpse", true),
-                "Cart style only: the mod draws every corpse on the cart itself (same placement rule and sliders as any other item) and keeps the game's loaded-cart body off. Off: the first corpse is shown by the game's own loaded cart body with the shroud, which the sliders cannot move.");
-            Cargo1Along = cfg.Bind(section, "Cargo1Along", Defaults.Get(section, "Cargo1Along", 0f),
-                "Cart style only: first cargo item, shift along the cart from the bed's centre, world units (the cart's local x axis).");
-            Cargo1Up = cfg.Bind(section, "Cargo1Up", Defaults.Get(section, "Cargo1Up", 0f),
-                "Cart style only: first cargo item, height above the measured top of the cart bed, world units.");
-            Cargo1Across = cfg.Bind(section, "Cargo1Across", Defaults.Get(section, "Cargo1Across", 0f),
-                "Cart style only: first cargo item, position across the cart's width from its centre, world units (positive = away from the camera).");
-            Cargo2Along = cfg.Bind(section, "Cargo2Along", Defaults.Get(section, "Cargo2Along", 0f),
-                "Cart style only: second cargo item, shift along the cart from the bed's centre, world units.");
-            Cargo2Up = cfg.Bind(section, "Cargo2Up", Defaults.Get(section, "Cargo2Up", 0f),
-                "Cart style only: second cargo item, height above the measured top of the cart bed, world units.");
-            Cargo2Across = cfg.Bind(section, "Cargo2Across", Defaults.Get(section, "Cargo2Across", -0.3f),
-                "Cart style only: second cargo item, position across the cart's width from its centre, world units (positive = away from the camera).");
+                "Cart style only: the mod draws every corpse on the cart itself (same packer and corrections as any other item) and keeps the game's loaded-cart body off. Off: the first corpse is shown by the game's own loaded cart body with the shroud, which the packer cannot move; other items then ride on top of it.");
+            CargoBedDepth = cfg.Bind(section, "CargoBedDepth", Defaults.Get(section, "CargoBedDepth", -0.26f),
+                "Cart style only: the cargo floor relative to the measured top of the empty cart body, world units (negative = items sink below the rails onto the bed floor). Every item's measured bottom is put on this floor.");
+            CargoSideGap = cfg.Bind(section, "CargoSideGap", Defaults.Get(section, "CargoSideGap", 0.02f),
+                "Cart style only: gap between two items lying side by side across the bed, world units.");
+            CargoOverhang = cfg.Bind(section, "CargoOverhang", Defaults.Get(section, "CargoOverhang", 0.12f),
+                "Cart style only: how far two side-by-side items may together exceed the bed's measured width before the second one is stacked on the first instead, world units.");
+            CargoNestle = cfg.Bind(section, "CargoNestle", Defaults.Get(section, "CargoNestle", 0.03f),
+                "Cart style only: how far an item stacked on another sinks into it, world units (a log on a shroud does not float on the highest point).");
         }
 
         public void ResetAll()
         {
             Reset(SpeedMultiplier); Reset(Depth); Reset(CenterOffset); Reset(RiderOffsetPx); Reset(TorsoOffsetPx);
             Reset(AutoSeat); Reset(SeatAdjustPx); Reset(SeatOffset); Reset(Bob); Reset(Pose); Reset(FreezePoseWhenIdle);
-            Reset(PoseSpeed); Reset(PoseSpeedFollowsDonkey); Reset(NearLeg); Reset(LegSource); Reset(LegHeightPx); Reset(LegAdjustXPx); Reset(LegAdjustYPx); Reset(SnapToGround); Reset(CartFollowsGround); Reset(CartGroundMaxShift); Reset(CargoAutoFit); Reset(CargoDrawCorpse); Reset(Cargo1Along); Reset(Cargo1Up); Reset(Cargo1Across); Reset(Cargo2Along); Reset(Cargo2Up); Reset(Cargo2Across);
+            Reset(PoseSpeed); Reset(PoseSpeedFollowsDonkey); Reset(NearLeg); Reset(LegSource); Reset(LegHeightPx); Reset(LegAdjustXPx); Reset(LegAdjustYPx); Reset(SnapToGround); Reset(CartFollowsGround); Reset(CartGroundMaxShift); Reset(CargoDrawCorpse); Reset(CargoBedDepth); Reset(CargoSideGap); Reset(CargoOverhang); Reset(CargoNestle);
         }
 
         private static void Reset<T>(ConfigEntry<T> e)
@@ -238,6 +218,9 @@ namespace GK2Mounts
 
             DisableOnGameUpdate = Config.Bind("Safety", "DisableOnGameUpdate", true,
                 "Do not patch anything if the game's code has changed since this mod was audited. Rebuild/re-audit after game updates.");
+
+            CargoLayout.Load(); // cargo-layout.cfg: embedded copy, or BepInEx/config/GK2Mounts.cargo-layout.cfg when present
+            Log.LogInfo("Cargo layout: " + CargoLayout.Summary());
 
             System.Guid gameMvid = typeof(WgoData).Assembly.ManifestModule.ModuleVersionId;
             if (gameMvid != AuditedGameMvid)

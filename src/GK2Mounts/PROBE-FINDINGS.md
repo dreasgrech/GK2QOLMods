@@ -626,3 +626,29 @@ and wild-zombie shrouds identical; stone block and ore heap identical; marble an
 plain white placeholder block. The bucket rule (box within 0.05) therefore holds and one correction per bucket covers
 all its items; per-mesh corrections are not needed for any of the 27. The placeholder block is a blank white box and
 must be replaced (marble: a stand-in mesh; engineering crate: prefix-match the truncated element name).
+
+### Cargo packer and layout file built (2026-09-28 18:24)
+
+Replaces the per-slot sliders. `Cargo.Pack`: boxes measured per view after activation; order independence by
+footprint area (larger first = bottom / far side, ties by load order); floor = measured empty-body top +
+`CargoBedDepth` (−0.26, the value the hand-tuned slot had); side by side when w0 + `CargoSideGap` + w1 ≤ bed width +
+`CargoOverhang`, centred as a pair, first item on the far side; else stacked, bottom = lower top − `CargoNestle`;
+third and later items stack on the previous one. `CargoLayout` (cargo-layout.cfg, embedded + config override):
+`[item id]` base/top offsets resolved by size class (box within 0.05 of the entry item's box; exact id wins),
+`[pair a+b]` mode auto/side/stack + shift of the second item, matched in either order. Panel: four packer sliders,
+corpse toggle, per-class correction sliders for the items aboard (role-aware) and the pair, Export / Reload. Icon
+resolution: exact element, else prefix match (engineering crate → `i_box_engineering_mec`), else stand-in table
+(marble → `i_stone`). The sheet's settings line now prints the packer values and the layout summary. Not yet run in
+game; the cargo sheet is the acceptance test.
+
+**First packer sheet (18:27, defaults, no layout entries), judged from class montages:** order independence holds
+(log + stone and stone + log both show the log far, the slab near). Side by side is right for every pair of narrow
+items (log, slab, body, barrel, flour sack in any combination). Stacking happens for every pair involving a crate
+except with the flour sack and barrel (which are 0.48–0.49 wide and fit beside a 0.35 item), and for two bodies
+(0.88 > 0.87). Crate on log, crate on slab, crate on corpse and barrel on crate read as stacked and plausible. Two
+identical stacked items (crate + crate, barrel + barrel) read as one raised item, because at the 53° camera the upper
+box covers most of the lower one; a small across-nudge of the top item (a `top_across` entry) would separate them
+visually. Borderline: log + crate is 0.35 + 0.02 + 0.50 = 0.87 against bed 0.75 + overhang 0.12 = 0.87, so it
+stacks while log + barrel (0.85) lies side by side; raising CargoOverhang to about 0.15 would make all crate + narrow
+pairs side by side. The engineering crate shows the generic crate mesh (prefix fix works). Singles sit low in the bed
+with CargoBedDepth −0.26; that is the value the hand-tuned slot had.
