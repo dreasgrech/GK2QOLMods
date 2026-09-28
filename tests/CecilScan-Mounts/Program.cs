@@ -32,6 +32,15 @@ Method("AnimationComponentBase", "SetWalkAnimationSpeedMultiplier", 1);
 { var td = game.GetType("AnimationComponentBase"); var m = td?.Methods.FirstOrDefault(x => x.Name == "SetDirection" && x.Parameters.Count == 1 && x.Parameters[0].ParameterType.Name == "Vector2"); bool good = m != null && m.HasBody && !m.IsVirtual; Console.WriteLine((good?"PASS":"FAIL") + " method AnimationComponentBase.SetDirection(Vector2) found=" + (m != null)); if (!good) fails++; }
 Method("GK2.FlowCanvasNodes.Flow_Body", "DoAction", 1);
 Field("GK2.FlowCanvasNodes.Flow_Body", "success", "FlowCanvas.FlowOutput");
+// Cart cargo investigation (CarryProbe.cs): the delivery script's own inventory path and the drawer that reacts to it.
+Field("WGODef", "inventorySize", "System.Int32");
+Field("ItemDef", "itemSize", "ItemSize");
+Field("ItemDef", "iconId", "System.String");
+Field("GameBalance", "itemDefs", "System.Collections.Generic.List`1<ItemDef>");
+Method("Inventory", "RemoveItemById", 5);
+Method("PlayerData", "TryAddOverheadItemNoReplace", 1);
+Method("ConditionalDrawer", "UpdateVisualsByConditions", 0);
+// Inventory.CanAddItemToInventory and PlayerData.InsertOverheadItemTo have two overloads each; the IL scan above covers them.
 { var pa = game.GetType("PlayerAnimation"); bool good = pa?.BaseType?.Name == "AnimationComponent" && game.GetType("AnimationComponent")?.BaseType?.Name == "AnimationComponentBase"; Console.WriteLine((good?"PASS":"FAIL") + " PlayerAnimation : AnimationComponent : AnimationComponentBase"); if (!good) fails++; }
 Console.WriteLine(fails == 0 ? "ALL PASS" : "FAILURES: " + fails);
 return fails;

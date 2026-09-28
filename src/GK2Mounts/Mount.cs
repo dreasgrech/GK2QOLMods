@@ -28,6 +28,29 @@ namespace GK2Mounts
         private static Wgo donkey;
         private static bool partsReady;
         private static MountStyle activeStyle;
+
+        // The mounted donkey, for the Debug tab's cargo investigation (null while on foot).
+        internal static Wgo Donkey => mounted ? donkey : null;
+
+        // Cargo was added or removed: the prefab's own drawer may have swapped the empty and the loaded cart body, so
+        // the list of lifted parts is rebuilt from the parts active now. Every part goes back to its prefab position
+        // first, so the current lift is not baked into the new base positions.
+        internal static void OnCargoChanged()
+        {
+            if (donkey == null || !partsReady || activeStyle != MountStyle.Cart)
+            {
+                return;
+            }
+            foreach (CartPart p in cartParts)
+            {
+                if (p.T != null)
+                {
+                    p.T.localPosition = p.Base;
+                }
+            }
+            cartParts.Clear();
+            CollectCartParts();
+        }
         private static float facingSign = 1f; // +1 when the donkey shows its right-facing sprite, -1 for left
         private static AnimationState lastMirrored = (AnimationState)(-1);
         private static Transform bodySprite; // the donkey's "bdy" sprite; its offset from the root is what centering cancels

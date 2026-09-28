@@ -317,3 +317,172 @@ on different tiles and the only collider they share is the flat box 1.5 below, w
 replaced by the plain one: the highest walkable hit within the level window at each point is the surface; the
 window is now 1.0 above and below the keeper (a 45° slope climbs 1.0 over the cart's length; the box sits 1.5 below
 the surface here, so it is outside the window).
+
+**Sixth in-game result (2026-09-28 14:17): working.** Log review of the session (52 lines, no warnings or
+exceptions): 5 mounts, each with the attached script skipped, 8 cart parts collected each time; one dismount by
+"control taken ByFlow" (a cutscene or dialogue took the keeper, the expected reaction). Nine `[cart]` lines, all
+explained by real geometry, none by a bad sample:
+
+- `target 0.400 -> 0.000` / `0.000 -> 0.400`: the cart point leaving a terrain-mesh slope for the flat ground box
+  ("Collider 0" is simply the flat ground at 3.595 or 5.995, the mesh tiles rise above it), or crossing onto or off
+  `BigDropTopSurface`, a walkable surface 0.4 above the flat ground; the 3 units/s glide turns these into a 0.13 s
+  step. Correction to the fourth/fifth notes above: the box is the ground of the flat areas, not something under the
+  terrain everywhere.
+- `navmesh: 0.385 -> 0.002`: the same slope-to-flat transition seen through the navigation mesh.
+- `no ground sample` once at x≈86 (map edge or water): the previous shift was kept, as designed.
+
+The `target jumped` log threshold (0.15) therefore also catches legitimate edges; it stays, as a debug aid.
+
+## Round 7 (2026-09-28): carrying cargo on the cart, what the game's code allows
+
+Source reading only (decompiled build 25533739); the in-game checks it calls for are listed at the end. Goal: let
+the keeper carry items on the cart while riding, the way the game's own delivery donkey carries a body.
+
+### What is carryable: "big" items, the ones the keeper carries overhead
+
+- `ItemDef.itemSize` (`ItemSize.Small = 1`, `Big`) is a plain serialized field with no `[AutoParse]` key, so it is set
+  in the balance asset and the earlier item CSV dump (`BepInEx/GK2-itemdefs.csv`) does not contain it. Nothing in code
+  derives it from a group. The Debug tab's new "Dump carry facts" button lists every Big item from `GameBalance.Me.itemDefs`.
+- Big is what the game treats as an overhead item: every dropped Big item gets a `BigDropInteractionHandler` (bodies
+  and zombies a `ZombieDropInteractionHandler` on top, which adds the inspect action), the drop collector and
+  `PlayerData` never auto-collect Big drops, and picking one up is `dropSystem.RemoveDrop` + `PlayerData.AddOverheadItem`.
+- The item group `overhead` in the item table marks 29 items, which is the expected Big set: `body_corpse` (Corpse,
+  groups body/corpse/overhead), `body_zombie`, `body_wild_zombie`, `wood` (Log), `stone`, `marble`, `iron_ore_2h`, and
+  22 town supply crates `box_*` (group `town_box`). All have `stack_count` 1, so each occupies one inventory slot.
+- Meshes exist for 27 of them: the keeper's overhead view (`PlayerView2D/.../overhead/item`, a `DropViewAtomMesh`,
+  the same atom as `Assets/AddressableAssets/Drops/BigItem.prefab`) has elements named by icon id: `i_wood`, `i_stone`,
+  `i_iron_ore_2h`, `i_body` (Object3D `drops_item_corpse_shroud`), `i_body_wild_zombie`, and 22 `i_box_*`, plus the
+  `drops_item_placeholder` default (used with an error log when an icon id has no element) and 10 zombie-pose prefabs
+  per pose (`drops_item_zombie_pose1_t1050..1059`, activated through `ActivateZombie` with the zombie's head id and LUT,
+  not by icon id). `marble` is not in that list; the dump's "big items without an element" line settles it.
+- Zombies (`body_zombie`, `ItemDef.isLinkedToWgo`) are items whose `UniqueId` points at a `ZombieWgoData` in
+  `ZombieSystemData`; they sit in inventories like any item (the morgue pallets take them), and the drop handler
+  re-links item and zombie on pickup (`ZombieDropInteractionHandler.LinkItemToZombieData`).
+
+### How the keeper carries, including more than one
+
+- `PlayerData.overheadItems` is a list. `OverheadStackLimit = 1 + GetResInt("extra_overhead")`; the game resource is
+  raised by the expressions `IncreaseOverheadStackLimit(n)` / `SetOverheadStackLimit(n)` (a perk or talent), so
+  carrying several items overhead is a built-in mechanic. `AddOverheadItem` drops the top item when the stack is
+  full; `TryAddOverheadItemNoReplace` refuses instead; `TryGetOverheadItem(predicate)` searches top-down.
+- Visual: `AnimationComponentBase.SetOverheadItems(items)`: item 0 on the prefab's `dropView`
+  (`DropViewAtomMesh.Activate(iconId)`), every further item on a clone made by `EnsureExtraOverheadViews`
+  (`Instantiate(dropView)`, parented under the first view, local position `LazyConsts.OVERHEAD_STACK_OFFSET`
+  (0, 0.3, -0.04) x index, renderers' `sortingOrder` = index). Zombies use `ActivateZombie` instead of `Activate`.
+- With more than one item overhead the game refuses work interactions and tool hints (`WorkInteractionHandler`,
+  `WGOInteractionHandlerBase.GetInteractionInfoByUsingTool`), custom interactions, reservoirs, fights, and the
+  `Flow_PlayerDropOverhead` node does nothing; `SetInteractingItem` (holding a small item in hand) is skipped.
+- Input: the Interaction key first serves a Big drop under the cursor box (`BigDropUnderInteraction`), then the WGO
+  under interaction, and only when neither did anything it drops the top overhead item in front of the keeper
+  (`PlayerInputHandler.UpdateInput` -> `PlayerData.DropOverheadItem` -> `SpecialPhysicsCastUtils.GetPlayerDropPosition`
+  -> `dropSystem.DropItem(item, currentGameSceneId, pos)`).
+
+### How the game's cart carries the body: the donkey's own inventory
+
+- Delivery (`full_cycle`, graph dumped in Round 6): `Flow_GenerateBody` (BodyDef `body_0_1` ->
+  `new Item(linkedBodyItemId)` = `body_corpse`, its parts, pockets and burial rewards added as nested items, zombie
+  skin and start-items properties rolled) -> `Flow_AddItem` (giveType Add, instanceAsInput, WgoData = the donkey) ->
+  **`donkey.Inventory.AddItemToInventory(item)`**. At the morgue (`full_cycle_back`): `Flow_RemoveItemsFromWgoData`
+  itemId `body_corpse` -> `removedItems` -> ForEach -> `Flow_DropItem` at GD point `RT_body_spawn` ->
+  `dropSystem.DropItem`. So the cargo of the game's cart is literally the donkey `WgoData`'s inventory; there is no
+  separate cart object. (`Flow_GetCorpseDropAmount`: 1, plus the const `donkey_drop_additional` while the resource
+  `nun_many_body_drop` is set, capped by the morgue's free capacity; the extra bodies are generated at the morgue and
+  go to the `morgue_pallets` group via `Flow_TryToAddCorpseToPallet` or are dropped at `RT_morgue_body_spawn`; they
+  are never on the cart.)
+- Capacity: `npc_donkey.inventorySize = 2` (Round 1). `WgoData.SetDataFromDefinition` builds
+  `Inventory.Create(2, isFuelContainer, inventoryWhiteList, inventoryBlackList, id)`; the filters are unknown until
+  dumped. Slot rules (`Item.CanAddItemCountToInventory`): white/black list properties, then free slots x `stackCount`
+  (bags aside), so two overhead items fit. **Our temp donkey is built by the same constructor**
+  (`new WgoData(id, pos, sceneId)` -> `SetDataFromDefinition`), so it already owns a 2-slot inventory in memory; being
+  a temp object it is never written to the save.
+- Visual: the donkey prefab's `WgoPart` has a `ConditionalDrawer` with **2 rules** (the Round 1 dump shows only
+  `{...}`; the new dump prints them), `dropViewBig/Small = null`, and its `cachedObjects3D` are `donkey_cart_wheel_f`,
+  `donkey_cart_wheel_b`, `donkey_cart_bars`, `donkey_cart_empty`, `donkey_cart_body`, `drops_item_corpse_shroud`,
+  `donkey_cart_lantern`: the loaded cart (`donkey_cart_body_sway`, off by default) is the cart body plus the same
+  corpse-shroud mesh the keeper's `i_body` overhead element uses. `ConditionalDrawer.SubscribeToEvents` hooks
+  `Inventory.OnItemsAdd/OnItemsRemove` for `ItemsChanged` rules, and `WgoPart.OnEnable` runs `Init` on every spawned
+  part, ours included. The available inventory conditions are `ItemCountCondition` (one item id),
+  `ItemGroupCountCondition` (group, e.g. `body`), `TotalItemsCountCondition` and `ItemGroupInventoryIndexCondition`;
+  the actions `SetActiveAction`/`SetActiveManyAction` (with `invertLogic`) and `UpdateDropViewsFromInventory`. The
+  expected pair is therefore "count > 0 -> loaded body on" and "-> empty body off (inverted)", which means
+  **adding an item to our donkey's inventory should switch the cart to the loaded look through the game's own code,
+  with no mesh handling by the mod**. Whether the rule tests a body group or any item decides whether a log would show
+  the shroud too (which would look wrong) or nothing. The Debug tab's "Put in cart inventory" test answers this.
+- Mod interplay: `Mount.PrepareParts` keeps `donkey_cart_body_sway` off and the cart-lift list is collected from the
+  parts active at mount time, so a part the drawer turns on later would not be lifted. `Mount.OnCargoChanged()` (new)
+  resets the parts to their prefab positions and re-collects; the test buttons call it.
+
+### Moving an item between the keeper and an object's inventory: the pallet and conveyor-cell pattern
+
+- Put (town pallet, `WGODef.InteractionType.TownPalette`, `TownPaletteInteractionHandler`):
+  `PlayerData.TryGetOverheadItem(item => wgo.Inventory.CanAddItemToInventory(item), out item)` ->
+  `PlayerData.InsertOverheadItemTo(wgoData, item)` (= `AddItemToInventory` + `RemoveOverheadItem` + the trigger
+  `PlayerInsertOverheadToWgoAnItem`); hint `hint_put`. The pallet is the "timber pile": a WGO whose `inventorySize`
+  is the pile's capacity; every put fills the next slot.
+- Take (`ConveyorCellInteractionHandler.Interact`): `Inventory.RemoveItemById(firstItem.id)` -> Big item ->
+  `PlayerData.TryAddOverheadItemNoReplace(item)`, else `wgoData.MakeDrop(item)` (drops at the WGO's drop point, else
+  the nearest dock point offset by `DockPointData.GetDropPos(itemSize, 0.3, 0.4, 0.5)`, else its position);
+  `HasInteraction` is false for a Big item while `!HasFreeOverheadSlot`. The expressions `TakeOvrhdItem(id)` /
+  `TakeOvrhdItemByGroup(group)` do the same with the free-slot check first.
+- Stacked visuals for several items (pallets): the drawer action `UpdateDropViewsFromInventory` holds a list
+  `bigDrops` of `DropViewAtomMesh`, and on every `ItemsChanged` activates `bigDrops[i]` with the icon id of inventory
+  slot i and deactivates the rest. So "N items on a pile" = an inventory of N slots plus N atom meshes placed in the
+  prefab. The donkey prefab has only the single shroud, so more than one item, or anything but a body, needs atoms
+  of our own: instantiate the keeper's overhead `DropViewAtomMesh` (it has all 27 elements) the way
+  `EnsureExtraOverheadViews` does, parent the clones to the cart body, place them with `OVERHEAD_STACK_OFFSET`
+  (or side by side along the cart), `Activate(iconId)` per slot, and hide the prefab's shroud rule where it would
+  double up. Zombies would use `ActivateZombie(headId, lut)` as `ApplyOverheadItemToView` does.
+
+### Can the cart carry more than one item?
+
+Data side: yes, two by the definition, and our donkey's inventory is ours (`Inventory.Data.InventorySize` is a plain
+setter on `Item`), never saved, so a configurable capacity is possible. Visual side: one body is free (the prefab's
+shroud); anything beyond needs the atom clones above. Gameplay side: nothing in the code caps a WGO inventory below
+its size for overhead items; the only limits are the item filters (dump) and slots x stack 1.
+
+### What a cargo feature needs (design notes, not built)
+
+1. **Load / unload control.** Simplest and patch-free: a configurable key while mounted in Cart style. With an
+   overhead item: `TryGetOverheadItem(cart can add)` -> `InsertOverheadItemTo(donkey.Data, item)` (the pallet
+   path). Without one: take the last cargo item -> `TryAddOverheadItemNoReplace`, else `dropSystem.DropItem` beside
+   the cart (the conveyor-cell path). Hooking the Interaction key instead would need a prefix on
+   `PlayerInputHandler.UpdateInput` (the game's order is Big drop -> WGO -> drop overhead).
+2. **Give everything back.** Cargo lives in a temp inventory that no save contains, so every path that ends the
+   ride must empty it first: dismount (return to overhead up to the stack limit, drop the rest at the keeper's drop
+   position), `ForceCleanup` (death, quit to menu, scene errors), sleep. With `StayMountedThroughDoors` the item list
+   must be carried over in memory and re-added to the new donkey after re-summon. A save made while riding with
+   cargo would lose the cargo; the save entry point should get a prefix that unloads first, or cargo is refused
+   while a save is pending. To be investigated before building.
+3. **Pickup while riding.** `BigDropInteractionHandler` works unchanged while mounted (the interaction box follows the
+   keeper), so bodies and logs can be picked up onto the keeper's head as usual and then moved to the cart; the mount
+   does not need its own pickup.
+4. **Bodies.** A corpse on the cart is exactly the game's own case (shroud mesh via the drawer); zombies keep their
+   `ZombieWgoData` link through inventories. `cur_bodies_count` is a game resource changed by the morgue script, not
+   by inventories, so carrying bodies around does not disturb it.
+
+### In-game checks (Debug tab, "Cart cargo (investigation)")
+
+1. Mount in Cart style, press **Dump carry facts**: `BepInEx/GK2-carry-facts.txt` gets the two drawer rules with
+   their condition fields and target objects, the definition's filters, the Big item list, and the overhead element
+   names with any Big item that lacks a mesh.
+2. **Put in cart inventory** with `wood`: the log line says whether the inventory accepted it (filters) and which of
+   `donkey_cart_empty_sway` / `donkey_cart_body_sway` / `drops_item_corpse_shroud` are on afterwards; **Take first
+   out** reverses it. Then the same with `body_corpse` (a plain corpse item without body parts, fine for a visual
+   test) and with `stone`.
+
+**In-game result (2026-09-28 15:05, `GK2-carry-facts.txt` and `[cargo]` log lines):**
+
+- The two drawer rules are both `ItemCountCondition` on the item id `body_corpse`: count > 0 turns
+  `donkey_cart_body_sway` on, count == 0 turns `donkey_cart_empty_sway` on (no inversion, both default off). So the
+  game's loaded look is corpse-only: two test corpses showed the one shroud; two logs showed nothing (the empty cart
+  stayed on). Zombies and every other big item need meshes of our own (clones of the keeper's overhead atom).
+- The definition has no white or black list, so the donkey inventory accepts any item; 2 slots, both tests filled it
+  to 2/2 and the third add would be refused by the slot count.
+- Our donkey reacts to its inventory through the game's own drawer: every add/remove line shows the meshes switching
+  synchronously, and `OnCargoChanged` re-collected the 8 lifted parts with `donkey_cart_body_sway` in place of
+  `donkey_cart_empty_sway` while a corpse was aboard.
+- 29 Big items, exactly the `overhead` group. The keeper's overhead atom lacks elements for `body_zombie`
+  (`i_body_zombie`; zombies go through `ActivateZombie` with a head id instead, so not needed), `marble` (`i_marble`)
+  and `box_engineering_mechanism` (the element is named `i_box_engineering_mec`, a truncated name, so the game itself
+  would show the placeholder for that crate). Marble on the cart would need a fallback mesh (e.g. the stone element).
+- Player overhead stack limit in this save: 1.

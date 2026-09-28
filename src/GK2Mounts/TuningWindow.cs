@@ -16,6 +16,7 @@ namespace GK2Mounts
         private static bool stylesReady;
         private static int tab;
         private static string donkeyEvent = "";
+        private static string cargoItemId = "wood";
         private static readonly string[] TabNames = { "General", "Riding", "Debug" };
 
         public static void Draw()
@@ -219,6 +220,26 @@ namespace GK2Mounts
             }
             GUILayout.EndHorizontal();
             GUILayout.Label("Other events from the dumped graph: move_to_morgue, full_cycle_back, move_from_morgue, stay_morgue, Disable, SetInteractive, SetNonInteractive.", small);
+
+            GUILayout.Label("Cart cargo (investigation)", header);
+            if (GUILayout.Button("Dump carry facts to a file (drawer rules, inventory filters, big items)"))
+            {
+                Plugin.Log.LogInfo("[cargo] " + CarryProbe.DumpFacts());
+            }
+            GUILayout.Label("Writes BepInEx/GK2-carry-facts.txt: the donkey prefab's ConditionalDrawer rules (what switches the loaded-cart mesh), the npc_donkey definition's inventory size and item filters, every item with itemSize Big, and the mesh elements the keeper's overhead view can show. Mount first for the drawer rules.", small);
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Test item id", label, GUILayout.Width(100f));
+            cargoItemId = GUILayout.TextField(cargoItemId, GUILayout.Width(110f));
+            if (GUILayout.Button("Put in cart inventory", GUILayout.Width(170f)))
+            {
+                Plugin.Log.LogInfo("[cargo] " + CarryProbe.TestLoad(cargoItemId));
+            }
+            if (GUILayout.Button("Take first out", GUILayout.Width(120f)))
+            {
+                Plugin.Log.LogInfo("[cargo] " + CarryProbe.TestUnload());
+            }
+            GUILayout.EndHorizontal();
+            GUILayout.Label("Adds a plain item to our donkey's inventory exactly as the delivery script does, and logs whether the game's drawer switched the cart meshes. Test items vanish; the donkey is a temp object, nothing is saved.", small);
 
             GUILayout.Label("Mod defaults", header);
             if (GUILayout.Button("Export current values as mod defaults"))
