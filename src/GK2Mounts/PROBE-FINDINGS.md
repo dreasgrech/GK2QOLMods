@@ -899,3 +899,19 @@ postfix returns the last matched cart item; an in-game inlining check on the fir
   shell the table's remove returns true and fires, and the cart holds the item with count 1 (E3b).
 
 **Verdict:** every open question from the three source passes is answered; nothing contradicts the design. Build it.
+
+### Cart = hands, built (2026-09-28 23:34, `HeadReroute.cs`)
+
+Six patches on `PlayerData` and one on `LazyExpressionEvaluationScope`, active only while mounted in Cart style with
+the cart attached and not during the mod's own unload (`Cargo.Unloading`): `AddOverheadItem` prefix (allowed item →
+cart, with the interacting-item cleanup, the `AddOverhead` trigger and the grab sound via the private
+`PlayOverheadItemTakeSound`; the source shell gets its count back after the split; cart full → drop at the keeper +
+"The cart is full."; zombies → the head, with the head's own limit applied first because the gate now answers for the
+cart); `HasFreeOverheadSlot` getter prefix (cart room); `TryGetOverheadItem` postfix (head first, then the cart top
+down; remembers the match); `RemoveOverheadItem(Item)` prefix (cart entry by GUID, always resynced);
+`InsertOverheadItemTo(WgoData, Item)` prefix (cart first, target second, `CanAddItemToInventory` checked, trigger
+fired); `GetOverheadItemForMutation` postfix (the remembered match, else the top cart item); `SaveSystem.Save` postfix
+(`Cargo.LoadFromHead` after the unload-before-save). `Cargo.Attach` moves allowed head items onto the cart at mount;
+the cargo key now sets the last item down in front of the keeper (no hands while riding). The probe's dormant patches
+were folded into the real ones (their override flags still arm them for the probe). Cecil: 186 refs, all pass.
+Not yet confirmed in game; test list in the report.

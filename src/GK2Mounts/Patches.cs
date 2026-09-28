@@ -33,6 +33,11 @@ namespace GK2Mounts
             Require(AccessTools.Method(typeof(PlayerData), nameof(PlayerData.RemoveOverheadItem), new[] { typeof(Item) }), "PlayerData.RemoveOverheadItem(Item)");
             Require(AccessTools.Method(typeof(LazyExpressionEvaluationScope), nameof(LazyExpressionEvaluationScope.GetOverheadItemForMutation)), "LazyExpressionEvaluationScope.GetOverheadItemForMutation");
             Require(AccessTools.Method(typeof(Inventory), nameof(Inventory.Create)), "Inventory.Create");
+            Require(AccessTools.Method(typeof(PlayerData), "PlayOverheadItemTakeSound"), "PlayerData.PlayOverheadItemTakeSound");
+            Require(AccessTools.Method(typeof(PlayerData), nameof(PlayerData.RemoveInteractingItem)), "PlayerData.RemoveInteractingItem");
+            Require(AccessTools.PropertyGetter(typeof(PlayerData), nameof(PlayerData.HasInteractingItem)), "PlayerData.HasInteractingItem getter");
+            Require(AccessTools.Method(typeof(GlobalEventsSystem), nameof(GlobalEventsSystem.FireTrigger)), "GlobalEventsSystem.FireTrigger");
+            Require(AccessTools.Method(typeof(PlayerData), nameof(PlayerData.DropOverheadItem), new System.Type[0]), "PlayerData.DropOverheadItem()");
         }
 
         private static void Require(object member, string name)
@@ -145,6 +150,22 @@ namespace GK2Mounts
             catch (Exception e)
             {
                 Plugin.Log.LogWarning("Cargo: unloading before the save failed: " + e.Message);
+            }
+        }
+
+        // The save is written inside Save (synchronous, Round 9). Still riding afterwards, the hands are the cart again.
+        private static void Postfix()
+        {
+            try
+            {
+                if (Mount.IsMounted && Mount.CurrentStyle == MountStyle.Cart && Cargo.Attached)
+                {
+                    Cargo.LoadFromHead("after the save");
+                }
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning("Cargo: reloading the cart after the save failed: " + e.Message);
             }
         }
     }

@@ -60,6 +60,14 @@ Field("QuestCheck", "triggerType", "GlobalEventsSystem/Event/Type");
 Field("QuestCheck", "condExpressions", "System.Collections.Generic.List`1<LazyExpression>");
 Field("GameBalance", "questDefs", "System.Collections.Generic.List`1<QuestDef>");
 Field("WGODef", "attachedScript", "System.String");
+Method("PlayerData", "PlayOverheadItemTakeSound", 1);
+Method("PlayerData", "RemoveInteractingItem", 0);
+Method("PlayerData", "get_HasInteractingItem", 0);
+Method("GlobalEventsSystem", "FireTrigger", 2);
+Method("PlayerData", "get_OverheadStackLimit", 0);
+Method("PlayerData", "get_OverheadCount", 0);
+{ var td = game.GetType("PlayerData"); var ms = td?.Methods.Where(x => x.Name == "DropOverheadItem").ToList(); bool good = ms != null && ms.Count == 2 && ms.Any(m => m.Parameters.Count == 0 && m.HasBody); Console.WriteLine((good?"PASS":"FAIL") + $" method PlayerData.DropOverheadItem overloads={ms?.Count} (need 0 and Item)"); if (!good) fails++; }
+{ var td = game.GetType("PlayerData"); var ms = td?.Methods.Where(x => x.Name == "InsertOverheadItemTo").ToList(); bool good = ms != null && ms.Count == 2 && ms.Any(m => m.Parameters.Count == 2 && m.HasBody); Console.WriteLine((good?"PASS":"FAIL") + $" method PlayerData.InsertOverheadItemTo overloads={ms?.Count} (need WgoData and WgoData,Item)"); if (!good) fails++; }
 // Inventory.CanAddItemToInventory and PlayerData.InsertOverheadItemTo have two overloads each; the IL scan above covers them.
 { var pa = game.GetType("PlayerAnimation"); bool good = pa?.BaseType?.Name == "AnimationComponent" && game.GetType("AnimationComponent")?.BaseType?.Name == "AnimationComponentBase"; Console.WriteLine((good?"PASS":"FAIL") + " PlayerAnimation : AnimationComponent : AnimationComponentBase"); if (!good) fails++; }
 Console.WriteLine(fails == 0 ? "ALL PASS" : "FAILURES: " + fails);

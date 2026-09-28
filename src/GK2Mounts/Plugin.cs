@@ -201,7 +201,7 @@ namespace GK2Mounts
             MountKey = Config.Bind("General", "MountKey", KeyCode.H,
                 "Key that mounts/dismounts. Pick one the game does not use.");
             CargoKey = Config.Bind("General", "CargoKey", KeyCode.L,
-                "Cart style: with an item carried overhead, puts it on the cart; with empty hands, takes the last item off the cart (into the hands, or dropped beside the keeper when they are full). The cart holds two items, like the game's own delivery cart. Pick a key the game does not use.");
+                "Cart style: sets the last item on the cart down on the ground in front of the keeper. Loading needs no key: while riding the cart, anything picked up (from the ground, a pile, a table) goes straight onto the cart, and piles, tables and graves take their items from the cart. The cart holds two items, like the game's own delivery cart. Pick a key the game does not use.");
             Style = Config.Bind("General", "Style", MountStyle.Ride,
                 "Ride: sit on the donkey's back. Cart: the donkey pulls its cart and the keeper stands in it. Each style has its own [Ride] / [Cart] settings section.");
             MountWgoId = Config.Bind("General", "MountWgoId", "npc_donkey",

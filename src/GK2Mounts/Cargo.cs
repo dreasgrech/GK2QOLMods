@@ -35,6 +35,7 @@ namespace GK2Mounts
         private static readonly List<DropViewAtomMesh> views = new List<DropViewAtomMesh>();
         private static bool subscribed;
         private static bool unloading;
+        internal static bool Unloading => unloading;
 
         // What the packer placed last, for the panel: item id and whether it sits on top of another item.
         public struct PlacedItem
@@ -103,7 +104,33 @@ namespace GK2Mounts
             inv.OnItemsRemove += OnChanged;
             subscribed = true;
             SyncMirror();
+            LoadFromHead("mount");
             RefreshViews();
+        }
+
+        // There is no head storage while riding the cart: whatever allowed items the keeper holds go onto the cart
+        // while there is room (at mount, and again after a save put them back in his hands). The game's own insert
+        // path is used: add to the cart inventory, then remove from the head by GUID.
+        public static void LoadFromHead(string reason)
+        {
+            PlayerData pd = MainGame.PlayerData;
+            if (inv == null || donkey == null || pd == null || !pd.HasOverheadItem)
+            {
+                return;
+            }
+            int moved = 0;
+            foreach (Item it in new List<Item>(pd.OverheadItems))
+            {
+                if (Allowed(it) && inv.CanAddItemToInventory(it))
+                {
+                    pd.InsertOverheadItemTo(donkey.Data, it);
+                    moved++;
+                }
+            }
+            if (moved > 0)
+            {
+                Plugin.Log.LogInfo($"Cargo: {moved} item(s) moved from the hands onto the cart ({reason}); cart {inv.Data.Inventory.Count}/{inv.Data.InventorySize}.");
+            }
         }
 
         // The view is gone (dismount or scene change); the mirror is kept, Unload clears it.
@@ -140,7 +167,8 @@ namespace GK2Mounts
             }
         }
 
-        // The cargo key: with something overhead, put it on the cart; with empty hands, take the last cargo item.
+        // The cargo key: with something overhead (a zombie, or an item the cart had no room for), put it on the cart;
+        // otherwise take the last cargo item off the cart onto the ground in front (there are no hands while riding).
         public static void Toggle(PlayerController pc)
         {
             if (inv == null || donkey == null || pc?.PlayerData == null)
@@ -174,17 +202,11 @@ namespace GK2Mounts
                 if (!taken)
                 {
                     Plugin.Log.LogWarning("Cargo: could not take the item off the cart.");
+                    Resync("take failed");
                     return;
                 }
-                if (pd.TryAddOverheadItemNoReplace(last))
-                {
-                    Plugin.Log.LogInfo($"Cargo: took {last.id} in hand; cart {list.Count}/{inv.Data.InventorySize}.");
-                }
-                else
-                {
-                    DropAtKeeper(pd, last);
-                    Plugin.Log.LogInfo($"Cargo: hands full, dropped {last.id} beside the keeper; cart {list.Count}/{inv.Data.InventorySize}.");
-                }
+                DropAtKeeper(pd, last);
+                Plugin.Log.LogInfo($"Cargo: set {last.id} down in front of the keeper; cart {list.Count}/{inv.Data.InventorySize}.");
             }
             catch (Exception e)
             {
@@ -192,7 +214,7 @@ namespace GK2Mounts
             }
         }
 
-        private static bool Allowed(Item item)
+        internal static bool Allowed(Item item)
         {
             return item != null && !item.IsEmpty && item.Definition != null && !item.Definition.itemGroupIds.Contains("zombie");
         }
@@ -253,7 +275,7 @@ namespace GK2Mounts
             Plugin.Log.LogInfo($"Cargo: unloaded on {reason}: {hands} in hand, {dropped} dropped{(lost > 0 ? $", {lost} LOST (no player)" : "")}.");
         }
 
-        private static void DropAtKeeper(PlayerData pd, Item item)
+        internal static void DropAtKeeper(PlayerData pd, Item item)
         {
             if (pd == null || item == null || item.IsEmpty)
             {

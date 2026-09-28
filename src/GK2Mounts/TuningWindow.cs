@@ -164,7 +164,7 @@ namespace GK2Mounts
             GUILayout.Label(Plugin.MountKey.Value.ToString(), label);
             GUILayout.EndHorizontal();
             GUILayout.BeginHorizontal();
-            GUILayout.Label("Cart cargo key: load what you carry / take the last item (General.CargoKey)", label, GUILayout.Width(LabelW));
+            GUILayout.Label("Cart cargo key: set the last item down (General.CargoKey)", label, GUILayout.Width(LabelW));
             GUILayout.Label(Plugin.CargoKey.Value.ToString(), label);
             GUILayout.EndHorizontal();
 
@@ -265,7 +265,7 @@ namespace GK2Mounts
                 FloatSlider("Overhang allowed before stacking", s.CargoOverhang, 0f, 0.5f, 2, Cargo.RefreshViews);
                 FloatSlider("Nestle: how far a stacked item sinks into the one below", s.CargoNestle, 0f, 0.3f, 2, Cargo.RefreshViews);
                 Toggle("Mod draws corpses too (off = the game's own shroud for the first corpse)", s.CargoDrawCorpse, Cargo.RefreshViews);
-                GUILayout.Label($"Press {Plugin.CargoKey.Value} with an item on your head to put it on the cart, with empty hands to take the last one back. {Cargo.Summary()}", small);
+                GUILayout.Label($"While riding, anything you pick up goes straight onto the cart and piles, tables and graves take from it. {Plugin.CargoKey.Value} sets the last item down in front of you. {Cargo.Summary()}", small);
                 DrawCargoCorrections();
 
                 Header("Cart lantern");

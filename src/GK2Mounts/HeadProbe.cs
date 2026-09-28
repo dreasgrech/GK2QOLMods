@@ -25,8 +25,7 @@ namespace GK2Mounts
     //   D. Every world-object flow script whose serialized graph mentions the head.
     //   E. The item identity mechanics, exercised on the cart's own inventory: split-on-add, silent removal of an
     //      emptied entry, and the count-restore remedy.
-    // The three test patches below are dormant unless the probe arms them for one call; they are the same patch
-    // points the reroute will use.
+    // The three override flags below arm, for one call each, the reroute's own patches (HeadReroute.cs).
     internal static class HeadProbe
     {
         internal static bool ForceNoFreeSlot;         // A1: getter patch armed -> HasFreeOverheadSlot reports false
@@ -584,47 +583,4 @@ namespace GK2Mounts
         }
     }
 
-    // ---------------------------------------------------------------------- dormant test patches (armed by the probe)
-
-    [HarmonyPatch(typeof(PlayerData), nameof(PlayerData.HasFreeOverheadSlot), MethodType.Getter)]
-    internal static class PlayerData_HasFreeOverheadSlot_Probe
-    {
-        private static bool Prefix(ref bool __result)
-        {
-            if (HeadProbe.ForceNoFreeSlot)
-            {
-                __result = false;
-                return false;
-            }
-            return true;
-        }
-    }
-
-    [HarmonyPatch(typeof(PlayerData), nameof(PlayerData.TryGetOverheadItem))]
-    internal static class PlayerData_TryGetOverheadItem_Probe
-    {
-        private static bool Prefix(Predicate<Item> match, ref Item item, ref bool __result)
-        {
-            Item o = HeadProbe.LookupOverride;
-            if (o != null && match != null && match(o))
-            {
-                item = o;
-                __result = true;
-                return false;
-            }
-            return true;
-        }
-    }
-
-    [HarmonyPatch(typeof(LazyExpressionEvaluationScope), nameof(LazyExpressionEvaluationScope.GetOverheadItemForMutation))]
-    internal static class LazyExpressionEvaluationScope_GetOverheadItemForMutation_Probe
-    {
-        private static void Postfix(ref Item __result)
-        {
-            if (HeadProbe.MutationOverride != null)
-            {
-                __result = HeadProbe.MutationOverride;
-            }
-        }
-    }
 }
