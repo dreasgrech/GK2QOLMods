@@ -933,3 +933,15 @@ Not yet confirmed in game; test list in the report.
   a pendulum about the foot, amplitude × (0.65 + 0.35 sin 0.37 t) × (0.5 + clamp01(wind)), on top of tilt; the lamp
   rig follows the head as before, so the point light moves with it; wind read once a second. Panel: three sliders
   under the freeze toggle, two under the lantern. Cecil 188 refs, all pass. Installed 01:02, unconfirmed.
+
+### Lantern tab (2026-09-29 01:26)
+
+Source facts: the cart lantern's two lights are plain `Light`s with no `DayNightLight` (the keeper's hand lantern
+has one, mode Night: intensity × (1 − sun), sun = `Shader.GetGlobalFloat(GlobalShaderParameters.idSunLight)`), so
+the cart lamp is lit around the clock; `light_source_self` (culling mask CustomLightingObject only) carries a
+`SyncedLight` whose source is null, i.e. inert. Built: a fourth panel tab "Lantern" (Cart style only) with every
+knob as a multiplier or switch on the authored values, applied each frame in `Lantern.ApplyLight`: `LanternShow`,
+`LanternScale` (about the foot; the lamp moves to the scaled top), main light on / intensity × / range × / shadows /
+colour (hex, three sliders) / `LanternLightDayDim` (intensity × lerp(1, dim, sun)), character light on / intensity ×
+/ range × (colour follows), glow on / alpha × / scale ×, glass on; plus the placement, mirror and sway rows moved
+from the Riding tab. Authored values restored on detach. Cecil 189 refs, all pass.

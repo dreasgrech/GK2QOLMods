@@ -29,10 +29,23 @@ namespace GK2Mounts
         private static float backSign = -1f, camSign = -1f;
         private static Vector3 lastPolePos, lastLightPos;
         private static Quaternion lastPoleRot;
-        private static float aAlong, aUp, aAcross, aTilt, aLean;
+        private static float aAlong, aUp, aAcross, aTilt, aLean, aScale;
         private static bool aFlip;
         private static bool applied, overwriteLogged;
         private static int overwrites;
+
+        // The lamp rig's parts (GK2-lantern-facts.txt): the main point light (range 4.5, intensity 3, orange, soft
+        // shadows, no day-night component, so lit around the clock), the "self" light that lights only characters and
+        // sprites (range 2, intensity 10, culling mask CustomLightingObject; its SyncedLight has no source and does
+        // nothing), the additive glow sprite and the lit glass sprite. Their authored values are kept and every
+        // setting is a multiplier or a switch on top, so a game update to the prefab still shows through.
+        private static Light mainLight, selfLight;
+        private static SpriteRenderer glow, glass;
+        private static float mainIntensity, mainRange, selfIntensity, selfRange;
+        private static Color mainColor, selfColor, glowColor;
+        private static LightShadows mainShadows;
+        private static Vector3 glowScaleRest;
+        private static bool poleShown = true;
 
         public static bool Attached => pole != null && pole;
         public static string Note { get; private set; } = "";
@@ -62,6 +75,22 @@ namespace GK2Mounts
                 }
                 poleRest = pole.localPosition; poleRotRest = pole.localRotation;
                 lightRest = light.localPosition; lightRotRest = light.localRotation; lightScaleRest = light.localScale;
+                mainLight = selfLight = null;
+                glow = glass = null;
+                foreach (Light l in light.GetComponentsInChildren<Light>(includeInactive: true))
+                {
+                    if (l.name == "light_source") mainLight = l;
+                    else if (l.name == "light_source_self") selfLight = l;
+                }
+                foreach (SpriteRenderer sr in light.GetComponentsInChildren<SpriteRenderer>(includeInactive: true))
+                {
+                    if (sr.name == "light_lt") glow = sr;
+                    else if (sr.name == "light_ut") glass = sr;
+                }
+                if (mainLight != null) { mainIntensity = mainLight.intensity; mainRange = mainLight.range; mainColor = mainLight.color; mainShadows = mainLight.shadows; }
+                if (selfLight != null) { selfIntensity = selfLight.intensity; selfRange = selfLight.range; selfColor = selfLight.color; }
+                if (glow != null) { glowColor = glow.color; glowScaleRest = glow.transform.localScale; }
+                poleShown = true;
                 if (!Cargo.MeasureMeshes(poleSway, poleSway, out Bounds b))
                 {
                     b = new Bounds(new Vector3(-0.46f, 0.55f, 0.26f), new Vector3(0.52f, 1.03f, 0.28f)); // measured 2026-09-28
@@ -120,13 +149,109 @@ namespace GK2Mounts
                     light.localRotation = lightRotRest;
                     light.localScale = lightScaleRest;
                 }
+                if (!poleShown)
+                {
+                    if (pole != null && pole) pole.gameObject.SetActive(true);
+                    if (light != null && light) light.gameObject.SetActive(true);
+                }
+                if (mainLight != null && mainLight) { mainLight.enabled = true; mainLight.intensity = mainIntensity; mainLight.range = mainRange; mainLight.color = mainColor; mainLight.shadows = mainShadows; }
+                if (selfLight != null && selfLight) { selfLight.enabled = true; selfLight.intensity = selfIntensity; selfLight.range = selfRange; selfLight.color = selfColor; }
+                if (glow != null && glow) { glow.enabled = true; glow.color = glowColor; glow.transform.localScale = glowScaleRest; }
+                if (glass != null && glass) { glass.enabled = true; }
             }
             catch
             {
                 // the donkey may be half destroyed
             }
             pole = light = null;
+            mainLight = selfLight = null;
+            glow = glass = null;
             applied = false;
+        }
+
+        // The lamp's lights and sprites, every frame: multipliers and switches on the authored values, and the
+        // day-night dimming the game gives its own hand lantern (DayNightLight, Night mode: intensity × (1 − sun))
+        // but not the cart's: here intensity × lerp(1, DayDim, sun), with sun the game's global shader value.
+        private static void ApplyLight(StyleSettings s)
+        {
+            bool show = s.LanternShow.Value;
+            if (show != poleShown)
+            {
+                poleShown = show;
+                pole.gameObject.SetActive(show);
+                light.gameObject.SetActive(show);
+            }
+            if (!show)
+            {
+                return;
+            }
+            float sun = 0f;
+            try
+            {
+                sun = Mathf.Clamp01(Shader.GetGlobalFloat(GlobalShaderParameters.idSunLight));
+            }
+            catch
+            {
+            }
+            float day = Mathf.Lerp(1f, Mathf.Clamp01(s.LanternLightDayDim.Value), sun);
+            Color color = ParseColor(s.LanternLightColor.Value, mainColor);
+            if (mainLight != null && mainLight)
+            {
+                mainLight.enabled = s.LanternLightOn.Value;
+                mainLight.intensity = mainIntensity * s.LanternLightIntensity.Value * day;
+                mainLight.range = mainRange * s.LanternLightRange.Value;
+                mainLight.color = color;
+                mainLight.shadows = s.LanternLightShadows.Value ? mainShadows : LightShadows.None;
+            }
+            if (selfLight != null && selfLight)
+            {
+                selfLight.enabled = s.LanternSelfLightOn.Value;
+                selfLight.intensity = selfIntensity * s.LanternSelfLightIntensity.Value * day;
+                selfLight.range = selfRange * s.LanternSelfLightRange.Value;
+                selfLight.color = string.IsNullOrEmpty(s.LanternLightColor.Value) ? selfColor : color;
+            }
+            if (glow != null && glow)
+            {
+                glow.enabled = s.LanternGlowOn.Value;
+                Color c = glowColor;
+                c.a = Mathf.Clamp01(glowColor.a * s.LanternGlowAlpha.Value * day);
+                glow.color = c;
+                glow.transform.localScale = glowScaleRest * s.LanternGlowScale.Value;
+            }
+            if (glass != null && glass)
+            {
+                glass.enabled = s.LanternGlassOn.Value;
+            }
+        }
+
+        internal static Color ParseColor(string hex, Color fallback)
+        {
+            if (string.IsNullOrEmpty(hex))
+            {
+                return fallback;
+            }
+            string h = hex.Trim().TrimStart('#');
+            if (h.Length == 6 && ColorUtility.TryParseHtmlString("#" + h, out Color c))
+            {
+                return c;
+            }
+            return fallback;
+        }
+
+        internal static string ToHex(Color c)
+        {
+            return ColorUtility.ToHtmlStringRGB(c);
+        }
+
+        public static string LightSummary()
+        {
+            if (!Attached)
+            {
+                return "";
+            }
+            float sun = 0f;
+            try { sun = Shader.GetGlobalFloat(GlobalShaderParameters.idSunLight); } catch { }
+            return $"Game values: main light {mainIntensity:F1} × {mainRange:F1} u {ToHex(mainColor)} shadows {mainShadows}; character light {selfIntensity:F1} × {selfRange:F1} u; glow alpha {glowColor.a:F2}. Sun now {sun:F2}. Live: main {(mainLight != null && mainLight ? mainLight.intensity.ToString("F2") : "-")}, character {(selfLight != null && selfLight ? selfLight.intensity.ToString("F2") : "-")}.";
         }
 
         // Called by the panel when a slider moves; Tick also picks up changes made any other way (config reload).
@@ -171,6 +296,7 @@ namespace GK2Mounts
                     float wind = 0.5f + Mathf.Clamp01(WindValue());
                     newSway = degrees * drift * wind * Mathf.Sin(t * (2f * Mathf.PI / period));
                 }
+                ApplyLight(s);
                 if (Mathf.Abs(newSway - swayTilt) > 0.001f)
                 {
                     swayTilt = newSway;
@@ -217,7 +343,8 @@ namespace GK2Mounts
             StyleSettings s = Mount.S;
             float along = s.LanternAlong.Value, up = s.LanternUp.Value, across = s.LanternAcross.Value, tilt = s.LanternTilt.Value, lean = s.LanternLean.Value;
             bool flip = s.LanternFlip.Value;
-            if (!force && applied && along == aAlong && up == aUp && across == aAcross && tilt == aTilt && lean == aLean && flip == aFlip)
+            float scale = Mathf.Clamp(s.LanternScale.Value, 0.2f, 3f);
+            if (!force && applied && along == aAlong && up == aUp && across == aAcross && tilt == aTilt && lean == aLean && flip == aFlip && scale == aScale)
             {
                 return;
             }
@@ -230,41 +357,41 @@ namespace GK2Mounts
             // a negative x scale (Unity flips the face winding for a mirrored mesh, so it draws normally) with its
             // origin moved to the mirrored spot: a mesh point q lands at M(rest) + S q = M(rest + q).
             Vector3 poleAt = poleRest;
-            Vector3 poleScale = Vector3.one;
+            Vector3 poleScale = Vector3.one * scale;
             if (flip)
             {
                 poleAt.x = 2f * foot.x - poleRest.x;
-                poleScale.x = -1f;
+                poleScale.x = -scale;
             }
-            // Turn the pole about its foot: a point of the child lands at foot + r*(point - foot).
+            // Turn the pole about its foot, scaled about the foot: a point of the child lands at foot + r*s*(point - foot).
             pole.localRotation = r * poleRotRest;
             pole.localScale = poleScale;
-            pole.localPosition = foot + r * (poleAt - foot) + offset;
+            pole.localPosition = foot + r * (scale * (poleAt - foot)) + offset;
             // The lamp rig (sprites and lights) is never rotated, its sprites are upright pixel art. Flipped, it is
             // mirrored in the same plane: the node goes to the mirrored spot and its x scale turns negative, which
             // mirrors sprites, glow offset and light positions alike (negative x scale is how the game draws the
             // donkey facing the other way, so its sprite shader is known to take it). Then the rig follows the top
             // of the pole.
             Vector3 rig = lightRest;
-            Vector3 scale = lightScaleRest;
+            Vector3 rigScale = lightScaleRest;
             if (flip)
             {
                 rig.x = 2f * foot.x - lightRest.x;
-                scale.x = -lightScaleRest.x;
+                rigScale.x = -lightScaleRest.x;
             }
             Vector3 top = head;
             if (flip)
             {
                 top.x = 2f * foot.x - head.x;
             }
-            Vector3 headShift = foot + r * (top - foot) - top;
+            Vector3 headShift = foot + r * (scale * (top - foot)) - top;
             light.localRotation = lightRotRest;
-            light.localScale = scale;
+            light.localScale = rigScale;
             light.localPosition = rig + headShift + offset;
             lastPolePos = pole.localPosition;
             lastPoleRot = pole.localRotation;
             lastLightPos = light.localPosition;
-            aAlong = along; aUp = up; aAcross = across; aTilt = tilt; aLean = lean; aFlip = flip;
+            aAlong = along; aUp = up; aAcross = across; aTilt = tilt; aLean = lean; aFlip = flip; aScale = scale;
             applied = true;
         }
 

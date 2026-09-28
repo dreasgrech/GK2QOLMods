@@ -62,6 +62,7 @@ Field("GameBalance", "questDefs", "System.Collections.Generic.List`1<QuestDef>")
 Field("WGODef", "attachedScript", "System.String");
 Method("WeatherSystem", "get_WindValue", 0);
 Method("WeatherSystem", "get_Instance", 0);
+Field("GlobalShaderParameters", "idSunLight", "System.Int32", true);
 Method("PlayerData", "PlayOverheadItemTakeSound", 1);
 Method("PlayerData", "RemoveInteractingItem", 0);
 Method("PlayerData", "get_HasInteractingItem", 0);

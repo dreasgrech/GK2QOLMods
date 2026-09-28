@@ -62,6 +62,9 @@ namespace GK2Mounts
         public readonly ConfigEntry<float> LanternAlong, LanternUp, LanternAcross, LanternTilt, LanternLean;
         public readonly ConfigEntry<bool> LanternFlip;
         public readonly ConfigEntry<float> LanternSwayDegrees, LanternSwaySeconds;
+        public readonly ConfigEntry<bool> LanternShow, LanternLightOn, LanternLightShadows, LanternSelfLightOn, LanternGlowOn, LanternGlassOn;
+        public readonly ConfigEntry<float> LanternScale, LanternLightIntensity, LanternLightRange, LanternLightDayDim, LanternSelfLightIntensity, LanternSelfLightRange, LanternGlowAlpha, LanternGlowScale;
+        public readonly ConfigEntry<string> LanternLightColor;
         public readonly ConfigEntry<float> IdleFidgetEverySeconds, IdleFidgetSpeed, IdleCrawlSpeed;
 
         public StyleSettings(ConfigFile cfg, string section, float speed, float depth, float center, int riderPx, int torsoPx,
@@ -138,6 +141,36 @@ namespace GK2Mounts
                 new ConfigDescription("Cart style only: a slow pendulum sway of the lantern pole about its foot, in degrees either way (0 = off). Scaled by the game's wind: about half this in still air, up to one and a half times in a gale. The lamp and its light follow, so the light pool shifts with it. Adds to the cart's own rocking while it rolls.", new AcceptableValueRange<float>(0f, 10f)));
             LanternSwaySeconds = cfg.Bind(section, "LanternSwaySeconds", Defaults.Get(section, "LanternSwaySeconds", 2.6f),
                 new ConfigDescription("Cart style only: period of one full sway, seconds. The amplitude drifts slowly so it is not a metronome.", new AcceptableValueRange<float>(0.5f, 10f)));
+            LanternShow = cfg.Bind(section, "LanternShow", Defaults.Get(section, "LanternShow", true),
+                "Cart style only: show the lantern pole and its lamp at all. Off hides pole, lamp, glow and lights.");
+            LanternScale = cfg.Bind(section, "LanternScale", Defaults.Get(section, "LanternScale", 1f),
+                new ConfigDescription("Cart style only: size of the pole, scaled about its foot (1 = the prefab's). The lamp moves to the scaled top; its pixel art is not scaled.", new AcceptableValueRange<float>(0.5f, 1.6f)));
+            LanternLightOn = cfg.Bind(section, "LanternLightOn", Defaults.Get(section, "LanternLightOn", true),
+                "Cart style only: the lamp's main point light (the game's: range 4.5, intensity 3, orange, soft shadows, lit day and night).");
+            LanternLightIntensity = cfg.Bind(section, "LanternLightIntensity", Defaults.Get(section, "LanternLightIntensity", 1f),
+                new ConfigDescription("Cart style only: multiplier on the main light's intensity (1 = the game's 3).", new AcceptableValueRange<float>(0f, 4f)));
+            LanternLightRange = cfg.Bind(section, "LanternLightRange", Defaults.Get(section, "LanternLightRange", 1f),
+                new ConfigDescription("Cart style only: multiplier on the main light's range (1 = the game's 4.5 world units).", new AcceptableValueRange<float>(0.2f, 3f)));
+            LanternLightColor = cfg.Bind(section, "LanternLightColor", Defaults.Get(section, "LanternLightColor", "FF9600"),
+                "Cart style only: colour of both lights as hex RRGGBB (the game's is FF9600, orange). Empty = the game's colour.");
+            LanternLightShadows = cfg.Bind(section, "LanternLightShadows", Defaults.Get(section, "LanternLightShadows", true),
+                "Cart style only: the main light casts soft shadows (as the game's does). Off saves a little rendering.");
+            LanternLightDayDim = cfg.Bind(section, "LanternLightDayDim", Defaults.Get(section, "LanternLightDayDim", 1f),
+                new ConfigDescription("Cart style only: how bright the lights are in full daylight, as a fraction of their night value (1 = always full, as the game's cart; 0 = off by day, like the keeper's own lantern). Follows the game's sun value through dusk and dawn.", new AcceptableValueRange<float>(0f, 1f)));
+            LanternSelfLightOn = cfg.Bind(section, "LanternSelfLightOn", Defaults.Get(section, "LanternSelfLightOn", true),
+                "Cart style only: the lamp's second light, which lights only characters and sprites nearby (the game's: range 2, intensity 10).");
+            LanternSelfLightIntensity = cfg.Bind(section, "LanternSelfLightIntensity", Defaults.Get(section, "LanternSelfLightIntensity", 1f),
+                new ConfigDescription("Cart style only: multiplier on the character light's intensity (1 = the game's 10).", new AcceptableValueRange<float>(0f, 4f)));
+            LanternSelfLightRange = cfg.Bind(section, "LanternSelfLightRange", Defaults.Get(section, "LanternSelfLightRange", 1f),
+                new ConfigDescription("Cart style only: multiplier on the character light's range (1 = the game's 2 world units).", new AcceptableValueRange<float>(0.2f, 3f)));
+            LanternGlowOn = cfg.Bind(section, "LanternGlowOn", Defaults.Get(section, "LanternGlowOn", true),
+                "Cart style only: the soft additive glow sprite around the lamp.");
+            LanternGlowAlpha = cfg.Bind(section, "LanternGlowAlpha", Defaults.Get(section, "LanternGlowAlpha", 1f),
+                new ConfigDescription("Cart style only: multiplier on the glow's opacity (1 = the game's).", new AcceptableValueRange<float>(0f, 4f)));
+            LanternGlowScale = cfg.Bind(section, "LanternGlowScale", Defaults.Get(section, "LanternGlowScale", 1f),
+                new ConfigDescription("Cart style only: multiplier on the glow's size (1 = the game's).", new AcceptableValueRange<float>(0.3f, 3f)));
+            LanternGlassOn = cfg.Bind(section, "LanternGlassOn", Defaults.Get(section, "LanternGlassOn", true),
+                "Cart style only: the lit lantern-glass sprite on the lamp (unlit shader, always bright).");
             IdleFidgetEverySeconds = cfg.Bind(section, "IdleFidgetEverySeconds", Defaults.Get(section, "IdleFidgetEverySeconds", 7f),
                 new ConfigDescription("With FreezePoseWhenIdle: instead of a dead stop, the frozen pose plays for about a second every this many seconds (randomised by half either way), so the rider shifts now and then. 0 = a hard freeze as before.", new AcceptableValueRange<float>(0f, 60f)));
             IdleFidgetSpeed = cfg.Bind(section, "IdleFidgetSpeed", Defaults.Get(section, "IdleFidgetSpeed", 0.45f),
@@ -153,6 +186,8 @@ namespace GK2Mounts
             Reset(PoseSpeed); Reset(PoseSpeedFollowsDonkey); Reset(NearLeg); Reset(LegSource); Reset(LegHeightPx); Reset(LegAdjustXPx); Reset(LegAdjustYPx); Reset(SnapToGround); Reset(CartFollowsGround); Reset(CartGroundMaxShift); Reset(CargoDrawCorpse); Reset(CargoBedDepth); Reset(CargoSideGap); Reset(CargoOverhang); Reset(CargoNestle);
             Reset(LanternAlong); Reset(LanternUp); Reset(LanternAcross); Reset(LanternTilt); Reset(LanternLean); Reset(LanternFlip);
             Reset(LanternSwayDegrees); Reset(LanternSwaySeconds); Reset(IdleFidgetEverySeconds); Reset(IdleFidgetSpeed); Reset(IdleCrawlSpeed);
+            Reset(LanternShow); Reset(LanternScale); Reset(LanternLightOn); Reset(LanternLightIntensity); Reset(LanternLightRange); Reset(LanternLightColor); Reset(LanternLightShadows); Reset(LanternLightDayDim);
+            Reset(LanternSelfLightOn); Reset(LanternSelfLightIntensity); Reset(LanternSelfLightRange); Reset(LanternGlowOn); Reset(LanternGlowAlpha); Reset(LanternGlowScale); Reset(LanternGlassOn);
         }
 
         private static void Reset<T>(ConfigEntry<T> e)

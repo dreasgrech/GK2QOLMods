@@ -19,7 +19,7 @@ namespace GK2Mounts
         private static string cargoItemId = "wood";
         private static string spawnItemId = "wood";
         private static bool pairOffsetsOpen;
-        private static readonly string[] TabNames = { "General", "Riding", "Debug" };
+        private static readonly string[] TabNames = { "General", "Riding", "Lantern", "Debug" };
 
         public static void Draw()
         {
@@ -51,7 +51,7 @@ namespace GK2Mounts
         private static float maxContentHeight = 800f;
         private static float chromeHeight = 130f;   // measured; 130 is the first-frame guess
         private static float lastScrollHeight;
-        private static readonly float[] contentHeight = new float[3]; // measured per tab, last repaint
+        private static readonly float[] contentHeight = new float[4]; // measured per tab, last repaint
 
         // Panel width in panel units (before the overall scale) and the widths derived from it, so rows shrink and
         // grow with the panel instead of overflowing it.
@@ -114,6 +114,7 @@ namespace GK2Mounts
             {
                 case 0: DrawGeneral(); break;
                 case 1: DrawRiding(); break;
+                case 2: DrawLantern(); break;
                 default: DrawDebug(); break;
             }
             GUILayout.EndVertical();
@@ -274,19 +275,94 @@ namespace GK2Mounts
                 Toggle("Mod draws corpses too (off = the game's own shroud for the first corpse)", s.CargoDrawCorpse, Cargo.RefreshViews);
                 GUILayout.Label($"While riding, anything you pick up goes straight onto the cart and piles, tables and graves take from it. {Plugin.CargoKey.Value} sets the last item down in front of you. {Cargo.Summary()}", small);
                 DrawCargoCorrections();
-
-                Header("Cart lantern");
-                GUILayout.Label("The prefab puts the pole at the front rail, where the rider's head hides it. Offsets in world units, angles in degrees; the pole turns about its own foot, the lamp and its light follow the top, and the cart's walking sway is kept.", small);
-                FloatSlider("Along the cart: towards the donkey (-) / the back (+)", s.LanternAlong, -0.6f, 0.9f, 2, Lantern.Refresh);
-                FloatSlider("Up (+) / down (-)", s.LanternUp, -0.5f, 0.8f, 2, Lantern.Refresh);
-                FloatSlider("Across: away from the camera (-) / towards it (+)", s.LanternAcross, -0.6f, 0.6f, 2, Lantern.Refresh);
-                FloatSlider("Tilt in the screen plane: top towards the donkey (-) / the back (+)", s.LanternTilt, -60f, 60f, 0, Lantern.Refresh);
-                FloatSlider("Lean: top away from the camera (-) / towards it (+)", s.LanternLean, -60f, 60f, 0, Lantern.Refresh);
-                Toggle("Mirror the pole (foot stays; it leans out over the back instead of over the donkey)", s.LanternFlip, Lantern.Refresh);
-                FloatSlider("Sway: pendulum about the foot, degrees either way (0 = off; scaled by the wind)", s.LanternSwayDegrees, 0f, 10f, 1, Lantern.Refresh);
-                FloatSlider("Sway period, seconds", s.LanternSwaySeconds, 0.5f, 10f, 1, Lantern.Refresh);
-                GUILayout.Label(Lantern.Summary(), small);
+                GUILayout.Label("The lantern pole and its lamp have their own tab.", small);
             }
+        }
+
+        // Everything about the cart's lantern: pole placement, sway, and the lamp's lights and sprites. All of it is
+        // per style ([Cart]); the tab shows a note in Ride style, where there is no cart.
+        private static void DrawLantern()
+        {
+            if (Mount.CurrentStyle != MountStyle.Cart)
+            {
+                GUILayout.Label("The lantern belongs to the cart. Set Style = Cart on the General tab and mount again to see and tune it here.", small);
+                return;
+            }
+            StyleSettings s = Mount.S;
+            Header("Show");
+            Toggle("Show the lantern pole and lamp at all", s.LanternShow, Lantern.Refresh);
+            if (!s.LanternShow.Value)
+            {
+                GUILayout.Label("Hidden: pole, lamp, glow and both lights. Everything below applies once it is shown again.", small);
+                return;
+            }
+
+            Header("Pole placement");
+            GUILayout.Label("The prefab puts the pole at the front rail, where the rider's head hides it. Offsets in world units, angles in degrees; the pole turns and scales about its own foot, the lamp and its lights follow the top, and the cart's walking sway is kept.", small);
+            FloatSlider("Along the cart: towards the donkey (-) / the back (+)", s.LanternAlong, -0.6f, 0.9f, 2, Lantern.Refresh);
+            FloatSlider("Up (+) / down (-)", s.LanternUp, -0.5f, 0.8f, 2, Lantern.Refresh);
+            FloatSlider("Across: away from the camera (-) / towards it (+)", s.LanternAcross, -0.6f, 0.6f, 2, Lantern.Refresh);
+            FloatSlider("Tilt in the screen plane: top towards the donkey (-) / the back (+)", s.LanternTilt, -60f, 60f, 0, Lantern.Refresh);
+            FloatSlider("Lean: top away from the camera (-) / towards it (+)", s.LanternLean, -60f, 60f, 0, Lantern.Refresh);
+            FloatSlider("Size of the pole (1 = the game's)", s.LanternScale, 0.5f, 1.6f, 2, Lantern.Refresh);
+            Toggle("Mirror the pole (foot stays; it leans out over the back instead of over the donkey)", s.LanternFlip, Lantern.Refresh);
+
+            Header("Sway");
+            FloatSlider("Pendulum about the foot, degrees either way (0 = off; scaled by the wind)", s.LanternSwayDegrees, 0f, 10f, 1, Lantern.Refresh);
+            FloatSlider("Sway period, seconds", s.LanternSwaySeconds, 0.5f, 10f, 1, Lantern.Refresh);
+            GUILayout.Label("The game never sways the pole except by rocking the whole cart while it rolls; this adds a slow swing whose amplitude drifts and follows the weather's wind value.", small);
+
+            Header("Main light (lights the ground and the cart)");
+            Toggle("On", s.LanternLightOn, Lantern.Refresh);
+            FloatSlider("Brightness (x the game's)", s.LanternLightIntensity, 0f, 4f, 2, Lantern.Refresh);
+            FloatSlider("Reach (x the game's)", s.LanternLightRange, 0.2f, 3f, 2, Lantern.Refresh);
+            Toggle("Casts soft shadows (as the game's does)", s.LanternLightShadows, Lantern.Refresh);
+            FloatSlider("Brightness in full daylight (1 = always lit, as the game's cart; 0 = off by day)", s.LanternLightDayDim, 0f, 1f, 2, Lantern.Refresh);
+            ColorRow("Colour of both lights (hex; the game's is FF9600)", s.LanternLightColor, Lantern.Refresh);
+
+            Header("Character light (lights only people and sprites nearby)");
+            Toggle("On", s.LanternSelfLightOn, Lantern.Refresh);
+            FloatSlider("Brightness (x the game's)", s.LanternSelfLightIntensity, 0f, 4f, 2, Lantern.Refresh);
+            FloatSlider("Reach (x the game's)", s.LanternSelfLightRange, 0.2f, 3f, 2, Lantern.Refresh);
+
+            Header("Lamp sprites");
+            Toggle("Glow around the lamp", s.LanternGlowOn, Lantern.Refresh);
+            FloatSlider("Glow opacity (x the game's)", s.LanternGlowAlpha, 0f, 4f, 2, Lantern.Refresh);
+            FloatSlider("Glow size (x the game's)", s.LanternGlowScale, 0.3f, 3f, 2, Lantern.Refresh);
+            Toggle("Lit lantern glass", s.LanternGlassOn, Lantern.Refresh);
+
+            GUILayout.Label(Lantern.LightSummary(), small);
+            GUILayout.Label(Lantern.Summary(), small);
+        }
+
+        // A hex colour as three 0-1 sliders; the entry keeps RRGGBB so the config stays hand-editable.
+        private static void ColorRow(string name, ConfigEntry<string> entry, Action onChange)
+        {
+            Color c = Lantern.ParseColor(entry.Value, new Color(1f, 0.59f, 0f));
+            GUILayout.BeginHorizontal();
+            GUILayout.Label(name, label, GUILayout.Width(LabelW));
+            GUILayout.Label(entry.Value, label, GUILayout.Width(70f));
+            GUILayout.EndHorizontal();
+            if (ResetOnRightClick(entry, onChange)) { return; }
+            Color n = c;
+            n.r = Channel("Red", c.r);
+            n.g = Channel("Green", c.g);
+            n.b = Channel("Blue", c.b);
+            if (n != c)
+            {
+                entry.Value = Lantern.ToHex(n);
+                onChange?.Invoke();
+            }
+        }
+
+        private static float Channel(string name, float v)
+        {
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("    " + name, label, GUILayout.Width(LabelW));
+            float r = GUILayout.HorizontalSlider(v, 0f, 1f, GUILayout.Width(90f));
+            GUILayout.Label(Mathf.RoundToInt(r * 255f).ToString(), label, GUILayout.Width(45f));
+            GUILayout.EndHorizontal();
+            return Mathf.Abs(r - v) > 0.002f ? r : v;
         }
 
         private static void DrawDebug()
