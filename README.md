@@ -7,7 +7,7 @@ so you can install any subset.
 |---|---|---|
 | [Global Storage](#global-storage) | 1.1.4 | Craft and build with materials from chests in every area, not just the one you're standing in. |
 | [Built Count](#built-count) | 1.0.4 | Build menus show how many of each building you already have in that area. |
-| [Move Building](#move-building) | 1.1.4 | Pick up a built building and put it down somewhere else, contents and all. |
+| [Move Building](#move-building) | 1.1.5 | Pick up a built building and put it down somewhere else, contents and all. |
 | [Owned Count](#owned-count) | 1.0.3 | Item tooltips show how many of that item you own across inventory and every chest. |
 
 ## Installing
@@ -26,7 +26,7 @@ and cannot load code, so it is not used.
 4. **Copy the DLLs you want** from [`dist/`](dist/) into `BepInEx\plugins\`. Any combination works; they don't depend
    on each other.
 5. **Start the game.** Each mod writes one line to `BepInEx\LogOutput.log` when it loads, for example
-   `GK2 Move Building 1.1.4 loaded.` Settings appear in `BepInEx\config\dreas.gk2.<mod>.cfg` after the first run
+   `GK2 Move Building 1.1.5 loaded.` Settings appear in `BepInEx\config\dreas.gk2.<mod>.cfg` after the first run
    and are read at game start.
 
 To **uninstall** a mod, delete its DLL from `BepInEx\plugins`. To remove BepInEx entirely, delete `winhttp.dll`,
@@ -104,6 +104,8 @@ game's normal Remove mode and click.
   garden bed, villagers' building, other area).
 - Same area only. Workbench extensions (tool racks etc.) re-link by position after a move, as when first placed.
 - Settings: the Move row and its label, the modifier key, stay-in-move-mode, the highlight and its colour.
+- Optional: with [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) installed, its settings
+  (all except the colour) also appear in the game's Mods menu. The same DLL works without it.
 
 ### Owned Count
 

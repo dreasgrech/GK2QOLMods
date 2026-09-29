@@ -172,7 +172,22 @@ the root and dist READMEs, and tests/README updated.
 - Run A and Run B both passed. Details are in `src/GK2GlobalStorage/FINDINGS.md`, "v1.1.4".
 - Its checks moved into the shared `tests/FrameworkScan`, which now covers both mods.
 
-Next: Move Building, then Built Count and Mounts.
+**Move Building 1.1.5 is released** (2026-09-30). The menu has Status plus 6 settings, and it's the first mod to
+use the framework's **text** and **keybind** controls.
+- A text field saves only on Enter or when the field loses focus. Both controls log `GK2_MOD_SETTING_CHANGED`,
+  which is how the tests were verified.
+- The key capture can't set `None`, because Esc cancels it. It stores a combination as main key plus modifiers,
+  and our mod reads only the main key. The row's menu description therefore says so.
+- The per-move `Config.Reload()` is compatible with menu edits. BepInEx saves on every change, and Reload updates
+  the same entry objects.
+- Run A passed:
+  - "Relocate" was saved and shown;
+  - Left Alt was captured and then used for a move;
+  - the tint toggled;
+  - the log was clean.
+- Run B passed with a clean log and three moves.
+
+Next: Built Count, then Mounts.
 
 **Rebuilds and git:** each DLL records the git commit it was built from (SourceLink's `+<hash>` in
 AssemblyInformationalVersion). So a rebuild after a commit differs byte-for-byte even when the code hasn't

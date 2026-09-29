@@ -8,10 +8,12 @@ using UnityEngine;
 namespace GK2MoveBuilding
 {
     [BepInPlugin(Guid, "GK2 Move Building", Version)]
+    // Soft: when GK2 Mod Framework is installed it loads first, so FrameworkLink can register; without it nothing changes.
+    [BepInDependency(FrameworkLink.FrameworkGuid, BepInDependency.DependencyFlags.SoftDependency)]
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "dreas.gk2.movebuilding";
-        public const string Version = "1.1.4";
+        public const string Version = "1.1.5";
 
         // Module version id of the Assembly-CSharp.dll this plugin was audited against (Steam build 25601286).
         private static readonly System.Guid AuditedGameMvid = new System.Guid("3ffadd70-169d-402a-bcdf-59c322dfc26d");
@@ -28,6 +30,26 @@ namespace GK2MoveBuilding
         internal static ConfigEntry<Color> MovableColor;
         internal static ConfigEntry<string> FaultInjection;
         internal static ConfigEntry<bool> DisableOnGameUpdate;
+
+        // Every Harmony patch class, patched by name. Not PatchAll(assembly): that lists every type in this DLL, and
+        // FrameworkLink's mod class can't be loaded without GK2.Framework.dll, so Harmony would log a warning.
+        // tests/FrameworkScan fails if a [HarmonyPatch] class is missing here.
+        internal static readonly Type[] PatchClasses =
+        {
+            typeof(UIBuildingWindowData_Ctor_Patch),
+            typeof(UIBuildingWidgetData_Ctor_Patch),
+            typeof(BuildManager_EnableBuildMode_Patch),
+            typeof(RemovePointer_TryDoBuildAction_Patch),
+            typeof(BuildPointer_TryBuildActionInput_Patch),
+            typeof(BuildSelectionCell_OverlapBoxNonAlloc_Patch),
+            typeof(RemovePointer_UpdateSelectionRect_Patch),
+            typeof(RemovePointer_OnPointerDisable_Patch),
+            typeof(BuildGrid3D_Draw_Patch),
+            typeof(WgoBuildPointer_SetTarget_Patch),
+        };
+
+        // What the mod is doing, for the Mods menu's status row.
+        internal static string Status = "not started";
 
         private Harmony harmony;
         private bool updateErrorLogged;
@@ -50,6 +72,13 @@ namespace GK2MoveBuilding
         {
             Log = Logger;
             instance = this;
+            BindConfig();
+            Status = StartMod(); // not "Start": Unity would call that itself on the first frame and patch twice
+            FrameworkLink.TryRegister(Config);
+        }
+
+        private void BindConfig()
+        {
             Enabled = Config.Bind("General", "Enabled", true,
                 "Lets a built building be picked up and put down elsewhere in the same area. The building keeps its contents, crafts and identity.");
             ShowMoveRow = Config.Bind("General", "ShowMoveRow", true,
@@ -69,17 +98,22 @@ namespace GK2MoveBuilding
                 "Values: AfterLinksCut, AfterZoneRemove, AfterPosition, AfterZoneAdd, WrongZone. Leave empty for normal use.");
             DisableOnGameUpdate = Config.Bind("Safety", "DisableOnGameUpdate", true,
                 "Do not patch anything if the game's code has changed since this mod was audited. Rebuild/re-audit after game updates.");
+        }
 
+        private string StartMod()
+        {
             System.Guid gameMvid = typeof(WgoData).Assembly.ManifestModule.ModuleVersionId;
             System.Guid lazyBearMvid = typeof(LazyBearTechnology.LazyAudio).Assembly.ManifestModule.ModuleVersionId;
+            bool forced = false;
             if (gameMvid != AuditedGameMvid || lazyBearMvid != AuditedLazyBearMvid)
             {
                 if (DisableOnGameUpdate.Value)
                 {
                     Log.LogError($"Game code changed since this mod was audited (Assembly-CSharp {gameMvid}, expected {AuditedGameMvid}; LazyBearTechnology {lazyBearMvid}, expected {AuditedLazyBearMvid}). Mod is DISABLED; the game runs unmodified. Set Safety.DisableOnGameUpdate=false to force-enable at your own risk.");
-                    return;
+                    return "Disabled: the game was updated since this version was checked. Update the mod, or set Safety.DisableOnGameUpdate=false in its cfg at your own risk.";
                 }
                 Log.LogWarning($"Game code changed since this mod was audited (Assembly-CSharp {gameMvid}, LazyBearTechnology {lazyBearMvid}). Running anyway because DisableOnGameUpdate=false.");
+                forced = true;
             }
 
             harmony = new Harmony(Guid);
@@ -87,16 +121,20 @@ namespace GK2MoveBuilding
             {
                 // Every private member the mod touches is resolved here; a missing one disables the whole mod.
                 Access.Verify();
-                harmony.PatchAll(typeof(Plugin).Assembly);
+                foreach (Type patch in PatchClasses)
+                {
+                    harmony.PatchAll(patch);
+                }
             }
             catch (Exception e)
             {
                 harmony.UnpatchSelf();
                 harmony = null;
                 Log.LogError($"Patching failed; all patches removed, game runs unmodified. {e}");
-                return;
+                return "Disabled: patching failed (see BepInEx/LogOutput.log).";
             }
             Log.LogInfo($"GK2 Move Building {Version} loaded.");
+            return forced ? "Active on an unchecked game version (Safety.DisableOnGameUpdate=false)" : "Active";
         }
 
         private void Update()

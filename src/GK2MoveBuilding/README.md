@@ -5,8 +5,9 @@ The building is the **same object** afterwards. Its contents, crafts, fuel, upgr
 reference to it (orders, porters, quests) stay as they were. Nothing is paid, nothing is refunded, no build or
 demolition scripts run.
 
-Version 1.1.4, built and audited against Steam game build 25601286 (Assembly-CSharp MVID `3ffadd70-…`,
-LazyBearTechnology `8a7a5e04-…`; re-audit in `docs/steam-move-audit.md`). 1.1.3 was the same code for 25533739.
+Version 1.1.5, built and audited against Steam game build 25601286 (Assembly-CSharp MVID `3ffadd70-…`,
+LazyBearTechnology `8a7a5e04-…`; re-audit in `docs/steam-move-audit.md`). 1.1.4 was the same move code without the
+Mods-menu integration, and 1.1.3 the same code for 25533739.
 See `INVESTIGATION.md` for the study of the Nexus mod this was designed against, and why this one works differently.
 
 ## How to use
@@ -23,7 +24,26 @@ Alternative: in the game's own **Remove** mode, hold **Left Ctrl** (setting `Mov
 
 Back / right click during the preview cancels the move. Nothing was changed at that point.
 
-## Settings (`BepInEx\config\dreas.gk2.movebuilding.cfg`, read at game start)
+## Optional: GK2 Mod Framework
+
+With [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) (0.1.x, by SuperMan4eg) installed,
+the mod appears in the game's **Mods** menu (main menu and ESC menu). It shows:
+- a Status row (Active, Off, or disabled after a game update);
+- Enabled, the Move row and its text, the modifier key, stay-in-move-mode and the tint switch.
+
+Each applies the next time it's used: the desk menu, the next click, the next frame.
+
+Two notes on the modifier key in the menu:
+- **Press a single key.** The mod uses only the main key, so a combination like Shift+K acts as plain K.
+- **The menu can't switch it off**, because Esc cancels the capture. For that, set `MoveModifier = None` in the cfg.
+
+`MovableColor` (the framework has no colour control), `Safety` and `Debug.FaultInjection` stay cfg-only. Without the
+framework, the same DLL works exactly as before. Details: [`docs/gk2-mod-framework.md`](../../docs/gk2-mod-framework.md).
+
+## Settings (`BepInEx\config\dreas.gk2.movebuilding.cfg`)
+
+Every value is read where it's used, so edits made in the Mods menu apply at once. Each move also re-reads the cfg
+file, so direct edits to it apply at the next move.
 
 | Key | Default | Meaning |
 |---|---|---|
@@ -117,7 +137,8 @@ Private members used (resolved at startup, any missing one disables the mod): `B
 ## Safety
 
 - MVID guard: after a game update the mod disables itself until re-audited.
-- `Access.Verify()` + `PatchAll` in one try; failure unpatches everything.
+- `Access.Verify()` and the patches (applied class by class from `Plugin.PatchClasses`) run in one try, and a
+  failure unpatches everything.
 - No per-frame work unless a move is in progress or the Move row was picked.
 - The only save-data writes are position, rotation and zone membership of the one moved object, and only after
   the game's preview said the spot is valid. A refused landing is rolled back before anything else happens.
@@ -136,7 +157,7 @@ Private members used (resolved at startup, any missing one disables the mod): `B
 
 Commit the saves repo first.
 
-1. Log shows `GK2 Move Building 1.1.4 loaded.`, no errors.
+1. Log shows `GK2 Move Building 1.1.5 loaded.` **once**, no errors.
 2. Desk menu: **Move** row after **Remove** on every tab; Built Count still shows its counts on other rows.
 3. Move an empty sawhorse-type station: preview appears, old spot is free, place, window returns. Check it's at the
    new spot, the old spot is walkable and buildable, and the Built Count is unchanged.
@@ -150,6 +171,14 @@ Commit the saves repo first.
 10. Ctrl + click in the game's own Remove mode moves; plain click still demolishes.
 11. Save, reload: the building is where it was put, still works.
 12. Leave the area and come back (chunk culling): the building appears at the new spot, not the old one.
+13. With GK2 Mod Framework installed:
+    - Mods → GK2 Move Building shows Status Active and the six settings;
+    - change the row text (press Enter) and it shows on the desk;
+    - capture a new modifier key, and it moves in Remove mode;
+    - turn the tint off and on;
+    - Reset all.
+14. With the framework removed: the mod loads as normal, a move works, and the log has no warning or error, and
+    nothing mentioning the framework.
 
 ## Verification done before release
 
@@ -159,3 +188,14 @@ Commit the saves repo first.
 - HarmonyX harness: not possible for this mod (like Global Storage) because `IWorker` uses default interface methods,
   which the .NET Framework harness can't load, and BepInEx 5's Harmony build doesn't initialise on .NET 8.
 - Round 1 in-game test (1.0.0) done by the user; see "Test rounds" below.
+- 1.1.5:
+  - `tests/FrameworkScan` passes: all 10 patch classes are in `Plugin.PatchClasses`, and the framework is confined
+    to `FrameworkLink`;
+  - `tests/CecilScan-MoveBuilding` resolves 87/87;
+  - in game on 2026-09-30, tests 13 and 14 passed.
+    - Framework installed: registered Compatible. In the log: `MoveLabel=Relocate` saved and shown on the desk,
+      `MoveModifier=LeftAlt` captured and then used for a move, and the tint toggled off and on. Moves of
+      `furnace_1` and `mf_hammer_0` in the yard, with no warnings.
+    - Framework removed: a clean log, and three moves (`furnace_1`, and `spinning_wheel` twice).
+  - The first key-capture attempt saved nothing, and the log showed no change. The second worked. There's no sign
+    of a fault in either mod: the capture needs the key button clicked, then one key pressed and released.
