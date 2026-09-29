@@ -234,6 +234,7 @@ namespace GK2Mounts
                 sb.AppendLine("<div id=\"bar\"><button onclick=\"zoom(-30)\">&minus;</button><input type=\"range\" id=\"z\" min=\"60\" max=\"600\" value=\"220\" oninput=\"setW(+this.value)\"><button onclick=\"zoom(30)\">+</button><button onclick=\"setW(220)\">Reset</button><span id=\"zl\">220 px</span></div>");
                 sb.AppendLine("<script>function setW(w){w=Math.max(40,Math.min(1200,Math.round(w)));document.documentElement.style.setProperty('--w',w+'px');document.getElementById('z').value=w;document.getElementById('zl').textContent=w+' px';}function zoom(d){setW(+document.getElementById('z').value+d);}function show(src,cap){var b=document.getElementById('big');b.querySelector('img').src=src;b.querySelector('div').textContent=cap;b.style.display='flex';}</script>");
                 sb.AppendLine("<div id=\"big\" onclick=\"this.style.display='none'\"><img alt=\"\"><div></div></div>");
+            sb.AppendLine(FilterHtml);
                 int n = 0;
                 foreach (KeyValuePair<string, List<string>> kv in buckets)
                 {
@@ -475,6 +476,7 @@ namespace GK2Mounts
             sb.AppendLine("<div id=\"bar\"><button onclick=\"zoom(-30)\">&minus;</button><input type=\"range\" id=\"z\" min=\"40\" max=\"600\" value=\"260\" oninput=\"setW(+this.value)\"><button onclick=\"zoom(30)\">+</button><button onclick=\"fitAll()\">Fit everything on one page</button><button onclick=\"fitWidth()\">Fit width</button><button onclick=\"setW(260)\">Reset</button><span id=\"zl\">260 px</span></div>");
             sb.AppendLine($"<script>var COLS={reps.Count + 1},ROWS={reps.Count};function setW(w){{w=Math.max(30,Math.min(1200,Math.round(w)));document.documentElement.style.setProperty('--w',w+'px');document.getElementById('z').value=w;document.getElementById('zl').textContent=w+' px';document.body.classList.toggle('small',w<110);}}function zoom(d){{setW(+document.getElementById('z').value+d);}}function fitWidth(){{var lab=document.querySelector('th.row').offsetWidth;setW((window.innerWidth-lab-40-COLS*6)/COLS);}}function fitAll(){{var lab=document.querySelector('th.row').offsetWidth;var img=document.querySelector('td img');var ratio=img?img.naturalHeight/img.naturalWidth:1.1;var top=document.querySelector('table').getBoundingClientRect().top+window.scrollY+30;var byW=(window.innerWidth-lab-40-COLS*6)/COLS;var byH=(window.innerHeight-top-ROWS*6)/ROWS/ratio;setW(Math.min(byW,byH));}}function show(src,cap){{var b=document.getElementById('big');b.querySelector('img').src=src;b.querySelector('div').textContent=cap;b.style.display='flex';}}</script>");
             sb.AppendLine("<div id=\"big\" onclick=\"this.style.display='none'\"><img alt=\"\"><div></div></div>");
+            sb.AppendLine(FilterHtml);
             sb.AppendLine($"<p>Settings [{s.Section}]: CargoDrawCorpse={s.CargoDrawCorpse.Value} BedDepth={s.CargoBedDepth.Value} SideGap={s.CargoSideGap.Value} Overhang={s.CargoOverhang.Value} Nestle={s.CargoNestle.Value}; layout file: {CargoLayout.Summary()}</p>");
             sb.Append("<table><tr><th></th><th>alone</th>");
             foreach (string b in reps)
@@ -500,6 +502,12 @@ namespace GK2Mounts
             sb.AppendLine("</body></html>");
             File.WriteAllText(path, sb.ToString());
         }
+
+        // A filter box added to the pages' toolbar: typing part of a name (for example "wood") replaces the grid
+        // with every picture whose name contains it (several words must all match); an empty box shows the grid.
+        private const string FilterHtml = @"<style>#q{width:240px;background:#111;color:#ddd;border:1px solid #666;padding:3px 6px}#qn{color:#999}#res{display:none;flex-wrap:wrap;gap:6px;margin-top:8px}#res .rc{border:1px solid #444;padding:2px;text-align:center}</style>
+<div id=""res""></div>
+<script>(function(){var bar=document.getElementById('bar');if(!bar)return;var q=document.createElement('input');q.type='search';q.id='q';q.placeholder='Filter by name, e.g. wood';var n=document.createElement('span');n.id='qn';bar.appendChild(q);bar.appendChild(n);var res=document.getElementById('res');function all(sel){return Array.prototype.slice.call(document.querySelectorAll(sel));}function filt(){var tables=all('table'),heads=all('h2');var text=q.value.trim().toLowerCase();res.innerHTML='';if(!text){res.style.display='none';tables.forEach(function(t){t.style.display='';});heads.forEach(function(h){h.style.display='';});n.textContent='';return;}var terms=text.split(/\s+/),count=0;document.querySelectorAll('table td img').forEach(function(img){var name=(img.alt||'').toLowerCase();if(terms.every(function(t){return name.indexOf(t)>=0;})){var d=document.createElement('div');d.className='rc';d.appendChild(img.cloneNode(true));var cap=document.createElement('div');cap.className='cap';cap.textContent=img.alt;d.appendChild(cap);res.appendChild(d);count++;}});tables.forEach(function(t){t.style.display='none';});heads.forEach(function(h){h.style.display='none';});res.style.display='flex';n.textContent=count+(count==1?' match':' matches');}q.addEventListener('input',filt);})();</script>";
 
         private static string Cell(Dictionary<string, string> cells, string a, string b, string caption)
         {
