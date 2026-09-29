@@ -625,7 +625,7 @@ namespace GK2Mounts
                 GUILayout.Label($"Pair {pair.A} + {pair.B} (either order): how the two are arranged", label);
                 GUILayout.BeginHorizontal();
                 GUILayout.Label("  mode", label, GUILayout.Width(120f));
-                foreach (string mode in new[] { "auto", "side", "stack" })
+                foreach (string mode in new[] { "auto", "side", "along", "stack" })
                 {
                     bool on = pair.Mode == mode;
                     if (GUILayout.Toggle(on, mode, GUI.skin.button, GUILayout.Width(70f)) && !on)
@@ -635,6 +635,7 @@ namespace GK2Mounts
                     }
                 }
                 GUILayout.EndHorizontal();
+                GUILayout.Label("  auto: across the bed when both widths fit, else end to end when both lengths fit, else stacked. side = across, along = end to end, stack = on top, whatever the sizes.", small);
                 bool hasPairOffsets = pair.Second != Vector3.zero;
                 bool wantPairOffsets = GUILayout.Toggle(hasPairOffsets || pairOffsetsOpen, "  This pair needs its own correction (an exception: extra offsets for the second item, only with this partner)", GUI.skin.toggle);
                 pairOffsetsOpen = wantPairOffsets;

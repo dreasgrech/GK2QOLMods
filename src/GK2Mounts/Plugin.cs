@@ -122,9 +122,9 @@ namespace GK2Mounts
             CargoBedDepth = cfg.Bind(section, "CargoBedDepth", Defaults.Get(section, "CargoBedDepth", -0.26f),
                 "Cart style only: the cargo floor relative to the measured top of the empty cart body, world units (negative = items sink below the rails onto the bed floor). Every item's measured bottom is put on this floor.");
             CargoSideGap = cfg.Bind(section, "CargoSideGap", Defaults.Get(section, "CargoSideGap", 0.02f),
-                "Cart style only: gap between two items lying side by side across the bed, world units.");
+                "Cart style only: gap between two items lying next to each other (across the bed or end to end along it), world units.");
             CargoOverhang = cfg.Bind(section, "CargoOverhang", Defaults.Get(section, "CargoOverhang", 0.12f),
-                "Cart style only: how far two side-by-side items may together exceed the bed's measured width before the second one is stacked on the first instead, world units.");
+                "Cart style only: how far two items lying next to each other may together exceed the bed's measured width (across) or length (end to end) before the second one is stacked on the first instead, world units.");
             CargoNestle = cfg.Bind(section, "CargoNestle", Defaults.Get(section, "CargoNestle", 0.03f),
                 "Cart style only: how far an item stacked on another sinks into it, world units (a log on a shroud does not float on the highest point).");
             LanternAlong = cfg.Bind(section, "LanternAlong", Defaults.Get(section, "LanternAlong", 0f),

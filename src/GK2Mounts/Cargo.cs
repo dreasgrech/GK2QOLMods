@@ -31,7 +31,8 @@ namespace GK2Mounts
         private static Inventory inv;
         private static readonly List<Item> mirror = new List<Item>(); // what is on the cart, kept across scene changes
         private static Transform container;
-        private static float bedWidth = 0.75f; // measured from the empty cart body (its size across, local z)
+        private static float bedWidth = 0.75f;  // measured from the empty cart body (its size across, local z)
+        private static float bedLength = 0.9f;  // measured from the empty cart body (its size along, local x)
         private static readonly List<DropViewAtomMesh> views = new List<DropViewAtomMesh>();
         private static bool subscribed;
         private static bool unloading;
@@ -454,14 +455,27 @@ namespace GK2Mounts
                 CargoLayout.ItemEntry e = CargoLayout.ForItem(cur.Item.id);
                 CargoLayout.PairEntry pair = i == 1 ? CargoLayout.ForPair(first.Item.id, cur.Item.id) : null;
                 string mode = pair != null ? pair.Mode : "auto";
-                float w0 = first.Box.size.z, w1 = cur.Box.size.z;
-                bool side = i == 1 && (mode == "side" || (mode == "auto" && w0 + s.CargoSideGap.Value + w1 <= bedWidth + s.CargoOverhang.Value));
+                float gap = s.CargoSideGap.Value, over = s.CargoOverhang.Value;
+                float w0 = first.Box.size.z, w1 = cur.Box.size.z; // across the bed
+                float l0 = first.Box.size.x, l1 = cur.Box.size.x; // along the cart
+                // Two ways to lie next to each other: across the bed (the game's timber pile density; the default
+                // when the widths fit) or end to end along the cart (when the lengths fit but the widths do not, e.g.
+                // two crates); otherwise stacked. A pair entry can force any of the three.
+                bool side = i == 1 && (mode == "side" || (mode == "auto" && w0 + gap + w1 <= bedWidth + over));
+                bool along = i == 1 && !side && (mode == "along" || (mode == "auto" && l0 + gap + l1 <= bedLength + over));
                 if (side)
                 {
-                    float total = w0 + s.CargoSideGap.Value + w1;
+                    float total = w0 + gap + w1;
                     target[0].z = total * 0.5f - w0 * 0.5f + (e0 != null ? e0.Base.z : 0f);
                     target[i] = new Vector3(0f, floor, -total * 0.5f + w1 * 0.5f) + (e != null ? e.Base : Vector3.zero);
-                    note.Append($"{first.Item.id} | {cur.Item.id} side by side ({w0:0.00}+{w1:0.00} on {bedWidth:0.00})");
+                    note.Append($"{first.Item.id} | {cur.Item.id} side by side across ({w0:0.00}+{w1:0.00} on {bedWidth:0.00})");
+                }
+                else if (along)
+                {
+                    float total = l0 + gap + l1;
+                    target[0].x = total * 0.5f - l0 * 0.5f + (e0 != null ? e0.Base.x : 0f);
+                    target[i] = new Vector3(-total * 0.5f + l1 * 0.5f, floor, 0f) + (e != null ? e.Base : Vector3.zero);
+                    note.Append($"{first.Item.id} | {cur.Item.id} end to end along ({l0:0.00}+{l1:0.00} on {bedLength:0.00})");
                 }
                 else
                 {
@@ -716,7 +730,8 @@ namespace GK2Mounts
                 Vector3 top = parent.InverseTransformPoint(new Vector3(b.center.x, b.max.y, b.center.z));
                 container.localPosition = top;
                 bedWidth = Mathf.Max(0.3f, b.size.z / Mathf.Max(0.01f, Mathf.Abs(parent.lossyScale.z)));
-                Plugin.Log.LogInfo($"Cargo: bed top at local {top}, bed width {bedWidth:0.00} (cart body bounds centre {b.center}, size {b.size}).");
+                bedLength = Mathf.Max(0.3f, b.size.x / Mathf.Max(0.01f, Mathf.Abs(parent.lossyScale.x)));
+                Plugin.Log.LogInfo($"Cargo: bed top at local {top}, bed width {bedWidth:0.00}, length {bedLength:0.00} (cart body bounds centre {b.center}, size {b.size}).");
             }
             else
             {
@@ -786,7 +801,7 @@ namespace GK2Mounts
             {
                 l.Add(it.id);
             }
-            return $"cargo {inv.Data.Inventory.Count}/{inv.Data.InventorySize} [{string.Join(" ", l)}]; layout: {LastLayoutNote}; bed width {bedWidth:0.00}";
+            return $"cargo {inv.Data.Inventory.Count}/{inv.Data.InventorySize} [{string.Join(" ", l)}]; layout: {LastLayoutNote}; bed {bedLength:0.00} long × {bedWidth:0.00} across";
         }
     }
 }

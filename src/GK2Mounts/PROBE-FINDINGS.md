@@ -956,3 +956,13 @@ reference sway node's local rotation each frame (after the animator) and turns i
 `pos = pivot + r·(base − pivot) + lift`. Reference: `donkey_cart_lantern_sway` (never toggled by the drawer), else the
 cart bodies. Setting `CargoSwaysWithCart` (per style, true); `OnCargoChanged` resets the holder's rotation before
 re-collecting rest positions so the rotated position is never captured as a rest.
+
+### Packer: end-to-end placement (2026-09-29 02:13)
+
+Third arrangement for a pair, "along": the two lie end to end along the cart's length (bed length measured from the
+empty cart body's bounds along local x, 0.90) when their lengths fit within bed + `CargoOverhang`. Auto order is now
+across (widths fit the 0.75 bed) → along (lengths fit the 0.90 bed) → stacked; `[pair a+b] mode = along` forces it,
+next to `side` (across) and `stack`. Motivation: two crates (0.52 long, 0.50 wide) never fit across but do fit along
+(1.04 + gap vs 0.90 + 0.12 overhang, so they need the overhang), and a crate beside a slab likewise. The first-placed
+(larger) item takes the +x half. Same gap and overhang settings serve both axes; the panel's pair box gained the
+"along" button and a one-line explanation of the auto order.

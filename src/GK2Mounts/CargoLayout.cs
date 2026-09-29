@@ -15,7 +15,7 @@ namespace GK2Mounts
     //                 the whole size class (stone's entry also covers iron ore; box_appliances_1's covers 15 crates).
     //                 along/up/across: offsets when the item is alone, at the bottom or beside another item.
     //                 top_along/top_up/top_across: offsets when it is stacked on top of another item.
-    //   [pair <a>+<b>] applies to that pair of size classes in either order: mode = auto|side|stack, and
+    //   [pair <a>+<b>] applies to that pair of size classes in either order: mode = auto|side|along|stack, and
     //                 along/up/across shift the second-placed item relative to where the packer put it.
     //
     // The file ships embedded in the DLL (the repo copy); a copy in BepInEx/config/GK2Mounts.cargo-layout.cfg
@@ -39,7 +39,7 @@ namespace GK2Mounts
         public class PairEntry
         {
             public string A, B;
-            public string Mode = "auto"; // auto | side | stack
+            public string Mode = "auto"; // auto | side (across) | along (end to end) | stack
             public Vector3 Second;       // offset of the second-placed item
             public bool IsEmpty => Mode == "auto" && Second == Vector3.zero;
         }
@@ -162,7 +162,7 @@ namespace GK2Mounts
             sb.AppendLine("# GK2 Mounts cargo layout: corrections on top of the size-based cargo packer. Written by the tuning panel.");
             sb.AppendLine("# [item <id>] applies to every item of the same size class (measured box within " + SizeTolerance.ToString("0.00", CultureInfo.InvariantCulture) + ").");
             sb.AppendLine("#   along / up / across: alone, at the bottom or beside another item; top_along / top_up / top_across: stacked on top.");
-            sb.AppendLine("# [pair <a>+<b>] applies to that pair of size classes in either order: mode = auto | side | stack; along / up / across move the second item.");
+            sb.AppendLine("# [pair <a>+<b>] applies to that pair of size classes in either order: mode = auto | side (across the bed) | along (end to end) | stack; along / up / across move the second item.");
             sb.AppendLine("# Copy this file over src/GK2Mounts/cargo-layout.cfg and rebuild to ship it as the mod's default.");
             sb.AppendLine("version = 1");
             var ids = new List<string>(Items.Keys);
