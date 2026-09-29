@@ -33,6 +33,10 @@ namespace GK2Mounts
         // destination again.
         internal static bool Active => Mount.IsMounted && Mount.CurrentStyle == MountStyle.Cart && Cargo.Attached && !Cargo.Unloading;
 
+        // While the game's own AddOverheadItem runs for an item the cart refuses (a zombie), the gate answers for the
+        // real head, so the original drops for the head's limit and not for the cart's.
+        internal static bool GateAnswersForHead;
+
         // Puts an item the game wanted on the head onto the cart, with the pickup's side effects. False when the cart
         // is full or refuses the item (the caller then falls back).
         internal static bool TakeToCart(PlayerData pd, Item item)
@@ -120,18 +124,15 @@ namespace GK2Mounts
         {
             try
             {
-                if (!HeadReroute.Active || item == null || item.IsEmpty)
+                if (!HeadReroute.Active || HeadReroute.GateAnswersForHead || item == null || item.IsEmpty)
                 {
-                    return true;
+                    return true; // off, or a deliberate head add from the mod's own fallback: the game's path
                 }
                 if (!Cargo.Allowed(item))
                 {
-                    // A zombie keeps the head. The original drops what the head holds when the (now cart-answering)
-                    // gate says full, so the head's own limit is applied here first.
-                    if (__instance.OverheadCount >= __instance.OverheadStackLimit)
-                    {
-                        __instance.DropOverheadItem();
-                    }
+                    // A zombie keeps the head: the original runs, with the gate answering for the head (its own
+                    // limit) instead of the cart, so it drops exactly what a full head would drop and nothing more.
+                    HeadReroute.GateAnswersForHead = true;
                     return true;
                 }
                 if (HeadReroute.TakeToCart(__instance, item))
@@ -151,6 +152,12 @@ namespace GK2Mounts
                 return true;
             }
         }
+
+        // A finalizer, not a postfix: it must run when the original throws as well, or the gate would stay on the head.
+        private static void Finalizer()
+        {
+            HeadReroute.GateAnswersForHead = false;
+        }
     }
 
     // ---------------------------------------------------------------------- the gate
@@ -165,7 +172,7 @@ namespace GK2Mounts
                 __result = false;
                 return false;
             }
-            if (!HeadReroute.Active)
+            if (!HeadReroute.Active || HeadReroute.GateAnswersForHead)
             {
                 return true;
             }
@@ -291,7 +298,14 @@ namespace GK2Mounts
                 // silent (probe E2).
                 string id = stored.id;
                 HeadReroute.RemoveFromCart(stored);
-                wgoData.Inventory.AddItemToInventory(stored);
+                if (!wgoData.Inventory.AddItemToInventory(stored))
+                {
+                    // Refused after all (CanAdd said yes a moment ago): back onto the cart, never into thin air.
+                    Cargo.Inv.AddItemToInventory(stored);
+                    Cargo.Resync("insert refused");
+                    Plugin.Log.LogWarning($"Cargo: {wgoData.id} refused {id} after all; it is back on the cart.");
+                    return false;
+                }
                 GlobalEventsSystem.FireTrigger(GlobalEventsSystem.Event.Type.PlayerInsertOverheadToWgoAnItem, id);
                 Plugin.Log.LogInfo($"Cargo: {id} put into {wgoData.id} from the cart ({Cargo.Count} left).");
                 return false;

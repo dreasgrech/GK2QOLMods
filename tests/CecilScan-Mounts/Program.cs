@@ -60,6 +60,13 @@ Field("QuestCheck", "triggerType", "GlobalEventsSystem/Event/Type");
 Field("QuestCheck", "condExpressions", "System.Collections.Generic.List`1<LazyExpression>");
 Field("GameBalance", "questDefs", "System.Collections.Generic.List`1<QuestDef>");
 Field("WGODef", "attachedScript", "System.String");
+// Round 11 (save-safety audit): definition fields the mount refuses on, the teleport control flag, the sheet abort.
+Field("WGODef", "townQuality", "System.Int32");
+Field("WGODef", "npcLifeSimGroup", "System.String");
+Field("WGODef", "startItems", "System.Collections.Generic.List`1<NeedItemData>");
+Method("PlayerController", "get_IsControlsEnabled", 0);
+Method("Inventory", "Clear", 0);
+Method("PlayerData", "AddOverheadItem", 1);
 Method("WeatherSystem", "get_WindValue", 0);
 Method("WeatherSystem", "get_Instance", 0);
 Field("GlobalShaderParameters", "idSunLight", "System.Int32", true);

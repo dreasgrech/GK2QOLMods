@@ -253,14 +253,17 @@ namespace GK2Mounts
             if (donkey == null || !donkey)
             {
                 donkey = null;
+                if (!pc.IsControlsEnabled)
+                {
+                    // Still teleporting: the keeper's scene id and position are rewritten only once the new scene
+                    // is up (PlayerController.Teleport), and control comes back after that. Dismounting now would
+                    // set the cargo down at the old door; waiting puts it at his feet where he arrives.
+                    return;
+                }
                 if (!Plugin.StayMountedThroughDoors.Value)
                 {
                     Dismount(pc, "scene changed");
                     return;
-                }
-                if (!pc.IsControlsEnabled)
-                {
-                    return; // still teleporting; try again when control is back
                 }
                 if (!TrySpawn(pc, scene))
                 {
@@ -431,9 +434,37 @@ namespace GK2Mounts
             {
                 return "Not while building.";
             }
-            if (GameBalance.Me?.GetData<WGODef>(Plugin.MountWgoId.Value) == null)
+            WGODef def = GameBalance.Me?.GetData<WGODef>(Plugin.MountWgoId.Value);
+            if (def == null)
             {
                 return "There is no such animal (" + Plugin.MountWgoId.Value + ").";
+            }
+            string sideEffect = WhyDefinitionTouchesTheSave(def);
+            if (sideEffect != null)
+            {
+                return "Can't ride a " + Plugin.MountWgoId.Value + ": " + sideEffect;
+            }
+            return null;
+        }
+
+        // Constructing a WgoData (WgoData.SetDataFromDefinition) writes into the save for some definitions: town
+        // quality is added to TownSystem.Quality, an NPC life-sim group gets the object's GUID appended to its saved
+        // list, and start items are created in its inventory (which the cart would then hand out on dismount). The
+        // donkey has none of these (Round 11), but MountWgoId is a free text setting, so a definition that would
+        // leave a mark in the save is refused before anything is constructed.
+        private static string WhyDefinitionTouchesTheSave(WGODef def)
+        {
+            if (def.townQuality != 0)
+            {
+                return "it would change the town quality in the save.";
+            }
+            if (!string.IsNullOrEmpty(def.npcLifeSimGroup))
+            {
+                return "it belongs to an NPC group the save keeps track of.";
+            }
+            if (def.startItems != null && def.startItems.Count > 0)
+            {
+                return "it comes with items, which the cart would create out of nothing.";
             }
             return null;
         }

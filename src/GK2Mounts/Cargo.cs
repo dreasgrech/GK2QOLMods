@@ -249,6 +249,11 @@ namespace GK2Mounts
         // drop position in front of him). Used at every ride end and before a save.
         public static void Unload(string reason)
         {
+            if (CargoSheet.Running)
+            {
+                // The sheet's items are test copies made in memory; they must not be set down in the world.
+                CargoSheet.Abort("unload on " + reason);
+            }
             List<Item> items = inv != null ? new List<Item>(inv.Data.Inventory) : new List<Item>(mirror);
             if (items.Count == 0)
             {
@@ -266,28 +271,37 @@ namespace GK2Mounts
                     {
                         continue;
                     }
-                    if (inv != null)
+                    // One item at a time, so a failure with one never loses the others.
+                    try
                     {
-                        inv.RemoveItemFromInventoryByUID(it);
+                        if (inv != null)
+                        {
+                            inv.RemoveItemFromInventoryByUID(it);
+                        }
+                        if (pd == null)
+                        {
+                            lost++;
+                            Plugin.Log.LogWarning($"Cargo: {it.id} LOST on unload ({reason}): no player data.");
+                        }
+                        else if (pd.TryAddOverheadItemNoReplace(it))
+                        {
+                            hands++;
+                        }
+                        else if (DropAtKeeper(pd, it))
+                        {
+                            dropped++;
+                        }
+                        else
+                        {
+                            lost++;
+                        }
                     }
-                    if (pd == null)
+                    catch (Exception e)
                     {
                         lost++;
-                    }
-                    else if (pd.TryAddOverheadItemNoReplace(it))
-                    {
-                        hands++;
-                    }
-                    else
-                    {
-                        DropAtKeeper(pd, it);
-                        dropped++;
+                        Plugin.Log.LogWarning($"Cargo: {it.id} LOST on unload ({reason}): {e}");
                     }
                 }
-            }
-            catch (Exception e)
-            {
-                Plugin.Log.LogWarning("Cargo: unloading failed: " + e);
             }
             finally
             {
@@ -298,21 +312,45 @@ namespace GK2Mounts
             {
                 Mount.OnCargoChanged();
             }
-            Plugin.Log.LogInfo($"Cargo: unloaded on {reason}: {hands} in hand, {dropped} dropped{(lost > 0 ? $", {lost} LOST (no player)" : "")}.");
+            Plugin.Log.LogInfo($"Cargo: unloaded on {reason}: {hands} in hand, {dropped} dropped{(lost > 0 ? $", {lost} LOST (see warnings)" : "")}.");
         }
 
-        internal static void DropAtKeeper(PlayerData pd, Item item)
+        // Sets an item down in front of the keeper with the game's drop routine. False when the game refused the
+        // drop (it refuses fuel and tech points, and an empty scene id); the caller then keeps the item somewhere
+        // else rather than letting it vanish.
+        internal static bool DropAtKeeper(PlayerData pd, Item item)
         {
             if (pd == null || item == null || item.IsEmpty)
             {
-                return;
+                return false;
             }
             Vector3 pos;
             if (!SpecialPhysicsCastUtils.GetPlayerDropPosition(pd.position.Value, pd.Direction, out pos))
             {
                 pos = pd.position.Value;
             }
-            MainGame.Instance.dropSystem.DropItem(item, pd.currentGameSceneId, pos);
+            if (MainGame.Instance.dropSystem.DropItem(item, pd.currentGameSceneId, pos))
+            {
+                return true;
+            }
+            // The head as the last resort: an item in view beats an item gone. The game's own path, not the
+            // reroute (which may be what called here with a full cart), so the flag sends it to the head.
+            if (!unloading)
+            {
+                HeadReroute.GateAnswersForHead = true;
+                try
+                {
+                    pd.AddOverheadItem(item);
+                }
+                finally
+                {
+                    HeadReroute.GateAnswersForHead = false;
+                }
+                Plugin.Log.LogWarning($"Cargo: the game refused to drop {item.id} (scene '{pd.currentGameSceneId}'); it went to the keeper's hands.");
+                return true;
+            }
+            Plugin.Log.LogWarning($"Cargo: the game refused to drop {item.id} (scene '{pd.currentGameSceneId}'); it is LOST.");
+            return false;
         }
 
         // ------------------------------------------------------------------ views and the packer

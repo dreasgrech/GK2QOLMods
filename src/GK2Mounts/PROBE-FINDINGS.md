@@ -966,3 +966,74 @@ next to `side` (across) and `stack`. Motivation: two crates (0.52 long, 0.50 wid
 (1.04 + gap vs 0.90 + 0.12 overhang, so they need the overhang), and a crate beside a slab likewise. The first-placed
 (larger) item takes the +x half. Same gap and overhang settings serve both axes; the panel's pair box gained the
 "along" button and a one-line explanation of the auto order.
+
+## Round 11 (2026-09-29 03:49): save-safety audit (source reading of every path that touches saved state)
+
+Question: can the mod corrupt a save, or break a player's game? Method: trace every write the mod makes and every
+game path that could serialize, duplicate or lose an item while riding, in the fresh decompile.
+
+**What a save is.** `SaveSystem.Save(slotData, gameSave)` serializes the live `GameSave` object graph with Odin
+(`lazySaveSystem.Save`), synchronously, after `gameSave.PrepareToSave` (slot metadata only). The only in-game
+caller is `EnergySystem.StopSleeping` (end of sleep). Quitting (`GameShutdown`, `UIMainMenuWindow`) never saves,
+and there is no autosave. Our prefix runs before serialization, so its drops are part of the file.
+
+**The temp donkey never reaches the file.** `new WgoData(id, pos, sceneId) { isTempObject = true }` registers
+nothing: the constructor calls `SetDataFromDefinition`, `TryCreateMainWgoPartData`, `PrepareForGame`; none of them
+adds the object to `GameSceneData.wgoDataList` (only `WorldData.AddWgoData`/`GameSceneData.AddWgoData` do that) or
+to any other saved collection. `Wgo.Spawn` skips GD-point registration and workbench init for temp objects.
+`Wgo.OnDestroy` → `DeInit` → `data.DeInit()` unsubscribes it. Odin serializes only what the `GameSave` graph
+reaches, so the cart inventory (a field of the temp `WgoData`) is unreachable from the save.
+
+**But the constructor has three definition-dependent side effects on saved data** (`SetDataFromDefinition`):
+`townQuality > 0` adds to `TownSystem.Quality` (saved) on every construction; a non-empty `npcLifeSimGroup`
+appends the new GUID to `NPCGroupPointOfInterestData.wgos` (a `[SerializeField]` list in the save, left dangling
+when the temp object dies); `startItems` are created in the inventory (the cart would hand them out on dismount).
+`npc_donkey`: townQuality 0, group "", no start items, hp 0 (`GK2-mount-probe.txt` 4030-4084). `MountWgoId` is a
+free text setting, though, so `WhyCannotMount` now refuses any definition with one of the three ("Can't ride a …").
+
+**Item identity through the cart** (`Item.AddItemToInventory`, stack 1 path): `Split(1, transferInternalData:
+true)` makes a new object, copies the GUID (`SetGuid`), moves the pocket inventory and clones the properties, and
+`KeepUnaddedCountOnSource` sets the source to 0. Every caller path was checked for the two shells this creates:
+- ground pickup (`BigDropInteractionHandler.Interact`): `RemoveDrop` first, `AddOverheadItem` second, so the shell
+  is unreferenced garbage; the restored count changes nothing.
+- tables (`UIAutopsyWindowData.TakeBody`, embalm, resurrection): add first, `RemoveItemFromInventoryByUID(bodyItem)`
+  second, with count −1 → removes the whole entry whatever the shell's count. The count restore only matters for
+  the removal *event* (an emptied shell is removed silently, so the table would not redraw).
+- scripts (`TakeOvrhdItem`, `TakeOvrhdItemByGroup`, conveyor cells): the item is removed from the source
+  inventory first (`RemoveItemById`), then `TryAddOverheadItemNoReplace`. Garbage shell.
+- zombies: `ZombieItem` refused by `Allowed`, head path, vanilla.
+The mod's own moves (`LoadFromHead` via the game's `InsertOverheadItemTo`, `Unload` via `RemoveItemFromInventoryByUID`
+→ head/drop by reference, re-summon via `AddItemToInventory`) each leave exactly one live object per GUID.
+No path leaves two live objects with one GUID, so no save can hold a duplicate.
+
+**Drops are robust.** `DropSystem.DropItemInternal` queues the drop on the scene data when the scene is not loaded
+(`AddDropToQueue`), so unloading into an unloaded scene is safe. `DropItem` returns false only for fuel, tech
+points and an empty scene id; no head-carried item is fuel (`GK2-itemdefs.csv`, 29 items, all `is_fuel` False).
+`DropAtKeeper` now checks the result and falls back to the head (game path, gate flag) or logs LOST.
+
+**Other saved state**: `PlayerPhysicalBody.SpeedMultiplier` is an auto-property on the MonoBehaviour (not in
+`PlayerData`); seat, gear, lantern, cargo views are transforms/renderers on the temp object or the player prefab.
+`PlayerData.overheadItems` is only touched through the game's own methods; the purge at mount removes count-0
+entries (unusable by the game anyway). The `AddOverhead` trigger fires exactly as in vanilla.
+
+**Menu and load while mounted**: `MainGame.GoToMenu` clears the current scene, unprepares the save and unloads the
+scenes; `IsInGame` turns false and `ForceCleanup` unloads into the *old* `PlayerData` (in memory, then discarded),
+or counts LOST when it is already null. `ContinueGame` swaps `gameSave`/`PlayerData` only later, so cargo can never
+cross into another save. Death, sleep, work, fights: the state change dismounts first (control flags), so the sleep
+save always finds the cargo already handed back; the Save prefix is the second line.
+
+**Edge cases fixed in this build**: (1) `Enabled=false` mid-ride left the donkey, the speed and the reroute in
+place (LateUpdate returned early); now `ForceCleanup`. (2) A zombie pickup with a full cart could drop two head
+items (our pre-drop plus the original's gate-driven drop); the gate now answers for the real head during the
+original (`GateAnswersForHead`, reset by a finalizer). (3) `InsertOverheadItemTo` from the cart removed first and
+could lose the item if the target's add failed; it goes back on the cart. (4) `Unload` handled items in one
+try/catch, so one failure lost the rest; now per item, LOST items named in the log. (5) Dismount on scene change
+(with `StayMountedThroughDoors=false`) ran before the teleport rewrote scene id and position, setting the cargo
+down at the old door; it now waits for control like the re-summon path. (6) The cargo sheet swapped real cargo
+for test copies; a dismount mid-run would have set the copies down as real items and lost the real cargo. It now
+requires an empty cart and `Unload` aborts it (`CargoSheet.Abort`, coroutine stopped, inventory cleared; Unity
+does not run a stopped coroutine's finally).
+
+**Left as is (debug tools, not save risks but item-creating)**: "Put in cart inventory" and "Drop it here" create
+items from ids; "Start a real delivery" runs the game's own delivery. All behind the Debug tab; the release
+checklist turns `TuningWindow` off by default.

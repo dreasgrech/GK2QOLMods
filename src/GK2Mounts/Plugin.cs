@@ -323,8 +323,18 @@ namespace GK2Mounts
         // LateUpdate: runs after the game moved the player for this frame, so the donkey follows without lag.
         private void LateUpdate()
         {
-            if (harmony == null || !Enabled.Value)
+            if (harmony == null)
             {
+                return;
+            }
+            if (!Enabled.Value)
+            {
+                // Switched off mid-ride: hand the cargo back and restore the keeper instead of leaving a frozen
+                // donkey, a raised speed and the cart reroute behind (the patches stay installed until restart).
+                if (Mount.IsMounted)
+                {
+                    Mount.ForceCleanup("disabled in the config");
+                }
                 return;
             }
             try

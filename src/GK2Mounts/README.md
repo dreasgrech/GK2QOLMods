@@ -83,7 +83,7 @@ writing, Ride / Cart.
 |---|---|---|
 | `TuningWindow` | true | While mounted, a panel in the top-right corner with tabs General / Riding / Lantern / Debug / Export. Changes apply live; "Save to config file" writes them; right-click a row to reset it. `TuningWindowScale` (1.5) sets its overall size, `TuningWindowFontScale` (1) the text size inside it, `TuningWindowWidth` (470) its width; all three have - / + steppers on the Debug tab and the rows scale with the width. Turn off for normal play. |
 | `TuningKeys` | true | PageUp/PageDown torso, Home/End legs sideways, Insert/Delete legs up/down, one art pixel per press, editing the current style's values. Turn off for normal play. |
-| (Debug tab buttons) | | "Start a real delivery now" fires the game donkey's own `full_cycle` script event with its body roll forced to pass (a Harmony prefix on `Flow_Body.DoAction`, active for two frames after the press, drop chance untouched), so the real cart can be watched on the same ground as ours. "Dump the game donkey's script" writes the `npc_donkey` flow graph to `BepInEx/GK2-script-npc_donkey.json`; the text field sends any of its events. See `PROBE-FINDINGS.md` for the routine. "Dump carry facts" writes `BepInEx/GK2-carry-facts.txt` (the donkey prefab's drawer rules, its inventory filters, every big item, the overhead mesh elements) and "Put in cart inventory" / "Take first out" add or remove a plain test item on the mounted donkey's own 2-slot inventory to watch the game's loaded-cart mesh react (Round 7 of the findings; groundwork for carrying cargo). "Drop it here" spawns any big item in front of the keeper with the game's own drop routine (a normal, saved world drop; `<` `>` cycle through all of them; a corpse comes from the delivery script's body definition; zombies cannot be spawned from an id). "Photograph all cargo combinations" puts every distinct item shape alone and every ordered pair on the mounted cart in turn, screenshots and crops each, and writes `BepInEx/GK2-cargo-sheet/index.html`, a grid of all pictures (rows: first item, columns: second) with the settings used; the real cargo is put back afterwards. |
+| (Debug tab buttons) | | "Start a real delivery now" fires the game donkey's own `full_cycle` script event with its body roll forced to pass (a Harmony prefix on `Flow_Body.DoAction`, active for two frames after the press, drop chance untouched), so the real cart can be watched on the same ground as ours. "Dump the game donkey's script" writes the `npc_donkey` flow graph to `BepInEx/GK2-script-npc_donkey.json`; the text field sends any of its events. See `PROBE-FINDINGS.md` for the routine. "Dump carry facts" writes `BepInEx/GK2-carry-facts.txt` (the donkey prefab's drawer rules, its inventory filters, every big item, the overhead mesh elements) and "Put in cart inventory" / "Take first out" add or remove a plain test item on the mounted donkey's own 2-slot inventory to watch the game's loaded-cart mesh react (Round 7 of the findings; groundwork for carrying cargo). "Drop it here" spawns any big item in front of the keeper with the game's own drop routine (a normal, saved world drop; `<` `>` cycle through all of them; a corpse comes from the delivery script's body definition; zombies cannot be spawned from an id). "Photograph all cargo combinations" puts every distinct item shape alone and every ordered pair on the mounted cart in turn, screenshots and crops each, and writes `BepInEx/GK2-cargo-sheet/index.html`, a grid of all pictures (rows: first item, columns: second) with the settings used; the cart must be empty to start (a dismount mid-run aborts the sheet and discards its test copies). |
 | `DisableOnGameUpdate` | true | Do nothing if the game's code changed since the audit. |
 
 ## How it works
@@ -116,11 +116,18 @@ writing, Ride / Cart.
 
 ## Safety
 
-- **No save changes.** The donkey is a temp object outside `WorldData`; the speed multiplier lives on a
-  MonoBehaviour; the seat offset on a transform. Nothing new is serialized. Saves made while mounted load without
-  the mod exactly as they would otherwise (you are simply on foot).
-- **Worst case** if the plugin crashes mid-ride: a donkey view that lingers until the scene unloads and a faster walk
-  until the next dismount or restart. Nothing persists.
+- **No save changes.** The donkey is a temp object outside `WorldData` (never added to a scene list, so the save's
+  object graph cannot reach it or the cart inventory); the speed multiplier lives on a MonoBehaviour; the seat offset
+  on a transform. Nothing new is serialized. Saves made while mounted load without the mod exactly as they would
+  otherwise (you are simply on foot). Round 11 of `PROBE-FINDINGS.md` is the full audit: every save path (the only
+  one is the end of sleep), every item hand-over and its GUID bookkeeping, and the menu, load, death and door cases.
+- **Cargo is always handed back before a save**: the state change that leads to sleep dismounts first, and a prefix
+  on `SaveSystem.Save` is the second line. What the game refuses to drop goes to your hands, and anything the mod
+  cannot place is named in the log as LOST (never seen so far).
+- **`MountWgoId` is checked** before anything is built: definitions with town quality, an NPC life-sim group or
+  start items would leave a mark in the save when constructed, so they are refused with a message.
+- **Worst case** if the plugin crashes mid-ride: `ForceCleanup` hands the cargo back and restores the keeper; at most
+  a donkey view lingers until the scene unloads. Nothing persists. Setting `Enabled=false` mid-ride does the same.
 - The real `npc_donkey` NPC is never touched; the mod only reads its prefab.
 - MVID guard, `Access.Verify()` of every game member used, and all-or-nothing patching as in the other mods.
   Refuses in co-op.

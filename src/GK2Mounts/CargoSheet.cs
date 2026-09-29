@@ -22,6 +22,36 @@ namespace GK2Mounts
 
         private static readonly Vector3 CropHalfExtents = new Vector3(1.25f, 1.1f, 0.9f); // world box around the cart bed
         private static bool cropLogged;
+        private static Coroutine running;
+        private static Inventory runningInv;
+
+        // Ends a run early (a dismount, a save, an error) and throws its test items away. Unity does not run a
+        // stopped coroutine's finally block, so the inventory is cleared here. The cart was empty when the run
+        // began (Begin insists), so there is nothing to put back.
+        public static void Abort(string why)
+        {
+            if (!Running)
+            {
+                return;
+            }
+            try
+            {
+                if (running != null && Plugin.Instance != null)
+                {
+                    Plugin.Instance.StopCoroutine(running);
+                }
+                runningInv?.Clear();
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning("[sheet] abort cleanup failed: " + e.Message);
+            }
+            running = null;
+            runningInv = null;
+            Running = false;
+            Status = "aborted: " + why;
+            Plugin.Log.LogInfo("[sheet] aborted (" + why + "); test items discarded.");
+        }
 
         public static string Start()
         {
@@ -48,7 +78,14 @@ namespace GK2Mounts
             {
                 return "plugin instance missing";
             }
-            Plugin.Instance.StartCoroutine(routine);
+            if (Cargo.Count > 0)
+            {
+                // Real cargo would be swapped out for test copies for the run; if the ride ended mid-run the copies
+                // would be set down as real items and the real cargo would be gone. Run with an empty cart only.
+                return "set the cargo down first (the sheet needs an empty cart)";
+            }
+            runningInv = Mount.Donkey.Data.Inventory;
+            running = Plugin.Instance.StartCoroutine(routine);
             return "started; stand still until the panel comes back";
         }
 
