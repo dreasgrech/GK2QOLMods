@@ -308,8 +308,10 @@ namespace GK2Mounts
         public const string Guid = "dreas.gk2.mounts";
         public const string Version = "0.1.0";
 
-        // Module version id of the Assembly-CSharp.dll this plugin was audited against.
-        private static readonly System.Guid AuditedGameMvid = new System.Guid("97f92f0d-a093-49fe-ba4d-74aa62fae81e");
+        // Module version id of the Assembly-CSharp.dll this plugin was audited against (Steam build 25601286).
+        private static readonly System.Guid AuditedGameMvid = new System.Guid("3ffadd70-169d-402a-bcdf-59c322dfc26d");
+        // And of LazyBearTechnology.dll (the engine library the plugin also uses), same build (Steam 25601286).
+        private static readonly System.Guid AuditedLazyBearMvid = new System.Guid("8a7a5e04-396d-4525-a779-3f0de1341398");
 
         internal static ManualLogSource Log;
 
@@ -397,14 +399,15 @@ namespace GK2Mounts
             Log.LogInfo("Cargo layout: " + CargoLayout.Summary());
 
             System.Guid gameMvid = typeof(WgoData).Assembly.ManifestModule.ModuleVersionId;
-            if (gameMvid != AuditedGameMvid)
+            System.Guid lazyBearMvid = typeof(LazyBearTechnology.LazyAudio).Assembly.ManifestModule.ModuleVersionId;
+            if (gameMvid != AuditedGameMvid || lazyBearMvid != AuditedLazyBearMvid)
             {
                 if (DisableOnGameUpdate.Value)
                 {
-                    Log.LogError($"Game code changed since this mod was audited (MVID {gameMvid}, expected {AuditedGameMvid}). Mod is DISABLED; the game runs unmodified. Set Safety.DisableOnGameUpdate=false to force-enable at your own risk.");
+                    Log.LogError($"Game code changed since this mod was audited (Assembly-CSharp {gameMvid}, expected {AuditedGameMvid}; LazyBearTechnology {lazyBearMvid}, expected {AuditedLazyBearMvid}). Mod is DISABLED; the game runs unmodified. Set Safety.DisableOnGameUpdate=false to force-enable at your own risk.");
                     return;
                 }
-                Log.LogWarning($"Game code changed since this mod was audited (MVID {gameMvid}). Running anyway because DisableOnGameUpdate=false.");
+                Log.LogWarning($"Game code changed since this mod was audited (Assembly-CSharp {gameMvid}, LazyBearTechnology {lazyBearMvid}). Running anyway because DisableOnGameUpdate=false.");
             }
 
             harmony = new Harmony(Guid);

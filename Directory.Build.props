@@ -1,0 +1,9 @@
+<Project>
+  <!-- The game install every project in this repo builds against, deploys into and tests against. One place:
+       change it here, or pass -p:GameDir="..." on the command line. -->
+  <PropertyGroup>
+    <GameDir Condition="'$(GameDir)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Graveyard Keeper 2</GameDir>
+    <Managed>$(GameDir)\GraveyardKeeper2_Data\Managed</Managed>
+    <BepInExCore>$(GameDir)\BepInEx\core</BepInExCore>
+  </PropertyGroup>
+</Project>

@@ -1,6 +1,7 @@
 # GK2 Global Storage — Findings
 
-As of 2026-09-24. Covers the Graveyard Keeper 2 install at `C:\Games\Graveyard Keeper 2` and the mod in `src\GK2GlobalStorage`.
+As of 2026-09-24, updated 2026-09-29. Covers the mod in `src\GK2GlobalStorage` and the Graveyard Keeper 2 install at
+`C:\Program Files (x86)\Steam\steamapps\common\Graveyard Keeper 2` (since v1.1.3; before that `C:\Games\Graveyard Keeper 2`).
 
 ## Summary
 
@@ -18,12 +19,12 @@ GK2 Global Storage 1.1.0 (1.1.1 is the same code, re-audited for game build 2550
 | Engine | Unity 6000.3.9f1 |
 | Scripting backend | Mono (not IL2CPP), so it can be patched with Harmony |
 | Game code | `GraveyardKeeper2_Data\Managed\Assembly-CSharp.dll` |
-| Audited build MVID | `97f92f0d-a093-49fe-ba4d-74aa62fae81e` (Steam build 25533739, since v1.1.2). Before that `70946fdd-5c76-4d71-95c3-fea95051340d` (25509347, v1.1.1). Originally `dfae7296-aa7e-450f-92b4-4e617878a48d` (build 25457344) |
+| Audited build MVID | `3ffadd70-169d-402a-bcdf-59c322dfc26d`, LazyBearTechnology `8a7a5e04-396d-4525-a779-3f0de1341398` (Steam build 25601286, since v1.1.3). Before that `97f92f0d-a093-49fe-ba4d-74aa62fae81e` (25533739, v1.1.2), then `70946fdd-5c76-4d71-95c3-fea95051340d` (25509347, v1.1.1). Originally `dfae7296-aa7e-450f-92b4-4e617878a48d` (build 25457344) |
 | Assembly-CSharp SHA256 | `C631C68A9606E48F7DBBF1394E0849D37E0DDCD7B345CBF6D58569EE545B9E03` (25509347). Originally `185A742AB88B13E0CA9AB26EE820DDEFCBA05FAFD76A6027939F889DE65CCD50` |
 | Mod loader | BepInEx 5.4.23.5 (win x64), bundles HarmonyX 2.9.0 |
 | Save folder | `%USERPROFILE%\AppData\LocalLow\Lazy Bear Games\Graveyard Keeper 2` (`Steam_1.dat/.info` + 3 rotating backups) |
 | Save format | Odin Serializer (binary), records each object's concrete type |
-| Game folder | `C:\Games\Graveyard Keeper 2`, a git repo (`init commit`, BepInEx and mod commits, then `Game update 25509347`). The previous build's game files remain in `C:\Games\Graveyard Keeper 2 (25457344)` until they're deleted |
+| Game folder | `C:\Program Files (x86)\Steam\steamapps\common\Graveyard Keeper 2` since v1.1.3, a git repo (clean build 25601286 committed, `init clean commit of v1.007 build 25601286`). Before: `C:\Games\Graveyard Keeper 2`, a git repo (`init commit`, BepInEx and mod commits, then `Game update 25509347`). The previous build's game files remain in `C:\Games\Graveyard Keeper 2 (25457344)` until they're deleted |
 
 Tools used, all outside the game folder:
 
@@ -206,9 +207,9 @@ Storage would be the same set the mod already uses. Each transpiler would check 
 |---|---|
 | `src\GK2GlobalStorage\Plugin.cs` | Mod source |
 | `src\GK2GlobalStorage\GK2GlobalStorage.csproj` | Build project; `dotnet build -c Release` rebuilds and copies the DLL into the game |
-| `C:\Games\Graveyard Keeper 2\BepInEx\plugins\GK2GlobalStorage.dll` | Installed mod |
-| `C:\Games\Graveyard Keeper 2\BepInEx\config\dreas.gk2.globalstorage.cfg` | Settings |
-| `C:\Games\Graveyard Keeper 2\BepInEx\LogOutput.log` | Load and error log |
+| `<game folder>\BepInEx\plugins\GK2GlobalStorage.dll` | Installed mod (game folder: `C:\Program Files (x86)\Steam\steamapps\common\Graveyard Keeper 2` since v1.1.3) |
+| `<game folder>\BepInEx\config\dreas.gk2.globalstorage.cfg` | Settings |
+| `<game folder>\BepInEx\LogOutput.log` | Load and error log |
 | `winhttp.dll`, `doorstop_config.ini`, `.doorstop_version`, `BepInEx\` in the game folder | BepInEx loader |
 
 - **Disable the mod:** set `Enabled = false`, or delete `GK2GlobalStorage.dll`.
@@ -222,6 +223,33 @@ Storage would be the same set the mod already uses. Each transpiler would check 
 - Decide on the quest-handover scope (A or B) before implementation.
 
 ---
+
+## Game update 25601286, move to the Steam install: re-audit (v1.1.3)
+
+On 2026-09-29 the mods moved from `C:\Games\Graveyard Keeper 2` (build 25533739) to the Steam install at
+`C:\Program Files (x86)\Steam\steamapps\common\Graveyard Keeper 2` (build 25601286). The loader files, `BepInEx\core`
+and `BepInEx\config` were copied over; the plugins were rebuilt against the new build and deployed fresh. The full
+audit is `docs/steam-move-audit.md`; `tests/GameDiff` produced the member lists.
+
+**What changed in the game's code:** `Assembly-CSharp`: 72 method bodies changed, 169 members added, 79 removed
+(all compiler-generated). `LazyBearTechnology`: only `ExceptionReportWindow`.
+
+**Changes near the mod, none affecting it:**
+- **Patched methods:** `WgoData.GetCraftableMultiInventory`, `MultiInventory(PlayerData, bool)`, `MultiInventory.Sort`,
+  the `UIMultiInventoryWindowData` constructor and `PlayerOrderExecutor()` are unchanged.
+- **`ZombieWgoData`:** the caretaker aborts cleanly when the inventory it walks to is gone
+  (`CaretakerAbortPickUpFromMissingInventory`, null guards in `CaretakerTryPickUpFromInventory`). The
+  `GetCraftableMultiInventory` override is unchanged and the base-call check still passes.
+- **`Item` / `Inventory`:** bag rules (`CanBeInsertedInBag` in the add path) and inventory filters synced from the
+  balance data (`SyncWhiteList` / `SyncBlackList`, called from `WgoData.PrepareForGame`). The mod neither adds items
+  nor touches filters.
+- **`UIBaseChestWindowData` / `MultiInventoryWidget(Data)`:** a redraw when item availability changes. Display only.
+- **`CraftComponent`:** stale pre-finish clearing; output added only when non-empty. Material checks unchanged.
+- **Saves:** new one-time fixes at save version 1007 / 1007.1. `SaveSystem.Save` refuses to save under 100 MB free
+  disk space.
+
+**Verification:** static suite 24 OK, Cecil base-call check passes (both against the Steam build, run from the repo).
+**Code change:** the MVIDs, now `Assembly-CSharp` and `LazyBearTechnology`, and the version string.
 
 ## Game update 25533739: re-audit (v1.1.2)
 
@@ -553,7 +581,7 @@ Persistent:
 | Path | What |
 |---|---|
 | `src\GK2GlobalStorage\` | Mod source, build output (`bin\`, `obj\`), this file |
-| `C:\Games\Graveyard Keeper 2\` | BepInEx loader + mod DLL + config + log |
+| `C:\Program Files (x86)\Steam\steamapps\common\Graveyard Keeper 2\` (before v1.1.3: `C:\Games\Graveyard Keeper 2\`) | BepInEx loader + mod DLL + config + log |
 | `%USERPROFILE%\.dotnet\tools\ilspycmd` | Global .NET tool (v8.2.0.7535); remove with `dotnet tool uninstall -g ilspycmd` |
 | `%USERPROFILE%\.nuget\packages\` | NuGet cache (e.g. `System.Reflection.MetadataLoadContext` 8.0.0) |
 

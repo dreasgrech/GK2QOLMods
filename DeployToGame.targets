@@ -1,0 +1,18 @@
+<Project>
+  <!-- Copies the built plugin into $(GameDir)\BepInEx\plugins after every build, but only while the game is closed:
+       a running game has the old DLL loaded, and Windows still lets the file be replaced under it, so the check has
+       to be explicit. -p:Deploy=false skips deploying altogether. Imported by each plugin's .csproj. -->
+  <Target Name="DeployToGame" AfterTargets="Build" Condition="'$(Deploy)' != 'false'">
+    <Exec Command="tasklist /FI &quot;IMAGENAME eq GraveyardKeeper2.exe&quot; /NH" ConsoleToMSBuild="true" StandardOutputImportance="low" IgnoreExitCode="true">
+      <Output TaskParameter="ConsoleOutput" PropertyName="GameProcessList" />
+    </Exec>
+    <PropertyGroup>
+      <GameRunning>false</GameRunning>
+      <GameRunning Condition="$(GameProcessList.Contains('GraveyardKeeper2.exe'))">true</GameRunning>
+    </PropertyGroup>
+    <Warning Condition="'$(GameRunning)' == 'true'" Text="Graveyard Keeper 2 is running: $(TargetFileName) was built but NOT deployed. Close the game and build again." />
+    <MakeDir Condition="'$(GameRunning)' != 'true'" Directories="$(GameDir)\BepInEx\plugins" />
+    <Copy Condition="'$(GameRunning)' != 'true'" SourceFiles="$(TargetPath)" DestinationFolder="$(GameDir)\BepInEx\plugins" />
+    <Message Condition="'$(GameRunning)' != 'true'" Importance="high" Text="Deployed $(TargetFileName) to $(GameDir)\BepInEx\plugins" />
+  </Target>
+</Project>

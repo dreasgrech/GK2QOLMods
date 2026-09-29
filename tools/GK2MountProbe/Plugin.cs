@@ -18,7 +18,9 @@ namespace GK2MountProbe
         public const string Guid = "dreas.gk2.mountprobe";
         public const string Version = "0.1.0";
 
-        private static readonly System.Guid AuditedGameMvid = new System.Guid("97f92f0d-a093-49fe-ba4d-74aa62fae81e");
+        private static readonly System.Guid AuditedGameMvid = new System.Guid("3ffadd70-169d-402a-bcdf-59c322dfc26d");
+        // And of LazyBearTechnology.dll (the engine library the plugin also uses), same build (Steam 25601286).
+        private static readonly System.Guid AuditedLazyBearMvid = new System.Guid("8a7a5e04-396d-4525-a779-3f0de1341398");
 
         internal static ManualLogSource Log;
         internal static Plugin Instance;
@@ -93,14 +95,15 @@ namespace GK2MountProbe
                 "Do nothing if the game's code has changed since this probe was written.");
 
             System.Guid gameMvid = typeof(WgoData).Assembly.ManifestModule.ModuleVersionId;
-            if (gameMvid != AuditedGameMvid)
+            System.Guid lazyBearMvid = typeof(LazyBearTechnology.LazyAudio).Assembly.ManifestModule.ModuleVersionId;
+            if (gameMvid != AuditedGameMvid || lazyBearMvid != AuditedLazyBearMvid)
             {
                 if (DisableOnGameUpdate.Value)
                 {
-                    Log.LogError($"Game code changed since this probe was written (MVID {gameMvid}, expected {AuditedGameMvid}). Probe is DISABLED.");
+                    Log.LogError($"Game code changed since this probe was written (Assembly-CSharp {gameMvid}, expected {AuditedGameMvid}; LazyBearTechnology {lazyBearMvid}, expected {AuditedLazyBearMvid}). Probe is DISABLED.");
                     return;
                 }
-                Log.LogWarning($"Game code changed since this probe was written (MVID {gameMvid}). Running anyway.");
+                Log.LogWarning($"Game code changed since this probe was written (Assembly-CSharp {gameMvid}, LazyBearTechnology {lazyBearMvid}). Running anyway.");
             }
 
             harmony = new Harmony(Guid);

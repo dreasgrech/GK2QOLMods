@@ -1,12 +1,18 @@
 # Verification tools
 
-Console projects that check the built mod DLLs against the installed game (`C:\Games\Graveyard Keeper 2`) without
-launching it. Each is run after every build and after every game update. All paths inside are absolute; adjust the
-`GameDir`-style paths in the `.csproj` and `Program.cs` if the game or repo lives elsewhere.
+Console projects that check the built mod DLLs against the installed game without launching it. The game folder
+comes from `GameDir` in the repo's `Directory.Build.props` (the Steam install); `tests/Directory.Build.props` passes
+it to every test (`GamePaths.cs`). Each is run after every build and after every game update.
+
+**After a game update, first:** `dotnet run -c Release -- "<previous game folder>"` in `GameDiff` lists every
+member of `Assembly-CSharp` and `LazyBearTechnology` that was removed, added or changed (full list in
+`%TEMP%\gamediff.txt`). Check it against every patch target and every game member the mods use, then run the
+scans below, then update the audited MVIDs and version strings.
 
 | Project | Mod | What it checks | Run |
 |---|---|---|---|
-| `StaticScan-GlobalStorage` | Global Storage | MetadataLoadContext suite: every game member the mod relies on exists with the expected shape (22 checks). | `dotnet run -c Release` |
+| `GameDiff` | all | Member-by-member diff of two game installs (`Assembly-CSharp`, `LazyBearTechnology`): removed / added / changed, compiler-generated removals counted apart. | `dotnet run -c Release -- "<old game folder>" ["<new game folder>"]` |
+| `StaticScan-GlobalStorage` | Global Storage | MetadataLoadContext suite: every game member the mod relies on exists with the expected shape (24 checks). | `dotnet run -c Release` |
 | `CecilScan-GlobalStorage` | Global Storage | Mono.Cecil: the zombie and conveyor code paths still call the base methods the mod distinguishes. | `dotnet run -c Release` |
 | `CecilScan-BuiltCount` | Built Count | Mono.Cecil: `UIBuildingWidget.Redraw`, the `nameLabel`/`data` fields, MVID. | `dotnet run -c Release` |
 | `HarmonyHarness-BuiltCount` | Built Count | .NET Framework 4.8 process that loads the game assemblies and applies the mod's patches with HarmonyX: MVID match, patch classes construct, `PatchAll` succeeds, lists the patched methods. | `dotnet build -c Release` then run `bin\Release\net48\HarmonyHarness-BuiltCount.exe` |

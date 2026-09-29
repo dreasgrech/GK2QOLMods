@@ -1,6 +1,6 @@
 using Mono.Cecil; using Mono.Cecil.Cil;
-var managed = @"C:\Games\Graveyard Keeper 2\GraveyardKeeper2_Data\Managed\";
-var res = new DefaultAssemblyResolver(); res.AddSearchDirectory(managed); res.AddSearchDirectory(@"C:\Games\Graveyard Keeper 2\BepInEx\core\");
+var managed = GamePaths.Managed;
+var res = new DefaultAssemblyResolver(); res.AddSearchDirectory(managed); res.AddSearchDirectory(GamePaths.BepInExCore);
 var rp = new ReaderParameters { AssemblyResolver = res };
 var repo = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..")); // tests/X/bin/Release/net8.0 -> repo root
 var mod = ModuleDefinition.ReadModule(Path.Combine(repo, "src", "GK2OwnedCount", "bin", "Release", "netstandard2.1", "GK2OwnedCount.dll"), rp);

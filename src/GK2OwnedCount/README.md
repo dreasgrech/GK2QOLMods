@@ -11,7 +11,8 @@ on you 4 · in storage 116 (5 chests)
 the same set Global Storage draws from. "All grades" appears for graded items (the ones with a star, e.g. Bones of
 different skull grades) and sums the whole family. Display only: nothing in the game changes.
 
-Version 1.0.1, built and audited against game build 25533739 (Assembly-CSharp MVID `97f92f0d-…`).
+Version 1.0.2, built and audited against Steam game build 25601286 (Assembly-CSharp MVID `3ffadd70-…`,
+LazyBearTechnology `8a7a5e04-…`; re-audit in `docs/steam-move-audit.md`). 1.0.1 was the same code for 25533739.
 Feasibility study: [`docs/owned-count-tooltip.md`](../../docs/owned-count-tooltip.md).
 
 ## Settings (`BepInEx\config\dreas.gk2.ownedcount.cfg`, read at game start)
@@ -55,7 +56,7 @@ stock, items lying on the ground.
 
 ## In-game test list
 
-1. Log shows `GK2 Owned Count 1.0.1 loaded.`, no errors.
+1. Log shows `GK2 Owned Count 1.0.2 loaded.`, no errors.
 2. Hover an item in your inventory: the line appears under the game's own lines; numbers match what you see.
 3. Put some of it in a chest in another area; the storage count and chest count change accordingly.
 4. Hover a graded item (Bones with a star): "all grades" shows the family total; the plain "Owned" shows only that grade.

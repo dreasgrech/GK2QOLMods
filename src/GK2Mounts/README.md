@@ -5,7 +5,8 @@ mounted (configurable), the donkey follows your every step, faces the way you wa
 the key again to get off. Two looks: **Ride** (on the donkey's back) and **Cart** (you ride the donkey while it pulls
 its cart).
 
-Version 0.1.0 (first playable build), built and audited against game build 25533739 (Assembly-CSharp MVID `97f92f0d-…`).
+Version 0.1.0 (first playable build), built and audited against Steam game build 25601286 (Assembly-CSharp MVID `3ffadd70-…`, LazyBearTechnology
+`8a7a5e04-…`; re-audit in `docs/steam-move-audit.md`). Before that 25533739 (`97f92f0d-…`).
 Design notes: [`FEASIBILITY.md`](FEASIBILITY.md); runtime facts the design rests on: [`PROBE-FINDINGS.md`](PROBE-FINDINGS.md).
 
 The game has no mount of its own. The donkey you ride is the corpse-delivery donkey's *looks* only; the real donkey

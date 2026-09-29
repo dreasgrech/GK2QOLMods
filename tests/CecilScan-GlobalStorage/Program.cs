@@ -1,5 +1,5 @@
 using System; using System.Linq; using Mono.Cecil; using Mono.Cecil.Cil;
-var mod = ModuleDefinition.ReadModule(@"C:\Games\Graveyard Keeper 2\GraveyardKeeper2_Data\Managed\Assembly-CSharp.dll");
+var mod = ModuleDefinition.ReadModule(GamePaths.Managed + "Assembly-CSharp.dll");
 var interesting = new[]{"HasItemQuantityInInventory","GetTotalCountInInventory","RemoveItemById","GetCraftableMultiInventory","IsEnoughRes"};
 void Dump(string typeName, bool nested=true) {
   var t = mod.GetType(typeName); var types = new[]{t}.Concat(nested ? t.NestedTypes : Enumerable.Empty<TypeDefinition>());

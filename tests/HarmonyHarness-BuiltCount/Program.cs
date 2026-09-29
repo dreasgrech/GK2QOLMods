@@ -1,6 +1,6 @@
 using System; using System.IO; using System.Linq; using System.Reflection; using HarmonyLib;
 class P { static int Main() {
-  var dirs = new[]{@"C:\Games\Graveyard Keeper 2\GraveyardKeeper2_Data\Managed", @"C:\Games\Graveyard Keeper 2\BepInEx\core"};
+  var dirs = new[]{GamePaths.Managed, GamePaths.BepInExCore};
   AppDomain.CurrentDomain.AssemblyResolve += (s,e)=>{ var n=new AssemblyName(e.Name).Name+".dll"; foreach(var d in dirs){var p=Path.Combine(d,n); if(File.Exists(p)) return Assembly.LoadFrom(p);} return null; };
   var game = Assembly.LoadFrom(Path.Combine(dirs[0],"Assembly-CSharp.dll"));
   Console.WriteLine("Game MVID "+game.ManifestModule.ModuleVersionId);

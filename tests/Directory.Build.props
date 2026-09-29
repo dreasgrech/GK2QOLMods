@@ -1,0 +1,12 @@
+<Project>
+  <!-- The repo-wide game path (../Directory.Build.props), plus what the test programs need to find it at run time:
+       the path as assembly metadata and the shared GamePaths helper. -->
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>GameDir</_Parameter1>
+      <_Parameter2>$(GameDir)</_Parameter2>
+    </AssemblyAttribute>
+    <Compile Include="$(MSBuildThisFileDirectory)GamePaths.cs" Link="GamePaths.cs" />
+  </ItemGroup>
+</Project>

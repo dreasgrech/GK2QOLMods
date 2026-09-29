@@ -143,7 +143,7 @@ namespace GK2Mounts
                     Pathfinding.NNInfo nn = graph.GetNearest(p, c);
                     Vector3 np = nn.position;
                     float dx = np.x - p.x, dz = np.z - p.z;
-                    if (dx * dx + dz * dz < 0.05f * 0.05f)
+                    if (nn.node != null && dx * dx + dz * dz < 0.05f * 0.05f) // no node: position is meaningless (the game checks this too)
                     {
                         source = "navmesh";
                         return np.y;
@@ -949,6 +949,10 @@ namespace GK2Mounts
                     return float.NaN;
                 }
                 Pathfinding.NNInfo nn = graph.GetNearest(new Vector3(p.x, levelY, p.z), Pathfinding.NearestNodeConstraint.Walkable);
+                if (nn.node == null)
+                {
+                    return float.NaN;
+                }
                 Vector3 np = nn.position;
                 float dx = np.x - p.x, dz = np.z - p.z;
                 return dx * dx + dz * dz < 0.05f * 0.05f && Mathf.Abs(np.y - levelY) <= CartLevelWindow ? np.y : float.NaN;

@@ -1,4 +1,4 @@
-# GK2 Built Count (v1.0.3)
+# GK2 Built Count (v1.0.4)
 
 A BepInEx 5 plugin for Graveyard Keeper 2. Build menus show how many of each building already exist in that menu's area:
 
@@ -12,12 +12,12 @@ Woodworking Workbench I (1)
 It only changes what the menu shows. Build rules, costs and saves are not touched. It is independent of GK2 Global Storage; the two plugins work together or alone.
 
 - GUID: `dreas.gk2.builtcount`
-- Game build audited: Steam build 25533739, Unity 6000.3.9f1 Mono, `Assembly-CSharp` MVID `97f92f0d-a093-49fe-ba4d-74aa62fae81e`. v1.0.2 was audited against 25509347 (`70946fdd-5c76-4d71-95c3-fea95051340d`); v1.0.0 and v1.0.1 were audited against build 25457344 (`dfae7296-aa7e-450f-92b4-4e617878a48d`)
-- Needs: BepInEx 5.4.23.5, already installed in `C:\Games\Graveyard Keeper 2`
+- Game build audited: Steam build 25601286, Unity 6000.3.9f1 Mono, `Assembly-CSharp` MVID `3ffadd70-169d-402a-bcdf-59c322dfc26d`, `LazyBearTechnology` `8a7a5e04-396d-4525-a779-3f0de1341398`. v1.0.3 was audited against 25533739 (`97f92f0d-a093-49fe-ba4d-74aa62fae81e`); v1.0.2 was audited against 25509347 (`70946fdd-5c76-4d71-95c3-fea95051340d`); v1.0.0 and v1.0.1 were audited against build 25457344 (`dfae7296-aa7e-450f-92b4-4e617878a48d`)
+- Needs: BepInEx 5.4.23.5, installed in the game folder (`C:\Program Files (x86)\Steam\steamapps\common\Graveyard Keeper 2`)
 
 ## Settings
 
-File: `C:\Games\Graveyard Keeper 2\BepInEx\config\dreas.gk2.builtcount.cfg`. It is created on the first launch.
+File: `BepInEx\config\dreas.gk2.builtcount.cfg` in the game folder. It is created on the first launch.
 
 | Setting | Default | Meaning |
 |---|---|---|
@@ -85,6 +85,17 @@ Also checked, no issue found:
 - **`LazySingleton.Instance`** creates a `BuildManager` if none exists. One always exists while the build window is open, because `BuildManager` opened it.
 - **Errors.** Any exception, including a missing field after a game update, is caught and logged once, and the row shows its normal name. The MVID guard disables the plugin entirely after a game update anyway.
 - **Isolation.** Nothing is written to game state or saves. Global Storage patches none of these methods. The only change is the text shown on a UI label.
+
+## Game update 25601286 (move to the Steam install): re-audit (v1.0.4)
+
+The full comparison is in `docs/steam-move-audit.md` (and `..\GK2GlobalStorage\FINDINGS.md`, "Game update 25601286").
+
+**Relevant here:** nothing. `UIBuildingWidget`, `UIBuildingWindow`, `UIBuildingWidgetData`, `WorldZoneData` and
+`WgoData.isTempObject` are unchanged. `LazyBearTechnology` changed only in `ExceptionReportWindow`, not in
+`LazyWidget<T>`.
+
+**Verification:** Cecil scan (same member shapes), HarmonyX harness ALL PASS (audited MVID matches, one postfix on
+`UIBuildingWidget.Redraw`). **Code change:** the MVIDs (now also `LazyBearTechnology`'s) and the version string.
 
 ## Game update 25533739: re-audit (v1.0.3)
 
@@ -155,7 +166,7 @@ The update from Steam build 25457344 to 25509347 changed `Assembly-CSharp` (39 f
 
 ## Still to test in-game
 
-1. `LogOutput.log` shows `GK2 Built Count 1.0.3 loaded.` and no errors after opening a build menu.
+1. `LogOutput.log` shows `GK2 Built Count 1.0.4 loaded.` and no errors after opening a build menu.
 2. The Yard menu shows counts on rows you have built. Unbuilt rows are unchanged.
 3. Build one: reopen the menu and the count goes up by 1. Remove one: it goes down.
 4. Switching tabs keeps the counts right. The "Remove" row and limited buildings look as before.
@@ -166,4 +177,4 @@ The update from Steam build 25457344 to 25509347 changed `Assembly-CSharp` (39 f
 
 - **Build and deploy** (game closed): `dotnet build -c Release` in this folder.
 - **Build only** (game running): `dotnet build -c Release -p:Deploy=false`.
-- **Uninstall:** delete `C:\Games\Graveyard Keeper 2\BepInEx\plugins\GK2BuiltCount.dll`, and optionally `BepInEx\config\dreas.gk2.builtcount.cfg`.
+- **Uninstall:** delete `BepInEx\plugins\GK2BuiltCount.dll` in the game folder, and optionally `BepInEx\config\dreas.gk2.builtcount.cfg`.

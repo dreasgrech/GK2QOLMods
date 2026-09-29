@@ -5,7 +5,8 @@ The building is the **same object** afterwards. Its contents, crafts, fuel, upgr
 reference to it (orders, porters, quests) stay as they were. Nothing is paid, nothing is refunded, no build or
 demolition scripts run.
 
-Version 1.1.3, built and audited against game build 25533739 (Assembly-CSharp MVID `97f92f0d-…`).
+Version 1.1.4, built and audited against Steam game build 25601286 (Assembly-CSharp MVID `3ffadd70-…`,
+LazyBearTechnology `8a7a5e04-…`; re-audit in `docs/steam-move-audit.md`). 1.1.3 was the same code for 25533739.
 See `INVESTIGATION.md` for the study of the Nexus mod this was designed against, and why this one works differently.
 
 ## How to use
@@ -131,11 +132,11 @@ Private members used (resolved at startup, any missing one disables the mod): `B
 - A building that a porter is walking towards keeps being its target; the porter should re-path. Watch for this.
 - Limited buildings show the game's "x/max" bubble on the preview while moving; it is only a display.
 
-## In-game test list (game build 25533739)
+## In-game test list (game build 25601286)
 
 Commit the saves repo first.
 
-1. Log shows `GK2 Move Building 1.1.3 loaded.`, no errors.
+1. Log shows `GK2 Move Building 1.1.4 loaded.`, no errors.
 2. Desk menu: **Move** row after **Remove** on every tab; Built Count still shows its counts on other rows.
 3. Move an empty sawhorse-type station: preview appears, old spot is free, place, window returns. Check it's at the
    new spot, the old spot is walkable and buildable, and the Built Count is unchanged.

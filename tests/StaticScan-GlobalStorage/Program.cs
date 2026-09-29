@@ -1,5 +1,5 @@
 using System; using System.IO; using System.Linq; using System.Reflection;
-var managed = @"C:\Games\Graveyard Keeper 2\GraveyardKeeper2_Data\Managed";
+var managed = GamePaths.Managed;
 var paths = Directory.GetFiles(managed, "*.dll");
 using var mlc = new MetadataLoadContext(new PathAssemblyResolver(paths), "mscorlib");
 var asm = mlc.LoadFromAssemblyPath(Path.Combine(managed, "Assembly-CSharp.dll"));

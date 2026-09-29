@@ -5,10 +5,10 @@ so you can install any subset.
 
 | Mod | Version | In one line |
 |---|---|---|
-| [Global Storage](#global-storage) | 1.1.2 | Craft and build with materials from chests in every area, not just the one you're standing in. |
-| [Built Count](#built-count) | 1.0.3 | Build menus show how many of each building you already have in that area. |
-| [Move Building](#move-building) | 1.1.3 | Pick up a built building and put it down somewhere else, contents and all. |
-| [Owned Count](#owned-count) | 1.0.1 | Item tooltips show how many of that item you own across inventory and every chest. |
+| [Global Storage](#global-storage) | 1.1.3 | Craft and build with materials from chests in every area, not just the one you're standing in. |
+| [Built Count](#built-count) | 1.0.4 | Build menus show how many of each building you already have in that area. |
+| [Move Building](#move-building) | 1.1.4 | Pick up a built building and put it down somewhere else, contents and all. |
+| [Owned Count](#owned-count) | 1.0.2 | Item tooltips show how many of that item you own across inventory and every chest. |
 
 ## Installing
 
@@ -26,7 +26,7 @@ and cannot load code, so it is not used.
 4. **Copy the DLLs you want** from [`dist/`](dist/) into `BepInEx\plugins\`. Any combination works; they don't depend
    on each other.
 5. **Start the game.** Each mod writes one line to `BepInEx\LogOutput.log` when it loads, for example
-   `GK2 Move Building 1.1.3 loaded.` Settings appear in `BepInEx\config\dreas.gk2.<mod>.cfg` after the first run
+   `GK2 Move Building 1.1.4 loaded.` Settings appear in `BepInEx\config\dreas.gk2.<mod>.cfg` after the first run
    and are read at game start.
 
 To **uninstall** a mod, delete its DLL from `BepInEx\plugins`. To remove BepInEx entirely, delete `winhttp.dll`,
@@ -119,7 +119,8 @@ from. Graded items (the starred ones, e.g. Bones of different skull grades) also
 ## Safety
 
 - **No save-format changes.** The mods add no serialized types or fields. Saves made with them load without them.
-- **Game-update guard.** Every plugin checks the game code's module version id at startup and disables itself after
+- **Game-update guard.** Every plugin checks the module version ids of the game's code (`Assembly-CSharp.dll`) and
+  engine library (`LazyBearTechnology.dll`) at startup and disables itself after
   a game update until it has been re-audited and rebuilt (`Safety.DisableOnGameUpdate`, on by default). You'll see
   `Game code changed since this mod was audited ... Mod is DISABLED` in the log.
 - **All-or-nothing patching.** If any patch fails to apply, all of that mod's patches are removed and the game runs
@@ -130,5 +131,6 @@ from. Graded items (the starred ones, e.g. Bones of different skull grades) also
 ## Game updates
 
 After a game patch the mods disable themselves (see above) until the game's code has been compared against the
-audited build and the mods rebuilt with the new module version id. Until then the game runs exactly as unmodified.
+audited build and the mods rebuilt with the new module version ids (`tests/GameDiff` lists what changed; see
+`tests/README.md`). Until then the game runs exactly as unmodified. Audited build: Steam 25601286.
 Don't set `DisableOnGameUpdate=false` unless you accept running unaudited.

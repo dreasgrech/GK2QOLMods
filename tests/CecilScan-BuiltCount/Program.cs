@@ -1,5 +1,5 @@
 using System; using System.Linq; using Mono.Cecil;
-var dir = @"C:\Games\Graveyard Keeper 2\GraveyardKeeper2_Data\Managed\";
+var dir = GamePaths.Managed;
 var res = new DefaultAssemblyResolver(); res.AddSearchDirectory(dir);
 var mod = ModuleDefinition.ReadModule(dir+"Assembly-CSharp.dll", new ReaderParameters{AssemblyResolver=res});
 Console.WriteLine("MVID "+mod.Mvid);

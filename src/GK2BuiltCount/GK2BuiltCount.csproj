@@ -3,12 +3,9 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
     <AssemblyName>GK2BuiltCount</AssemblyName>
-    <Version>1.0.3</Version>
+    <Version>1.0.4</Version>
     <LangVersion>latest</LangVersion>
     <Nullable>disable</Nullable>
-    <GameDir>C:\Games\Graveyard Keeper 2</GameDir>
-    <Managed>$(GameDir)\GraveyardKeeper2_Data\Managed</Managed>
-    <BepInExCore>$(GameDir)\BepInEx\core</BepInExCore>
     <GenerateDependencyFile>false</GenerateDependencyFile>
   </PropertyGroup>
 
@@ -23,10 +20,7 @@
     <Reference Include="0Harmony"><HintPath>$(BepInExCore)\0Harmony.dll</HintPath><Private>false</Private></Reference>
   </ItemGroup>
 
-  <!-- Copies into the game only when it is not running (BepInEx keeps plugin DLLs locked). -->
-  <Target Name="DeployToGame" AfterTargets="Build" Condition="'$(Deploy)' != 'false'">
-    <MakeDir Directories="$(GameDir)\BepInEx\plugins" />
-    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(GameDir)\BepInEx\plugins" />
-  </Target>
+  <!-- Deploys into the game after every build, only while it is closed (-p:Deploy=false skips it). -->
+  <Import Project="$(MSBuildThisFileDirectory)..\..\DeployToGame.targets" />
 
 </Project>
