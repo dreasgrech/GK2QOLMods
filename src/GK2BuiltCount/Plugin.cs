@@ -11,10 +11,12 @@ using UnityEngine;
 namespace GK2BuiltCount
 {
     [BepInPlugin(Guid, "GK2 Built Count", Version)]
+    // Soft: when GK2 Mod Framework is installed it loads first, so FrameworkLink can register; without it nothing changes.
+    [BepInDependency(FrameworkLink.FrameworkGuid, BepInDependency.DependencyFlags.SoftDependency)]
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "dreas.gk2.builtcount";
-        public const string Version = "1.0.4"; // one place: the plugin attribute and the log line
+        public const string Version = "1.0.5"; // one place: the plugin attribute and the log line
 
         // Module version id of the Assembly-CSharp.dll this plugin was audited against (Steam build 25601286).
         private static readonly System.Guid AuditedGameMvid = new System.Guid("3ffadd70-169d-402a-bcdf-59c322dfc26d");
@@ -25,38 +27,62 @@ namespace GK2BuiltCount
         internal static ConfigEntry<bool> Enabled;
         internal static ConfigEntry<bool> DisableOnGameUpdate;
 
+        // Every Harmony patch class, patched by name. Not PatchAll(assembly): that lists every type in this DLL, and
+        // FrameworkLink's mod class can't be loaded without GK2.Framework.dll, so Harmony would log a warning.
+        // tests/FrameworkScan fails if a [HarmonyPatch] class is missing here.
+        internal static readonly Type[] PatchClasses = { typeof(UIBuildingWidget_Redraw_Patch) };
+
+        // What the mod is doing, for the Mods menu's status row.
+        internal static string Status = "not started";
+
         private void Awake()
         {
             Log = Logger;
+            BindConfig();
+            Status = StartMod(); // not "Start": Unity would call that itself on the first frame and patch twice
+            FrameworkLink.TryRegister(Config);
+        }
+
+        private void BindConfig()
+        {
             Enabled = Config.Bind("General", "Enabled", true,
                 "Build menus show how many of each building already exist in that area, e.g. \"Sawhorse (2)\". Display only.");
             DisableOnGameUpdate = Config.Bind("Safety", "DisableOnGameUpdate", true,
                 "Do not patch anything if the game's code has changed since this mod was audited. Rebuild/re-audit after game updates.");
+        }
 
+        private string StartMod()
+        {
             System.Guid gameMvid = typeof(WgoData).Assembly.ManifestModule.ModuleVersionId;
             System.Guid lazyBearMvid = typeof(LazyBearTechnology.LazyAudio).Assembly.ManifestModule.ModuleVersionId;
+            bool forced = false;
             if (gameMvid != AuditedGameMvid || lazyBearMvid != AuditedLazyBearMvid)
             {
                 if (DisableOnGameUpdate.Value)
                 {
                     Log.LogError($"Game code changed since this mod was audited (Assembly-CSharp {gameMvid}, expected {AuditedGameMvid}; LazyBearTechnology {lazyBearMvid}, expected {AuditedLazyBearMvid}). Mod is DISABLED; the game runs unmodified. Set Safety.DisableOnGameUpdate=false to force-enable at your own risk.");
-                    return;
+                    return "Disabled: the game was updated since this version was checked. Update the mod, or set Safety.DisableOnGameUpdate=false in its cfg at your own risk.";
                 }
                 Log.LogWarning($"Game code changed since this mod was audited (Assembly-CSharp {gameMvid}, LazyBearTechnology {lazyBearMvid}). Running anyway because DisableOnGameUpdate=false.");
+                forced = true;
             }
 
             Harmony harmony = new Harmony(Guid);
             try
             {
-                harmony.PatchAll(typeof(Plugin).Assembly);
+                foreach (Type patch in PatchClasses)
+                {
+                    harmony.PatchAll(patch);
+                }
             }
             catch (Exception e)
             {
                 harmony.UnpatchSelf();
                 Log.LogError($"Patching failed; all patches removed, game runs unmodified. {e}");
-                return;
+                return "Disabled: patching failed (see BepInEx/LogOutput.log).";
             }
             Log.LogInfo($"GK2 Built Count {Version} loaded.");
+            return forced ? "Active on an unchecked game version (Safety.DisableOnGameUpdate=false)" : "Active";
         }
     }
 

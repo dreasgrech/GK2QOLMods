@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
     <AssemblyName>GK2BuiltCount</AssemblyName>
-    <Version>1.0.4</Version>
+    <Version>1.0.5</Version>
     <LangVersion>latest</LangVersion>
     <Nullable>disable</Nullable>
     <GenerateDependencyFile>false</GenerateDependencyFile>
@@ -18,6 +18,8 @@
     <Reference Include="UnityEngine.CoreModule"><HintPath>$(Managed)\UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="BepInEx"><HintPath>$(BepInExCore)\BepInEx.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="0Harmony"><HintPath>$(BepInExCore)\0Harmony.dll</HintPath><Private>false</Private></Reference>
+    <!-- Optional at runtime: only FrameworkLink uses it, and only when the framework is installed. -->
+    <Reference Include="GK2.Framework"><HintPath>$(FrameworkDll)</HintPath><Private>false</Private></Reference>
   </ItemGroup>
 
   <!-- Deploys into the game after every build, only while it is closed (-p:Deploy=false skips it). -->

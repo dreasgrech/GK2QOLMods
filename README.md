@@ -6,7 +6,7 @@ so you can install any subset.
 | Mod | Version | In one line |
 |---|---|---|
 | [Global Storage](#global-storage) | 1.1.4 | Craft and build with materials from chests in every area, not just the one you're standing in. |
-| [Built Count](#built-count) | 1.0.4 | Build menus show how many of each building you already have in that area. |
+| [Built Count](#built-count) | 1.0.5 | Build menus show how many of each building you already have in that area. |
 | [Move Building](#move-building) | 1.1.5 | Pick up a built building and put it down somewhere else, contents and all. |
 | [Owned Count](#owned-count) | 1.0.3 | Item tooltips show how many of that item you own across inventory and every chest. |
 
@@ -75,6 +75,8 @@ within one area.
 - Every row in a build desk's menu shows how many of that building already stand in the desk's area, as
 `Sawhorse (2)`. Rows with none built look unchanged. Buildings the game limits (`x/max`) keep the game's own label.
 - Display only; nothing else changes.
+- Optional: with [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) installed, it appears in
+  the game's Mods menu with its on/off switch. The same DLL works without it.
 
 ### Move Building
 

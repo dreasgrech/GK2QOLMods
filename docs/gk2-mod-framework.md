@@ -187,7 +187,15 @@ use the framework's **text** and **keybind** controls.
   - the log was clean.
 - Run B passed with a clean log and three moves.
 
-Next: Built Count, then Mounts.
+**Built Count 1.0.5 is released** (2026-09-30).
+- The menu has Status plus "Show built counts".
+- Its HarmonyX harness now loads the mod without `GK2.Framework.dll` and checks that only the framework class fails
+  to load. The old harness (`GetTypes()`, then `PatchAll(asm)`) failed with `ReflectionTypeLoadException`, which is
+  the failure `PatchClasses` exists to avoid.
+- Run A passed, with all four mods in the Mods menu. Run B passed with a clean log.
+
+**All four released mods are now in the Mods menu.** Mounts remains; it isn't released yet, and its panel is the
+real UI.
 
 **Rebuilds and git:** each DLL records the git commit it was built from (SourceLink's `+<hash>` in
 AssemblyInformationalVersion). So a rebuild after a commit differs byte-for-byte even when the code hasn't

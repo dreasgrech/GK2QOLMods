@@ -1,4 +1,4 @@
-# GK2 Built Count (v1.0.4)
+# GK2 Built Count (v1.0.5)
 
 A BepInEx 5 plugin for Graveyard Keeper 2. Build menus show how many of each building already exist in that menu's area:
 
@@ -15,13 +15,23 @@ It only changes what the menu shows. Build rules, costs and saves are not touche
 - Game build audited: Steam build 25601286, Unity 6000.3.9f1 Mono, `Assembly-CSharp` MVID `3ffadd70-169d-402a-bcdf-59c322dfc26d`, `LazyBearTechnology` `8a7a5e04-396d-4525-a779-3f0de1341398`. v1.0.3 was audited against 25533739 (`97f92f0d-a093-49fe-ba4d-74aa62fae81e`); v1.0.2 was audited against 25509347 (`70946fdd-5c76-4d71-95c3-fea95051340d`); v1.0.0 and v1.0.1 were audited against build 25457344 (`dfae7296-aa7e-450f-92b4-4e617878a48d`)
 - Needs: BepInEx 5.4.23.5, installed in the game folder (`C:\Program Files (x86)\Steam\steamapps\common\Graveyard Keeper 2`)
 
+## Optional: GK2 Mod Framework
+
+With [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) (0.1.x, by SuperMan4eg) installed,
+the mod appears in the game's **Mods** menu (main menu and ESC menu):
+- a Status row: Active, Off, or disabled after a game update;
+- "Show built counts" (`General.Enabled`), which applies the next time a build-menu tab is drawn.
+
+`Safety.DisableOnGameUpdate` stays cfg-only. Without the framework, the same DLL works exactly as before. Details:
+[`docs/gk2-mod-framework.md`](../../docs/gk2-mod-framework.md).
+
 ## Settings
 
 File: `BepInEx\config\dreas.gk2.builtcount.cfg` in the game folder. It is created on the first launch.
 
 | Setting | Default | Meaning |
 |---|---|---|
-| `General.Enabled` | true | Show counts. `false` makes menus look like vanilla. The value is read each time a row is drawn, but BepInEx reads the file at startup, so restart the game after editing it |
+| `General.Enabled` | true | Show counts. `false` makes menus look like vanilla. The value is read each time a row is drawn. BepInEx reads the file only at startup, so a hand edit needs a restart; a change in the Mods menu applies at once |
 | `Safety.DisableOnGameUpdate` | true | If the game's code changed (the MVID differs), patch nothing and log an error |
 
 ## How it works
@@ -85,6 +95,31 @@ Also checked, no issue found:
 - **`LazySingleton.Instance`** creates a `BuildManager` if none exists. One always exists while the build window is open, because `BuildManager` opened it.
 - **Errors.** Any exception, including a missing field after a game update, is caught and logged once, and the row shows its normal name. The MVID guard disables the plugin entirely after a game update anyway.
 - **Isolation.** Nothing is written to game state or saves. Global Storage patches none of these methods. The only change is the text shown on a UI label.
+
+## v1.0.5: optional GK2 Mod Framework integration
+
+**Code:**
+- `FrameworkLink.cs` is new.
+- `Plugin`:
+  - has a soft `BepInDependency` on the framework;
+  - patches its one class from `Plugin.PatchClasses` instead of with `PatchAll(assembly)`;
+  - has a `StartMod` step that returns the status text.
+- The postfix is unchanged.
+
+**Verification:**
+- **`tests/FrameworkScan`** passes.
+- **The HarmonyX harness** now loads the mod with `GK2.Framework.dll` unresolvable (a player without the framework)
+  and checks that:
+  - only the framework-typed class fails to load;
+  - `PatchClasses` equals the `[HarmonyPatch]` classes;
+  - patching class by class applies exactly one postfix, on `UIBuildingWidget.Redraw()`.
+
+  The previous harness called `asm.GetTypes()` and `PatchAll(asm)`, and failed with `ReflectionTypeLoadException`.
+  That's the very failure the plugin avoids.
+- **In game on 2026-09-30:**
+  - **Run A (framework installed):** registered Compatible, and the Mods menu listed all four mods. "Show built
+    counts" was turned off and on, then Reset, with no warnings or errors.
+  - **Run B (framework removed):** a clean log; the counts were checked in game by the user.
 
 ## Game update 25601286 (move to the Steam install): re-audit (v1.0.4)
 
@@ -166,12 +201,18 @@ The update from Steam build 25457344 to 25509347 changed `Assembly-CSharp` (39 f
 
 ## Still to test in-game
 
-1. `LogOutput.log` shows `GK2 Built Count 1.0.4 loaded.` and no errors after opening a build menu.
+1. `LogOutput.log` shows `GK2 Built Count 1.0.5 loaded.` once and no errors after opening a build menu.
 2. The Yard menu shows counts on rows you have built. Unbuilt rows are unchanged.
 3. Build one: reopen the menu and the count goes up by 1. Remove one: it goes down.
 4. Switching tabs keeps the counts right. The "Remove" row and limited buildings look as before.
 5. A build desk in another area counts only that area.
 6. With `Enabled = false`, the menus look like vanilla.
+7. With GK2 Mod Framework installed:
+   - Mods → GK2 Built Count shows Status Active and "Show built counts";
+   - unticking it makes the counts go at the next tab switch, and Status reads Off;
+   - Reset brings them back.
+8. With the framework removed: counts as normal, and the log has no warning or error, and nothing mentioning the
+   framework.
 
 ## Build, install, uninstall
 
