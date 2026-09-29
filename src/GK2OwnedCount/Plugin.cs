@@ -7,10 +7,12 @@ using HarmonyLib;
 namespace GK2OwnedCount
 {
     [BepInPlugin(Guid, "GK2 Owned Count", Version)]
+    // Soft: when GK2 Mod Framework is installed it loads first, so FrameworkLink can register; without it nothing changes.
+    [BepInDependency(FrameworkLink.FrameworkGuid, BepInDependency.DependencyFlags.SoftDependency)]
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "dreas.gk2.ownedcount";
-        public const string Version = "1.0.2";
+        public const string Version = "1.0.3";
 
         // Module version id of the Assembly-CSharp.dll this plugin was audited against (Steam build 25601286).
         private static readonly System.Guid AuditedGameMvid = new System.Guid("3ffadd70-169d-402a-bcdf-59c322dfc26d");
@@ -28,11 +30,26 @@ namespace GK2OwnedCount
         internal static ConfigEntry<bool> DisableOnGameUpdate;
         internal static ConfigEntry<bool> DumpItemDefs;
 
+        // Every Harmony patch class, patched by name. Not PatchAll(assembly): that lists every type in this DLL, and
+        // FrameworkLink's mod class can't be loaded without GK2.Framework.dll, so Harmony would log a warning.
+        // tests/CecilScan-OwnedCount fails if a [HarmonyPatch] class is missing here.
+        internal static readonly Type[] PatchClasses = { typeof(UITooltip_AddItemWidgets_Patch) };
+
+        // What the mod is doing, for the Mods menu's status row.
+        internal static string Status = "not started";
+
         private Harmony harmony;
 
         private void Awake()
         {
             Log = Logger;
+            BindConfig();
+            Status = StartMod(); // not "Start": Unity would call that itself on the first frame and patch twice
+            FrameworkLink.TryRegister(Config);
+        }
+
+        private void BindConfig()
+        {
             Enabled = Config.Bind("General", "Enabled", true,
                 "Item tooltips get a line with how many of that item you own: on you (inventory, bags, tool belt) plus every storage chest in every area. Display only.");
             OnlyOnOwnTooltip = Config.Bind("General", "OnlyOnOwnTooltip", true,
@@ -51,33 +68,42 @@ namespace GK2OwnedCount
                 "Do not patch anything if the game's code has changed since this mod was audited. Rebuild/re-audit after game updates.");
             DumpItemDefs = Config.Bind("Debug", "DumpItemDefs", false,
                 "Once the game data is loaded, write every item definition (id, name, type, stack size, grade, star) to BepInEx\\GK2-itemdefs.csv. Off by default.");
+        }
 
+        private string StartMod()
+        {
             System.Guid gameMvid = typeof(WgoData).Assembly.ManifestModule.ModuleVersionId;
             System.Guid lazyBearMvid = typeof(LazyBearTechnology.LazyAudio).Assembly.ManifestModule.ModuleVersionId;
+            bool forced = false;
             if (gameMvid != AuditedGameMvid || lazyBearMvid != AuditedLazyBearMvid)
             {
                 if (DisableOnGameUpdate.Value)
                 {
                     Log.LogError($"Game code changed since this mod was audited (Assembly-CSharp {gameMvid}, expected {AuditedGameMvid}; LazyBearTechnology {lazyBearMvid}, expected {AuditedLazyBearMvid}). Mod is DISABLED; the game runs unmodified. Set Safety.DisableOnGameUpdate=false to force-enable at your own risk.");
-                    return;
+                    return "Disabled: the game was updated since this version was checked. Update the mod, or set Safety.DisableOnGameUpdate=false in its cfg at your own risk.";
                 }
                 Log.LogWarning($"Game code changed since this mod was audited (Assembly-CSharp {gameMvid}, LazyBearTechnology {lazyBearMvid}). Running anyway because DisableOnGameUpdate=false.");
+                forced = true;
             }
 
             harmony = new Harmony(Guid);
             try
             {
                 Access.Verify();
-                harmony.PatchAll(typeof(Plugin).Assembly);
+                foreach (Type patch in PatchClasses)
+                {
+                    harmony.PatchAll(patch);
+                }
             }
             catch (Exception e)
             {
                 harmony.UnpatchSelf();
                 harmony = null;
                 Log.LogError($"Patching failed; all patches removed, game runs unmodified. {e}");
-                return;
+                return "Disabled: patching failed (see BepInEx/LogOutput.log).";
             }
             Log.LogInfo($"GK2 Owned Count {Version} loaded.");
+            return forced ? "Active on an unchecked game version (Safety.DisableOnGameUpdate=false)" : "Active";
         }
 
         // Only used by the debug dump; nothing runs per frame otherwise.

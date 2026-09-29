@@ -11,11 +11,25 @@ on you 4 · in storage 116 (5 chests)
 the same set Global Storage draws from. "All grades" appears for graded items (the ones with a star, e.g. Bones of
 different skull grades) and sums the whole family. Display only: nothing in the game changes.
 
-Version 1.0.2, built and audited against Steam game build 25601286 (Assembly-CSharp MVID `3ffadd70-…`,
+Version 1.0.3, built and audited against Steam game build 25601286 (Assembly-CSharp MVID `3ffadd70-…`,
 LazyBearTechnology `8a7a5e04-…`; re-audit in `docs/steam-move-audit.md`). 1.0.1 was the same code for 25533739.
 Feasibility study: [`docs/owned-count-tooltip.md`](../../docs/owned-count-tooltip.md).
 
-## Settings (`BepInEx\config\dreas.gk2.ownedcount.cfg`, read at game start)
+## Optional: GK2 Mod Framework
+
+With [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) (0.1.x, by SuperMan4eg) installed,
+the mod appears in the game's **Mods** menu (main menu and ESC menu):
+- a Status row: Active, Off, or disabled after a game update;
+- the seven General and Storage switches below, which apply as soon as you change them.
+
+The Safety and Debug settings stay in the cfg only. Without the framework, the same DLL works exactly as before;
+it isn't a requirement, and there's nothing extra to install. How this is done, and the tests behind it:
+[`docs/gk2-mod-framework.md`](../../docs/gk2-mod-framework.md).
+
+## Settings (`BepInEx\config\dreas.gk2.ownedcount.cfg`)
+
+Read at game start. The General and Storage ones are also read on every tooltip, so a change made in the Mods menu
+applies at once.
 
 | Key | Default | Meaning |
 |---|---|---|
@@ -56,7 +70,7 @@ stock, items lying on the ground.
 
 ## In-game test list
 
-1. Log shows `GK2 Owned Count 1.0.2 loaded.`, no errors.
+1. Log shows `GK2 Owned Count 1.0.3 loaded.` **once**, no errors.
 2. Hover an item in your inventory: the line appears under the game's own lines; numbers match what you see.
 3. Put some of it in a chest in another area; the storage count and chest count change accordingly.
 4. Hover a graded item (Bones with a star): "all grades" shows the family total; the plain "Owned" shows only that grade.
@@ -65,6 +79,13 @@ stock, items lying on the ground.
 6. Main menu / no save loaded: tooltips unchanged, no errors.
 7. Set `Debug.DumpItemDefs = true`, restart, load a save: `BepInEx\GK2-itemdefs.csv` appears with all items; set it
    back to false.
+8. With GK2 Mod Framework installed:
+   - the log shows `Registered GK2 mod [dreas.gk2.ownedcount] … status=Compatible`;
+   - Mods → GK2 Owned Count shows Status Active and seven switches;
+   - untick "Show the owned count": the tooltip line goes and Status reads Off;
+   - Reset brings it back.
+9. With the framework removed: the mod loads as normal, and the log has no warning or error, and nothing mentioning
+   the framework.
 
 ## Verification done before release
 
@@ -73,6 +94,16 @@ stock, items lying on the ground.
   fields exist with the expected types; the patch target is a single method with a body.
 - Round 1 in-game (1.0.0): line correct in inventory and chest tooltips; "all grades" missing for Bones, fixed in 1.0.1 (see below).
 - Round 2 in-game (1.0.1): both Bones grades show `Owned: 1  (all grades: 2)` with the breakdown on its own line; no errors in the log.
+- 1.0.3, Cecil scan additions:
+  - every `[HarmonyPatch]` class is listed in `Plugin.PatchClasses`;
+  - `Plugin` has no method Unity would call by name;
+  - only `FrameworkLink.Register` and its mod class touch `GK2.Framework`, `Register` is NoInlining, and the
+    framework dependency is soft;
+  - the framework-isolation check was shown to fail on a deliberately planted violation.
+- Round 3 in-game (1.0.3 code, still numbered 1.0.2, 2026-09-30): tests 8 and 9 passed.
+  - Run A (framework installed): registered Compatible, and the menu edits, Off status and Reset all worked, with no
+    warnings.
+  - Run B (framework removed): a clean log, and the tooltip was checked in game.
 
 ## Notes from testing
 
@@ -81,3 +112,10 @@ before the colon (`pumpkin:1..3` share one group), so body parts such as `bones_
 total never showed. The family is now the union of that star group and the item's `gr_*` item groups
 (`gr_bones` holds all six Bones grades, `gr_stories` all stories, and so on). The tooltip line was also split into two
 shorter lines because the game's tooltip is narrow.
+
+**1.0.2 → 1.0.3.** Optional GK2 Mod Framework integration (`FrameworkLink.cs`).
+- Patches are applied class by class (`Plugin.PatchClasses`), not with `PatchAll(assembly)`. That call would list
+  the framework-typed class, fail when the framework is absent, and make Harmony log a warning.
+- During the work, a helper named `Start()` was called a second time by Unity on the first frame and patched
+  everything twice. Since HarmonyX doesn't de-duplicate, the tooltip code ran twice. It was renamed to `StartMod`
+  before release, and the scan now guards against it.

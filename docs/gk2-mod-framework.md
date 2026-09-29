@@ -117,7 +117,61 @@ Not done: installing it, a run in game, and choosing which mods get a bridge.
 - Our six cfgs and `BepInEx.cfg` are byte-identical to before. The only new cfg is
   `ru.superman4eg.gk2.framework.cfg`.
 
-**B. Decide**
+**Decided: one DLL per mod, with no separate bridge** (the user's choice, 2026-09-29). A separate bridge DLL would
+make BepInEx log an **error** for players without the framework ("Could not load … missing dependencies",
+`Chainloader` → `Logger.LogError`). Instead each mod carries its framework code, which only runs when the framework
+is loaded:
+- a soft `BepInDependency` on `ru.superman4eg.gk2.framework` (load order only);
+- `FrameworkLink.TryRegister` checks `Chainloader.PluginInfos`, then calls the `NoInlining` `Register`, inside a
+  try/catch;
+- only `Register` and the nested `Gk2ModBase` class reference framework types. Mono loads `GK2.Framework.dll` only
+  when such a method is compiled;
+- patches go in by class (`Plugin.PatchClasses`) and not with `PatchAll(assembly)`. The latter calls
+  `Assembly.GetTypes()`, which throws for the unloadable nested class, and HarmonyX then logs a warning.
+  BepInEx's Cecil scan catches `AssemblyResolutionException`, so it needs no change;
+- `tests/CecilScan-<Mod>` checks that every `[HarmonyPatch]` class is listed, that no code outside
+  `FrameworkLink.Register` and its mod class references `GK2.Framework` (in base types, fields, signatures, locals
+  or IL), and that `NoInlining` and the soft dependency are in place. A mutation test (a framework-typed field
+  added to `Plugin`) made it fail as it should;
+- we build against `lib/GK2.Framework/GK2.Framework.dll`, a pinned 0.1.16 copy (MIT, with its LICENSE), and never
+  ship it.
+
+This goes **against the framework's own advice**. PUBLIC_API and OPTIONAL_INTEGRATION warn that referencing it
+directly "can still require" the DLL. That's a deliberate choice: we checked it against the loader code of BepInEx
+5.4.23.5 and HarmonyX, and it is proven only by an in-game run with the framework removed (the log must show no
+`TypeLoad`, `FileNotFound`, `ReflectionTypeLoad`, `GetTypesFromAssembly` or `Could not load` lines).
+
+**Run A (framework installed), 2026-09-30:**
+- `Registered GK2 mod [dreas.gk2.ownedcount] 1.0.2 by dreas; status=Compatible`, loaded after the framework (the
+  soft dependency), with no warnings or errors.
+- The settings page was opened twice. The cfg ended unchanged (untick, then Reset).
+- **Bug found:** the refactor named a helper `Start()`. Unity calls that on every MonoBehaviour's first frame, so
+  the plugin checked the game build and **patched a second time** ("loaded." twice in the log). HarmonyX doesn't
+  de-duplicate (`PatchInfo.Add` concatenates), so the tooltip patch ran twice.
+  - Fix: renamed it to `StartMod`.
+  - The Cecil scan now fails if `Plugin` has a method named after a Unity message (Start, OnEnable, OnDisable,
+    FixedUpdate, LateUpdate, OnGUI, OnApplicationQuit).
+
+**Run A again, after the fix:** "loaded." appears once, with the registration and no warnings or errors. The
+settings page was opened three times, and the cfg ended unchanged.
+
+**Run B (framework removed), 2026-09-30: passed.**
+- "5 plugins to load", and all five of ours `loaded`, Owned Count once.
+- The log has no line mentioning `TypeLoad`, `FileNotFound`, `ReflectionTypeLoad`, `GetTypesFromAssembly`,
+  `Could not load`, `GK2.Framework` or `superman4eg`, and no warning, error or exception at all.
+- The user checked the tooltip in game.
+
+**So the single-DLL approach works with the framework both installed and absent.** The framework went back
+afterwards (byte-identical).
+
+**Owned Count 1.0.3 is released:** in `dist/` (byte-identical to the installed and built DLL), with its README,
+the root and dist READMEs, and tests/README updated. Next: Global Storage, then Move Building, Built Count and
+Mounts, each with the same FrameworkLink, the same scan checks, and Run A and Run B.
+
+The build's MSB3277 System.IO.Compression warning is older than this change: Global Storage, which has no framework
+reference, shows it too.
+
+**B. Decide** (superseded for packaging by the decision above)
 6. Decide:
    - which mods get a bridge;
    - the naming: `GK2<Mod>.Framework.dll`, GUID `dreas.gk2.<mod>.framework`;

@@ -5,5 +5,8 @@
     <GameDir Condition="'$(GameDir)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Graveyard Keeper 2</GameDir>
     <Managed>$(GameDir)\GraveyardKeeper2_Data\Managed</Managed>
     <BepInExCore>$(GameDir)\BepInEx\core</BepInExCore>
+    <!-- GK2 Mod Framework (third party, MIT, optional at runtime): a compile-time reference only, never shipped.
+         A copy in lib/ so builds work with the framework uninstalled and the API we build against is pinned. -->
+    <FrameworkDll Condition="'$(FrameworkDll)' == ''">$(MSBuildThisFileDirectory)lib\GK2.Framework\GK2.Framework.dll</FrameworkDll>
   </PropertyGroup>
 </Project>

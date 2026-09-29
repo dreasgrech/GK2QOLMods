@@ -8,7 +8,7 @@ so you can install any subset.
 | [Global Storage](#global-storage) | 1.1.3 | Craft and build with materials from chests in every area, not just the one you're standing in. |
 | [Built Count](#built-count) | 1.0.4 | Build menus show how many of each building you already have in that area. |
 | [Move Building](#move-building) | 1.1.4 | Pick up a built building and put it down somewhere else, contents and all. |
-| [Owned Count](#owned-count) | 1.0.2 | Item tooltips show how many of that item you own across inventory and every chest. |
+| [Owned Count](#owned-count) | 1.0.3 | Item tooltips show how many of that item you own across inventory and every chest. |
 
 ## Installing
 
@@ -115,6 +115,8 @@ from. Graded items (the starred ones, e.g. Bones of different skull grades) also
 - Settings: own-tooltip only or also embedded items, breakdown on/off, a per-area second line, other grades,
   whether fuel containers and conveyor chests count as storage. A debug switch dumps every item definition
   (stack sizes, grades) to a CSV.
+- Optional: with [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) installed, its settings
+  also appear in the game's Mods menu. The same DLL works without it.
 
 ## Safety
 
