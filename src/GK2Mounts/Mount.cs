@@ -121,6 +121,21 @@ namespace GK2Mounts
             public Vector3 Sample;
             public float Weight;
             public float LastLift;
+            // Shafts only (CartSlope = ShaftsTilt, and the harness for WholeCartPitch): the harness end in parent space, the signed length from there to the cart
+            // end along the parent's x, the animator's rotation of this frame and what the mod wrote last frame.
+            public bool IsShafts;
+            public Vector3 Harness;
+            public float ReachX;
+            public Quaternion AnimRot = Quaternion.identity;
+            public Quaternion WrittenRot = Quaternion.identity;
+            public bool Written;
+            public float LastTiltDeg;
+            // WholeCartPitch: pitched with the cart body, the axle in this part's parent space, and (stretched parent,
+            // the lamp rig under gfx) the child whose world spot is carried along instead of turning the node.
+            public bool Pitched;
+            public bool CarryOnly;
+            public Vector3 Pivot;
+            public Transform CarryChild;
             public float LastGround;
             public string LastSource = "-";
         }
@@ -755,12 +770,153 @@ namespace GK2Mounts
             {
                 cartBodyPart = cartParts.Find(p => p.Weight >= 1f) ?? cartParts[0];
             }
+            CartPart shafts = cartParts.Find(p => p.T.name == "donkey_cart_bars");
+            if (shafts != null)
+            {
+                MeasureShafts(shafts, cartBodyPart);
+            }
             // The rock reference for the cargo: one of the nodes the walk animation rotates (all three share the pivot
             // and the angle, Round 8). The lantern's is never switched off by the game's drawer; the cart bodies are.
             swayRefPart = cartParts.Find(p => p.T.name == "donkey_cart_lantern_sway")
                           ?? cartParts.Find(p => p.T.name == "donkey_cart_empty_sway")
                           ?? cartParts.Find(p => p.T.name == "donkey_cart_body_sway");
-            Plugin.Log.LogInfo($"Mount: {cartParts.Count} cart parts follow the ground as one (sampled under {cartBodyPart?.T.name}): " + string.Join(", ", cartParts.ConvertAll(p => p.T.name)));
+            ClassifyForPitch();
+            Plugin.Log.LogInfo($"Mount: {cartParts.Count} cart parts follow the ground as one (sampled under {cartBodyPart?.T.name}): " + string.Join(", ", cartParts.ConvertAll(p => p.T.name + (p.Pitched ? (p.CarryOnly ? "(carried)" : "(pitched)") : ""))));
+        }
+
+        // The shafts are one rigid mesh from the donkey's harness to the front of the cart (0.76 long). Their extent
+        // along the parent's x (the travel axis in Base space; facing only flips Base's scale, so parent-local values
+        // hold for both facings) comes from the mesh bounds. The cart end is the end nearer the cart body, the
+        // harness end the other one. (Not "nearer the donkey's root": the donkey is drawn 0.48 to its facing side of
+        // the root, so the root sits near the cart end; measured x -0.66..0.10 with the cart body at +0.37.)
+        private static void MeasureShafts(CartPart part, CartPart body)
+        {
+            Transform t = part.T;
+            part.AnimRot = t.localRotation;
+            if (body == null || body.T == null || !Cargo.MeasureMeshes(t, t.parent, out Bounds b))
+            {
+                Plugin.Log.LogWarning("Mount: the shafts or the cart body could not be measured; the shafts keep the half lift.");
+                return;
+            }
+            float bodyX = t.parent.InverseTransformPoint(body.T.parent.TransformPoint(body.Sample)).x;
+            float minX = part.Base.x + b.min.x, maxX = part.Base.x + b.max.x;
+            bool minIsCartEnd = Mathf.Abs(minX - bodyX) <= Mathf.Abs(maxX - bodyX);
+            float harnessX = minIsCartEnd ? maxX : minX;
+            float cartEndX = minIsCartEnd ? minX : maxX;
+            part.Harness = new Vector3(harnessX, part.Base.y + b.center.y, part.Base.z + b.center.z);
+            part.ReachX = cartEndX - harnessX;
+            part.IsShafts = Mathf.Abs(part.ReachX) > 0.05f;
+            Plugin.Log.LogInfo($"Mount: shafts x {minX:F2}..{maxX:F2} in {t.parent.name} space, cart body at x {bodyX:F2}: harness end x {harnessX:F2}, cart end x {cartEndX:F2}, reach {part.ReachX:F2}.");
+        }
+
+        // WholeCartPitch: everything that belongs to the cart body turns with it about the axle, the point the walk
+        // animation rocks the cart about (the _sway nodes' rest position, Round 8): the sway nodes themselves (their
+        // origin is that point), the shafts and the cargo holder (turned about the axle carried into their parent's
+        // space). The wheels only follow the ground. A node under a stretched parent (the lamp rig's light_sway under
+        // gfx, scale 1 x 1.667) would slide along a stretched arc if turned, so it is only moved by what its child
+        // (the lamp, posed by Lantern.cs) must move to stay at the turned pole head, and the lamp keeps hanging.
+        private static void ClassifyForPitch()
+        {
+            Vector3 axleWorld = Vector3.zero;
+            bool haveAxle = swayRefPart != null && swayRefPart.T != null && swayRefPart.T.parent != null;
+            if (haveAxle)
+            {
+                axleWorld = swayRefPart.T.parent.TransformPoint(swayRefPart.Base);
+            }
+            foreach (CartPart p in cartParts)
+            {
+                bool sway = p.T.name.EndsWith("_sway", StringComparison.Ordinal);
+                p.Pitched = haveAxle && (sway || p.T.name == "donkey_cart_bars" || p.T.name == Cargo.ContainerName);
+                if (!p.Pitched)
+                {
+                    continue;
+                }
+                p.Pivot = sway ? p.Base : p.T.parent.InverseTransformPoint(axleWorld);
+                Vector3 sc = p.T.parent.lossyScale;
+                float ax = Mathf.Abs(sc.x), ay = Mathf.Abs(sc.y);
+                p.CarryOnly = ax > 0.0001f && Mathf.Abs(ay / ax - 1f) > 0.05f;
+                if (p.CarryOnly)
+                {
+                    p.CarryChild = p.T.childCount > 0 ? p.T.GetChild(0) : null;
+                    if (p.CarryChild == null)
+                    {
+                        p.Pitched = false;
+                    }
+                }
+                if (p.T.name != Cargo.ContainerName)
+                {
+                    p.AnimRot = p.T.localRotation;
+                }
+            }
+        }
+
+        // The pitch angle for this frame: the shafts' harness end (measured, MeasureShafts) must come down by the lift
+        // relative to the lifted axle, i.e. stay at the donkey. 0 without measured shafts.
+        private static float lastPitchDeg;
+        private static bool lastPitchCapped;
+
+        private static float PitchDegrees(float liftLocalY)
+        {
+            CartPart shafts = cartParts.Find(p => p.IsShafts);
+            lastPitchCapped = false;
+            if (shafts == null || !shafts.Pitched)
+            {
+                return 0f;
+            }
+            float lever = shafts.Harness.x - shafts.Pivot.x; // signed, axle to harness along the travel axis
+            if (Mathf.Abs(lever) < 0.1f)
+            {
+                return 0f;
+            }
+            float sin = -liftLocalY / lever;
+            float cap = Mathf.Sin(Mathf.Clamp(S.CartPitchMaxDegrees.Value, 0f, 45f) * Mathf.Deg2Rad);
+            if (Mathf.Abs(sin) > cap)
+            {
+                lastPitchCapped = true;
+                sin = Mathf.Sign(sin) * cap;
+            }
+            return Mathf.Asin(sin) * Mathf.Rad2Deg;
+        }
+
+        public static string CartSlopeStatus()
+        {
+            if (!mounted || activeStyle != MountStyle.Cart || cartParts.Count == 0)
+            {
+                return "";
+            }
+            string s = $"Now: lift {cartShiftApplied:F2}";
+            switch (S.CartSlope.Value)
+            {
+                case CartSlopeStyle.WholeCartPitch: s += $", pitch {lastPitchDeg:F1}°{(lastPitchCapped ? " (at the cap)" : "")}"; break;
+                case CartSlopeStyle.ShaftsTilt:
+                    CartPart sh = cartParts.Find(p => p.IsShafts);
+                    s += $", shafts tilt {(sh != null ? sh.LastTiltDeg : 0f):F1}°"; break;
+            }
+            return s + ".";
+        }
+
+        // CartSlope = ShaftsTilt: the harness end stays with the donkey and the cart end follows the cart's lift, a turn about
+        // the harness end in the travel plane (parent z). The animator rocks the shafts too (Round 8, about -4..0
+        // degrees), so the tilt goes on top of its rotation of this frame: a rotation that differs from what the mod
+        // wrote last frame is the animator's; an unchanged one means the animator left it, and last frame's is kept.
+        private static void PoseShafts(CartPart p, float liftLocalY, bool tilt)
+        {
+            Quaternion cur = p.T.localRotation;
+            if (!p.Written || Quaternion.Angle(cur, p.WrittenRot) > 0.01f)
+            {
+                p.AnimRot = cur;
+            }
+            float deg = 0f;
+            if (tilt)
+            {
+                deg = Mathf.Asin(Mathf.Clamp(liftLocalY / p.ReachX, -0.9f, 0.9f)) * Mathf.Rad2Deg;
+            }
+            Quaternion r = Quaternion.AngleAxis(deg, Vector3.forward);
+            p.T.localRotation = r * p.AnimRot;
+            p.T.localPosition = p.Harness + r * (p.Base - p.Harness);
+            p.WrittenRot = p.T.localRotation;
+            p.Written = true;
+            p.LastTiltDeg = deg;
         }
 
         private static bool HasCartPartAncestor(Transform t)
@@ -855,34 +1011,110 @@ namespace GK2Mounts
             }
             cartShiftTarget = target;
             cartShiftApplied = sideChange ? cartShiftTarget : Mathf.MoveTowards(cartShiftApplied, cartShiftTarget, CartShiftRate * Time.deltaTime);
+            CartSlopeStyle style = on ? S.CartSlope.Value : CartSlopeStyle.HalfLift;
+            // Pass 1: this frame's animator rotations (a rotation that differs from the mod's last write is the
+            // animator's; an unchanged one means it left the node, and the last known one is kept).
+            foreach (CartPart p in cartParts)
+            {
+                if (p.T == null || !p.T || p.T.name == Cargo.ContainerName)
+                {
+                    continue;
+                }
+                Quaternion cur = p.T.localRotation;
+                if (!p.Written || Quaternion.Angle(cur, p.WrittenRot) > 0.01f)
+                {
+                    p.AnimRot = cur;
+                }
+            }
+            float pitchDeg = 0f;
+            if (style == CartSlopeStyle.WholeCartPitch && swayRefPart != null && swayRefPart.T != null && swayRefPart.T)
+            {
+                float ly = Mathf.Abs(cartShiftApplied) < 0.0005f ? 0f : swayRefPart.T.parent.InverseTransformVector(Vector3.up * cartShiftApplied).y;
+                pitchDeg = PitchDegrees(ly);
+            }
+            lastPitchDeg = pitchDeg;
+            Quaternion pitch = Quaternion.AngleAxis(pitchDeg, Vector3.forward);
+            Quaternion swayAnim = swayRefPart != null ? swayRefPart.AnimRot : Quaternion.identity;
             foreach (CartPart p in cartParts)
             {
                 if (p.T == null || !p.T)
                 {
                     continue;
                 }
+                Vector3 fullLift = Mathf.Abs(cartShiftApplied) < 0.0005f ? Vector3.zero : p.T.parent.InverseTransformVector(Vector3.up * cartShiftApplied);
+                bool cargo = p.T.name == Cargo.ContainerName;
+                if (cargo)
+                {
+                    // The cargo rocks with the cart the way the game's loaded corpse does: that corpse hangs under
+                    // donkey_cart_body_sway, which the walk animation rotates about the axle pivot by up to 3 degrees.
+                    // The holder is not reparented (the game's drawer switches those nodes on and off); it copies the
+                    // rotation (and the pitch) and turns about the axle every frame, after the animator.
+                    bool pitchIt = style == CartSlopeStyle.WholeCartPitch && p.Pitched;
+                    Quaternion r = S.CargoSwaysWithCart.Value && swayRefPart != null ? swayAnim : Quaternion.identity;
+                    if (pitchIt)
+                    {
+                        r = pitch * r;
+                    }
+                    Vector3 pivot = pitchIt ? p.Pivot : (swayRefPart != null ? swayRefPart.Base : p.Base);
+                    p.T.localRotation = r;
+                    p.T.localPosition = pivot + r * (p.Base - pivot) + fullLift;
+                    p.LastLift = cartShiftApplied;
+                    continue;
+                }
+                if (style == CartSlopeStyle.WholeCartPitch && p.Pitched)
+                {
+                    p.LastLift = cartShiftApplied;
+                    p.LastTiltDeg = 0f;
+                    if (p.CarryOnly)
+                    {
+                        // Lamp rig under a stretched parent: its node keeps its rotation; it moves so that its child
+                        // (the lamp) lands where the pitched pole head is.
+                        p.T.localRotation = p.AnimRot;
+                        Vector3 restPos = p.Base + fullLift;
+                        p.T.localPosition = restPos;
+                        Vector3 axleW = p.T.parent.TransformPoint(p.Pivot + fullLift);
+                        Vector3 childW = p.CarryChild != null && p.CarryChild ? p.CarryChild.position : p.T.position;
+                        Vector3 turned = axleW + WorldPitch(p.T.parent, pitchDeg) * (childW - axleW);
+                        p.T.localPosition = restPos + p.T.parent.InverseTransformVector(turned - childW);
+                    }
+                    else
+                    {
+                        p.T.localRotation = pitch * p.AnimRot;
+                        p.T.localPosition = p.Pivot + fullLift + pitch * (p.Base - p.Pivot);
+                    }
+                    p.WrittenRot = p.T.localRotation;
+                    p.Written = true;
+                    continue;
+                }
+                if (style == CartSlopeStyle.ShaftsTilt && p.IsShafts)
+                {
+                    p.LastLift = 0f;
+                    float ly = fullLift.y;
+                    PoseShafts(p, ly, tilt: true);
+                    continue;
+                }
+                if (p.Written)
+                {
+                    // Left a pitching or tilting style: hand the rotation back to the animator's value once.
+                    p.T.localRotation = p.AnimRot;
+                    p.Written = false;
+                    p.LastTiltDeg = 0f;
+                }
                 float lift = cartShiftApplied * p.Weight;
                 p.LastLift = lift;
                 Vector3 liftVec = Mathf.Abs(lift) < 0.0005f ? Vector3.zero : p.T.parent.InverseTransformVector(Vector3.up * lift);
-                if (p.T.name == Cargo.ContainerName)
-                {
-                    // The cargo rocks with the cart the way the game's loaded corpse does: that corpse hangs under
-                    // donkey_cart_body_sway, which the walk animation rotates about the axle pivot (the sway node's
-                    // own rest position) by up to 3 degrees. The holder is not reparented (the game's drawer switches
-                    // those nodes on and off); it copies the rotation and turns about the same pivot every frame,
-                    // after the animator. Off: the holder stays level.
-                    if (S.CargoSwaysWithCart.Value && swayRefPart != null && swayRefPart.T != null && swayRefPart.T)
-                    {
-                        Quaternion r = swayRefPart.T.localRotation;
-                        Vector3 pivot = swayRefPart.Base;
-                        p.T.localRotation = r;
-                        p.T.localPosition = pivot + r * (p.Base - pivot) + liftVec;
-                        continue;
-                    }
-                    p.T.localRotation = Quaternion.identity;
-                }
                 p.T.localPosition = p.Base + liftVec;
             }
+        }
+
+        // The pitch as a world rotation: about the parent's z axis (the axis across the cart), by the angle as seen
+        // in that parent's own axes, so the lamp moves the same way the pole (pitched in Base) does.
+        private static Quaternion WorldPitch(Transform parent, float deg)
+        {
+            Transform basis = swayRefPart != null && swayRefPart.T != null ? swayRefPart.T.parent : parent;
+            Vector3 axis = basis.TransformDirection(Vector3.forward);
+            float sign = Mathf.Sign(basis.lossyScale.x * basis.lossyScale.y);
+            return Quaternion.AngleAxis(deg * sign, axis);
         }
 
         private static CartPart swayRefPart;
@@ -971,14 +1203,14 @@ namespace GK2Mounts
                 return "no cart parts";
             }
             var parts = new System.Collections.Generic.List<string>();
-            parts.Add($"refGround={lastCartRefGround:F3} target={cartShiftTarget:F3} applied={cartShiftApplied:F3} anomaliesLogged={cartAnomalies}");
+            parts.Add($"style={S.CartSlope.Value} pitch={lastPitchDeg:F1}deg{(lastPitchCapped ? " (capped)" : "")} refGround={lastCartRefGround:F3} target={cartShiftTarget:F3} applied={cartShiftApplied:F3} anomaliesLogged={cartAnomalies}");
             foreach (CartPart p in cartParts)
             {
                 if (p.T == null || !p.T)
                 {
                     continue;
                 }
-                parts.Add($"{p.T.name}: lift={p.LastLift:F3} ground={p.LastGround:F3} ({p.LastSource}) lpos={p.T.localPosition:F3} base={p.Base:F3} lrot={p.T.localEulerAngles:F0} world={p.T.position:F2}");
+                parts.Add($"{p.T.name}: lift={p.LastLift:F3}{(p.IsShafts ? $" tilt={p.LastTiltDeg:F1}deg harness={p.Harness:F2} reach={p.ReachX:F2}" : "")} ground={p.LastGround:F3} ({p.LastSource}) lpos={p.T.localPosition:F3} base={p.Base:F3} lrot={p.T.localEulerAngles:F0} world={p.T.position:F2}");
             }
             return string.Join(" | ", parts);
         }

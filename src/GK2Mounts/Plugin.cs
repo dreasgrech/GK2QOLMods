@@ -13,6 +13,15 @@ namespace GK2Mounts
         Cart,
     }
 
+    // How the cart meets a slope (CartFollowsGround): the whole cart lifted level with the shafts at half the lift,
+    // the shafts tilted about their harness end, or the cart pitched about its axle like a real cart.
+    public enum CartSlopeStyle
+    {
+        HalfLift,
+        ShaftsTilt,
+        WholeCartPitch,
+    }
+
     public enum LegSource
     {
         Body,
@@ -57,6 +66,8 @@ namespace GK2Mounts
         public readonly ConfigEntry<bool> SnapToGround;
         public readonly ConfigEntry<bool> CartFollowsGround;
         public readonly ConfigEntry<float> CartGroundMaxShift;
+        public readonly ConfigEntry<CartSlopeStyle> CartSlope;
+        public readonly ConfigEntry<float> CartPitchMaxDegrees;
         public readonly ConfigEntry<bool> CargoDrawCorpse, CargoSwaysWithCart;
         public readonly ConfigEntry<float> CargoBedDepth, CargoSideGap, CargoOverhang, CargoNestle;
         public readonly ConfigEntry<float> LanternAlong, LanternUp, LanternAcross, LanternTilt, LanternLean;
@@ -123,6 +134,10 @@ namespace GK2Mounts
                 "Cart style only: raise or lower the whole cart (wheels, cart body, lantern) as one, every frame, by the ground difference between the cart and the donkey, so the rigid 3D cart does not sink into a slope behind the donkey. The bars between donkey and cart take half of that shift. Nothing rotates.");
             CartGroundMaxShift = cfg.Bind(section, "CartGroundMaxShift", Defaults.Get(section, "CartGroundMaxShift", 0.8f),
                 "Largest shift the cart may get from CartFollowsGround, in world units, either way.");
+            CartSlope = cfg.Bind(section, "CartSlope", Defaults.Get(section, "CartSlope", CartSlopeStyle.WholeCartPitch),
+                "Cart style, with CartFollowsGround: how the cart meets a slope. WholeCartPitch: the wheels follow the ground and the cart (body, shafts, pole, cargo) pitches about the axle so the shafts stay at the donkey, as a real cart does. ShaftsTilt: the cart is lifted level and only the shafts turn about their harness end. HalfLift: the cart is lifted level and the shafts by half (a gap at both ends).");
+            CartPitchMaxDegrees = cfg.Bind(section, "CartPitchMaxDegrees", Defaults.Get(section, "CartPitchMaxDegrees", 20f),
+                new ConfigDescription("WholeCartPitch: the steepest the cart may pitch, in degrees. Steeper ground leaves the shafts short of the donkey instead of tipping the pole and cargo further.", new AcceptableValueRange<float>(0f, 45f)));
             CargoDrawCorpse = cfg.Bind(section, "CargoDrawCorpse", Defaults.Get(section, "CargoDrawCorpse", true),
                 "Cart style only: the mod draws every corpse on the cart itself (same packer and corrections as any other item) and keeps the game's loaded-cart body off. Off: the first corpse is shown by the game's own loaded cart body with the shroud, which the packer cannot move; other items then ride on top of it.");
             CargoSwaysWithCart = cfg.Bind(section, "CargoSwaysWithCart", Defaults.Get(section, "CargoSwaysWithCart", true),
@@ -277,7 +292,7 @@ namespace GK2Mounts
                 {
                     SpeedMultiplier, Depth, CenterOffset, RiderOffsetPx, TorsoOffsetPx,
                     AutoSeat, SeatAdjustPx, SeatOffset, Bob, Pose, FreezePoseWhenIdle, PoseSpeed, PoseSpeedFollowsDonkey,
-                    NearLeg, LegSource, LegHeightPx, LegAdjustXPx, LegAdjustYPx, SnapToGround, CartFollowsGround, CartGroundMaxShift,
+                    NearLeg, LegSource, LegHeightPx, LegAdjustXPx, LegAdjustYPx, SnapToGround, CartFollowsGround, CartGroundMaxShift, CartSlope, CartPitchMaxDegrees,
                     CargoDrawCorpse, CargoSwaysWithCart, CargoBedDepth, CargoSideGap, CargoOverhang, CargoNestle,
                     LanternAlong, LanternUp, LanternAcross, LanternTilt, LanternLean, LanternFlip,
                     LanternSwayDegrees, LanternSwaySeconds, IdleFidgetEverySeconds, IdleFidgetSpeed, IdleCrawlSpeed,

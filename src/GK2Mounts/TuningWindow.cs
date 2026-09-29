@@ -310,7 +310,18 @@ namespace GK2Mounts
                 if (s.CartFollowsGround.Value)
                 {
                     FloatSlider("Cart: largest height shift allowed", s.CartGroundMaxShift, 0f, 1.5f, 2, null);
-                    GUILayout.Label("Wheels, cart body and lantern move up or down together by the ground difference between cart and donkey; the bars between them take half of it.", small);
+                    EnumCycler("How the cart meets a slope", s.CartSlope, null);
+                    CartSlopeStyle next = (CartSlopeStyle)(((int)s.CartSlope.Value + 1) % Enum.GetValues(typeof(CartSlopeStyle)).Length);
+                    if (GUILayout.Button("Compare: switch to " + next + " (live)"))
+                    {
+                        s.CartSlope.Value = next;
+                        Plugin.Log.LogInfo("Mount: cart slope style " + next + ".");
+                    }
+                    if (s.CartSlope.Value == CartSlopeStyle.WholeCartPitch)
+                    {
+                        FloatSlider("Steepest cart pitch, degrees", s.CartPitchMaxDegrees, 0f, 45f, 0, null);
+                    }
+                    GUILayout.Label(CartSlopeNote(s.CartSlope.Value) + " " + Mount.CartSlopeStatus(), small);
                 }
 
                 Header("Cart cargo: the packer");
@@ -381,6 +392,19 @@ namespace GK2Mounts
 
             GUILayout.Label(Lantern.LightSummary(), small);
             GUILayout.Label(Lantern.Summary(), small);
+        }
+
+        private static string CartSlopeNote(CartSlopeStyle style)
+        {
+            switch (style)
+            {
+                case CartSlopeStyle.WholeCartPitch:
+                    return "WholeCartPitch: the wheels follow the ground and the cart pitches about its axle, so the shafts stay at the donkey; the lamp keeps hanging upright.";
+                case CartSlopeStyle.ShaftsTilt:
+                    return "ShaftsTilt: the cart is lifted level by the ground difference and only the shafts turn about their harness end.";
+                default:
+                    return "HalfLift: the cart is lifted level by the ground difference and the shafts by half of it.";
+            }
         }
 
         private static bool waitingForBellKey;

@@ -1137,3 +1137,32 @@ quitting, the only blocker is the startup scene load) never saves; the only save
 Fixes: `Application.quitting` sets `Plugin.Quitting`, and `Cargo.Unload` skips the hand-back when closing (logged);
 a failed hand-over now checks the hands by item GUID (counted as in hand) and otherwise tries the ground before
 reporting LOST.
+
+### Shafts tilt instead of half lift (2026-09-29, `CartShaftsTilt`, per style, default on)
+
+The whole-cart lift (CartFollowsGround) left the shafts (`donkey_cart_bars`, one rigid 0.76-long mesh from the
+harness to the cart front) at half the lift, so on a slope they missed both the donkey and the cart. Now they turn
+about their harness end in the travel plane (parent z) by asin(lift / reach), so the cart end follows the cart and
+the harness end stays at the donkey. Measured once at spawn with `Cargo.MeasureMeshes` in the parent (`Base`) space:
+the end of the x extent nearer the donkey root is the harness (logged: "shafts x .. harness end x .., reach .."). The
+walk animation rocks the shafts itself (-4..0 degrees, Round 8), so the tilt is composed on top of the animator's
+rotation of the frame (a rotation that differs from the mod's last write is the animator's). Off: the old half lift.
+The geometry log's `cart lift:` block shows `tilt=..deg harness=.. reach=..` for the shafts. Unconfirmed in game.
+
+**First in-game result (screenshots):** worse; the shafts swung out steeply at the donkey end. Log: "shafts x -0.66..0.10
+in Base space, donkey root at x 0.00: harness end x 0.10". The root is not where the donkey is drawn (the sprite sits
+0.48 to its facing side), so "end nearer the root" picked the cart end as the pivot. Fixed: the cart end is the end
+nearer the cart body (sampled at +0.37), the harness end the other one (x -0.66, reach +0.76).
+
+### Whole-cart pitch about the axle (2026-09-29, `CartSlope`, per style: HalfLift / ShaftsTilt / WholeCartPitch)
+
+Second in-game result of ShaftsTilt (screenshots): pivot right (harness x -0.66, reach 0.76), still looks detached,
+because a real cart's shafts are part of the cart: on a slope the cart pitches about its axle, it is not lifted level.
+`CartShaftsTilt` became `CartSlope` (enum, default WholeCartPitch) with a live "Compare: switch to ..." button on the
+Riding tab. WholeCartPitch: wheels (meshes and sprites) lifted as before; the sway nodes (`donkey_cart_empty_sway`,
+`donkey_cart_lantern_sway`, body sway), the shafts and the cargo holder turn about the axle (the sway nodes' rest
+position, carried into each part's parent space) by asin(lift / 1.02) (axle x 0.36 to harness x -0.66), on top of
+the animator's rock, capped by `CartPitchMaxDegrees` (20). `light_sway` sits under `gfx` (scale 1 x 1.667): turning it
+would move the lamp along a stretched arc, so it is only translated by what its child (the lamp) must move to stay at
+the pitched pole head, and keeps its rotation (the lamp hangs). Status line on the Riding tab and the geometry log's
+`cart lift:` show style, pitch and whether the cap was hit. Unconfirmed in game.
