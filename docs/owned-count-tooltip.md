@@ -89,4 +89,4 @@ craft are committed), vendor stock, and dropped items on the ground. These can b
 - Verification: Cecil scan for `AddItemWidgets`, the two private fields, `GetTotalCountInInventory`; in-game check of
   each tooltip context (inventory, chest, craft ingredient, vendor, dialogue) and a graded item.
 
-Half a day including the in-game test list. Suggested plugin name: **GK2 Owned Count** (`anvil.gk2.ownedcount`).
+Half a day including the in-game test list. Suggested plugin name: **GK2 Owned Count** (`dreas.gk2.ownedcount`).

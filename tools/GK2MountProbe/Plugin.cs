@@ -15,7 +15,7 @@ namespace GK2MountProbe
     [BepInPlugin(Guid, "GK2 Mount Probe", Version)]
     public class Plugin : BaseUnityPlugin
     {
-        public const string Guid = "anvil.gk2.mountprobe";
+        public const string Guid = "dreas.gk2.mountprobe";
         public const string Version = "0.1.0";
 
         private static readonly System.Guid AuditedGameMvid = new System.Guid("97f92f0d-a093-49fe-ba4d-74aa62fae81e");

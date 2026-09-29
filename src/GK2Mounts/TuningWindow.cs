@@ -640,7 +640,7 @@ namespace GK2Mounts
         private static void DrawDefaults()
         {
             Header("Your settings and the mod defaults");
-            GUILayout.Label("Your settings: everything you set on this panel, saved to anvil.gk2.mounts.cfg the moment you change it. They are what you play with.", small);
+            GUILayout.Label("Your settings: everything you set on this panel, saved to dreas.gk2.mounts.cfg the moment you change it. They are what you play with.", small);
             GUILayout.Label("Mod defaults: what a fresh install starts with and what right-click and the reset buttons go back to. They come from defaults.cfg, which is built into the DLL.", small);
             GUILayout.Label("A setting shown in yellow differs from its mod default.", small);
             GUILayout.Label("Mod defaults read from: " + Defaults.Source, small);

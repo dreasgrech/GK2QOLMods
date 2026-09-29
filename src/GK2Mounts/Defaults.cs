@@ -9,7 +9,7 @@ using BepInEx.Configuration;
 namespace GK2Mounts
 {
     // Two kinds of values, and only two:
-    //   Your settings: anvil.gk2.mounts.cfg. BepInEx writes it on every change (SaveOnConfigSet), so the panel has no
+    //   Your settings: dreas.gk2.mounts.cfg. BepInEx writes it on every change (SaveOnConfigSet), so the panel has no
     //     save button; what you set is kept.
     //   Mod defaults: what a fresh install starts with, and what "reset" goes back to. They live in defaults.cfg next
     //     to the sources and are embedded into the DLL at build time.
@@ -286,7 +286,7 @@ namespace GK2Mounts
             var sb = new StringBuilder();
             sb.AppendLine("# GK2 Mounts: the mod's default values, embedded into the DLL at build time.");
             sb.AppendLine("# Written by the tuning panel's \"Make these the mod defaults\" button; rebuild to ship them.");
-            sb.AppendLine("# Format: [Section] then Key = Value, same names as anvil.gk2.mounts.cfg.");
+            sb.AppendLine("# Format: [Section] then Key = Value, same names as dreas.gk2.mounts.cfg.");
             string group = null;
             foreach (var t in Tracked)
             {

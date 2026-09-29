@@ -10,7 +10,7 @@ namespace GK2MoveBuilding
     [BepInPlugin(Guid, "GK2 Move Building", Version)]
     public class Plugin : BaseUnityPlugin
     {
-        public const string Guid = "anvil.gk2.movebuilding";
+        public const string Guid = "dreas.gk2.movebuilding";
         public const string Version = "1.1.3";
 
         // Module version id of the Assembly-CSharp.dll this plugin was audited against.

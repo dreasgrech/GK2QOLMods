@@ -13,7 +13,7 @@ namespace GK2GlobalStorage
     [BepInPlugin(Guid, "GK2 Global Storage", "1.1.2")]
     public class Plugin : BaseUnityPlugin
     {
-        public const string Guid = "anvil.gk2.globalstorage";
+        public const string Guid = "dreas.gk2.globalstorage";
 
         // Module version id of the Assembly-CSharp.dll this plugin was audited against.
         private static readonly System.Guid AuditedGameMvid = new System.Guid("97f92f0d-a093-49fe-ba4d-74aa62fae81e");

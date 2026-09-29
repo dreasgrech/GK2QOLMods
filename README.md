@@ -26,7 +26,7 @@ and cannot load code, so it is not used.
 4. **Copy the DLLs you want** from [`dist/`](dist/) into `BepInEx\plugins\`. Any combination works; they don't depend
    on each other.
 5. **Start the game.** Each mod writes one line to `BepInEx\LogOutput.log` when it loads, for example
-   `GK2 Move Building 1.1.3 loaded.` Settings appear in `BepInEx\config\anvil.gk2.<mod>.cfg` after the first run
+   `GK2 Move Building 1.1.3 loaded.` Settings appear in `BepInEx\config\dreas.gk2.<mod>.cfg` after the first run
    and are read at game start.
 
 To **uninstall** a mod, delete its DLL from `BepInEx\plugins`. To remove BepInEx entirely, delete `winhttp.dll`,
@@ -105,7 +105,7 @@ game's normal Remove mode and click.
 
 ### Owned Count
 
-`GK2OwnedCount.dll` · GUID `anvil.gk2.ownedcount` · [source and README](src/GK2OwnedCount/)
+`GK2OwnedCount.dll` · GUID `dreas.gk2.ownedcount` · [source and README](src/GK2OwnedCount/)
 
 Every item tooltip gets a line such as `Owned: 120 · on you 4 · in storage 116 (5 chests)`. "On you" is your
 inventory, bags and tool belt; "in storage" is every storage chest in every area, the same set Global Storage draws

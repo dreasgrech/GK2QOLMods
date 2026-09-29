@@ -11,7 +11,7 @@ Design notes: [`FEASIBILITY.md`](FEASIBILITY.md); runtime facts the design rests
 The game has no mount of its own. The donkey you ride is the corpse-delivery donkey's *looks* only; the real donkey
 NPC and its schedule are untouched.
 
-## Settings (`BepInEx\config\anvil.gk2.mounts.cfg`, read at game start)
+## Settings (`BepInEx\config\dreas.gk2.mounts.cfg`, read at game start)
 
 ### `[General]`: behaviour
 
@@ -36,7 +36,7 @@ Ride / Cart.
 
 **Your settings and the mod defaults.** There are two kinds of values, and only two:
 
-- *Your settings* are in `anvil.gk2.mounts.cfg`. BepInEx writes that file the moment a value changes, so there is
+- *Your settings* are in `dreas.gk2.mounts.cfg`. BepInEx writes that file the moment a value changes, so there is
   no save button: what you set on the panel is kept.
 - *Mod defaults* are what a fresh install starts with, and what right-click and the reset buttons go back to. They
   come from `defaults.cfg` next to the sources, embedded into the DLL at build time.
@@ -46,7 +46,7 @@ A panel row shown in yellow differs from its mod default; the footer counts them
 `defaults.cfg` from the repo itself, and **Make these the mod defaults** (click twice to confirm) writes every
 current value of both styles into it. The yellow marks clear at once, and a rebuild ships the new defaults in the
 DLL. On any other machine the built-in copy is used and that button is not shown. A new default never overwrites
-a value already in someone's `anvil.gk2.mounts.cfg`: that row then shows yellow until it is reset.
+a value already in someone's `dreas.gk2.mounts.cfg`: that row then shows yellow until it is reset.
 
 | Key | Ride | Cart | Meaning |
 |---|---|---|---|

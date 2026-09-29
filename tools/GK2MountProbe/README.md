@@ -27,7 +27,7 @@ right of the player, dumps each prefab the same way and destroys them after 25 s
 | `PageUp` / `PageDown` | Move the rider (player view) up/down by 0.05 via a `PlayerView.LateUpdate` postfix. |
 
 State-machine, animation-state and control-flag transitions are logged as they happen (`LogStateChanges`).
-Config: `BepInEx\config\anvil.gk2.mountprobe.cfg`.
+Config: `BepInEx\config\dreas.gk2.mountprobe.cfg`.
 
 ## Animation viewer (`viewer/keeper-animations.html`)
 

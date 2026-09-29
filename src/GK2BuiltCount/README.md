@@ -11,13 +11,13 @@ Woodworking Workbench I (1)
 
 It only changes what the menu shows. Build rules, costs and saves are not touched. It is independent of GK2 Global Storage; the two plugins work together or alone.
 
-- GUID: `anvil.gk2.builtcount`
+- GUID: `dreas.gk2.builtcount`
 - Game build audited: Steam build 25533739, Unity 6000.3.9f1 Mono, `Assembly-CSharp` MVID `97f92f0d-a093-49fe-ba4d-74aa62fae81e`. v1.0.2 was audited against 25509347 (`70946fdd-5c76-4d71-95c3-fea95051340d`); v1.0.0 and v1.0.1 were audited against build 25457344 (`dfae7296-aa7e-450f-92b4-4e617878a48d`)
 - Needs: BepInEx 5.4.23.5, already installed in `C:\Games\Graveyard Keeper 2`
 
 ## Settings
 
-File: `C:\Games\Graveyard Keeper 2\BepInEx\config\anvil.gk2.builtcount.cfg`. It is created on the first launch.
+File: `C:\Games\Graveyard Keeper 2\BepInEx\config\dreas.gk2.builtcount.cfg`. It is created on the first launch.
 
 | Setting | Default | Meaning |
 |---|---|---|
@@ -166,4 +166,4 @@ The update from Steam build 25457344 to 25509347 changed `Assembly-CSharp` (39 f
 
 - **Build and deploy** (game closed): `dotnet build -c Release` in this folder.
 - **Build only** (game running): `dotnet build -c Release -p:Deploy=false`.
-- **Uninstall:** delete `C:\Games\Graveyard Keeper 2\BepInEx\plugins\GK2BuiltCount.dll`, and optionally `BepInEx\config\anvil.gk2.builtcount.cfg`.
+- **Uninstall:** delete `C:\Games\Graveyard Keeper 2\BepInEx\plugins\GK2BuiltCount.dll`, and optionally `BepInEx\config\dreas.gk2.builtcount.cfg`.

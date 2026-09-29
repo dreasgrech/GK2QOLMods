@@ -14,7 +14,7 @@ different skull grades) and sums the whole family. Display only: nothing in the 
 Version 1.0.1, built and audited against game build 25533739 (Assembly-CSharp MVID `97f92f0d-…`).
 Feasibility study: [`docs/owned-count-tooltip.md`](../../docs/owned-count-tooltip.md).
 
-## Settings (`BepInEx\config\anvil.gk2.ownedcount.cfg`, read at game start)
+## Settings (`BepInEx\config\dreas.gk2.ownedcount.cfg`, read at game start)
 
 | Key | Default | Meaning |
 |---|---|---|

@@ -68,7 +68,7 @@ Source: `src\GK2GlobalStorage\Plugin.cs` and `GK2GlobalStorage.csproj` (netstand
 
 Every container in an **active container zone** (`IsContainer && IsActive`) whose definition has `OpenInMultiInventory` and a non-zero size, and that is **not hidden** and **is interactable**. Duplicates are removed by the underlying item data. By default two kinds are left out of the faraway set: fuel containers (they feed furnaces) and conveyor chests (both conveyor chest types hand items onto belts). Chests in the player's current zone behave exactly as before.
 
-### Settings (`BepInEx\config\anvil.gk2.globalstorage.cfg`)
+### Settings (`BepInEx\config\dreas.gk2.globalstorage.cfg`)
 
 | Setting | Default | Meaning |
 |---|---|---|
@@ -207,7 +207,7 @@ Storage would be the same set the mod already uses. Each transpiler would check 
 | `src\GK2GlobalStorage\Plugin.cs` | Mod source |
 | `src\GK2GlobalStorage\GK2GlobalStorage.csproj` | Build project; `dotnet build -c Release` rebuilds and copies the DLL into the game |
 | `C:\Games\Graveyard Keeper 2\BepInEx\plugins\GK2GlobalStorage.dll` | Installed mod |
-| `C:\Games\Graveyard Keeper 2\BepInEx\config\anvil.gk2.globalstorage.cfg` | Settings |
+| `C:\Games\Graveyard Keeper 2\BepInEx\config\dreas.gk2.globalstorage.cfg` | Settings |
 | `C:\Games\Graveyard Keeper 2\BepInEx\LogOutput.log` | Load and error log |
 | `winhttp.dll`, `doorstop_config.ini`, `.doorstop_version`, `BepInEx\` in the game folder | BepInEx loader |
 

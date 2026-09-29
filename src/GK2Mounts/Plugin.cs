@@ -305,7 +305,7 @@ namespace GK2Mounts
     [BepInPlugin(Guid, "GK2 Mounts", Version)]
     public class Plugin : BaseUnityPlugin
     {
-        public const string Guid = "anvil.gk2.mounts";
+        public const string Guid = "dreas.gk2.mounts";
         public const string Version = "0.1.0";
 
         // Module version id of the Assembly-CSharp.dll this plugin was audited against.

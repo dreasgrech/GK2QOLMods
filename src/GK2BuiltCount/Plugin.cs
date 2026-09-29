@@ -13,7 +13,7 @@ namespace GK2BuiltCount
     [BepInPlugin(Guid, "GK2 Built Count", "1.0.3")]
     public class Plugin : BaseUnityPlugin
     {
-        public const string Guid = "anvil.gk2.builtcount";
+        public const string Guid = "dreas.gk2.builtcount";
 
         // Module version id of the Assembly-CSharp.dll this plugin was audited against.
         private static readonly System.Guid AuditedGameMvid = new System.Guid("97f92f0d-a093-49fe-ba4d-74aa62fae81e");

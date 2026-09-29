@@ -9,7 +9,7 @@ namespace GK2OwnedCount
     [BepInPlugin(Guid, "GK2 Owned Count", Version)]
     public class Plugin : BaseUnityPlugin
     {
-        public const string Guid = "anvil.gk2.ownedcount";
+        public const string Guid = "dreas.gk2.ownedcount";
         public const string Version = "1.0.1";
 
         // Module version id of the Assembly-CSharp.dll this plugin was audited against.

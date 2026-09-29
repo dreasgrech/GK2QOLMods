@@ -22,7 +22,7 @@ Alternative: in the game's own **Remove** mode, hold **Left Ctrl** (setting `Mov
 
 Back / right click during the preview cancels the move. Nothing was changed at that point.
 
-## Settings (`BepInEx\config\anvil.gk2.movebuilding.cfg`, read at game start)
+## Settings (`BepInEx\config\dreas.gk2.movebuilding.cfg`, read at game start)
 
 | Key | Default | Meaning |
 |---|---|---|
