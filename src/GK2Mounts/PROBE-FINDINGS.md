@@ -945,3 +945,14 @@ knob as a multiplier or switch on the authored values, applied each frame in `La
 colour (hex, three sliders) / `LanternLightDayDim` (intensity × lerp(1, dim, sun)), character light on / intensity ×
 / range × (colour follows), glow on / alpha × / scale ×, glass on; plus the placement, mirror and sway rows moved
 from the Riding tab. Authored values restored on detach. Cecil 189 refs, all pass.
+
+### Cargo rocks with the cart (2026-09-29)
+
+Why the game's corpse sways and ours did not: the loaded corpse is a child of `donkey_cart_body_sway`, one of the
+three sway nodes the walk animation rotates about the axle pivot (0.36, 0.267, 0) by up to 3° (Round 8 sample); our
+holder `cart_cargo` hangs directly under `Base`, which never rotates. Not reparented, because the game's drawer
+switches the cart-body sway nodes on and off with the corpse rules: instead `FollowCartParts` gives the holder the
+reference sway node's local rotation each frame (after the animator) and turns it about that node's rest position,
+`pos = pivot + r·(base − pivot) + lift`. Reference: `donkey_cart_lantern_sway` (never toggled by the drawer), else the
+cart bodies. Setting `CargoSwaysWithCart` (per style, true); `OnCargoChanged` resets the holder's rotation before
+re-collecting rest positions so the rotated position is never captured as a rest.

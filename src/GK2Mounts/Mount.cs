@@ -86,6 +86,10 @@ namespace GK2Mounts
                 if (p.T != null)
                 {
                     p.T.localPosition = p.Base;
+                    if (p.T.name == Cargo.ContainerName)
+                    {
+                        p.T.localRotation = Quaternion.identity; // the sway rotation is re-applied next frame
+                    }
                 }
             }
             Cargo.RefreshViews();
@@ -713,6 +717,11 @@ namespace GK2Mounts
             {
                 cartBodyPart = cartParts.Find(p => p.Weight >= 1f) ?? cartParts[0];
             }
+            // The rock reference for the cargo: one of the nodes the walk animation rotates (all three share the pivot
+            // and the angle, Round 8). The lantern's is never switched off by the game's drawer; the cart bodies are.
+            swayRefPart = cartParts.Find(p => p.T.name == "donkey_cart_lantern_sway")
+                          ?? cartParts.Find(p => p.T.name == "donkey_cart_empty_sway")
+                          ?? cartParts.Find(p => p.T.name == "donkey_cart_body_sway");
             Plugin.Log.LogInfo($"Mount: {cartParts.Count} cart parts follow the ground as one (sampled under {cartBodyPart?.T.name}): " + string.Join(", ", cartParts.ConvertAll(p => p.T.name)));
         }
 
@@ -816,9 +825,29 @@ namespace GK2Mounts
                 }
                 float lift = cartShiftApplied * p.Weight;
                 p.LastLift = lift;
-                p.T.localPosition = Mathf.Abs(lift) < 0.0005f ? p.Base : p.Base + p.T.parent.InverseTransformVector(Vector3.up * lift);
+                Vector3 liftVec = Mathf.Abs(lift) < 0.0005f ? Vector3.zero : p.T.parent.InverseTransformVector(Vector3.up * lift);
+                if (p.T.name == Cargo.ContainerName)
+                {
+                    // The cargo rocks with the cart the way the game's loaded corpse does: that corpse hangs under
+                    // donkey_cart_body_sway, which the walk animation rotates about the axle pivot (the sway node's
+                    // own rest position) by up to 3 degrees. The holder is not reparented (the game's drawer switches
+                    // those nodes on and off); it copies the rotation and turns about the same pivot every frame,
+                    // after the animator. Off: the holder stays level.
+                    if (S.CargoSwaysWithCart.Value && swayRefPart != null && swayRefPart.T != null && swayRefPart.T)
+                    {
+                        Quaternion r = swayRefPart.T.localRotation;
+                        Vector3 pivot = swayRefPart.Base;
+                        p.T.localRotation = r;
+                        p.T.localPosition = pivot + r * (p.Base - pivot) + liftVec;
+                        continue;
+                    }
+                    p.T.localRotation = Quaternion.identity;
+                }
+                p.T.localPosition = p.Base + liftVec;
             }
         }
+
+        private static CartPart swayRefPart;
 
         // Ground heights at two points from one source: the navigation mesh when it knows both, otherwise the ground
         // raycast for both. NaN where neither knows. Only ground within CartLevelWindow of levelY counts.

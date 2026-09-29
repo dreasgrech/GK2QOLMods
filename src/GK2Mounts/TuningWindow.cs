@@ -180,6 +180,20 @@ namespace GK2Mounts
                 GUILayout.Label("Forced on: the " + Mount.S.Pose.Value + " pose only has left/right frames; facing up or down would show no body.", small);
             }
             GUILayout.Label("You always dismount for work, ladders, building, fishing, fighting, sleep and co-op; chests and inventory keep you mounted.", small);
+
+            Header("Setup");
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Mount: world-object id to summon (General.MountWgoId)", label, GUILayout.Width(LabelW));
+            string wgo = GUILayout.TextField(Plugin.MountWgoId.Value ?? "", GUILayout.Width(150f));
+            GUILayout.EndHorizontal();
+            if (ResetOnRightClick(Plugin.MountWgoId, null)) { }
+            else if (wgo != Plugin.MountWgoId.Value)
+            {
+                Plugin.MountWgoId.Value = wgo;
+            }
+            GUILayout.Label("Used at the next mount. The game defines npc_donkey (and npc_donkey_test, the same art); anything without a cart gives Ride style only.", small);
+            Toggle("Safety: do nothing if the game's code changed since the audit (Safety.DisableOnGameUpdate)", Plugin.DisableOnGameUpdate, null);
+            GUILayout.Label($"Checked once at game start; a change here counts from the next start. General.Enabled is {Plugin.Enabled.Value} (set in the cfg; turning the mod off while mounted would strand the donkey, so it is not a switch here).", small);
         }
 
         private static void DrawRiding()
@@ -274,6 +288,7 @@ namespace GK2Mounts
                 FloatSlider("Overhang allowed before stacking", s.CargoOverhang, 0f, 0.5f, 2, Cargo.RefreshViews);
                 FloatSlider("Nestle: how far a stacked item sinks into the one below", s.CargoNestle, 0f, 0.3f, 2, Cargo.RefreshViews);
                 Toggle("Mod draws corpses too (off = the game's own shroud for the first corpse)", s.CargoDrawCorpse, Cargo.RefreshViews);
+                Toggle("Cargo rocks with the cart while it rolls (as the game's loaded corpse does)", s.CargoSwaysWithCart, null);
                 GUILayout.Label($"While riding, anything you pick up goes straight onto the cart and piles, tables and graves take from it. {Plugin.CargoKey.Value} sets the last item down in front of you. {Cargo.Summary()}", small);
                 DrawCargoCorrections();
                 GUILayout.Label("The lantern pole and its lamp have their own tab.", small);
@@ -504,7 +519,16 @@ namespace GK2Mounts
                     Plugin.Log.LogWarning(exportStatus);
                 }
             }
-            GUILayout.Label("Path: Debug.DefaultsExportPath (empty = BepInEx/config/GK2Mounts.defaults.cfg). The \"Save to config file\" button below is different: it saves your own settings for play, not the mod's defaults.", small);
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Export path (Debug.DefaultsExportPath; empty = BepInEx/config/GK2Mounts.defaults.cfg)", label, GUILayout.Width(LabelW));
+            string path2 = GUILayout.TextField(Plugin.DefaultsExportPath.Value ?? "", GUILayout.ExpandWidth(true));
+            GUILayout.EndHorizontal();
+            if (ResetOnRightClick(Plugin.DefaultsExportPath, null)) { }
+            else if (path2 != Plugin.DefaultsExportPath.Value)
+            {
+                Plugin.DefaultsExportPath.Value = path2;
+            }
+            GUILayout.Label("A full path to the repo's src/GK2Mounts/defaults.cfg makes the export land directly where the build reads it. The \"Save to config file\" button below is different: it saves your own settings for play, not the mod's defaults.", small);
 
             Header("Cargo layout (item and pair corrections)");
             GUILayout.Label("The per-size-class and per-pair corrections edited on the Riding tab. Export writes BepInEx/config/GK2Mounts.cargo-layout.cfg, which the mod loads instead of its embedded copy from then on, so no rebuild is needed to iterate; copy it over src/GK2Mounts/cargo-layout.cfg to ship it. Reload re-reads that file (or the embedded one when it is absent).", small);

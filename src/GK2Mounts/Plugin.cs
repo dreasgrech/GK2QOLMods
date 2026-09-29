@@ -57,7 +57,7 @@ namespace GK2Mounts
         public readonly ConfigEntry<bool> SnapToGround;
         public readonly ConfigEntry<bool> CartFollowsGround;
         public readonly ConfigEntry<float> CartGroundMaxShift;
-        public readonly ConfigEntry<bool> CargoDrawCorpse;
+        public readonly ConfigEntry<bool> CargoDrawCorpse, CargoSwaysWithCart;
         public readonly ConfigEntry<float> CargoBedDepth, CargoSideGap, CargoOverhang, CargoNestle;
         public readonly ConfigEntry<float> LanternAlong, LanternUp, LanternAcross, LanternTilt, LanternLean;
         public readonly ConfigEntry<bool> LanternFlip;
@@ -117,6 +117,8 @@ namespace GK2Mounts
                 "Largest shift the cart may get from CartFollowsGround, in world units, either way.");
             CargoDrawCorpse = cfg.Bind(section, "CargoDrawCorpse", Defaults.Get(section, "CargoDrawCorpse", true),
                 "Cart style only: the mod draws every corpse on the cart itself (same packer and corrections as any other item) and keeps the game's loaded-cart body off. Off: the first corpse is shown by the game's own loaded cart body with the shroud, which the packer cannot move; other items then ride on top of it.");
+            CargoSwaysWithCart = cfg.Bind(section, "CargoSwaysWithCart", Defaults.Get(section, "CargoSwaysWithCart", true),
+                "Cart style only: the cargo rocks with the cart while it rolls, as the game's own loaded corpse does (the walk animation rotates the cart body about the axle by up to 3 degrees; the cargo holder copies that rotation every frame). Off: the cargo stays level.");
             CargoBedDepth = cfg.Bind(section, "CargoBedDepth", Defaults.Get(section, "CargoBedDepth", -0.26f),
                 "Cart style only: the cargo floor relative to the measured top of the empty cart body, world units (negative = items sink below the rails onto the bed floor). Every item's measured bottom is put on this floor.");
             CargoSideGap = cfg.Bind(section, "CargoSideGap", Defaults.Get(section, "CargoSideGap", 0.02f),
@@ -183,7 +185,7 @@ namespace GK2Mounts
         {
             Reset(SpeedMultiplier); Reset(Depth); Reset(CenterOffset); Reset(RiderOffsetPx); Reset(TorsoOffsetPx);
             Reset(AutoSeat); Reset(SeatAdjustPx); Reset(SeatOffset); Reset(Bob); Reset(Pose); Reset(FreezePoseWhenIdle);
-            Reset(PoseSpeed); Reset(PoseSpeedFollowsDonkey); Reset(NearLeg); Reset(LegSource); Reset(LegHeightPx); Reset(LegAdjustXPx); Reset(LegAdjustYPx); Reset(SnapToGround); Reset(CartFollowsGround); Reset(CartGroundMaxShift); Reset(CargoDrawCorpse); Reset(CargoBedDepth); Reset(CargoSideGap); Reset(CargoOverhang); Reset(CargoNestle);
+            Reset(PoseSpeed); Reset(PoseSpeedFollowsDonkey); Reset(NearLeg); Reset(LegSource); Reset(LegHeightPx); Reset(LegAdjustXPx); Reset(LegAdjustYPx); Reset(SnapToGround); Reset(CartFollowsGround); Reset(CartGroundMaxShift); Reset(CargoDrawCorpse); Reset(CargoSwaysWithCart); Reset(CargoBedDepth); Reset(CargoSideGap); Reset(CargoOverhang); Reset(CargoNestle);
             Reset(LanternAlong); Reset(LanternUp); Reset(LanternAcross); Reset(LanternTilt); Reset(LanternLean); Reset(LanternFlip);
             Reset(LanternSwayDegrees); Reset(LanternSwaySeconds); Reset(IdleFidgetEverySeconds); Reset(IdleFidgetSpeed); Reset(IdleCrawlSpeed);
             Reset(LanternShow); Reset(LanternScale); Reset(LanternLightOn); Reset(LanternLightIntensity); Reset(LanternLightRange); Reset(LanternLightColor); Reset(LanternLightShadows); Reset(LanternLightDayDim);

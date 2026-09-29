@@ -195,7 +195,17 @@ namespace GK2Mounts
             {
                 if (pd.HasOverheadItem)
                 {
-                    if (!pd.TryGetOverheadItem(i => Allowed(i) && inv.CanAddItemToInventory(i), out Item item))
+                    // The head list itself, not TryGetOverheadItem: while riding that lookup falls through to the
+                    // cart, and a cart item would be "loaded" onto the cart it is already on.
+                    Item item = null;
+                    foreach (Item h in pd.OverheadItems)
+                    {
+                        if (Allowed(h) && inv.CanAddItemToInventory(h))
+                        {
+                            item = h;
+                        }
+                    }
+                    if (item == null)
                     {
                         bool full = inv.Data.Inventory.Count >= inv.Data.InventorySize;
                         Mount.Say(full ? "The cart is full." : "That can't go on the cart.");
