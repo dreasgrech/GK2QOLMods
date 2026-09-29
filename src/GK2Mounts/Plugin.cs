@@ -356,6 +356,8 @@ namespace GK2Mounts
         // [Debug]
         internal static ConfigEntry<bool> TuningKeys;
         internal static ConfigEntry<bool> TuningWindowEnabled;
+        internal static ConfigEntry<KeyCode> TuningWindowKey;
+        internal static bool TuningWindowHidden; // this session only, toggled by TuningWindowKey (e.g. for screenshots)
         internal static ConfigEntry<float> TuningWindowScale;
         internal static ConfigEntry<float> TuningWindowFontScale;
         internal static ConfigEntry<float> TuningWindowWidth;
@@ -401,6 +403,8 @@ namespace GK2Mounts
 
             TuningWindowEnabled = Config.Bind("Debug", "TuningWindow", true,
                 "Show a tuning panel for all mount settings in the top-right corner while mounted. Values apply live; Save writes them to this file. Turn off for normal play.");
+            TuningWindowKey = Config.Bind("Debug", "TuningWindowKey", KeyCode.F11,
+                "Hides or shows the tuning panel, e.g. for screenshots. Only for this session: the panel is back after a restart. The game doesn't use F11 on its own (it can't be bound in its controls; Shift+F11 is its Workshop creator). None = no key.");
             TuningWindowScale = Config.Bind("Debug", "TuningWindowScale", 1.5f,
                 "Overall size of the tuning panel (1 = Unity default, 1.5 suits 1440p). Text and width scale with it.");
             TuningWindowFontScale = Config.Bind("Debug", "TuningWindowFontScale", 1f,
@@ -460,6 +464,12 @@ namespace GK2Mounts
                     Mount.ForceCleanup("disabled in the config");
                 }
                 return;
+            }
+            // Plain key only: Shift+F11 opens the game's Workshop creator (when enabled), so leave that combination to it.
+            if (TuningWindowKey.Value != KeyCode.None && UnityInput.Current.GetKeyDown(TuningWindowKey.Value)
+                && !UnityInput.Current.GetKey(KeyCode.LeftShift) && !UnityInput.Current.GetKey(KeyCode.RightShift))
+            {
+                TuningWindowHidden = !TuningWindowHidden;
             }
             try
             {

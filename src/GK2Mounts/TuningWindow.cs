@@ -32,9 +32,9 @@ namespace GK2Mounts
         public static void Draw()
         {
             CargoLayout.SaveIfDue(now: !Mount.IsMounted);
-            if (!Mount.IsMounted || !Plugin.TuningWindowEnabled.Value || CargoSheet.Running)
+            if (!Mount.IsMounted || !Plugin.TuningWindowEnabled.Value || Plugin.TuningWindowHidden || CargoSheet.Running)
             {
-                return; // hidden while the cargo sheet photographs the cart
+                return; // hidden by its key, or while the cargo sheet photographs the cart
             }
             float scale = Mathf.Clamp(Plugin.TuningWindowScale.Value, 0.75f, 3f);
             GUI.matrix = Matrix4x4.Scale(new Vector3(scale, scale, 1f));
@@ -48,7 +48,9 @@ namespace GK2Mounts
             rect.y = 16f;
             rect.width = W;
             rect.height = 0f; // a layout window grows to its content but never shrinks unless the height is reset
-            rect = GUILayout.Window(WindowId, rect, DrawContents, "GK2 Mounts tuning", GUILayout.Width(W));
+            rect = GUILayout.Window(WindowId, rect, DrawContents,
+                Plugin.TuningWindowKey.Value == KeyCode.None ? "GK2 Mounts tuning" : $"GK2 Mounts tuning ({Plugin.TuningWindowKey.Value} hides)",
+                GUILayout.Width(W));
             if (lastScrollHeight > 0f && rect.height > lastScrollHeight)
             {
                 chromeHeight = Mathf.Clamp(rect.height - lastScrollHeight, 60f, 600f);
