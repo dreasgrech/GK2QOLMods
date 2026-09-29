@@ -26,6 +26,8 @@ namespace GK2Mounts
         private static Vector3 poleRest, lightRest, lightScaleRest;
         private static Quaternion poleRotRest, lightRotRest;
         private static Vector3 foot, head;
+        private static Vector3 rigPosed;          // the rig's pose as Apply set it, before LampHang hangs it
+        private static Quaternion rigRotPosed = Quaternion.identity;
         private static float backSign = -1f, camSign = -1f;
         private static Vector3 lastPolePos, lastLightPos;
         private static Quaternion lastPoleRot;
@@ -136,6 +138,7 @@ namespace GK2Mounts
 
         public static void Detach()
         {
+            LampHang.Detach(); // the original mesh back before the pole is reset (and measured again on attach)
             try
             {
                 if (pole != null && pole)
@@ -266,6 +269,38 @@ namespace GK2Mounts
         // and the pose is simply written every frame from then on.
         public static void Tick()
         {
+            TickPose();
+            if (!Attached)
+            {
+                return;
+            }
+            try
+            {
+                bool want = Mount.S.LanternHangs.Value && poleShown;
+                if (want && !LampHang.Active)
+                {
+                    LampHang.Attach(pole);
+                }
+                else if (!want && LampHang.Active)
+                {
+                    LampHang.Detach();
+                    Apply(true); // the rig back to the pole's pose
+                }
+                if (LampHang.Active)
+                {
+                    LampHang.Tick(light, rigPosed, rigRotPosed);
+                    lastLightPos = light.localPosition; // the hang, not someone else moving the rig
+                }
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning("Lantern: hanging the lamp failed, it turns with the pole: " + e.Message);
+                LampHang.Detach();
+            }
+        }
+
+        private static void TickPose()
+        {
             if (!Attached)
             {
                 return;
@@ -385,6 +420,8 @@ namespace GK2Mounts
             light.localRotation = r * lightRotRest;
             light.localScale = rigScale;
             light.localPosition = foot + r * (scale * (rig - foot)) + offset;
+            rigPosed = light.localPosition;
+            rigRotPosed = light.localRotation;
             lastPolePos = pole.localPosition;
             lastPoleRot = pole.localRotation;
             lastLightPos = light.localPosition;

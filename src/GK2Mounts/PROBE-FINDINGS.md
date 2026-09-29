@@ -1257,3 +1257,38 @@ so the pole tips with the cart again. Removed: the anchor sliders (`LanternLitAn
 line is ignored), `PlaceLampOnPole`, the upright pole, the carried rig and both lamp probes. The earlier conclusions
 in this file that the sprite "cannot be turned" or sits "along the line of sight at another depth" are wrong.
 Unconfirmed in game.
+
+## Round 13 (2026-09-29): can the lamp hang straight on its own? (investigation, nothing built)
+
+Mesh `donkey_cart_lantern-MERGE S_OBJ` (bundle d9b435a4…, read with UnityPy from the bundle and its .resS stream):
+- `m_IsReadable = False`: the game cannot read it back at runtime, so the mod cannot either. Its data is in the
+  bundle: 135 vertices × 32 bytes in the resource stream (offset 5248, size 4320), 195 UInt16 indices (390 bytes).
+- Vertex layout: position Float32×3 (0), normal Float16×4 (12), colour UNorm8×4 (20, all (0,0,0,255)), UV0 Float32×2
+  (24). Two submeshes: 0 = vertices 0–95, 48 triangles; 1 = vertices 96–134, 17 triangles.
+- Bounds centre (−0.10, 0.817, −0.0375), extents (0.26, 0.517, 0.1375). (UnityPy's OBJ export mirrors x.)
+- 35 separate pieces (the baked sprites of the Object3D; none connected to another). Lamp vs pole by position,
+  checked piece by piece: lamp = max x ≤ −0.07, y within 0.50–1.21 (body, top and bottom plates, roof in submesh 1,
+  hook at x −0.28…−0.18, y 1.03…1.20); every other piece reaches x > −0.07 or y > 1.21 (shaft, arm up to y 1.33).
+  Hanging point: the hook's top, about (−0.23, 1.20, −0.08) in mesh space.
+- Rendering: `Object3DMesh`/`Object3DSubMesh` set everything per renderer through MaterialPropertyBlocks per material
+  index (main texture, LUT, texture 2, normal map, unlit, transparency occlusion, selection tint, wind) on shared
+  materials. A second renderer with the same shared materials and the property blocks copied each frame looks the same.
+
+Plan if built: embed those two buffers (a game-derived copy; the only way, since the mesh is not readable), check the
+live mesh's vertex count, submesh count and bounds against them (feature off on any mismatch, e.g. a game update),
+build a "pole without lamp" mesh for our donkey's MeshFilter and a "lamp only" mesh on a new renderer, and each frame
+turn the lamp and the lamp rig together about the hook so that they hang upright (the rig by the same correction as
+the lamp, computed from Lantern's stored pose, so nothing accumulates). No game object is reparented.
+
+**Built (2026-09-29, `LampHang.cs`, setting `LanternHangs`, Cart, default on):** the two buffers ship as embedded
+resources (`assets/lantern-vertices.bin`, `assets/lantern-indices.bin`). On attach (after Lantern has measured the
+pole with the original mesh) the live mesh is checked (135 vertices, 2 submeshes at 0+144 and 144+51 indices, bounds
+centre (−0.10, 0.817, −0.0375) extents (0.26, 0.517, 0.1375)); then two meshes are built from the exact vertex bytes
+(Float32×3 position, Float16×4 normal, UNorm8×4 colour, Float32×2 UV): pole (17 pieces, 32 triangles, submesh 1
+empty) on our donkey's MeshFilter, lamp (18 pieces, 33 triangles; all of submesh 1) on a child `gk2_hanging_lamp` with
+the same shared materials, shadow and sorting settings, and every property block copied each frame. Hang point
+(−0.230, 1.200, −0.075) in mesh space, the top of the hook. Each frame after all poses: d = FromToRotation(lamp up,
+world up), C = turn by d about the hook; lamp local = M⁻¹·C·M (M = the mesh node's matrix; a rotation even with the
+mirrors), rig node local = P⁻¹·C·P applied to Lantern's stored rig pose. Detach restores the original mesh before any
+re-measure. Off, hidden pole or any mismatch: the lantern as before. Offline check of the split on the embedded
+data matches the Round 13 table. Unconfirmed in game.

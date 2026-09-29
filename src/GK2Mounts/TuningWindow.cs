@@ -365,6 +365,8 @@ namespace GK2Mounts
             FloatSlider("Lean: top away from the camera (-) / towards it (+)", s.LanternLean, -60f, 60f, 0, Lantern.Refresh);
             FloatSlider("Size of the pole (1 = the game's)", s.LanternScale, 0.5f, 1.6f, 2, Lantern.Refresh);
             Toggle("Mirror the pole (foot stays; it leans out over the back instead of over the donkey)", s.LanternFlip, Lantern.Refresh);
+            Toggle("Lamp hangs straight from its hook (on slopes, while walking, with tilt or lean)", s.LanternHangs, Lantern.Refresh);
+            GUILayout.Label(LampHang.Note + (LampHang.Active ? $"; turned {LampHang.LastTurn:F1}° to hang" : ""), small);
 
             Header("Sway");
             FloatSlider("Pendulum about the foot, degrees either way (0 = off; scaled by the wind)", s.LanternSwayDegrees, 0f, 10f, 1, Lantern.Refresh);

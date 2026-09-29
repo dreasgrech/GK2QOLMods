@@ -72,6 +72,7 @@ namespace GK2Mounts
         public readonly ConfigEntry<float> CargoBedDepth, CargoSideGap, CargoOverhang, CargoNestle;
         public readonly ConfigEntry<float> LanternAlong, LanternUp, LanternAcross, LanternTilt, LanternLean;
         public readonly ConfigEntry<bool> LanternFlip;
+        public readonly ConfigEntry<bool> LanternHangs;
         public readonly ConfigEntry<float> LanternSwayDegrees, LanternSwaySeconds;
         public readonly ConfigEntry<bool> LanternShow, LanternLightOn, LanternLightShadows, LanternSelfLightOn, LanternGlowOn, LanternGlassOn;
         public readonly ConfigEntry<float> LanternScale, LanternLightIntensity, LanternLightRange, LanternLightDayDim, LanternSelfLightIntensity, LanternSelfLightRange, LanternGlowAlpha, LanternGlowScale;
@@ -160,6 +161,8 @@ namespace GK2Mounts
                 new ConfigDescription("Cart style only: tilt the pole about its foot in the screen plane, degrees; positive = its top leans towards the back of the cart. The lamp and its light follow the top; the cart's walking sway is kept.", new AcceptableValueRange<float>(-60f, 60f)));
             LanternLean = cfg.Bind(section, "LanternLean", Defaults.Get(section, "LanternLean", 0f),
                 new ConfigDescription("Cart style only: lean the pole about its foot towards the camera (positive) or away from it, degrees. The lamp follows the top; its sprites stay upright.", new AcceptableValueRange<float>(-60f, 60f)));
+            LanternHangs = cfg.Bind(section, "LanternHangs", Defaults.Get(section, "LanternHangs", true),
+                "Cart style only: the iron lamp hangs straight down from the pole's hook (with its lit glass, glow and lights) while the pole tips with a slope, rocks while walking, or is tilted or leaned on the Lantern tab. Off: the lamp turns with the pole, as in the game.");
             LanternFlip = cfg.Bind(section, "LanternFlip", Defaults.Get(section, "LanternFlip", false),
                 "Cart style only: mirror the pole in the plane through its foot, so the slanted pole leans out over the back of the cart instead of forward over the donkey; the foot stays where it is. The lamp, its glow and its lights are mirrored with it.");
             LanternSwayDegrees = cfg.Bind(section, "LanternSwayDegrees", Defaults.Get(section, "LanternSwayDegrees", 1.5f),
@@ -294,7 +297,7 @@ namespace GK2Mounts
                     AutoSeat, SeatAdjustPx, SeatOffset, Bob, Pose, FreezePoseWhenIdle, PoseSpeed, PoseSpeedFollowsDonkey,
                     NearLeg, LegSource, LegHeightPx, LegAdjustXPx, LegAdjustYPx, SnapToGround, CartFollowsGround, CartGroundMaxShift, CartSlope, CartPitchMaxDegrees,
                     CargoDrawCorpse, CargoSwaysWithCart, CargoBedDepth, CargoSideGap, CargoOverhang, CargoNestle,
-                    LanternAlong, LanternUp, LanternAcross, LanternTilt, LanternLean, LanternFlip,
+                    LanternAlong, LanternUp, LanternAcross, LanternTilt, LanternLean, LanternFlip, LanternHangs,
                     LanternSwayDegrees, LanternSwaySeconds, IdleFidgetEverySeconds, IdleFidgetSpeed, IdleCrawlSpeed,
                     LanternShow, LanternScale, LanternLightOn, LanternLightIntensity, LanternLightRange, LanternLightColor, LanternLightShadows, LanternLightDayDim,
                     LanternSelfLightOn, LanternSelfLightIntensity, LanternSelfLightRange, LanternGlowOn, LanternGlowAlpha, LanternGlowScale, LanternGlassOn,
