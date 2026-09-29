@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using BepInEx;
+using GK2Mounts.Api;
 using LazyBearTechnology;
 using UnityEngine;
 
@@ -223,15 +224,16 @@ namespace GK2Mounts
                 return;
             }
 
+            // The built-in key uses the public API like any other mod (until the showcase mod takes the keys over).
             if (UnityInput.Current.GetKeyDown(Plugin.MountKey.Value))
             {
                 if (mounted)
                 {
-                    Dismount(pc, "dismounted");
+                    Mounts.Dismount("dismounted");
                 }
                 else
                 {
-                    TryMount(pc, scene);
+                    Mounts.TryMount(Mounts.BuiltInKeyOwner, Plugin.Style.Value);
                 }
             }
             if (!mounted)
@@ -253,6 +255,13 @@ namespace GK2Mounts
             if (why != null)
             {
                 Dismount(pc, why);
+                return;
+            }
+            string ruleWhy = MountRules.WhyMustDismountIfDue();
+            if (ruleWhy != null)
+            {
+                Say(ruleWhy); // another mod's reason: tell the player why the ride ended
+                Dismount(pc, ruleWhy);
                 return;
             }
 
@@ -399,20 +408,52 @@ namespace GK2Mounts
 
         // ------------------------------------------------------------------ mount / dismount
 
-        private static void TryMount(PlayerController pc, GameScene scene)
+        // Mounts.TryMount: null when mounted, else the reason (logged, and said when showMessage).
+        internal static string TryMountFromApi(MountStyle style, bool showMessage)
         {
-            string reason = WhyCannotMount(pc);
+            if (!IsInGame(out PlayerController pc, out GameScene scene))
+            {
+                return "Not in a game.";
+            }
+            return TryMount(pc, scene, style, showMessage);
+        }
+
+        // Mounts.Dismount: the normal dismount in a game, the cleanup otherwise.
+        internal static void DismountFromApi(string reason)
+        {
+            PlayerController pc = MainGame.Instance != null ? MainGame.PlayerController : null;
+            if (pc != null)
+            {
+                Dismount(pc, reason);
+            }
+            else
+            {
+                ForceCleanup(reason);
+            }
+        }
+
+        private static string TryMount(PlayerController pc, GameScene scene, MountStyle style, bool showMessage)
+        {
+            // The core's own checks first (safety); other mods' rules can only add refusals on top.
+            string reason = WhyCannotMount(pc) ?? MountRules.WhyCannotMount(style);
             if (reason != null)
             {
                 Plugin.Log.LogInfo("Mount refused: " + reason);
-                Say(reason);
-                return;
+                if (showMessage)
+                {
+                    Say(reason);
+                }
+                return reason;
             }
-            activeStyle = Plugin.Style.Value;
+            activeStyle = style;
             if (!TrySpawn(pc, scene))
             {
-                Say("The donkey is nowhere to be found.");
-                return;
+                reason = "The donkey is nowhere to be found.";
+                if (showMessage)
+                {
+                    Say(reason);
+                }
+                return reason;
             }
             mounted = true;
             MountSounds.OnMounted();
@@ -429,6 +470,8 @@ namespace GK2Mounts
                 ApplySeat(pc, S.SeatOffset.Value);
             }
             Plugin.Log.LogInfo($"Mounted ({activeStyle}, speed x{S.SpeedMultiplier.Value}).");
+            Mounts.RaiseMounted(activeStyle);
+            return null;
         }
 
         private static string WhyCannotMount(PlayerController pc)
@@ -547,6 +590,7 @@ namespace GK2Mounts
             RestoreSpeed(pc);
             RestorePose(pc);
             Plugin.Log.LogInfo("Dismounted (" + reason + ").");
+            Mounts.RaiseDismounted(reason);
         }
 
         // Used when the player object may already be gone (menu, plugin unload, error).
@@ -579,6 +623,7 @@ namespace GK2Mounts
             if (was)
             {
                 Plugin.Log.LogInfo("Dismounted (" + reason + ").");
+                Mounts.RaiseDismounted(reason);
             }
         }
 
@@ -1259,20 +1304,14 @@ namespace GK2Mounts
 
         public static MountStyle CurrentStyle => activeStyle;
 
-        // Style switch from the panel: the cart parts and offsets are decided at spawn, so mount again in place.
+        // Style switch from the panel: the cart parts and offsets are decided at spawn, so mount again in place
+        // (through the API, so the ride keeps its owner and the rules for the new style are asked).
         public static void Remount()
         {
-            if (!mounted)
+            if (mounted)
             {
-                return;
+                Mounts.SwitchStyle(Plugin.Style.Value);
             }
-            PlayerController pc = MainGame.PlayerController;
-            if (pc == null || !pc.TryGetCurrentGameScene(out GameScene scene) || scene == null)
-            {
-                return;
-            }
-            Dismount(pc, "style change");
-            TryMount(pc, scene);
         }
 
         public static void RefreshSpeed()

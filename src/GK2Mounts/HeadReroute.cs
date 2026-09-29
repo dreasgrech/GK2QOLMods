@@ -5,6 +5,8 @@ using HarmonyLib;
 using LazyBearTechnology;
 using UnityEngine;
 
+using GK2Mounts.Api;
+
 namespace GK2Mounts
 {
     // While mounted in Cart style the cart is the keeper's hands: what the game would put on his head lands on the

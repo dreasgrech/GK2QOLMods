@@ -6,6 +6,8 @@ using System.Text;
 using BepInEx;
 using UnityEngine;
 
+using GK2Mounts.Api;
+
 namespace GK2Mounts
 {
     // Development tool: photographs every cargo combination on the mounted cart and writes an HTML contact sheet, so

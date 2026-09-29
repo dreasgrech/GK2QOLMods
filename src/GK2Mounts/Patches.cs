@@ -1,6 +1,8 @@
 using System;
 using HarmonyLib;
 
+using GK2Mounts.Api;
+
 namespace GK2Mounts
 {
     // Members the mod relies on, checked once at startup so a game update fails loudly instead of at ride time.

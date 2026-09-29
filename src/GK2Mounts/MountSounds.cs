@@ -5,6 +5,8 @@ using HarmonyLib;
 using LazyBearTechnology;
 using UnityEngine;
 
+using GK2Mounts.Api;
+
 namespace GK2Mounts
 {
     // Mount sounds (Round 12 in PROBE-FINDINGS.md). The game's donkey walks silently (its walk clips have no step

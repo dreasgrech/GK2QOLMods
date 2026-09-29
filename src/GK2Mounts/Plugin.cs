@@ -2,17 +2,12 @@ using System;
 using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
+using GK2Mounts.Api;
 using HarmonyLib;
 using UnityEngine;
 
 namespace GK2Mounts
 {
-    public enum MountStyle
-    {
-        Ride,
-        Cart,
-    }
-
     // How the cart meets a slope (CartFollowsGround): the whole cart lifted level with the shafts at half the lift,
     // the shafts tilted about their harness end, or the cart pitched about its axle like a real cart.
     public enum CartSlopeStyle
@@ -367,6 +362,10 @@ namespace GK2Mounts
 
         private Harmony harmony;
 
+        // True once every patch is in: the API (Mounts.IsAvailable) refuses everything before that and after a
+        // game update disabled the mod.
+        internal static bool Patched;
+
         private void Awake()
         {
             Log = Logger;
@@ -445,6 +444,7 @@ namespace GK2Mounts
                 Log.LogError($"Patching failed; all patches removed, game runs unmodified. {e}");
                 return;
             }
+            Patched = true;
             Log.LogInfo($"GK2 Mounts {Version} loaded. Mount key: {MountKey.Value}, style {Style.Value}, speed x{For(Style.Value).SpeedMultiplier.Value}.");
         }
 
@@ -507,6 +507,7 @@ namespace GK2Mounts
             catch
             {
             }
+            Patched = false;
             harmony?.UnpatchSelf();
             harmony = null;
         }

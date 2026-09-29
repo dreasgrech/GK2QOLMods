@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using BepInEx.Configuration;
 using UnityEngine;
 
+using GK2Mounts.Api;
+
 namespace GK2Mounts
 {
     // In-game tuning panel (Unity IMGUI), shown in the top-right corner while mounted when Debug.TuningWindow is on.

@@ -1,0 +1,26 @@
+struct GK2Mounts.Api.MountResult
+  property bool Ok { get; }
+  property string Reason { get; }
+  property static GK2Mounts.Api.MountResult Success { get; }
+  method static GK2Mounts.Api.MountResult Refused(string reason)
+  method string ToString()
+static class GK2Mounts.Api.Mounts
+  field static readonly System.Version ApiVersion
+  field static const string BuiltInKeyOwner = dreas.gk2.mounts.key
+  property static bool IsAvailable { get; }
+  property static bool IsMounted { get; }
+  property static string Owner { get; }
+  property static GK2Mounts.Api.MountStyle Style { get; }
+  event static System.Action<string> Dismounted
+  event static System.Action<GK2Mounts.Api.MountStyle> Mounted
+  method static System.IDisposable AddMountRule(string ownerId, System.Func<GK2Mounts.Api.MountStyle, string> whyNot)
+  method static System.IDisposable AddStayRule(string ownerId, System.Func<string> whyDismount)
+  method static void Bray()
+  method static void Dismount(string reason = null)
+  method static void RemoveRules(string ownerId)
+  method static void RingBell()
+  method static GK2Mounts.Api.MountResult SwitchStyle(GK2Mounts.Api.MountStyle style, bool showMessage = True)
+  method static GK2Mounts.Api.MountResult TryMount(string ownerId, GK2Mounts.Api.MountStyle style, bool showMessage = True)
+enum GK2Mounts.Api.MountStyle
+  Ride = 0
+  Cart = 1

@@ -6,6 +6,8 @@ using System.Text;
 using BepInEx;
 using UnityEngine;
 
+using GK2Mounts.Api;
+
 namespace GK2Mounts
 {
     // Investigation aid for moving and tilting the cart's lantern pole (Debug tab). The pole is two sibling nodes
