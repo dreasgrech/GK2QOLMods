@@ -1126,3 +1126,14 @@ per style (`[Ride]`/`[Cart]`), plus `General.BellKey`.
 - **Cargo thump** from `HeadReroute.TakeToCart` and `Cargo.LoadFromHead`, Cart style only, not while the cargo sheet
   runs.
 - `UnityEngine.AudioModule` reference added (AudioMixerGroup). Unconfirmed in game.
+
+### Closing the game with cargo on the cart (2026-09-29)
+
+Log: quitting while mounted with 2 wood logged "wood LOST on unload (plugin unloaded)". The plugin's OnDestroy ran the
+normal hand-back; `TryAddOverheadItemNoReplace` put the log in the hands, then the game's
+`PlayOverheadItemTakeSound` threw (`LazyAudio.PlayAndForget`, sound system already torn down), and the catch
+counted an item that was in hand as lost. Nothing reached a save: the quit path (`GameShutdown`: wantsToQuit /
+quitting, the only blocker is the startup scene load) never saves; the only save is `EnergySystem.StopSleeping`.
+Fixes: `Application.quitting` sets `Plugin.Quitting`, and `Cargo.Unload` skips the hand-back when closing (logged);
+a failed hand-over now checks the hands by item GUID (counted as in hand) and otherwise tries the ground before
+reporting LOST.

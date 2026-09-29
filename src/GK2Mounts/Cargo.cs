@@ -239,6 +239,15 @@ namespace GK2Mounts
                 mirror.Clear();
                 return;
             }
+            if (Plugin.Quitting)
+            {
+                // The game is closing: its world and sound system are being torn down, and closing never saves (the
+                // only save is on waking, EnergySystem.StopSleeping, which hands the cargo back first). Handing items
+                // back now could only fail; the last save already has everything where it was.
+                Plugin.Log.LogInfo($"Cargo: the game is closing with {items.Count} item(s) on the cart; not handed back (closing does not save, the last save is unaffected).");
+                mirror.Clear();
+                return;
+            }
             PlayerData pd = MainGame.PlayerData;
             int hands = 0, dropped = 0, lost = 0;
             unloading = true;
@@ -277,6 +286,27 @@ namespace GK2Mounts
                     }
                     catch (Exception e)
                     {
+                        // The game adds the item to the hands and then plays its pickup sound; a failure after the add
+                        // (a torn-down sound system) leaves the item in hand. Look before calling it lost, and try the
+                        // ground when it is not there.
+                        if (pd != null && InHands(pd, it))
+                        {
+                            hands++;
+                            Plugin.Log.LogWarning($"Cargo: {it.id} handed over on unload ({reason}), but the game's pickup side effects failed: {e.Message}");
+                            continue;
+                        }
+                        try
+                        {
+                            if (pd != null && DropAtKeeper(pd, it))
+                            {
+                                dropped++;
+                                Plugin.Log.LogWarning($"Cargo: {it.id} set down on unload ({reason}) after handing it over failed: {e.Message}");
+                                continue;
+                            }
+                        }
+                        catch
+                        {
+                        }
                         lost++;
                         Plugin.Log.LogWarning($"Cargo: {it.id} LOST on unload ({reason}): {e}");
                     }
@@ -292,6 +322,18 @@ namespace GK2Mounts
                 Mount.OnCargoChanged();
             }
             Plugin.Log.LogInfo($"Cargo: unloaded on {reason}: {hands} in hand, {dropped} dropped{(lost > 0 ? $", {lost} LOST (see warnings)" : "")}.");
+        }
+
+        private static bool InHands(PlayerData pd, Item item)
+        {
+            foreach (Item h in pd.OverheadItems)
+            {
+                if (h != null && h.UniqueId == item.UniqueId)
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         // Sets an item down in front of the keeper with the game's drop routine. False when the game refused the

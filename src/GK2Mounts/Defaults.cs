@@ -29,6 +29,9 @@ namespace GK2Mounts
         // Where the defaults were read from: the repo file's path, or "built into the DLL".
         public static string Source { get; private set; } = "(not loaded)";
 
+        // Source for running text: no full path (one long unbreakable word in a wrapped label).
+        public static string SourceShort => Source == RepoDefaultsPath && Source != null ? "the repo's defaults.cfg (src/GK2Mounts)" : Source;
+
         private static readonly string SourceDir = ReadSourceDir();
 
         private static string ReadSourceDir()

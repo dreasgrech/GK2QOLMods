@@ -59,7 +59,7 @@ namespace GK2Mounts
             try
             {
                 Save(repo);
-                LastSaveNote = "Saved to " + repo + " at " + DateTime.Now.ToString("HH:mm:ss") + ".";
+                LastSaveNote = "Saved to the repo's cargo-layout.cfg at " + DateTime.Now.ToString("HH:mm:ss") + ".";
             }
             catch (Exception e)
             {
@@ -349,7 +349,8 @@ namespace GK2Mounts
                     pairs++;
                 }
             }
-            return $"{items} item entr{(items == 1 ? "y" : "ies")}, {pairs} pair entr{(pairs == 1 ? "y" : "ies")}, from {Source}";
+            string from = Source.EndsWith(RepoFileName, StringComparison.OrdinalIgnoreCase) && Source.IndexOf('\\') >= 0 ? "the repo's cargo-layout.cfg" : Source;
+            return $"{items} item entr{(items == 1 ? "y" : "ies")}, {pairs} pair entr{(pairs == 1 ? "y" : "ies")}, from {from}";
         }
     }
 }

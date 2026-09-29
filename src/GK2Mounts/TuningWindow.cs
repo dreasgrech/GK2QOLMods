@@ -14,7 +14,7 @@ namespace GK2Mounts
     {
         private const int WindowId = 0x6d6e7431; // 'mnt1'
         private static Rect rect = new Rect(0f, 0f, 470f, 10f);
-        private static GUIStyle label, header, small, changed;
+        private static GUIStyle label, header, small, changed, wrapToggle;
 
         // Yellow when the setting differs from its mod default.
         private static GUIStyle LabelFor(ConfigEntryBase e)
@@ -68,6 +68,20 @@ namespace GK2Mounts
         private static float LabelW => W * 0.62f;
         private static float SliderW => W * 0.30f;
 
+        // The width inside the scroll view: the panel minus the window's padding and the vertical scrollbar. The tab
+        // contents are held to it. An IMGUI scroll view gives its content unlimited width, and a wrapping label wraps
+        // at the width of its column, which is set by the widest control in it; without this cap one wide row
+        // widens the column and every sentence then runs past the panel's edge.
+        private static float ContentW
+        {
+            get
+            {
+                GUISkin k = GUI.skin;
+                float bar = k.verticalScrollbar.fixedWidth > 0f ? k.verticalScrollbar.fixedWidth : 15f;
+                return Mathf.Max(200f, W - k.window.padding.horizontal - bar - k.verticalScrollbar.margin.horizontal - k.scrollView.padding.horizontal - 4f);
+            }
+        }
+
         private static float appliedFontScale = -1f;
 
         private static void EnsureStyles()
@@ -82,6 +96,7 @@ namespace GK2Mounts
             small = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(11f * fontScale), wordWrap = true };
             small.normal.textColor = new Color(0.75f, 0.75f, 0.75f);
             header = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(13f * fontScale), fontStyle = FontStyle.Bold };
+            wrapToggle = new GUIStyle(GUI.skin.toggle) { wordWrap = true, fontSize = Mathf.RoundToInt(13f * fontScale) };
             changed = new GUIStyle(label);
             changed.normal.textColor = new Color(1f, 0.85f, 0.3f);
             var tex = new Texture2D(1, 1);
@@ -144,8 +159,9 @@ namespace GK2Mounts
             // Small height jitter is ignored for the same reason.
             float h = contentHeight[tab] > 0f ? Mathf.Min(contentHeight[tab], maxContentHeight) : maxContentHeight;
             lastScrollHeight = h;
-            scroll = GUILayout.BeginScrollView(scroll, false, true, GUILayout.Height(h));
-            GUILayout.BeginVertical();
+            // No horizontal scrollbar: the content is held to the panel's width (ContentW).
+            scroll = GUILayout.BeginScrollView(scroll, false, true, GUIStyle.none, GUI.skin.verticalScrollbar, GUILayout.Height(h));
+            GUILayout.BeginVertical(GUILayout.Width(ContentW));
             switch (tab)
             {
                 case 0: DrawGeneral(); break;
@@ -643,7 +659,7 @@ namespace GK2Mounts
             GUILayout.Label("Your settings: everything you set on this panel, saved to dreas.gk2.mounts.cfg the moment you change it. They are what you play with.", small);
             GUILayout.Label("Mod defaults: what a fresh install starts with and what right-click and the reset buttons go back to. They come from defaults.cfg, which is built into the DLL.", small);
             GUILayout.Label("A setting shown in yellow differs from its mod default.", small);
-            GUILayout.Label("Mod defaults read from: " + Defaults.Source, small);
+            GUILayout.Label("Mod defaults read from: " + Defaults.SourceShort, small);
 
             List<(string Group, ConfigEntryBase Entry)> diff = diffSnapshot;
             Header(diff.Count == 0 ? "All settings match the mod defaults" : $"{diff.Count} setting{(diff.Count == 1 ? "" : "s")} differ from the mod defaults");
@@ -701,7 +717,7 @@ namespace GK2Mounts
                         try
                         {
                             string path = Defaults.MakeCurrentTheDefaults();
-                            exportStatus = $"{differing} setting{(differing == 1 ? "" : "s")} are now the mod defaults, written to {path}. Rebuild the mod to ship them in the DLL.";
+                            exportStatus = $"{differing} setting{(differing == 1 ? "" : "s")} are now the mod defaults, written to the repo's defaults.cfg. Rebuild the mod to ship them in the DLL.";
                             Plugin.Log.LogInfo(exportStatus);
                         }
                         catch (Exception e)
@@ -798,7 +814,7 @@ namespace GK2Mounts
                 GUILayout.EndHorizontal();
                 GUILayout.Label("  auto: across the bed when both widths fit, else end to end when both lengths fit, else stacked. side = across, along = end to end, stack = on top, whatever the sizes.", small);
                 bool hasPairOffsets = pair.Second != Vector3.zero;
-                bool wantPairOffsets = GUILayout.Toggle(hasPairOffsets || pairOffsetsOpen, "  This pair needs its own correction (an exception: extra offsets for the second item, only with this partner)", GUI.skin.toggle);
+                bool wantPairOffsets = GUILayout.Toggle(hasPairOffsets || pairOffsetsOpen, "  This pair needs its own correction (an exception: extra offsets for the second item, only with this partner)", wrapToggle, GUILayout.Width(ContentW - 16f));
                 pairOffsetsOpen = wantPairOffsets;
                 if (wantPairOffsets)
                 {
@@ -844,7 +860,8 @@ namespace GK2Mounts
         private static bool RawSlider(string name, ref float value, float min, float max)
         {
             GUILayout.BeginHorizontal();
-            GUILayout.Label(name, label, GUILayout.Width(LabelW));
+            // Inside a box (its padding) with a slider and a value: the label gets the rest of the content width.
+            GUILayout.Label(name, label, GUILayout.Width(Mathf.Max(80f, ContentW - SliderW - 50f - GUI.skin.box.padding.horizontal - 12f)));
             float v = GUILayout.HorizontalSlider(value, min, max, GUILayout.Width(SliderW));
             Rect r = GUILayoutUtility.GetLastRect();
             if (Event.current.type == EventType.MouseDown && Event.current.button == 1 && r.Contains(Event.current.mousePosition))

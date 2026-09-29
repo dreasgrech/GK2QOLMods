@@ -312,6 +312,9 @@ namespace GK2Mounts
         private static readonly System.Guid AuditedGameMvid = new System.Guid("97f92f0d-a093-49fe-ba4d-74aa62fae81e");
 
         internal static ManualLogSource Log;
+
+        // Set when the application starts closing (Application.quitting runs before the plugin's OnDestroy).
+        internal static bool Quitting;
         internal static Plugin Instance;
 
         // [General]: behaviour
@@ -346,6 +349,7 @@ namespace GK2Mounts
         {
             Log = Logger;
             Instance = this;
+            Application.quitting += () => Quitting = true;
             Enabled = Config.Bind("General", "Enabled", true,
                 "Master switch. Press the mount key to summon a donkey under the keeper and ride it; press again to dismount.");
             MountKey = Config.Bind("General", "MountKey", KeyCode.H,
