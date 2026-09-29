@@ -165,10 +165,6 @@ namespace GK2Mounts
             GUILayout.Label("Mount / dismount key (change General.MountKey in the cfg)", label, GUILayout.Width(LabelW));
             GUILayout.Label(Plugin.MountKey.Value.ToString(), label);
             GUILayout.EndHorizontal();
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("Cart cargo key: set the last item down (General.CargoKey)", label, GUILayout.Width(LabelW));
-            GUILayout.Label(Plugin.CargoKey.Value.ToString(), label);
-            GUILayout.EndHorizontal();
 
             Header("Behaviour");
             Toggle("Stay mounted when going through doors (scene changes)", Plugin.StayMountedThroughDoors, null);
@@ -289,7 +285,7 @@ namespace GK2Mounts
                 FloatSlider("Nestle: how far a stacked item sinks into the one below", s.CargoNestle, 0f, 0.3f, 2, Cargo.RefreshViews);
                 Toggle("Mod draws corpses too (off = the game's own shroud for the first corpse)", s.CargoDrawCorpse, Cargo.RefreshViews);
                 Toggle("Cargo rocks with the cart while it rolls (as the game's loaded corpse does)", s.CargoSwaysWithCart, null);
-                GUILayout.Label($"While riding, anything you pick up goes straight onto the cart and piles, tables and graves take from it. {Plugin.CargoKey.Value} sets the last item down in front of you. {Cargo.Summary()}", small);
+                GUILayout.Label($"While riding, anything you pick up goes straight onto the cart and piles, tables and graves take from it. The interact key with nothing in front of you sets the top item down. {Cargo.Summary()}", small);
                 DrawCargoCorrections();
                 GUILayout.Label("The lantern pole and its lamp have their own tab.", small);
             }

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using HarmonyLib;
+using LazyBearTechnology;
 using UnityEngine;
 
 namespace GK2Mounts
@@ -314,6 +315,70 @@ namespace GK2Mounts
             {
                 Plugin.Log.LogWarning("Cargo: insert from the cart failed, the game's own path runs: " + e.Message);
                 return true;
+            }
+        }
+    }
+
+    // Setting an item down. On foot the game drops the held item when interact is pressed with nothing to interact
+    // with: the last step of the Interaction branch of PlayerInputHandler.UpdateInput, guarded by HasOverheadItem.
+    // While riding the cart the real head is empty, so that press did nothing. This prefix takes over the
+    // Interaction branch only while riding the cart and runs it in the game's own order (a big drop in front, then
+    // the world object's events and interaction), with the cart's top item as the fallback instead of the head's.
+    // The branch ends in a return in the original, so skipping the original on that frame skips nothing else.
+    // UpdateInputInteractionOnly has the same fallback but is only called while planting, which dismounts.
+    [HarmonyPatch(typeof(PlayerInputHandler), nameof(PlayerInputHandler.UpdateInput))]
+    internal static class PlayerInputHandler_UpdateInput_Patch
+    {
+        private static readonly AccessTools.FieldRef<PlayerInputHandler, PlayerController> Controller =
+            AccessTools.FieldRefAccess<PlayerInputHandler, PlayerController>("playerController");
+        private static readonly AccessTools.FieldRef<PlayerInputHandler, IWGOInteractionHandler> CurHandler =
+            AccessTools.FieldRefAccess<PlayerInputHandler, IWGOInteractionHandler>("curInteractionHandler");
+        private static readonly MethodInfo TryCallFireEvent = AccessTools.Method(typeof(PlayerInputHandler), "TryCallFireEvent");
+        private static readonly object Interaction1 = Enum.ToObject(AccessTools.Inner(typeof(PlayerInputHandler), "InteractionType"), 0);
+
+        private static bool Prefix(PlayerInputHandler __instance)
+        {
+            if (!HeadReroute.Active || CargoSheet.Running || !LazyInput.GetKeyDown(GameKey.Interaction))
+            {
+                return true;
+            }
+            try
+            {
+                PlayerController pc = Controller(__instance);
+                PlayerInteractionComponent ic = pc.PlayerInteractionComponent;
+                DropView drop = ic.BigDropUnderInteraction;
+                if (drop != null && drop.InteractionHandler.HasInteraction())
+                {
+                    drop.InteractionHandler.Interact();
+                    return false;
+                }
+                Wgo wgo = ic.WgoUnderInteraction;
+                if (wgo != null)
+                {
+                    IWGOInteractionHandler h = wgo.InteractionHandler;
+                    CurHandler(__instance) = h;
+                    if ((bool)TryCallFireEvent.Invoke(__instance, new[] { Interaction1 }) || (h.HasInteraction() && h.Interact(pc)))
+                    {
+                        return false;
+                    }
+                }
+                PlayerData pd = pc.PlayerData;
+                if (pd.HasOverheadItem)
+                {
+                    pd.DropOverheadItem(); // something really on the head (a zombie): the game's own drop
+                }
+                else
+                {
+                    Cargo.SetDownLast(pd);
+                }
+                return false;
+            }
+            catch (Exception e)
+            {
+                // Not handed to the original: part of the press may already have run, and running it again
+                // could interact twice. The press is lost for this frame only.
+                Plugin.Log.LogWarning("Cargo: interact press failed: " + e.Message);
+                return false;
             }
         }
     }

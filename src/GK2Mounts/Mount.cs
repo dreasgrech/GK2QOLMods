@@ -237,11 +237,6 @@ namespace GK2Mounts
             {
                 TuningKeys(pc);
             }
-            if (activeStyle == MountStyle.Cart && partsReady && !CargoSheet.Running && UnityInput.Current.GetKeyDown(Plugin.CargoKey.Value))
-            {
-                Cargo.Toggle(pc);
-            }
-
             string why = WhyMustDismount(pc);
             if (why != null)
             {

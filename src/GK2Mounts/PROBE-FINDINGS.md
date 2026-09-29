@@ -1037,3 +1037,22 @@ does not run a stopped coroutine's finally).
 **Left as is (debug tools, not save risks but item-creating)**: "Put in cart inventory" and "Drop it here" create
 items from ids; "Start a real delivery" runs the game's own delivery. All behind the Debug tab; the release
 checklist turns `TuningWindow` off by default.
+
+### Setting cargo down with the interact key; the cargo key is gone (2026-09-29)
+
+The L key (General.CargoKey) began as the proof-of-concept load/unload control. Since the cart became the hands
+its load branch was dead (head items move onto the cart at mount and after a save; a full-cart pickup lands on the
+ground; zombies are refused), and its unload branch was the only way to set an item down while riding. The reason:
+on foot the game drops the held item when interact is pressed with nothing to interact with, the last step of the
+Interaction branch of `PlayerInputHandler.UpdateInput` (`if (PlayerData.HasOverheadItem) DropOverheadItem();`),
+and while riding the real head is empty. `UpdateInput` is called only from `FreePlayerState`; the twin
+`UpdateInputInteractionOnly` only from `PlantingPlayerState`, which dismounts.
+
+Now a prefix on `UpdateInput` takes over the Interaction branch while `HeadReroute.Active` (and the sheet is not
+running): big drop in front → `Interact()`; world object → `curInteractionHandler` set, `TryCallFireEvent(Interaction1)`
+or `HasInteraction() && Interact(pc)`; else the real head's item is dropped by the game if there is one (a zombie),
+otherwise `Cargo.SetDownLast` (top item, `DropAtKeeper`). The branch ends in `return` in the original, so skipping
+the original on that frame skips nothing else. Silent with an empty cart, as the game is with empty hands. A failure
+inside skips the original too (part of the press may have run; running it again could interact twice). Private
+members via AccessTools, checked in `Access.Verify` and the Cecil scan (the nested enum's `Interaction1 == 0`).
+`CargoKey` removed from the config, the panel and the README.

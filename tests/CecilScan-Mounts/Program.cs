@@ -49,6 +49,16 @@ Method("DropViewAtomMesh", "Activate", 1);
 Method("PlayerData", "get_HasFreeOverheadSlot", 0);
 Method("PlayerData", "TryGetOverheadItem", 2);
 Method("PlayerData", "AddOverheadItem", 1);
+// Setting a cart item down with the interact press (PlayerInputHandler_UpdateInput_Patch).
+Method("PlayerInputHandler", "UpdateInput", 0);
+Method("PlayerInputHandler", "TryCallFireEvent", 1);
+Field("PlayerInputHandler", "playerController", "PlayerController");
+Field("PlayerInputHandler", "curInteractionHandler", "IWGOInteractionHandler");
+Method("PlayerInteractionComponent", "get_BigDropUnderInteraction", 0);
+Method("PlayerInteractionComponent", "get_WgoUnderInteraction", 0);
+Method("DropView", "get_InteractionHandler", 0);
+Method("Wgo", "get_InteractionHandler", 0);
+{ var it = game.GetType("PlayerInputHandler")?.NestedTypes.FirstOrDefault(n => n.Name == "InteractionType"); var f = it?.Fields.FirstOrDefault(x => x.Name == "Interaction1"); bool good = f != null && System.Convert.ToInt32(f.Constant) == 0; Console.WriteLine((good?"PASS":"FAIL") + " enum PlayerInputHandler.InteractionType.Interaction1 == 0"); if (!good) fails++; }
 { var td = game.GetType("PlayerData"); var ms = td?.Methods.Where(x => x.Name == "RemoveOverheadItem").ToList(); bool good = ms != null && ms.Count == 2 && ms.Any(m => m.Parameters.Count == 1 && m.Parameters[0].ParameterType.Name == "Item" && m.HasBody); Console.WriteLine((good?"PASS":"FAIL") + $" method PlayerData.RemoveOverheadItem overloads={ms?.Count} (need 0 and Item)"); if (!good) fails++; }
 Method("LazyExpressionEvaluationScope", "GetOverheadItemForMutation", 0);
 Method("Inventory", "Create", 5);

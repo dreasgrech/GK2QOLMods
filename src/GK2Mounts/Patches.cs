@@ -38,6 +38,11 @@ namespace GK2Mounts
             Require(AccessTools.PropertyGetter(typeof(PlayerData), nameof(PlayerData.HasInteractingItem)), "PlayerData.HasInteractingItem getter");
             Require(AccessTools.Method(typeof(GlobalEventsSystem), nameof(GlobalEventsSystem.FireTrigger)), "GlobalEventsSystem.FireTrigger");
             Require(AccessTools.Method(typeof(PlayerData), nameof(PlayerData.DropOverheadItem), new System.Type[0]), "PlayerData.DropOverheadItem()");
+            Require(AccessTools.Method(typeof(PlayerInputHandler), nameof(PlayerInputHandler.UpdateInput)), "PlayerInputHandler.UpdateInput");
+            Require(AccessTools.Field(typeof(PlayerInputHandler), "playerController"), "PlayerInputHandler.playerController");
+            Require(AccessTools.Field(typeof(PlayerInputHandler), "curInteractionHandler"), "PlayerInputHandler.curInteractionHandler");
+            Require(AccessTools.Method(typeof(PlayerInputHandler), "TryCallFireEvent"), "PlayerInputHandler.TryCallFireEvent");
+            Require(AccessTools.Inner(typeof(PlayerInputHandler), "InteractionType"), "PlayerInputHandler.InteractionType");
         }
 
         private static void Require(object member, string name)

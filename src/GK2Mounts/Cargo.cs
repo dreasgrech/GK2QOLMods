@@ -183,49 +183,25 @@ namespace GK2Mounts
             }
         }
 
-        // The cargo key: with something overhead (a zombie, or an item the cart had no room for), put it on the cart;
-        // otherwise take the last cargo item off the cart onto the ground in front (there are no hands while riding).
-        public static void Toggle(PlayerController pc)
+        // Sets the top cart item down on the ground in front of the keeper: what the game's interact press does with
+        // a held item when there is nothing to interact with (PlayerInputHandler.UpdateInput), one item per press.
+        // Called from that press while riding the cart (PlayerInputHandler_UpdateInput_Patch). Silent when the cart
+        // is empty, as the game is with empty hands.
+        public static void SetDownLast(PlayerData pd)
         {
-            if (inv == null || donkey == null || pc?.PlayerData == null)
+            if (inv == null || donkey == null || pd == null)
             {
                 return;
             }
-            PlayerData pd = pc.PlayerData;
             try
             {
-                if (pd.HasOverheadItem)
-                {
-                    // The head list itself, not TryGetOverheadItem: while riding that lookup falls through to the
-                    // cart, and a cart item would be "loaded" onto the cart it is already on.
-                    Item item = null;
-                    foreach (Item h in pd.OverheadItems)
-                    {
-                        if (Allowed(h) && inv.CanAddItemToInventory(h))
-                        {
-                            item = h;
-                        }
-                    }
-                    if (item == null)
-                    {
-                        bool full = inv.Data.Inventory.Count >= inv.Data.InventorySize;
-                        Mount.Say(full ? "The cart is full." : "That can't go on the cart.");
-                        return;
-                    }
-                    string id = item.id;
-                    pd.InsertOverheadItemTo(donkey.Data, item);
-                    Plugin.Log.LogInfo($"Cargo: loaded {id}; cart {inv.Data.Inventory.Count}/{inv.Data.InventorySize}.");
-                    return;
-                }
                 List<Item> list = inv.Data.Inventory;
                 if (list.Count == 0)
                 {
-                    Mount.Say("Nothing on the cart.");
                     return;
                 }
                 Item last = list[list.Count - 1];
-                bool taken = inv.RemoveItemFromInventoryByUID(last);
-                if (!taken)
+                if (!inv.RemoveItemFromInventoryByUID(last))
                 {
                     Plugin.Log.LogWarning("Cargo: could not take the item off the cart.");
                     Resync("take failed");
@@ -236,10 +212,9 @@ namespace GK2Mounts
             }
             catch (Exception e)
             {
-                Plugin.Log.LogWarning("Cargo: load/unload failed: " + e);
+                Plugin.Log.LogWarning("Cargo: setting the item down failed: " + e);
             }
         }
-
         internal static bool Allowed(Item item)
         {
             return item != null && !item.IsEmpty && item.Definition != null && !item.Definition.itemGroupIds.Contains("zombie");
