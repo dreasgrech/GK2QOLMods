@@ -17,6 +17,14 @@
     <EmbeddedResource Include="cargo-layout.cfg" LogicalName="GK2Mounts.cargo-layout.cfg" />
   </ItemGroup>
 
+  <!-- The source folder, so the panel can read and write defaults.cfg / cargo-layout.cfg in place on this machine. -->
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>GK2MountsSourceDir</_Parameter1>
+      <_Parameter2>$(MSBuildProjectDirectory)</_Parameter2>
+    </AssemblyAttribute>
+  </ItemGroup>
+
   <ItemGroup>
     <Reference Include="Assembly-CSharp"><HintPath>$(Managed)\Assembly-CSharp.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="LazyBearTechnology"><HintPath>$(Managed)\LazyBearTechnology.dll</HintPath><Private>false</Private></Reference>

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using BepInEx.Configuration;
 using UnityEngine;
 
@@ -6,23 +7,31 @@ namespace GK2Mounts
 {
     // In-game tuning panel (Unity IMGUI), shown in the top-right corner while mounted when Debug.TuningWindow is on.
     // Tabs: General (behaviour), Riding (everything that places and animates rider and donkey, for the style
-    // currently mounted), Lantern, Sounds, Debug, Export. Every control edits the live config value and the mount reacts immediately;
-    // "Save to config file" writes the cfg. Right-click on a row resets that value to its default.
+    // currently mounted), Lantern, Sounds, Debug, Defaults. Every control edits the live config value and the mount
+    // reacts immediately; BepInEx saves the cfg on every change. A row whose value differs from its mod default is
+    // yellow, and right-click puts it back to that default (see Defaults.cs for yours against the mod defaults).
     internal static class TuningWindow
     {
         private const int WindowId = 0x6d6e7431; // 'mnt1'
         private static Rect rect = new Rect(0f, 0f, 470f, 10f);
-        private static GUIStyle label, header, small;
+        private static GUIStyle label, header, small, changed;
+
+        // Yellow when the setting differs from its mod default.
+        private static GUIStyle LabelFor(ConfigEntryBase e)
+        {
+            return e != null && Defaults.IsTracked(e) && Defaults.Differs(e) ? changed : label;
+        }
         private static bool stylesReady;
         private static int tab;
         private static string donkeyEvent = "";
         private static string cargoItemId = "wood";
         private static string spawnItemId = "wood";
         private static bool pairOffsetsOpen;
-        private static readonly string[] TabNames = { "General", "Riding", "Lantern", "Sounds", "Debug", "Export" };
+        private static readonly string[] TabNames = { "General", "Riding", "Lantern", "Sounds", "Debug", "Defaults" };
 
         public static void Draw()
         {
+            CargoLayout.SaveIfDue(now: !Mount.IsMounted);
             if (!Mount.IsMounted || !Plugin.TuningWindowEnabled.Value || CargoSheet.Running)
             {
                 return; // hidden while the cargo sheet photographs the cart
@@ -73,6 +82,8 @@ namespace GK2Mounts
             small = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(11f * fontScale), wordWrap = true };
             small.normal.textColor = new Color(0.75f, 0.75f, 0.75f);
             header = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(13f * fontScale), fontStyle = FontStyle.Bold };
+            changed = new GUIStyle(label);
+            changed.normal.textColor = new Color(1f, 0.85f, 0.3f);
             var tex = new Texture2D(1, 1);
             tex.SetPixel(0, 0, new Color(1f, 1f, 1f, 0.35f));
             tex.Apply();
@@ -92,8 +103,33 @@ namespace GK2Mounts
             GUILayout.Label(text, header);
         }
 
+        // The settings that differ from their mod defaults, taken once per layout pass. IMGUI lays out every event
+        // first and then runs it again; the button and the list below must have the same controls in both passes,
+        // so a value changed by this event (a slider moved off its default) shows up from the next event on.
+        private static List<(string Group, ConfigEntryBase Entry)> diffSnapshot = new List<(string, ConfigEntryBase)>();
+
+        private static string DiffByGroup()
+        {
+            int g = 0, r = 0, c = 0;
+            foreach (var d in diffSnapshot)
+            {
+                if (d.Group == "Ride") r++;
+                else if (d.Group == "Cart") c++;
+                else g++;
+            }
+            var parts = new List<string>();
+            if (r > 0) parts.Add("Ride " + r);
+            if (c > 0) parts.Add("Cart " + c);
+            if (g > 0) parts.Add("General " + g);
+            return string.Join(", ", parts);
+        }
+
         private static void DrawContents(int id)
         {
+            if (Event.current.type == EventType.Layout)
+            {
+                diffSnapshot = Defaults.Differing();
+            }
             int newTab = GUILayout.Toolbar(tab, TabNames);
             if (newTab != tab)
             {
@@ -117,7 +153,7 @@ namespace GK2Mounts
                 case 2: DrawLantern(); break;
                 case 3: DrawSounds(); break;
                 case 4: DrawDebug(); break;
-                default: DrawExport(); break;
+                default: DrawDefaults(); break;
             }
             GUILayout.EndVertical();
             if (Event.current.type == EventType.Repaint)
@@ -131,29 +167,12 @@ namespace GK2Mounts
             GUILayout.EndScrollView();
 
             GUILayout.Space(8f);
-            GUILayout.BeginHorizontal();
-            if (GUILayout.Button("Save to config file"))
-            {
-                try
-                {
-                    Plugin.Instance.Config.Save();
-                    Plugin.Log.LogInfo("Mount tuning saved to config.");
-                }
-                catch (Exception e)
-                {
-                    Plugin.Log.LogWarning("Config save failed: " + e.Message);
-                }
-            }
-            if (GUILayout.Button("Reset this style to defaults"))
-            {
-                Mount.S.ResetAll();
-                Mount.RefreshLeg();
-                Mount.RefreshSeat();
-                Mount.RefreshSpeed();
-                Mount.ApplyPoseNow();
-            }
-            GUILayout.EndHorizontal();
-            GUILayout.Label("Changes apply immediately. Right-click any row to put that value back to its default. Saving writes to anvil.gk2.mounts.cfg.", small);
+            int differing = diffSnapshot.Count;
+            GUILayout.Label(differing == 0
+                ? "Your changes are saved as you make them. All settings match the mod defaults."
+                : $"Your changes are saved as you make them. {differing} setting{(differing == 1 ? "" : "s")} differ from the mod defaults ({DiffByGroup()}; yellow, listed on the Defaults tab).", small);
+            DrawDefaultsButtons(differing);
+            GUILayout.Label("Right-click a row to put it back to its mod default.", small);
             GUI.DragWindow(new Rect(0f, 0f, 10000f, 20f));
         }
 
@@ -378,11 +397,8 @@ namespace GK2Mounts
             Toggle("Chewing sound when the donkey grazes", s.GrazeOn, null);
             SoundIdRow("Graze sound id", s.GrazeSoundId, "graze", allowEmpty: false);
             FloatSlider("Graze volume", s.GrazeVolume, 0f, 3f, 2, null);
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("Lip-smacking volume (the game's own sound on the lips animation; 0 = silent)", label, GUILayout.Width(LabelW));
-            if (GUILayout.Button("Play", GUILayout.Width(50f))) MountSounds.Preview("lips");
-            GUILayout.EndHorizontal();
-            FloatSlider("", s.LipsVolume, 0f, 3f, 2, null);
+            FloatSlider("Lip-smacking volume (the game's own lips sound; 0 = silent)", s.LipsVolume, 0f, 3f, 2, null);
+            if (GUILayout.Button("Play the lips sound", GUILayout.Width(160f))) MountSounds.Preview("lips");
 
             Header("Braying");
             SoundIdRow("Bray sound id (voice_donkey: four short ee-aw sounds)", s.BraySoundId, "bray", allowEmpty: false);
@@ -434,7 +450,7 @@ namespace GK2Mounts
         private static void SoundIdRow(string name, ConfigEntry<string> entry, string preview, bool allowEmpty)
         {
             GUILayout.BeginHorizontal();
-            GUILayout.Label(name, label, GUILayout.Width(LabelW));
+            GUILayout.Label(name, LabelFor(entry), GUILayout.Width(LabelW));
             if (GUILayout.Button("Play", GUILayout.Width(50f)))
             {
                 MountSounds.Preview(preview);
@@ -479,7 +495,7 @@ namespace GK2Mounts
         {
             Color c = Lantern.ParseColor(entry.Value, new Color(1f, 0.59f, 0f));
             GUILayout.BeginHorizontal();
-            GUILayout.Label(name, label, GUILayout.Width(LabelW));
+            GUILayout.Label(name, LabelFor(entry), GUILayout.Width(LabelW));
             GUILayout.Label(entry.Value, label, GUILayout.Width(70f));
             GUILayout.EndHorizontal();
             if (ResetOnRightClick(entry, onChange)) { return; }
@@ -617,72 +633,94 @@ namespace GK2Mounts
 
         }
 
-        // Everything that turns tuned values into shipped files lives here, apart from the play controls.
+        // Your settings (saved as you change them) against the mod defaults (defaults.cfg, shipped in the DLL).
         private static string exportStatus = "";
+        private static float confirmMakeDefaultsUntil = -1f;
 
-        private static void DrawExport()
+        private static void DrawDefaults()
         {
-            Header("Mod defaults (all settings)");
-            GUILayout.Label("The values every setting starts with are baked into the DLL from defaults.cfg at build time. This writes the current values of both styles and the General section in that file's format, so tuned values become the mod's defaults with no code edits: export, copy the file over src/GK2Mounts/defaults.cfg, rebuild.", small);
-            if (GUILayout.Button("Export current values as mod defaults"))
+            Header("Your settings and the mod defaults");
+            GUILayout.Label("Your settings: everything you set on this panel, saved to anvil.gk2.mounts.cfg the moment you change it. They are what you play with.", small);
+            GUILayout.Label("Mod defaults: what a fresh install starts with and what right-click and the reset buttons go back to. They come from defaults.cfg, which is built into the DLL.", small);
+            GUILayout.Label("A setting shown in yellow differs from its mod default.", small);
+            GUILayout.Label("Mod defaults read from: " + Defaults.Source, small);
+
+            List<(string Group, ConfigEntryBase Entry)> diff = diffSnapshot;
+            Header(diff.Count == 0 ? "All settings match the mod defaults" : $"{diff.Count} setting{(diff.Count == 1 ? "" : "s")} differ from the mod defaults");
+            foreach ((string group, ConfigEntryBase e) in diff)
             {
-                try
-                {
-                    string path = Plugin.DefaultsExportPath.Value;
-                    if (string.IsNullOrWhiteSpace(path))
-                    {
-                        path = System.IO.Path.Combine(BepInEx.Paths.ConfigPath, "GK2Mounts.defaults.cfg");
-                    }
-                    exportStatus = "Defaults written to " + Defaults.Export(path);
-                    Plugin.Log.LogInfo(exportStatus + " (rebuild the mod to embed them).");
-                }
-                catch (Exception e)
-                {
-                    exportStatus = "Defaults export failed: " + e.Message;
-                    Plugin.Log.LogWarning(exportStatus);
-                }
+                GUILayout.Label($"[{group}] {e.Definition.Key}: yours {Defaults.Show(e.BoxedValue)}, mod default {Defaults.Show(Defaults.DefaultFor(e))}", small);
             }
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("Export path (Debug.DefaultsExportPath; empty = BepInEx/config/GK2Mounts.defaults.cfg)", label, GUILayout.Width(LabelW));
-            string path2 = GUILayout.TextField(Plugin.DefaultsExportPath.Value ?? "", GUILayout.ExpandWidth(true));
-            GUILayout.EndHorizontal();
-            if (ResetOnRightClick(Plugin.DefaultsExportPath, null)) { }
-            else if (path2 != Plugin.DefaultsExportPath.Value)
-            {
-                Plugin.DefaultsExportPath.Value = path2;
-            }
-            GUILayout.Label("A full path to the repo's src/GK2Mounts/defaults.cfg makes the export land directly where the build reads it. The \"Save to config file\" button below is different: it saves your own settings for play, not the mod's defaults.", small);
+            DrawDefaultsButtons(diff.Count);
 
             Header("Cargo layout (item and pair corrections)");
-            GUILayout.Label("The per-size-class and per-pair corrections edited on the Riding tab. Export writes BepInEx/config/GK2Mounts.cargo-layout.cfg, which the mod loads instead of its embedded copy from then on, so no rebuild is needed to iterate; copy it over src/GK2Mounts/cargo-layout.cfg to ship it. Reload re-reads that file (or the embedded one when it is absent).", small);
-            GUILayout.BeginHorizontal();
-            if (GUILayout.Button("Export cargo layout"))
+            if (CargoLayout.SavesToRepo)
             {
-                try
-                {
-                    exportStatus = "Cargo layout written to " + CargoLayout.Export();
-                    Plugin.Log.LogInfo(exportStatus + " (copy over src/GK2Mounts/cargo-layout.cfg to ship it).");
-                }
-                catch (Exception e)
-                {
-                    exportStatus = "Cargo layout export failed: " + e.Message;
-                    Plugin.Log.LogWarning(exportStatus);
-                }
+                GUILayout.Label("The corrections edited on the Riding tab are saved to the repo's cargo-layout.cfg as you make them. They have no separate 'yours': the file is the mod default, and a rebuild ships it.", small);
             }
-            if (GUILayout.Button("Reload layout file"))
+            else
+            {
+                GUILayout.Label("The corrections edited on the Riding tab last for this session only: the mod's source folder is not on this machine, so there is nowhere to save them.", small);
+            }
+            if (GUILayout.Button("Re-read the layout file"))
             {
                 CargoLayout.Load();
                 Cargo.RefreshViews();
                 exportStatus = "Cargo layout reloaded: " + CargoLayout.Summary();
             }
-            GUILayout.EndHorizontal();
             GUILayout.Label("Loaded now: " + CargoLayout.Summary(), small);
+            if (!string.IsNullOrEmpty(CargoLayout.LastSaveNote))
+            {
+                GUILayout.Label(CargoLayout.LastSaveNote, small);
+            }
 
             if (!string.IsNullOrEmpty(exportStatus))
             {
                 Header("Last result");
                 GUILayout.Label(exportStatus, small);
             }
+        }
+
+        // "Make these the mod defaults" (only where the sources are) and "Reset this style"; used by the footer and
+        // the Defaults tab.
+        private static void DrawDefaultsButtons(int differing)
+        {
+            GUILayout.BeginHorizontal();
+            if (Defaults.CanWriteDefaults && differing > 0)
+            {
+                bool confirming = Time.unscaledTime < confirmMakeDefaultsUntil;
+                if (GUILayout.Button(confirming ? $"Click again: make all {differing} the mod defaults" : "Make these the mod defaults"))
+                {
+                    if (!confirming)
+                    {
+                        confirmMakeDefaultsUntil = Time.unscaledTime + 4f;
+                    }
+                    else
+                    {
+                        confirmMakeDefaultsUntil = -1f;
+                        try
+                        {
+                            string path = Defaults.MakeCurrentTheDefaults();
+                            exportStatus = $"{differing} setting{(differing == 1 ? "" : "s")} are now the mod defaults, written to {path}. Rebuild the mod to ship them in the DLL.";
+                            Plugin.Log.LogInfo(exportStatus);
+                        }
+                        catch (Exception e)
+                        {
+                            exportStatus = "Making the mod defaults failed: " + e.Message;
+                            Plugin.Log.LogWarning(exportStatus);
+                        }
+                    }
+                }
+            }
+            if (GUILayout.Button("Reset this style to the mod defaults"))
+            {
+                Mount.S.ResetAll();
+                Mount.RefreshLeg();
+                Mount.RefreshSeat();
+                Mount.RefreshSpeed();
+                Mount.ApplyPoseNow();
+            }
+            GUILayout.EndHorizontal();
         }
 
         // ------------------------------------------------------------------ controls
@@ -693,7 +731,7 @@ namespace GK2Mounts
         private static void CenteringToggle(ConfigEntry<float> entry)
         {
             bool on = entry.Value > 0.0001f;
-            bool clicked = OnOffRow("Keep the donkey centred under the rider", on);
+            bool clicked = OnOffRow("Keep the donkey centred under the rider", on, LabelFor(entry));
             if (ResetOnRightClick(entry, null)) { return; }
             if (clicked)
             {
@@ -702,8 +740,8 @@ namespace GK2Mounts
         }
 
         // Layout-file corrections for what is on the cart right now: one group per item (its size class, in the role
-        // it currently has: base, or top when stacked) and one for the pair. Values live in CargoLayout until
-        // exported; the packer re-runs on every change.
+        // it currently has: base, or top when stacked) and one for the pair. The packer re-runs on every change, and
+        // the layout file is saved shortly after (CargoLayout.MarkChanged / SaveIfDue).
         private static void DrawCargoCorrections()
         {
             Header("Cart cargo: corrections (cargo-layout.cfg)");
@@ -774,15 +812,16 @@ namespace GK2Mounts
             if (refresh)
             {
                 Cargo.RefreshViews();
+                CargoLayout.MarkChanged();
             }
-            GUILayout.Label("Right-click a slider to zero it. Export and reload of the layout file are on the Export tab.", small);
+            GUILayout.Label("Right-click a slider to zero it. " + (CargoLayout.SavesToRepo ? "Saved to the repo's cargo-layout.cfg as you edit." : "Not saved on this machine (no source folder)."), small);
         }
 
         // A - value + row for a float setting, stepping by 'step' within [min, max]; right-click the value resets it.
         private static void Stepper(string name, ConfigEntry<float> entry, float step, float min, float max, string format)
         {
             GUILayout.BeginHorizontal();
-            GUILayout.Label(name, label, GUILayout.Width(LabelW));
+            GUILayout.Label(name, LabelFor(entry), GUILayout.Width(LabelW));
             if (GUILayout.Button("-", GUILayout.Width(30f)))
             {
                 entry.Value = Mathf.Max(min, (float)Math.Round(entry.Value - step, 2));
@@ -791,7 +830,7 @@ namespace GK2Mounts
             Rect r = GUILayoutUtility.GetLastRect();
             if (Event.current.type == EventType.MouseDown && Event.current.button == 1 && r.Contains(Event.current.mousePosition))
             {
-                entry.Value = (float)entry.DefaultValue;
+                Defaults.ResetToDefault(entry);
                 Event.current.Use();
             }
             if (GUILayout.Button("+", GUILayout.Width(30f)))
@@ -827,7 +866,7 @@ namespace GK2Mounts
         private static void FloatSlider(string name, ConfigEntry<float> entry, float min, float max, int decimals, Action onChange)
         {
             GUILayout.BeginHorizontal();
-            GUILayout.Label(name, label, GUILayout.Width(LabelW));
+            GUILayout.Label(name, LabelFor(entry), GUILayout.Width(LabelW));
             float v = GUILayout.HorizontalSlider(entry.Value, min, max, GUILayout.Width(90f));
             v = (float)Math.Round(v, decimals);
             GUILayout.Label(v.ToString("F" + decimals), label, GUILayout.Width(45f));
@@ -843,7 +882,7 @@ namespace GK2Mounts
         private static void IntSlider(string name, ConfigEntry<int> entry, int min, int max, Action onChange)
         {
             GUILayout.BeginHorizontal();
-            GUILayout.Label(name, label, GUILayout.Width(LabelW));
+            GUILayout.Label(name, LabelFor(entry), GUILayout.Width(LabelW));
             // The slider is laid out between the buttons and reads the value before "+" runs; a button press must
             // therefore win over the slider's (stale) value in the same pass.
             bool pressed = false;
@@ -861,10 +900,10 @@ namespace GK2Mounts
         }
 
         // Booleans as a labelled On/Off button in the value column (a label-styled GUILayout.Toggle draws no box).
-        private static bool OnOffRow(string name, bool value)
+        private static bool OnOffRow(string name, bool value, GUIStyle style = null)
         {
             GUILayout.BeginHorizontal();
-            GUILayout.Label(name, label, GUILayout.Width(LabelW));
+            GUILayout.Label(name, style ?? label, GUILayout.Width(LabelW));
             bool clicked = GUILayout.Button(value ? "On" : "Off", GUILayout.Width(70f));
             GUILayout.EndHorizontal();
             return clicked;
@@ -872,7 +911,7 @@ namespace GK2Mounts
 
         private static void Toggle(string name, ConfigEntry<bool> entry, Action onChange)
         {
-            bool clicked = OnOffRow(name, entry.Value);
+            bool clicked = OnOffRow(name, entry.Value, LabelFor(entry));
             if (ResetOnRightClick(entry, onChange)) { return; }
             if (clicked)
             {
@@ -886,7 +925,7 @@ namespace GK2Mounts
             T[] values = (T[])Enum.GetValues(typeof(T));
             int idx = Array.IndexOf(values, entry.Value);
             GUILayout.BeginHorizontal();
-            GUILayout.Label(name, label, GUILayout.Width(LabelW));
+            GUILayout.Label(name, LabelFor(entry), GUILayout.Width(LabelW));
             bool changed = false;
             if (GUILayout.Button("<", GUILayout.Width(22f))) { idx = (idx - 1 + values.Length) % values.Length; changed = true; }
             GUILayout.Label(entry.Value.ToString(), label, GUILayout.Width(90f));
@@ -914,7 +953,7 @@ namespace GK2Mounts
                 return false;
             }
             e.Use();
-            T def = (T)entry.DefaultValue;
+            T def = (T)Defaults.DefaultFor(entry);
             if (!Equals(entry.Value, def))
             {
                 entry.Value = def;

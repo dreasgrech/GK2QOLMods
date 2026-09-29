@@ -18,15 +18,55 @@ namespace GK2Mounts
     //   [pair <a>+<b>] applies to that pair of size classes in either order: mode = auto|side|along|stack, and
     //                 along/up/across shift the second-placed item relative to where the packer put it.
     //
-    // The file ships embedded in the DLL (the repo copy); a copy in BepInEx/config/GK2Mounts.cargo-layout.cfg
-    // overrides it, which is what the panel's export writes, so tuning needs no rebuild. Entries are keyed by item
+    // The file ships embedded in the DLL (the repo copy). On the machine with the sources (Defaults.RepoFile) the mod
+    // reads the repo file itself and the panel's corrections are written back to it as you edit, so there is one copy
+    // and a rebuild ships it; elsewhere the embedded copy is used and edits last for the session. Entries are keyed by item
     // id and resolved through the items' measured boxes at runtime, so a game update that adds an item of a known
     // size is covered automatically, and an item whose mesh changes size simply stops matching (the packer's
     // defaults then apply, and the sheet shows it).
     internal static class CargoLayout
     {
         public const float SizeTolerance = 0.05f;
-        public const string FileName = "GK2Mounts.cargo-layout.cfg";
+        public const string RepoFileName = "cargo-layout.cfg";
+
+        // True on the machine with the sources: edits are saved to the repo file.
+        public static bool SavesToRepo => Defaults.RepoFile(RepoFileName) != null;
+
+        private static bool dirty;
+        private static float lastChange;
+
+        // A correction changed on the panel; written to the repo file shortly after the last change (SaveIfDue).
+        public static void MarkChanged()
+        {
+            dirty = true;
+            lastChange = UnityEngine.Time.unscaledTime;
+        }
+
+        public static string LastSaveNote { get; private set; } = "";
+
+        public static void SaveIfDue(bool now = false)
+        {
+            if (!dirty || (!now && UnityEngine.Time.unscaledTime - lastChange < 0.75f))
+            {
+                return;
+            }
+            dirty = false;
+            string repo = Defaults.RepoFile(RepoFileName);
+            if (repo == null)
+            {
+                return;
+            }
+            try
+            {
+                Save(repo);
+                LastSaveNote = "Saved to " + repo + " at " + DateTime.Now.ToString("HH:mm:ss") + ".";
+            }
+            catch (Exception e)
+            {
+                LastSaveNote = "Saving the layout failed: " + e.Message;
+                Plugin.Log.LogWarning("Cargo layout: " + LastSaveNote);
+            }
+        }
 
         public class ItemEntry
         {
@@ -55,13 +95,14 @@ namespace GK2Mounts
         {
             Items.Clear();
             Pairs.Clear();
-            string external = Path.Combine(Paths.ConfigPath, FileName);
+            dirty = false;
+            string repo = Defaults.RepoFile(RepoFileName);
             try
             {
-                if (File.Exists(external))
+                if (repo != null)
                 {
-                    Parse(File.ReadAllText(external));
-                    Source = external;
+                    Parse(File.ReadAllText(repo));
+                    Source = repo;
                     return;
                 }
                 using (Stream s = Assembly.GetExecutingAssembly().GetManifestResourceStream("GK2Mounts.cargo-layout.cfg"))
@@ -155,15 +196,19 @@ namespace GK2Mounts
             }
         }
 
-        // Writes the current entries (empty ones dropped) to the config folder and returns the path.
-        public static string Export()
+        // Writes the current entries (empty ones dropped) to path.
+        private static void Save(string path)
         {
             var sb = new StringBuilder();
-            sb.AppendLine("# GK2 Mounts cargo layout: corrections on top of the size-based cargo packer. Written by the tuning panel.");
+            sb.AppendLine("# GK2 Mounts cargo layout: corrections on top of the size-based cargo packer (see CargoLayout.cs).");
+            sb.AppendLine("# Embedded into the DLL at build time. The tuning panel writes this file as you edit; rebuild to ship it.");
             sb.AppendLine("# [item <id>] applies to every item of the same size class (measured box within " + SizeTolerance.ToString("0.00", CultureInfo.InvariantCulture) + ").");
             sb.AppendLine("#   along / up / across: alone, at the bottom or beside another item; top_along / top_up / top_across: stacked on top.");
             sb.AppendLine("# [pair <a>+<b>] applies to that pair of size classes in either order: mode = auto | side (across the bed) | along (end to end) | stack; along / up / across move the second item.");
-            sb.AppendLine("# Copy this file over src/GK2Mounts/cargo-layout.cfg and rebuild to ship it as the mod's default.");
+            sb.AppendLine("#");
+            sb.AppendLine("# Size classes at the time of writing (27 items): log (wood); flour sack (box_flour); tall crate (box_beer,");
+            sb.AppendLine("# box_clothes_1/2, box_fabric, box_vine); body (body_corpse, body_wild_zombie); low crate (15 box_* incl. preserves);");
+            sb.AppendLine("# slab (stone, iron_ore_2h); no mesh (marble -> shown with the slab mesh, box_engineering_mechanism -> generic crate).");
             sb.AppendLine("version = 1");
             var ids = new List<string>(Items.Keys);
             ids.Sort(string.CompareOrdinal);
@@ -188,10 +233,8 @@ namespace GK2Mounts
                 sb.AppendLine("mode = " + p.Mode);
                 Line(sb, "along", p.Second.x); Line(sb, "up", p.Second.y); Line(sb, "across", p.Second.z);
             }
-            string path = Path.Combine(Paths.ConfigPath, FileName);
             File.WriteAllText(path, sb.ToString());
             Source = path;
-            return path;
         }
 
         private static void Line(StringBuilder sb, string key, float v)

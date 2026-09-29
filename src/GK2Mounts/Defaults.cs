@@ -8,30 +8,101 @@ using BepInEx.Configuration;
 
 namespace GK2Mounts
 {
-    // The mod's default values live in defaults.cfg next to the sources, embedded into the DLL at build time.
-    // Config.Bind uses them as the defaults (so a fresh install, "Reset" and right-click reset all land there), and
-    // the tuning panel can write the current values back to that file, so tuning never needs a code edit: tune,
-    // export, rebuild. Values missing from the file fall back to the constants in code.
+    // Two kinds of values, and only two:
+    //   Your settings: anvil.gk2.mounts.cfg. BepInEx writes it on every change (SaveOnConfigSet), so the panel has no
+    //     save button; what you set is kept.
+    //   Mod defaults: what a fresh install starts with, and what "reset" goes back to. They live in defaults.cfg next
+    //     to the sources and are embedded into the DLL at build time.
+    // The build records the source folder (AssemblyMetadata GK2MountsSourceDir). On the machine that has it (the
+    // developer's), the mod reads the defaults from the repo file instead of the embedded copy, and the panel's "Make
+    // these the mod defaults" writes that file directly: no path to set, no copy step, and the panel shows the new
+    // defaults at once. A rebuild then ships them. On any other machine the embedded copy is used and the button is
+    // absent. Values missing from the file fall back to the constants in code.
     internal static class Defaults
     {
         private const string ResourceName = "GK2Mounts.defaults.cfg";
-        private static Dictionary<string, string> values;
+        public const string FileName = "defaults.cfg";
 
-        private static void Load()
+        private static Dictionary<string, string> values;
+        private static readonly Dictionary<ConfigEntryBase, object> converted = new Dictionary<ConfigEntryBase, object>();
+
+        // Where the defaults were read from: the repo file's path, or "built into the DLL".
+        public static string Source { get; private set; } = "(not loaded)";
+
+        private static readonly string SourceDir = ReadSourceDir();
+
+        private static string ReadSourceDir()
+        {
+            try
+            {
+                foreach (AssemblyMetadataAttribute a in typeof(Defaults).Assembly.GetCustomAttributes<AssemblyMetadataAttribute>())
+                {
+                    if (a.Key == "GK2MountsSourceDir")
+                    {
+                        return a.Value;
+                    }
+                }
+            }
+            catch
+            {
+            }
+            return null;
+        }
+
+        // A file in the mod's source folder, or null when this machine does not have the sources.
+        public static string RepoFile(string name)
+        {
+            if (string.IsNullOrEmpty(SourceDir))
+            {
+                return null;
+            }
+            try
+            {
+                string p = Path.Combine(SourceDir, name);
+                return File.Exists(p) ? p : null;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        public static string RepoDefaultsPath => RepoFile(FileName);
+        public static bool CanWriteDefaults => RepoDefaultsPath != null;
+
+        public static void Load()
         {
             values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            converted.Clear();
+            string repo = RepoDefaultsPath;
+            if (repo != null)
+            {
+                try
+                {
+                    Parse(File.ReadAllText(repo));
+                    Source = repo;
+                    return;
+                }
+                catch (Exception e)
+                {
+                    values.Clear();
+                    Plugin.Log?.LogWarning("Defaults: could not read " + repo + " (" + e.Message + "); using the built-in copy.");
+                }
+            }
             try
             {
                 using (Stream s = typeof(Defaults).Assembly.GetManifestResourceStream(ResourceName))
                 {
                     if (s == null)
                     {
+                        Source = "(none, code constants)";
                         return;
                     }
                     using (var r = new StreamReader(s))
                     {
                         Parse(r.ReadToEnd());
                     }
+                    Source = "built into the DLL";
                 }
             }
             catch (Exception e)
@@ -64,6 +135,25 @@ namespace GK2Mounts
             }
         }
 
+        private static bool TryConvert(string raw, Type t, out object value)
+        {
+            value = null;
+            try
+            {
+                if (t == typeof(float)) value = float.Parse(raw, CultureInfo.InvariantCulture);
+                else if (t == typeof(int)) value = int.Parse(raw, CultureInfo.InvariantCulture);
+                else if (t == typeof(bool)) value = bool.Parse(raw);
+                else if (t.IsEnum) value = Enum.Parse(t, raw, ignoreCase: true);
+                else if (t == typeof(string)) value = raw;
+                return value != null;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        // Used by Config.Bind: the mod default for a key, or the code constant.
         public static T Get<T>(string section, string key, T fallback)
         {
             if (values == null)
@@ -74,69 +164,144 @@ namespace GK2Mounts
             {
                 return fallback;
             }
-            try
+            if (TryConvert(raw, typeof(T), out object v))
             {
-                Type t = typeof(T);
-                if (t == typeof(float)) return (T)(object)float.Parse(raw, CultureInfo.InvariantCulture);
-                if (t == typeof(int)) return (T)(object)int.Parse(raw, CultureInfo.InvariantCulture);
-                if (t == typeof(bool)) return (T)(object)bool.Parse(raw);
-                if (t.IsEnum) return (T)Enum.Parse(t, raw, ignoreCase: true);
-                if (t == typeof(string)) return (T)(object)raw;
+                return (T)v;
             }
-            catch (Exception e)
-            {
-                Plugin.Log?.LogWarning($"Defaults: bad value for {section}.{key} = '{raw}' ({e.Message}); using {fallback}.");
-            }
+            Plugin.Log?.LogWarning($"Defaults: bad value for {section}.{key} = '{raw}'; using {fallback}.");
             return fallback;
         }
 
-        // Writes the current values of both styles (and the General keys that shape the look) in the embedded
-        // file's format to `path`, so the next build ships them as defaults.
-        public static string Export(string path)
+        // The current mod default of a setting. BepInEx's own DefaultValue is fixed at Bind time; after "Make these
+        // the mod defaults" the file is re-read and this answers with the new value.
+        public static object DefaultFor(ConfigEntryBase e)
         {
-            var sb = new StringBuilder();
-            sb.AppendLine("# GK2 Mounts: default values embedded into the DLL at build time and used as the mod's defaults.");
-            sb.AppendLine("# Written by the tuning panel's \"Export current values as mod defaults\" button; rebuild to bake them in.");
-            sb.AppendLine("# Format: [Section] then Key = Value, same names as anvil.gk2.mounts.cfg.");
-            sb.AppendLine();
-            sb.AppendLine("[General]");
-            Line(sb, Plugin.SideViewOnly);
-            Line(sb, Plugin.StayMountedThroughDoors);
-            Line(sb, Plugin.DismountIndoors);
-            Line(sb, Plugin.ShowMessages);
-            sb.AppendLine();
-            foreach (StyleSettings s in new[] { Plugin.Ride, Plugin.Cart })
+            if (values == null)
             {
-                sb.AppendLine("[" + s.Section + "]");
-                Line(sb, s.SpeedMultiplier); Line(sb, s.Depth); Line(sb, s.CenterOffset); Line(sb, s.RiderOffsetPx); Line(sb, s.TorsoOffsetPx);
-                Line(sb, s.AutoSeat); Line(sb, s.SeatAdjustPx); Line(sb, s.SeatOffset); Line(sb, s.Bob); Line(sb, s.Pose); Line(sb, s.FreezePoseWhenIdle); Line(sb, s.PoseSpeed); Line(sb, s.PoseSpeedFollowsDonkey);
-                Line(sb, s.NearLeg); Line(sb, s.LegSource); Line(sb, s.LegHeightPx); Line(sb, s.LegAdjustXPx); Line(sb, s.LegAdjustYPx); Line(sb, s.SnapToGround); Line(sb, s.CartFollowsGround); Line(sb, s.CartGroundMaxShift); Line(sb, s.CargoDrawCorpse); Line(sb, s.CargoSwaysWithCart); Line(sb, s.CargoBedDepth); Line(sb, s.CargoSideGap); Line(sb, s.CargoOverhang); Line(sb, s.CargoNestle);
-                Line(sb, s.LanternAlong); Line(sb, s.LanternUp); Line(sb, s.LanternAcross); Line(sb, s.LanternTilt); Line(sb, s.LanternLean); Line(sb, s.LanternFlip);
-                Line(sb, s.LanternSwayDegrees); Line(sb, s.LanternSwaySeconds); Line(sb, s.IdleFidgetEverySeconds); Line(sb, s.IdleFidgetSpeed); Line(sb, s.IdleCrawlSpeed);
-                Line(sb, s.LanternShow); Line(sb, s.LanternScale); Line(sb, s.LanternLightOn); Line(sb, s.LanternLightIntensity); Line(sb, s.LanternLightRange); Line(sb, s.LanternLightColor); Line(sb, s.LanternLightShadows); Line(sb, s.LanternLightDayDim);
-                Line(sb, s.LanternSelfLightOn); Line(sb, s.LanternSelfLightIntensity); Line(sb, s.LanternSelfLightRange); Line(sb, s.LanternGlowOn); Line(sb, s.LanternGlowAlpha); Line(sb, s.LanternGlowScale); Line(sb, s.LanternGlassOn);
-                foreach (ConfigEntryBase e in s.SoundEntries)
-                {
-                    LineBoxed(sb, e);
-                }
-                sb.AppendLine();
+                Load();
             }
-            Directory.CreateDirectory(Path.GetDirectoryName(path));
-            File.WriteAllText(path, sb.ToString());
-            return path;
+            if (converted.TryGetValue(e, out object c))
+            {
+                return c;
+            }
+            object v = e.DefaultValue;
+            if (values.TryGetValue(e.Definition.Section + "." + e.Definition.Key, out string raw) && TryConvert(raw, e.SettingType, out object parsed))
+            {
+                v = parsed;
+            }
+            converted[e] = v;
+            return v;
         }
 
-        private static void LineBoxed(StringBuilder sb, ConfigEntryBase e)
+        public static void ResetToDefault(ConfigEntryBase e)
         {
+            e.BoxedValue = DefaultFor(e);
+        }
+
+        public static bool Differs(ConfigEntryBase e)
+        {
+            object d = DefaultFor(e);
             object v = e.BoxedValue;
-            string text = v is IFormattable f ? f.ToString(null, CultureInfo.InvariantCulture) : (v?.ToString() ?? "");
-            sb.AppendLine(e.Definition.Key + " = " + text);
+            if (v is float a && d is float b)
+            {
+                return Math.Abs(a - b) > 0.0001f;
+            }
+            if (v is string sa || d is string)
+            {
+                return !string.Equals(v as string ?? "", d as string ?? "", StringComparison.Ordinal);
+            }
+            return !Equals(v, d);
         }
 
-        private static void Line<T>(StringBuilder sb, ConfigEntry<T> e)
+        // The settings that make up the mod defaults: the General keys that shape the look, then both styles.
+        private static List<(string Group, ConfigEntryBase Entry)> tracked;
+        private static HashSet<ConfigEntryBase> trackedSet;
+
+        public static List<(string Group, ConfigEntryBase Entry)> Tracked
         {
-            string v = e.Value is IFormattable f ? f.ToString(null, CultureInfo.InvariantCulture) : e.Value.ToString();
-            sb.AppendLine(e.Definition.Key + " = " + v);
+            get
+            {
+                if (tracked == null)
+                {
+                    tracked = new List<(string, ConfigEntryBase)>();
+                    foreach (ConfigEntryBase e in new ConfigEntryBase[] { Plugin.SideViewOnly, Plugin.StayMountedThroughDoors, Plugin.DismountIndoors, Plugin.ShowMessages })
+                    {
+                        tracked.Add(("General", e));
+                    }
+                    foreach (StyleSettings s in new[] { Plugin.Ride, Plugin.Cart })
+                    {
+                        foreach (ConfigEntryBase e in s.AllEntries)
+                        {
+                            tracked.Add((s.Section, e));
+                        }
+                    }
+                    trackedSet = new HashSet<ConfigEntryBase>();
+                    foreach (var t in tracked)
+                    {
+                        trackedSet.Add(t.Entry);
+                    }
+                }
+                return tracked;
+            }
+        }
+
+        public static bool IsTracked(ConfigEntryBase e)
+        {
+            _ = Tracked;
+            return e != null && trackedSet.Contains(e);
+        }
+
+        public static List<(string Group, ConfigEntryBase Entry)> Differing()
+        {
+            var list = new List<(string, ConfigEntryBase)>();
+            foreach (var t in Tracked)
+            {
+                if (Differs(t.Entry))
+                {
+                    list.Add(t);
+                }
+            }
+            return list;
+        }
+
+        public static string Show(object v)
+        {
+            if (v is IFormattable f)
+            {
+                return f.ToString(null, CultureInfo.InvariantCulture);
+            }
+            string s = v?.ToString() ?? "";
+            return s.Length == 0 ? "(empty)" : s;
+        }
+
+        // Writes every tracked setting's current value to the repo's defaults.cfg and re-reads it, so the panel's
+        // defaults (reset targets, the yellow marks) are the new ones at once. Returns the path.
+        public static string MakeCurrentTheDefaults()
+        {
+            string path = RepoDefaultsPath;
+            if (path == null)
+            {
+                throw new InvalidOperationException("the mod's source folder is not on this machine");
+            }
+            var sb = new StringBuilder();
+            sb.AppendLine("# GK2 Mounts: the mod's default values, embedded into the DLL at build time.");
+            sb.AppendLine("# Written by the tuning panel's \"Make these the mod defaults\" button; rebuild to ship them.");
+            sb.AppendLine("# Format: [Section] then Key = Value, same names as anvil.gk2.mounts.cfg.");
+            string group = null;
+            foreach (var t in Tracked)
+            {
+                if (t.Group != group)
+                {
+                    sb.AppendLine().AppendLine("[" + t.Group + "]");
+                    group = t.Group;
+                }
+                object v = t.Entry.BoxedValue;
+                string text = v is IFormattable f ? f.ToString(null, CultureInfo.InvariantCulture) : (v?.ToString() ?? "");
+                sb.AppendLine(t.Entry.Definition.Key + " = " + text);
+            }
+            File.WriteAllText(path, sb.ToString());
+            Load();
+            return path;
         }
     }
 }

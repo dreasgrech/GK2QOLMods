@@ -264,25 +264,38 @@ namespace GK2Mounts
         {
             foreach (ConfigEntryBase e in SoundEntries)
             {
-                e.BoxedValue = e.DefaultValue;
+                Defaults.ResetToDefault(e);
             }
         }
 
-        public void ResetAll()
+        // Every setting of this style, in the order defaults.cfg lists them.
+        public ConfigEntryBase[] AllEntries
         {
-            Reset(SpeedMultiplier); Reset(Depth); Reset(CenterOffset); Reset(RiderOffsetPx); Reset(TorsoOffsetPx);
-            Reset(AutoSeat); Reset(SeatAdjustPx); Reset(SeatOffset); Reset(Bob); Reset(Pose); Reset(FreezePoseWhenIdle);
-            Reset(PoseSpeed); Reset(PoseSpeedFollowsDonkey); Reset(NearLeg); Reset(LegSource); Reset(LegHeightPx); Reset(LegAdjustXPx); Reset(LegAdjustYPx); Reset(SnapToGround); Reset(CartFollowsGround); Reset(CartGroundMaxShift); Reset(CargoDrawCorpse); Reset(CargoSwaysWithCart); Reset(CargoBedDepth); Reset(CargoSideGap); Reset(CargoOverhang); Reset(CargoNestle);
-            Reset(LanternAlong); Reset(LanternUp); Reset(LanternAcross); Reset(LanternTilt); Reset(LanternLean); Reset(LanternFlip);
-            Reset(LanternSwayDegrees); Reset(LanternSwaySeconds); Reset(IdleFidgetEverySeconds); Reset(IdleFidgetSpeed); Reset(IdleCrawlSpeed);
-            Reset(LanternShow); Reset(LanternScale); Reset(LanternLightOn); Reset(LanternLightIntensity); Reset(LanternLightRange); Reset(LanternLightColor); Reset(LanternLightShadows); Reset(LanternLightDayDim);
-            Reset(LanternSelfLightOn); Reset(LanternSelfLightIntensity); Reset(LanternSelfLightRange); Reset(LanternGlowOn); Reset(LanternGlowAlpha); Reset(LanternGlowScale); Reset(LanternGlassOn);
-            ResetSounds();
+            get
+            {
+                var list = new System.Collections.Generic.List<ConfigEntryBase>
+                {
+                    SpeedMultiplier, Depth, CenterOffset, RiderOffsetPx, TorsoOffsetPx,
+                    AutoSeat, SeatAdjustPx, SeatOffset, Bob, Pose, FreezePoseWhenIdle, PoseSpeed, PoseSpeedFollowsDonkey,
+                    NearLeg, LegSource, LegHeightPx, LegAdjustXPx, LegAdjustYPx, SnapToGround, CartFollowsGround, CartGroundMaxShift,
+                    CargoDrawCorpse, CargoSwaysWithCart, CargoBedDepth, CargoSideGap, CargoOverhang, CargoNestle,
+                    LanternAlong, LanternUp, LanternAcross, LanternTilt, LanternLean, LanternFlip,
+                    LanternSwayDegrees, LanternSwaySeconds, IdleFidgetEverySeconds, IdleFidgetSpeed, IdleCrawlSpeed,
+                    LanternShow, LanternScale, LanternLightOn, LanternLightIntensity, LanternLightRange, LanternLightColor, LanternLightShadows, LanternLightDayDim,
+                    LanternSelfLightOn, LanternSelfLightIntensity, LanternSelfLightRange, LanternGlowOn, LanternGlowAlpha, LanternGlowScale, LanternGlassOn,
+                };
+                list.AddRange(SoundEntries);
+                return list.ToArray();
+            }
         }
 
-        private static void Reset<T>(ConfigEntry<T> e)
+        // Back to the mod defaults (Defaults.DefaultFor: the defaults file as last written, not only as built).
+        public void ResetAll()
         {
-            e.Value = (T)e.DefaultValue;
+            foreach (ConfigEntryBase e in AllEntries)
+            {
+                Defaults.ResetToDefault(e);
+            }
         }
     }
 
@@ -319,7 +332,6 @@ namespace GK2Mounts
 
         // [Debug]
         internal static ConfigEntry<bool> TuningKeys;
-        internal static ConfigEntry<string> DefaultsExportPath;
         internal static ConfigEntry<bool> TuningWindowEnabled;
         internal static ConfigEntry<float> TuningWindowScale;
         internal static ConfigEntry<float> TuningWindowFontScale;
@@ -373,13 +385,11 @@ namespace GK2Mounts
                 "Width of the tuning panel in panel units before the overall size is applied (470 = original).");
             TuningKeys = Config.Bind("Debug", "TuningKeys", true,
                 "While mounted: PageUp/PageDown move the torso, Home/End the legs sideways, Insert/Delete the legs up/down, one art pixel per press, editing the current style's values. Development aid, turn off for normal play.");
-            DefaultsExportPath = Config.Bind("Debug", "DefaultsExportPath", "",
-                "Where the panel's \"Export current values as mod defaults\" button writes defaults.cfg. Point it at src/GK2Mounts/defaults.cfg in the repo; the next build embeds it. Empty: BepInEx/config/GK2Mounts.defaults.cfg.");
 
             DisableOnGameUpdate = Config.Bind("Safety", "DisableOnGameUpdate", true,
                 "Do not patch anything if the game's code has changed since this mod was audited. Rebuild/re-audit after game updates.");
 
-            CargoLayout.Load(); // cargo-layout.cfg: embedded copy, or BepInEx/config/GK2Mounts.cargo-layout.cfg when present
+            CargoLayout.Load(); // cargo-layout.cfg: the repo file on the machine with the sources, else the embedded copy
             Log.LogInfo("Cargo layout: " + CargoLayout.Summary());
 
             System.Guid gameMvid = typeof(WgoData).Assembly.ManifestModule.ModuleVersionId;

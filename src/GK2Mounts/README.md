@@ -31,10 +31,22 @@ NPC and its schedule are untouched.
 ### `[Ride]` and `[Cart]`: position, pose, animation, legs, speed
 
 Both sections hold the same keys; the values differ because the two looks differ. The tuning panel edits the
-section of the style you are currently mounted on. The defaults come from `defaults.cfg` next to the sources, embedded into the DLL at
-build time; the panel's "Export current values as mod defaults" (Export tab) writes the current values into that
-file, so tuning never needs a code edit: tune, export, rebuild. The table shows the values shipped at the time of
-writing, Ride / Cart.
+section of the style you are currently mounted on. The table shows the values shipped at the time of writing,
+Ride / Cart.
+
+**Your settings and the mod defaults.** There are two kinds of values, and only two:
+
+- *Your settings* are in `anvil.gk2.mounts.cfg`. BepInEx writes that file the moment a value changes, so there is
+  no save button: what you set on the panel is kept.
+- *Mod defaults* are what a fresh install starts with, and what right-click and the reset buttons go back to. They
+  come from `defaults.cfg` next to the sources, embedded into the DLL at build time.
+
+A panel row shown in yellow differs from its mod default; the footer counts them and the Defaults tab lists them
+(yours and the default). On the machine with the sources (the build records the source folder), the mod reads
+`defaults.cfg` from the repo itself, and **Make these the mod defaults** (click twice to confirm) writes every
+current value of both styles into it. The yellow marks clear at once, and a rebuild ships the new defaults in the
+DLL. On any other machine the built-in copy is used and that button is not shown. A new default never overwrites
+a value already in someone's `anvil.gk2.mounts.cfg`: that row then shows yellow until it is reset.
 
 | Key | Ride | Cart | Meaning |
 |---|---|---|---|
@@ -76,7 +88,7 @@ writing, Ride / Cart.
 | `LanternGlowOn` / `LanternGlowAlpha` / `LanternGlowScale` / `LanternGlassOn` | true / 1 / 1 / true | same | Cart style only: the additive glow sprite around the lamp (switch, opacity and size multipliers) and the lit lantern-glass sprite. |
 | `LanternFlip` | false | false | Cart style only: mirror the pole in the plane through its foot, so the slanted pole leans out over the back of the cart instead of forward over the donkey; the foot stays put. The lamp, glow and lights are mirrored with it (a mirrored sprite is how the game itself draws the donkey facing the other way). |
 
-**How cargo is placed.** The game never arranges items on a pile (every pile in it is hand-made art switched by item count), so the mod packs the cargo itself. Every item's mesh box is measured at runtime; the larger footprint goes to the bottom or the far side, so the picture does not depend on load order; two items lie side by side across the bed, touching within the gap and centred as a pair, when their widths fit within the bed (0.75) plus the overhang, the density of the game's own timber stockpile; when the widths do not fit but the lengths do (two crates, 0.52 each on the 0.90-long bed), they lie end to end along the cart instead; and they stack otherwise. The 27 carryable items fall into seven size classes (log; flour sack; tall crates; bodies; 15 low crates; slabs = stone and ore; the two without a mesh, marble shown as a slab and the engineering crate as a generic crate). Corrections on top of the packer live in `cargo-layout.cfg` (embedded; `BepInEx\config\GK2Mounts.cargo-layout.cfg` overrides it when present): `[item <id>]` entries apply to the whole size class of that item, with offsets for the base role and for the on-top role; `[pair <a>+<b>]` entries force one arrangement (`side` = across, `along` = end to end, `stack`) and shift the second item. The panel edits the entries for what is on the cart and "Export cargo layout" writes the override file, so tuning needs no rebuild; copy it over the repo file to ship it. The Debug tab's cargo sheet (`GK2-cargo-sheet\index.html`, every pair) and shapes page (`shapes.html`, every item by size class) are the visual checks.
+**How cargo is placed.** The game never arranges items on a pile (every pile in it is hand-made art switched by item count), so the mod packs the cargo itself. Every item's mesh box is measured at runtime; the larger footprint goes to the bottom or the far side, so the picture does not depend on load order; two items lie side by side across the bed, touching within the gap and centred as a pair, when their widths fit within the bed (0.75) plus the overhang, the density of the game's own timber stockpile; when the widths do not fit but the lengths do (two crates, 0.52 each on the 0.90-long bed), they lie end to end along the cart instead; and they stack otherwise. The 27 carryable items fall into seven size classes (log; flour sack; tall crates; bodies; 15 low crates; slabs = stone and ore; the two without a mesh, marble shown as a slab and the engineering crate as a generic crate). Corrections on top of the packer live in `cargo-layout.cfg` (embedded; `BepInEx\config\GK2Mounts.cargo-layout.cfg` overrides it when present): `[item <id>]` entries apply to the whole size class of that item, with offsets for the base role and for the on-top role; `[pair <a>+<b>]` entries force one arrangement (`side` = across, `along` = end to end, `stack`) and shift the second item. The panel edits the entries for what is on the cart. On the machine with the sources they are saved to the repo's `cargo-layout.cfg` as you edit (the layout has no separate "yours"; the file is the default and a rebuild ships it); elsewhere they last for the session. The Debug tab's cargo sheet (`GK2-cargo-sheet\index.html`, every pair) and shapes page (`shapes.html`, every item by size class) are the visual checks.
 
 ### Sounds (`[Ride]` and `[Cart]`, the Sounds tab)
 
@@ -108,7 +120,7 @@ nothing, is flagged on the tab and logged once), and each has a play button on t
 
 | Key | Default | Meaning |
 |---|---|---|
-| `TuningWindow` | true | While mounted, a panel in the top-right corner with tabs General / Riding / Lantern / Debug / Export. Changes apply live; "Save to config file" writes them; right-click a row to reset it. `TuningWindowScale` (1.5) sets its overall size, `TuningWindowFontScale` (1) the text size inside it, `TuningWindowWidth` (470) its width; all three have - / + steppers on the Debug tab and the rows scale with the width. Turn off for normal play. |
+| `TuningWindow` | true | While mounted, a panel in the top-right corner with tabs General / Riding / Lantern / Sounds / Debug / Defaults. Changes apply live and are saved as you make them; yellow rows differ from the mod default; right-click a row to put it back to the mod default. `TuningWindowScale` (1.5) sets its overall size, `TuningWindowFontScale` (1) the text size inside it, `TuningWindowWidth` (470) its width; all three have - / + steppers on the Debug tab and the rows scale with the width. Turn off for normal play. |
 | `TuningKeys` | true | PageUp/PageDown torso, Home/End legs sideways, Insert/Delete legs up/down, one art pixel per press, editing the current style's values. Turn off for normal play. |
 | (Debug tab buttons) | | "Start a real delivery now" fires the game donkey's own `full_cycle` script event with its body roll forced to pass (a Harmony prefix on `Flow_Body.DoAction`, active for two frames after the press, drop chance untouched), so the real cart can be watched on the same ground as ours. "Dump the game donkey's script" writes the `npc_donkey` flow graph to `BepInEx/GK2-script-npc_donkey.json`; the text field sends any of its events. See `PROBE-FINDINGS.md` for the routine. "Dump carry facts" writes `BepInEx/GK2-carry-facts.txt` (the donkey prefab's drawer rules, its inventory filters, every big item, the overhead mesh elements) and "Put in cart inventory" / "Take first out" add or remove a plain test item on the mounted donkey's own 2-slot inventory to watch the game's loaded-cart mesh react (Round 7 of the findings; groundwork for carrying cargo). "Drop it here" spawns any big item in front of the keeper with the game's own drop routine (a normal, saved world drop; `<` `>` cycle through all of them; a corpse comes from the delivery script's body definition; zombies cannot be spawned from an id). "Photograph all cargo combinations" puts every distinct item shape alone and every ordered pair on the mounted cart in turn, screenshots and crops each, and writes `BepInEx/GK2-cargo-sheet/index.html`, a grid of all pictures (rows: first item, columns: second) with the settings used; the cart must be empty to start (a dismount mid-run aborts the sheet and discards its test copies). |
 | `DisableOnGameUpdate` | true | Do nothing if the game's code changed since the audit. |
