@@ -66,6 +66,7 @@ namespace GK2Mounts
             {
                 Plugin.Log.LogWarning("Cargo: take sound failed: " + e.Message);
             }
+            MountSounds.CargoLanded();
             Plugin.Log.LogInfo($"Cargo: picked up {item.id} straight onto the cart ({inv.Data.Inventory.Count}/{inv.Data.InventorySize}).");
             return true;
         }

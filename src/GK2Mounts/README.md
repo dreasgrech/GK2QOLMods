@@ -2,8 +2,8 @@
 
 BepInEx plugin for Graveyard Keeper 2: press a key and the keeper rides a donkey. You walk 1.75× as fast while
 mounted (configurable), the donkey follows your every step, faces the way you walk and animates when you do. Press
-the key again to get off. Two looks: **Ride** (on the donkey's back) and **Cart** (the donkey pulls its cart and you
-stand in it).
+the key again to get off. Two looks: **Ride** (on the donkey's back) and **Cart** (you ride the donkey while it pulls
+its cart).
 
 Version 0.1.0 (first playable build), built and audited against game build 25533739 (Assembly-CSharp MVID `97f92f0d-…`).
 Design notes: [`FEASIBILITY.md`](FEASIBILITY.md); runtime facts the design rests on: [`PROBE-FINDINGS.md`](PROBE-FINDINGS.md).
@@ -19,8 +19,9 @@ NPC and its schedule are untouched.
 |---|---|---|
 | `Enabled` | true | Master switch. |
 | `MountKey` | `H` | Mount / dismount. Pick a key the game does not use. |
+| `BellKey` | `None` | While mounted: ring the donkey's bell. None = no key; the Sounds tab can set one (click, press a key, Escape clears) and has a play button. |
 | (cargo) | | Cart style, no key of its own. Press the game's interact key with nothing in front of you to set the top cart item down on the ground in front of you, one item per press, as the game drops a held item on foot. Loading needs no key either: while you ride the cart there is no head storage, so anything you pick up (a log, stone, ore, crate or corpse from the ground, a pile, a pallet or a table) goes straight onto the cart, and piles, pallets, tables, graves and quest hand-ins take their items from the cart as if you held them. A full cart puts a ground pickup back down in front of you ("The cart is full.") and piles simply offer no take. The cart holds two items, like the game's own delivery cart. Zombies are refused and stay on your head. Cargo is handed back automatically at every dismount and before every save (it lives in a temporary inventory that no save contains) and goes back onto the cart after the save; through doors it stays on the cart. |
-| `Style` | `Ride` | `Ride` (on the donkey's back) or `Cart` (the donkey pulls its cart, the keeper stands in it). Each style has its own section below. |
+| `Style` | `Ride` | `Ride` (on the donkey's back) or `Cart` (you ride the donkey while it pulls its cart). Each style has its own section below. |
 | `MountWgoId` | `npc_donkey` | Which world object's looks to use. Only the donkey is tested. |
 | `StayMountedThroughDoors` | true | After a scene change the donkey is re-summoned and you keep riding. Off: dismount at every door. |
 | `DismountIndoors` | true | Dismount automatically when entering a building, church or dungeon (the game's indoor lighting presets), and refuse to mount indoors. The cart is a 3D object that would cut through furniture and door frames inside. |
@@ -76,6 +77,32 @@ writing, Ride / Cart.
 | `LanternFlip` | false | false | Cart style only: mirror the pole in the plane through its foot, so the slanted pole leans out over the back of the cart instead of forward over the donkey; the foot stays put. The lamp, glow and lights are mirrored with it (a mirrored sprite is how the game itself draws the donkey facing the other way). |
 
 **How cargo is placed.** The game never arranges items on a pile (every pile in it is hand-made art switched by item count), so the mod packs the cargo itself. Every item's mesh box is measured at runtime; the larger footprint goes to the bottom or the far side, so the picture does not depend on load order; two items lie side by side across the bed, touching within the gap and centred as a pair, when their widths fit within the bed (0.75) plus the overhang, the density of the game's own timber stockpile; when the widths do not fit but the lengths do (two crates, 0.52 each on the 0.90-long bed), they lie end to end along the cart instead; and they stack otherwise. The 27 carryable items fall into seven size classes (log; flour sack; tall crates; bodies; 15 low crates; slabs = stone and ore; the two without a mesh, marble shown as a slab and the engineering crate as a generic crate). Corrections on top of the packer live in `cargo-layout.cfg` (embedded; `BepInEx\config\GK2Mounts.cargo-layout.cfg` overrides it when present): `[item <id>]` entries apply to the whole size class of that item, with offsets for the base role and for the on-top role; `[pair <a>+<b>]` entries force one arrangement (`side` = across, `along` = end to end, `stack`) and shift the second item. The panel edits the entries for what is on the cart and "Export cargo layout" writes the override file, so tuning needs no rebuild; copy it over the repo file to ship it. The Debug tab's cargo sheet (`GK2-cargo-sheet\index.html`, every pair) and shapes page (`shapes.html`, every item by size class) are the visual checks.
+
+### Sounds (`[Ride]` and `[Cart]`, the Sounds tab)
+
+The game's donkey walks silently (its walk animation has no step events) and the game has no cart sound, so the mod
+plays these itself through the game's own sound player: game sound ids, 3D at the donkey, in the game's mixer
+groups, so the in-game volume sliders apply. No audio files ship with the mod. Volumes and pitches multiply the
+game's own values for that sound. Every sound id is editable (any id from the game's list; an unknown id plays
+nothing, is flagged on the tab and logged once), and each has a play button on the tab. Defaults below are Ride / Cart.
+
+| Key | Default | Meaning |
+|---|---|---|
+| `SoundsOn` / `SoundVolume` | true / 1 | Master switch and volume for everything below. Off: the game's own behaviour. |
+| `HoofOn` / `HoofSoundId` / `HoofSurfaceAware` | true / empty / true | Hoofsteps on each footfall of the donkey's walk cycle. Empty id: the game's footstep for the ground under the donkey (grass, dirt, wood, stone; dirt where the ground is untagged). |
+| `HoofVolume` / `HoofPitch` / `HoofPitchVariation` | 1.3 / 0.8 / 0.06 | Louder and lower than the keeper's steps; a small random pitch change per step. |
+| `HoofStepsPerCycle` / `HoofPhase` | 4 / 0 | Footfalls per walk cycle and their timing within it (fraction of a step). |
+| `GrazeOn` / `GrazeSoundId` / `GrazeVolume` | true / `donkey_eating_grass` / 1 | Chewing when the donkey grazes. The game has this sound, exactly as long as the graze animation, and never plays it. Stops if the donkey sets off mid-graze. |
+| `LipsVolume` | 1 | The game's own lip-smacking on the lips animation (0 = silent). |
+| `BraySoundId` / `BrayOnMountChance` / `BrayIdleEverySeconds` / `BrayWhileWalking` | `voice_donkey` / 0.5 / 40 / false | Brays (the donkey's dialogue voice): a chance at mounting, and on average one per interval while standing (randomised by half either way; 0 = never). |
+| `BrayVolume` / `BrayPitch` / `BrayInSfxChannel` | 1 / 1 / true | The game plays this sound in the dialogue-voice channel (speech volume); on routes it through the SFX volume. |
+| `WheelOn` | false / true | Cart: a wooden wheel rumble once per walk cycle while the cart moves (a borrowed machine wheel; its samples last one walk cycle). `conveyor_assembly_wheel` is a chain-and-rev alternative. |
+| `WheelSoundId` | `conveyor_furnace_wheel` | The wheel sound. |
+| `WheelVolume` / `WheelPitch` / `WheelPitchFollowsSpeed` / `WheelEveryCycles` / `WheelPhase` | 0.6 / 1 / false / 1 / 0 | Wheel tuning. |
+| `CargoThumpOn` / `CargoThumpSoundId` / `CargoThumpVolume` / `CargoThumpPitch` | true / `oh_wood_container_drop` / 1 / 1 | Cart: a thump when an item lands in the cart, on top of the game's own pickup sound. |
+| `BellSoundId` / `BellVolume` / `BellPitch` | `donkey_bell` / 0.7 / 1 | The donkey delivery's bell. |
+| `BellOnSetOff` | false / true | Ring the bell when setting off; see the next row. |
+| `BellOnlyWithCargo` / `BellSetOffIdleSeconds` | true / 4 | Ring when the donkey sets off after standing at least that long (optionally only with cargo). |
 
 ### `[Debug]` and `[Safety]`
 
@@ -143,8 +170,11 @@ writing, Ride / Cart.
 6. Use a workbench / climb a ladder / draw a weapon while mounted: automatic dismount, normal speed after.
 7. Try to mount while working or in build mode: refused with a bubble.
 8. Sleep while mounted: dismounted; next morning normal.
-9. Set `Style = Cart`, restart, mount: donkey ahead with cart and lantern, keeper standing in the cart.
+9. Set `Style = Cart`, restart, mount: keeper on the donkey, the donkey pulling its cart with the lantern.
 10. Quit to menu while mounted, load again: on foot, normal speed, no errors in the log.
+11. Sounds: hoofsteps while walking (on grass, a road, a wooden floor), none of the keeper's steps while riding;
+    graze chewing when the donkey grazes; brays now and then; in the cart the wheel rumble, a thump on loading and
+    the bell when setting off with cargo. Game SFX slider at 0 silences all of them.
 
 ## Probe (`tools/GK2MountProbe/`)
 

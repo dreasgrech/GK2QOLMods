@@ -1056,3 +1056,73 @@ the original on that frame skips nothing else. Silent with an empty cart, as the
 inside skips the original too (part of the press may have run; running it again could interact twice). Private
 members via AccessTools, checked in `Access.Verify` and the Cecil scan (the nested enum's `Interaction1 == 0`).
 `CargoKey` removed from the config, the panel and the README.
+
+## Round 12 (2026-09-29): sound, what the game has and what the donkey uses
+
+Source: `LazyAudio` (LazyBearTechnology), the `AudioConfig` asset (sharedassets0.assets, path id 2203, 310 sound ids,
+dumped with the UnityPy type-tree generator), and the donkey bundle `d9b435a4de792baab160116c755c02af.bundle`
+(16 clips, `CharacterNPC_Donkey` override controller).
+
+**How the game plays sounds.** Everything is a string id: `LazyAudio.PlayAtGameObject(id, transform, SpatialType.sound3D,
+checkDelay)` returns a `SoundHandler` (SetVolume, SetPitch, Stop, SetFadeInFadeOut). Each id is a `Sound` with random
+samples (random without repeat), a volume, a loop flag and a mixer group, so the game's SFX slider applies to anything
+played through it. `checkDelay: true` refuses a replay of the same id within `minDelayTimeBetweenSounds`; the game's
+own repeating sounds (zombie idle, conveyors) pass `false`.
+
+**Footsteps.** A walk clip's animation event calls `AnimationEventReceiver.CallEvent2` or
+`AudioAnimationParamsReceiver.OnAnimationStepCompleted`, which calls `AnimationComponentBase.OnAnimationStepCompleted`
+(public virtual): raycast down 1 unit (mask 2060) for a `SurfaceType` (None/Grass/Stone/Wood/Dirt), look up
+`SurfaceStepSoundSettings.GetStepSoundIdForSurfaceType` (public), play it 3D at the character, with a 50% chance of a
+0.01–0.04 s delay, plus an optional `AdditionalStepSoundId` (armour clank). Ids: `step_grass`, `step_dirt`,
+`step_wood`, `step_stone`.
+
+**The donkey in vanilla:**
+- `walk_left`/`walk_right` (0.97 s) have **no events**: the donkey walks silently in the game.
+- `lips_left`/`lips_right` (1.57 s) fire `PlaySound("donkey_lips")` at t=0. Our lips fidget already plays it.
+- `graze_left`/`graze_right` (2.89/2.9 s) have **no events**, but `donkey_eating_grass` is a 2.89 s clip, so it was
+  made for the graze clip and never wired. Nothing in the code or the data plays it.
+- `ear_*`, `turning_head_*`, `static_*`: no events.
+- `donkey_bell` (1.87 s): the npc_donkey flow script plays it twice (delivery start/arrival, before event 42 DonkeyMorgue).
+- `voice_donkey` (v_donkey_1..4, 0.29–0.54 s): the donkey's dialogue voice (LazySpeechEngine), plays only in dialogue.
+
+**The cart:** nothing. No rolling or creak sound exists for a cart. Closest by length/name: `conveyor_furnace_wheel`
+(0.97 s samples, the same as the walk cycle), `conveyor_assembly_wheel` (0.85 s); loops `potters_wheel_work`,
+`millstone_work`, `well_pump`. Not auditioned.
+
+**Cargo:** the game's grab sound (`PlayOverheadItemTakeSound`: zombie/corpse/wood only) already plays when loading
+the cart (HeadReroute), and the drop sounds play when an item is set down (DropView.PlayItemDropSound).
+`oh_wood_container_drop` ("oh_wood_crate_drop") exists and is a thump into a container.
+
+**The rider:** Ride style holds the keeper in a pose clip; unconfirmed whether it has step events (expected silent).
+Cart style's riding pose is the keeper's walk animation (he rides the donkey, which pulls the cart), so its step
+events would sound footsteps of a keeper who is riding; the mod skips the keeper's step events while mounted.
+
+Candidate clips exported as WAV to `C:\ClaudeCodeTemp\GK2-donkey-sfx-audition\` (35 files) for listening.
+
+### Round 12, built (2026-09-29): MountSounds.cs and the Sounds tab
+
+User audition: `v_donkey_*` are brays (eehh, ahh, oooh); `ConveyorFurnace_Wheel_*` work as cart wheels;
+`ConveyorAssembly_Wheel_*` sound like a rev with a chain. All six proposals built, every value on a new Sounds tab,
+per style (`[Ride]`/`[Cart]`), plus `General.BellKey`.
+
+- **Timing** from the donkey's animator, layer 0: current clip name (override clips `walk_left`, `graze_right`, ...)
+  and `normalizedTime`. Footfall k = floor(t * HoofStepsPerCycle + HoofPhase); a sound on every increase. Entering
+  the walk clip starts one below, so the first footfall sounds at once; a decrease (left/right clip change restarts
+  the time) re-bases without a step. Wheel the same with t / WheelEveryCycles.
+- **Surface**: the game's footstep probe (`AnimationComponentBase.GetSurfaceType`: ray 1 unit down, mask 2060, the
+  `IOrderedSurface` with the lowest Depth) re-implemented from the donkey's root, because the donkey's animation
+  component may sit on an offset child; then `SurfaceStepSoundSettings.GetStepSoundIdForSurfaceType`. `None` = dirt.
+- **Cargo thump** only for a real mount's head load, not `LoadFromHead("after the save")` (waking up).
+- **Playback**: `LazyAudio.PlayAtGameObject(id, donkey.transform, sound3D, checkDelay: false)`, then
+  `SetVolume`/`SetPitch` (both multiply the sample's own values) and `SetFadeInFadeOut(0, 0)`. Why the last:
+  `SoundController.Reset` does not clear fade times, and `UpdateVolumeWhilePlaying` with a leftover fade-out writes
+  back the volume captured when that fade was set up, which would undo SetVolume on a reused pool entry.
+  An id missing from `AudioConfig` is refused before playing (the game would play its placeholder `defaultClip`).
+- **Mixer**: `voice_donkey` is in a different group (path id 2194, the dialogue voice) from the SFX sounds (2187).
+  `BrayInSfxChannel` moves the bray to `donkey_bell`'s group via `SoundHandler.SetMixerGroup`.
+- **Patches** (both on AnimationComponentBase, no overrides below it, Cecil-checked):
+  `OnAnimationStepCompleted` prefix skips the keeper's step while mounted (no setting; he always rides);
+  `PlaySound(string)` prefix sends the donkey's own `donkey_lips` animation event through `LipsVolume`.
+- **Cargo thump** from `HeadReroute.TakeToCart` and `Cargo.LoadFromHead`, Cart style only, not while the cargo sheet
+  runs.
+- `UnityEngine.AudioModule` reference added (AudioMixerGroup). Unconfirmed in game.

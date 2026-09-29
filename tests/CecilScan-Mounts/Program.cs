@@ -90,5 +90,14 @@ Method("PlayerData", "get_OverheadCount", 0);
 { var td = game.GetType("PlayerData"); var ms = td?.Methods.Where(x => x.Name == "InsertOverheadItemTo").ToList(); bool good = ms != null && ms.Count == 2 && ms.Any(m => m.Parameters.Count == 2 && m.HasBody); Console.WriteLine((good?"PASS":"FAIL") + $" method PlayerData.InsertOverheadItemTo overloads={ms?.Count} (need WgoData and WgoData,Item)"); if (!good) fails++; }
 // Inventory.CanAddItemToInventory and PlayerData.InsertOverheadItemTo have two overloads each; the IL scan above covers them.
 { var pa = game.GetType("PlayerAnimation"); bool good = pa?.BaseType?.Name == "AnimationComponent" && game.GetType("AnimationComponent")?.BaseType?.Name == "AnimationComponentBase"; Console.WriteLine((good?"PASS":"FAIL") + " PlayerAnimation : AnimationComponent : AnimationComponentBase"); if (!good) fails++; }
+// Round 12 (sounds): the donkey's surface probe, the keeper's step event and the animation-event PlaySound, patched
+// on AnimationComponentBase; neither may be overridden below it or the patch would miss the keeper/donkey.
+{ var td = game.GetType("IOrderedSurface"); bool good = td != null && td.IsInterface && td.Methods.Any(m => m.Name == "get_SurfaceType") && td.Methods.Any(m => m.Name == "get_Depth"); Console.WriteLine((good?"PASS":"FAIL") + " interface IOrderedSurface.SurfaceType/Depth"); if (!good) fails++; }
+Method("AnimationComponentBase", "OnAnimationStepCompleted", 0);
+Method("AnimationComponentBase", "PlaySound", 1);
+Method("SurfaceStepSoundSettings", "GetStepSoundIdForSurfaceType", 1);
+{ bool good = !game.Types.Any(t => t.Name != "AnimationComponentBase" && t.Methods.Any(m => (m.Name == "OnAnimationStepCompleted" || m.Name == "PlaySound") && m.IsVirtual && !m.IsNewSlot && IsSubOf(t, "AnimationComponentBase")));
+  Console.WriteLine((good?"PASS":"FAIL") + " no override of AnimationComponentBase.OnAnimationStepCompleted/PlaySound"); if (!good) fails++; }
+bool IsSubOf(TypeDefinition t, string baseName) { var b = t.BaseType; while (b != null) { if (b.Name == baseName) return true; try { b = b.Resolve()?.BaseType; } catch { return false; } } return false; }
 Console.WriteLine(fails == 0 ? "ALL PASS" : "FAILURES: " + fails);
 return fails;

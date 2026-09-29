@@ -281,6 +281,17 @@ namespace GK2Mounts
 
             Follow(pc);
             RevealDonkeyIfDue();
+            if (partsReady)
+            {
+                try
+                {
+                    MountSounds.Tick(donkey, pc.PlayerData.charState.Value == AnimationState.Walk);
+                }
+                catch (Exception e)
+                {
+                    Plugin.Log.LogWarning("Sounds: update failed: " + e.Message);
+                }
+            }
             if (activeStyle == MountStyle.Cart && partsReady)
             {
                 Lantern.Tick();
@@ -392,6 +403,7 @@ namespace GK2Mounts
                 return;
             }
             mounted = true;
+            MountSounds.OnMounted();
             riderFacingX = pc.PlayerData.Direction.x < -0.05f ? -1f : 1f;
             if (Mount.SideView)
             {
@@ -1361,6 +1373,7 @@ namespace GK2Mounts
             donkey = null;
             partsReady = false;
             cartParts.Clear();
+            MountSounds.OnDonkeyGone();
             Cargo.Detach(); // keeps the item list; Unload (called before this on a real dismount) clears it
             Lantern.Detach();
             hiddenRenderers.Clear();

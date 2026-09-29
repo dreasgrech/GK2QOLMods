@@ -6,7 +6,7 @@ namespace GK2Mounts
 {
     // In-game tuning panel (Unity IMGUI), shown in the top-right corner while mounted when Debug.TuningWindow is on.
     // Tabs: General (behaviour), Riding (everything that places and animates rider and donkey, for the style
-    // currently mounted), Debug. Every control edits the live config value and the mount reacts immediately;
+    // currently mounted), Lantern, Sounds, Debug, Export. Every control edits the live config value and the mount reacts immediately;
     // "Save to config file" writes the cfg. Right-click on a row resets that value to its default.
     internal static class TuningWindow
     {
@@ -19,7 +19,7 @@ namespace GK2Mounts
         private static string cargoItemId = "wood";
         private static string spawnItemId = "wood";
         private static bool pairOffsetsOpen;
-        private static readonly string[] TabNames = { "General", "Riding", "Lantern", "Debug", "Export" };
+        private static readonly string[] TabNames = { "General", "Riding", "Lantern", "Sounds", "Debug", "Export" };
 
         public static void Draw()
         {
@@ -51,7 +51,7 @@ namespace GK2Mounts
         private static float maxContentHeight = 800f;
         private static float chromeHeight = 130f;   // measured; 130 is the first-frame guess
         private static float lastScrollHeight;
-        private static readonly float[] contentHeight = new float[5]; // measured per tab, last repaint
+        private static readonly float[] contentHeight = new float[6]; // measured per tab, last repaint
 
         // Panel width in panel units (before the overall scale) and the widths derived from it, so rows shrink and
         // grow with the panel instead of overflowing it.
@@ -115,7 +115,8 @@ namespace GK2Mounts
                 case 0: DrawGeneral(); break;
                 case 1: DrawRiding(); break;
                 case 2: DrawLantern(); break;
-                case 3: DrawDebug(); break;
+                case 3: DrawSounds(); break;
+                case 4: DrawDebug(); break;
                 default: DrawExport(); break;
             }
             GUILayout.EndVertical();
@@ -345,6 +346,132 @@ namespace GK2Mounts
 
             GUILayout.Label(Lantern.LightSummary(), small);
             GUILayout.Label(Lantern.Summary(), small);
+        }
+
+        private static bool waitingForBellKey;
+
+        private static void DrawSounds()
+        {
+            StyleSettings s = Mount.S;
+            bool cart = Mount.CurrentStyle == MountStyle.Cart;
+            Header("Sounds for this style  [" + s.Section + "]");
+            GUILayout.Label("All sounds are the game's own, played at the donkey through the game's sound player, so the in-game SFX volume applies. Volumes and pitches multiply the game's values for that sound (1 = as the game plays it). Sound ids can be any id from the game's list (PROBE-FINDINGS Round 12); an unknown id plays nothing and is marked here. The play buttons preview a sound with the settings below.", small);
+            Toggle("All mount sounds on", s.SoundsOn, null);
+            FloatSlider("Master volume", s.SoundVolume, 0f, 3f, 2, null);
+            if (!s.SoundsOn.Value)
+            {
+                GUILayout.Label("Off: the game's own behaviour (a silent donkey, the keeper's footsteps, the game's lip sound).", small);
+                return;
+            }
+
+            Header("Hoofsteps");
+            Toggle("Hoofsteps while the donkey walks", s.HoofOn, null);
+            SoundIdRow("Sound id (empty = by the ground: grass, dirt, wood, stone)", s.HoofSoundId, "hoof", allowEmpty: true);
+            Toggle("Pick the step by the ground under the donkey (empty id only; off = dirt)", s.HoofSurfaceAware, null);
+            FloatSlider("Volume", s.HoofVolume, 0f, 3f, 2, null);
+            FloatSlider("Pitch (below 1 = heavier)", s.HoofPitch, 0.3f, 2f, 2, null);
+            FloatSlider("Random pitch change per step, either way", s.HoofPitchVariation, 0f, 0.5f, 2, null);
+            IntSlider("Footfalls per walk cycle", s.HoofStepsPerCycle, 1, 8, null);
+            FloatSlider("Timing within the cycle (fraction of a step)", s.HoofPhase, 0f, 1f, 2, null);
+
+            Header("Grazing and lips (standing still)");
+            Toggle("Chewing sound when the donkey grazes", s.GrazeOn, null);
+            SoundIdRow("Graze sound id", s.GrazeSoundId, "graze", allowEmpty: false);
+            FloatSlider("Graze volume", s.GrazeVolume, 0f, 3f, 2, null);
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Lip-smacking volume (the game's own sound on the lips animation; 0 = silent)", label, GUILayout.Width(LabelW));
+            if (GUILayout.Button("Play", GUILayout.Width(50f))) MountSounds.Preview("lips");
+            GUILayout.EndHorizontal();
+            FloatSlider("", s.LipsVolume, 0f, 3f, 2, null);
+
+            Header("Braying");
+            SoundIdRow("Bray sound id (voice_donkey: four short ee-aw sounds)", s.BraySoundId, "bray", allowEmpty: false);
+            FloatSlider("Chance of a bray when you mount", s.BrayOnMountChance, 0f, 1f, 2, null);
+            FloatSlider("One idle bray on average every ... seconds (0 = never)", s.BrayIdleEverySeconds, 0f, 300f, 0, null);
+            Toggle("Idle brays also while moving", s.BrayWhileWalking, null);
+            FloatSlider("Volume", s.BrayVolume, 0f, 3f, 2, null);
+            FloatSlider("Pitch", s.BrayPitch, 0.3f, 2f, 2, null);
+            Toggle("Follows the SFX volume (off: the speech volume, as in the donkey's dialogue)", s.BrayInSfxChannel, null);
+
+            Header("Cart");
+            if (!cart)
+            {
+                GUILayout.Label("Wheels and the cargo thump belong to the cart. Mount in Cart style to tune them.", small);
+            }
+            else
+            {
+                Toggle("Wheel rumble while the cart moves", s.WheelOn, null);
+                SoundIdRow("Wheel sound id (conveyor_assembly_wheel = chain and rev)", s.WheelSoundId, "wheel", allowEmpty: false);
+                FloatSlider("Wheel volume", s.WheelVolume, 0f, 3f, 2, null);
+                FloatSlider("Wheel pitch", s.WheelPitch, 0.3f, 2f, 2, null);
+                Toggle("Wheel pitch rises with the walking speed", s.WheelPitchFollowsSpeed, null);
+                IntSlider("Once every ... walk cycles", s.WheelEveryCycles, 1, 4, null);
+                FloatSlider("Timing within the cycle", s.WheelPhase, 0f, 1f, 2, null);
+                Toggle("Thump when an item lands in the cart", s.CargoThumpOn, null);
+                SoundIdRow("Thump sound id", s.CargoThumpSoundId, "thump", allowEmpty: false);
+                FloatSlider("Thump volume", s.CargoThumpVolume, 0f, 3f, 2, null);
+                FloatSlider("Thump pitch", s.CargoThumpPitch, 0.3f, 2f, 2, null);
+            }
+
+            Header("Bell");
+            SoundIdRow("Bell sound id", s.BellSoundId, "bell", allowEmpty: false);
+            Toggle("Ring when the donkey sets off after standing", s.BellOnSetOff, null);
+            Toggle("... only with cargo on the cart", s.BellOnlyWithCargo, null);
+            FloatSlider("... after standing at least (seconds)", s.BellSetOffIdleSeconds, 0f, 60f, 0, null);
+            FloatSlider("Volume", s.BellVolume, 0f, 3f, 2, null);
+            FloatSlider("Pitch", s.BellPitch, 0.3f, 2f, 2, null);
+            BellKeyRow();
+
+            Header("Status");
+            GUILayout.Label("Last sound: " + (string.IsNullOrEmpty(MountSounds.LastEvent) ? "none yet" : MountSounds.LastEvent), small);
+            if (GUILayout.Button("Reset the sounds of this style to defaults"))
+            {
+                s.ResetSounds();
+            }
+        }
+
+        // A sound id as a text field with a play button; an id the game does not have is flagged.
+        private static void SoundIdRow(string name, ConfigEntry<string> entry, string preview, bool allowEmpty)
+        {
+            GUILayout.BeginHorizontal();
+            GUILayout.Label(name, label, GUILayout.Width(LabelW));
+            if (GUILayout.Button("Play", GUILayout.Width(50f)))
+            {
+                MountSounds.Preview(preview);
+            }
+            GUILayout.EndHorizontal();
+            GUILayout.BeginHorizontal();
+            string v = GUILayout.TextField(entry.Value ?? "", GUILayout.Width(LabelW));
+            string id = (v ?? "").Trim();
+            bool ok = (allowEmpty && id.Length == 0) || MountSounds.KnownId(id);
+            GUILayout.Label(ok ? "" : "unknown id", small);
+            GUILayout.EndHorizontal();
+            if (ResetOnRightClick(entry, null)) { return; }
+            if (v != entry.Value)
+            {
+                entry.Value = v;
+            }
+        }
+
+        // General.BellKey: click, then press a key (Escape clears it).
+        private static void BellKeyRow()
+        {
+            if (waitingForBellKey && Event.current.type == EventType.KeyDown && Event.current.keyCode != KeyCode.None)
+            {
+                Plugin.BellKey.Value = Event.current.keyCode == KeyCode.Escape ? KeyCode.None : Event.current.keyCode;
+                waitingForBellKey = false;
+                Event.current.Use();
+            }
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Bell key (General.BellKey, both styles)", label, GUILayout.Width(LabelW));
+            string shown = waitingForBellKey ? "press a key" : (Plugin.BellKey.Value == KeyCode.None ? "none" : Plugin.BellKey.Value.ToString());
+            if (GUILayout.Button(shown, GUILayout.Width(100f)))
+            {
+                waitingForBellKey = !waitingForBellKey;
+            }
+            GUILayout.EndHorizontal();
+            if (ResetOnRightClick(Plugin.BellKey, null)) { waitingForBellKey = false; }
+            GUILayout.Label("Click, then press the key; Escape clears it. Pick a key the game does not use.", small);
         }
 
         // A hex colour as three 0-1 sliders; the entry keeps RRGGBB so the config stays hand-editable.

@@ -145,6 +145,10 @@ namespace GK2Mounts
             }
             if (moved > 0)
             {
+                if (reason == "mount")
+                {
+                    MountSounds.CargoLanded(); // not when the cargo goes back on after a save (waking up)
+                }
                 Plugin.Log.LogInfo($"Cargo: {moved} item(s) moved from the hands onto the cart ({reason}); cart {inv.Data.Inventory.Count}/{inv.Data.InventorySize}.");
             }
         }

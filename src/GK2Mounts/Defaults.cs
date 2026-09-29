@@ -115,11 +115,22 @@ namespace GK2Mounts
                 Line(sb, s.LanternSwayDegrees); Line(sb, s.LanternSwaySeconds); Line(sb, s.IdleFidgetEverySeconds); Line(sb, s.IdleFidgetSpeed); Line(sb, s.IdleCrawlSpeed);
                 Line(sb, s.LanternShow); Line(sb, s.LanternScale); Line(sb, s.LanternLightOn); Line(sb, s.LanternLightIntensity); Line(sb, s.LanternLightRange); Line(sb, s.LanternLightColor); Line(sb, s.LanternLightShadows); Line(sb, s.LanternLightDayDim);
                 Line(sb, s.LanternSelfLightOn); Line(sb, s.LanternSelfLightIntensity); Line(sb, s.LanternSelfLightRange); Line(sb, s.LanternGlowOn); Line(sb, s.LanternGlowAlpha); Line(sb, s.LanternGlowScale); Line(sb, s.LanternGlassOn);
+                foreach (ConfigEntryBase e in s.SoundEntries)
+                {
+                    LineBoxed(sb, e);
+                }
                 sb.AppendLine();
             }
             Directory.CreateDirectory(Path.GetDirectoryName(path));
             File.WriteAllText(path, sb.ToString());
             return path;
+        }
+
+        private static void LineBoxed(StringBuilder sb, ConfigEntryBase e)
+        {
+            object v = e.BoxedValue;
+            string text = v is IFormattable f ? f.ToString(null, CultureInfo.InvariantCulture) : (v?.ToString() ?? "");
+            sb.AppendLine(e.Definition.Key + " = " + text);
         }
 
         private static void Line<T>(StringBuilder sb, ConfigEntry<T> e)

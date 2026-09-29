@@ -66,6 +66,14 @@ namespace GK2Mounts
         public readonly ConfigEntry<float> LanternScale, LanternLightIntensity, LanternLightRange, LanternLightDayDim, LanternSelfLightIntensity, LanternSelfLightRange, LanternGlowAlpha, LanternGlowScale;
         public readonly ConfigEntry<string> LanternLightColor;
         public readonly ConfigEntry<float> IdleFidgetEverySeconds, IdleFidgetSpeed, IdleCrawlSpeed;
+        // Sounds tab (MountSounds.cs). Volumes multiply the game's own volume for that sound (1 = as the game plays it).
+        public readonly ConfigEntry<bool> SoundsOn, HoofOn, HoofSurfaceAware, GrazeOn, BrayWhileWalking, BrayInSfxChannel,
+            CargoThumpOn, WheelOn, WheelPitchFollowsSpeed, BellOnSetOff, BellOnlyWithCargo;
+        public readonly ConfigEntry<float> SoundVolume, HoofVolume, HoofPitch, HoofPitchVariation, HoofPhase, GrazeVolume, LipsVolume,
+            BrayOnMountChance, BrayIdleEverySeconds, BrayVolume, BrayPitch, CargoThumpVolume, CargoThumpPitch,
+            WheelVolume, WheelPitch, WheelPhase, BellVolume, BellPitch, BellSetOffIdleSeconds;
+        public readonly ConfigEntry<int> HoofStepsPerCycle, WheelEveryCycles;
+        public readonly ConfigEntry<string> HoofSoundId, GrazeSoundId, BraySoundId, CargoThumpSoundId, WheelSoundId, BellSoundId;
 
         public StyleSettings(ConfigFile cfg, string section, float speed, float depth, float center, int riderPx, int torsoPx,
             bool autoSeat, int seatAdjustPx, float seatOffset, bool bob, RiderPose pose, bool freeze,
@@ -179,6 +187,85 @@ namespace GK2Mounts
                 new ConfigDescription("Playback speed of the pose during a fidget (1 = the clip's own speed).", new AcceptableValueRange<float>(0.05f, 2f)));
             IdleCrawlSpeed = cfg.Bind(section, "IdleCrawlSpeed", Defaults.Get(section, "IdleCrawlSpeed", 0.05f),
                 new ConfigDescription("With FreezePoseWhenIdle: playback speed between fidgets, so the keeper's breathing layer keeps a barely visible life instead of stopping. 0 = fully still between fidgets.", new AcceptableValueRange<float>(0f, 0.5f)));
+
+            bool cart = section == "Cart";
+            SoundsOn = B(cfg, section, "SoundsOn", true, "Master switch for all mount sounds added by the mod " + who + ".");
+            SoundVolume = F(cfg, section, "SoundVolume", 1f, 0f, 3f, "Master volume multiplier for all mount sounds " + who + ".");
+            HoofOn = B(cfg, section, "HoofOn", true, "Hoofsteps: the game's donkey walks silently; this plays a step sound on each footfall of its walk cycle.");
+            HoofSoundId = S(cfg, section, "HoofSoundId", "", "Sound id for the hoofsteps. Empty = by the ground under the donkey (step_grass/step_dirt/step_wood/step_stone, as the game's footsteps).");
+            HoofSurfaceAware = B(cfg, section, "HoofSurfaceAware", true, "With an empty HoofSoundId: pick the step sound by the surface under the donkey. Off: always step_dirt.");
+            HoofVolume = F(cfg, section, "HoofVolume", 1.3f, 0f, 3f, "Hoofstep volume (x the game's footstep volume).");
+            HoofPitch = F(cfg, section, "HoofPitch", 0.8f, 0.3f, 2f, "Hoofstep pitch (below 1 = heavier than the keeper's steps).");
+            HoofPitchVariation = F(cfg, section, "HoofPitchVariation", 0.06f, 0f, 0.5f, "Random pitch change per hoofstep, either way, so steps do not sound identical.");
+            HoofStepsPerCycle = I(cfg, section, "HoofStepsPerCycle", 4, 1, 8, "Footfalls per walk cycle of the donkey's animation (a donkey has four hooves).");
+            HoofPhase = F(cfg, section, "HoofPhase", 0f, 0f, 1f, "Shifts the footfalls within the walk cycle (fraction of one step), to line them up with the art.");
+            GrazeOn = B(cfg, section, "GrazeOn", true, "Play a chewing sound when the donkey grazes while standing (the game has the sound, made for the graze animation, but never plays it).");
+            GrazeSoundId = S(cfg, section, "GrazeSoundId", "donkey_eating_grass", "Sound id for grazing.");
+            GrazeVolume = F(cfg, section, "GrazeVolume", 1f, 0f, 3f, "Graze sound volume.");
+            LipsVolume = F(cfg, section, "LipsVolume", 1f, 0f, 3f, "Volume of the lip-smacking the game's own donkey animation plays (0 = silent).");
+            BraySoundId = S(cfg, section, "BraySoundId", "voice_donkey", "Sound id for brays (the donkey's dialogue voice: short ee-aw sounds).");
+            BrayOnMountChance = F(cfg, section, "BrayOnMountChance", 0.5f, 0f, 1f, "Chance the donkey brays when you mount (0 = never, 1 = always).");
+            BrayIdleEverySeconds = F(cfg, section, "BrayIdleEverySeconds", 40f, 0f, 300f, "On average one bray this often while standing (randomised by half either way). 0 = no idle brays.");
+            BrayWhileWalking = B(cfg, section, "BrayWhileWalking", false, "Idle brays can also happen while moving.");
+            BrayVolume = F(cfg, section, "BrayVolume", 1f, 0f, 3f, "Bray volume.");
+            BrayPitch = F(cfg, section, "BrayPitch", 1f, 0.3f, 2f, "Bray pitch.");
+            BrayInSfxChannel = B(cfg, section, "BrayInSfxChannel", true, "Route brays through the game's SFX volume. Off: the dialogue-voice channel the game uses for this sound (speech volume).");
+            CargoThumpOn = B(cfg, section, "CargoThumpOn", true, "Cart: a thump when an item lands in the cart (on top of the game's pickup sound).");
+            CargoThumpSoundId = S(cfg, section, "CargoThumpSoundId", "oh_wood_container_drop", "Sound id for an item landing in the cart.");
+            CargoThumpVolume = F(cfg, section, "CargoThumpVolume", 1f, 0f, 3f, "Cargo thump volume.");
+            CargoThumpPitch = F(cfg, section, "CargoThumpPitch", 1f, 0.3f, 2f, "Cargo thump pitch.");
+            WheelOn = B(cfg, section, "WheelOn", cart, "Cart: a wooden wheel rumble once per walk cycle while the cart moves (the game has no cart sound; this borrows a machine wheel).");
+            WheelSoundId = S(cfg, section, "WheelSoundId", "conveyor_furnace_wheel", "Sound id for the wheels (conveyor_assembly_wheel is the chain-and-rev alternative).");
+            WheelVolume = F(cfg, section, "WheelVolume", 0.6f, 0f, 3f, "Wheel volume.");
+            WheelPitch = F(cfg, section, "WheelPitch", 1f, 0.3f, 2f, "Wheel pitch.");
+            WheelPitchFollowsSpeed = B(cfg, section, "WheelPitchFollowsSpeed", false, "Raise the wheel pitch with the walk animation speed (faster = higher).");
+            WheelEveryCycles = I(cfg, section, "WheelEveryCycles", 1, 1, 4, "Play the wheel sound every this many walk cycles.");
+            WheelPhase = F(cfg, section, "WheelPhase", 0f, 0f, 1f, "Shifts the wheel sound within its cycle.");
+            BellSoundId = S(cfg, section, "BellSoundId", "donkey_bell", "Sound id for the bell (the donkey delivery's bell).");
+            BellOnSetOff = B(cfg, section, "BellOnSetOff", cart, "Ring the bell when the donkey sets off after standing still a while.");
+            BellOnlyWithCargo = B(cfg, section, "BellOnlyWithCargo", true, "Only ring on setting off when there is cargo on the cart.");
+            BellSetOffIdleSeconds = F(cfg, section, "BellSetOffIdleSeconds", 4f, 0f, 60f, "How long the donkey must have stood still before setting off rings the bell.");
+            BellVolume = F(cfg, section, "BellVolume", 0.7f, 0f, 3f, "Bell volume.");
+            BellPitch = F(cfg, section, "BellPitch", 1f, 0.3f, 2f, "Bell pitch.");
+        }
+
+        private static ConfigEntry<bool> B(ConfigFile cfg, string section, string key, bool def, string desc)
+        {
+            return cfg.Bind(section, key, Defaults.Get(section, key, def), desc);
+        }
+
+        private static ConfigEntry<string> S(ConfigFile cfg, string section, string key, string def, string desc)
+        {
+            return cfg.Bind(section, key, Defaults.Get(section, key, def), desc);
+        }
+
+        private static ConfigEntry<float> F(ConfigFile cfg, string section, string key, float def, float min, float max, string desc)
+        {
+            return cfg.Bind(section, key, Defaults.Get(section, key, def), new ConfigDescription(desc, new AcceptableValueRange<float>(min, max)));
+        }
+
+        private static ConfigEntry<int> I(ConfigFile cfg, string section, string key, int def, int min, int max, string desc)
+        {
+            return cfg.Bind(section, key, Defaults.Get(section, key, def), new ConfigDescription(desc, new AcceptableValueRange<int>(min, max)));
+        }
+
+        // Every sound entry, for the Sounds tab's reset and the defaults export.
+        public ConfigEntryBase[] SoundEntries => new ConfigEntryBase[]
+        {
+            SoundsOn, SoundVolume, HoofOn, HoofSoundId, HoofSurfaceAware, HoofVolume, HoofPitch, HoofPitchVariation, HoofStepsPerCycle, HoofPhase,
+            GrazeOn, GrazeSoundId, GrazeVolume, LipsVolume,
+            BraySoundId, BrayOnMountChance, BrayIdleEverySeconds, BrayWhileWalking, BrayVolume, BrayPitch, BrayInSfxChannel,
+            CargoThumpOn, CargoThumpSoundId, CargoThumpVolume, CargoThumpPitch,
+            WheelOn, WheelSoundId, WheelVolume, WheelPitch, WheelPitchFollowsSpeed, WheelEveryCycles, WheelPhase,
+            BellSoundId, BellOnSetOff, BellOnlyWithCargo, BellSetOffIdleSeconds, BellVolume, BellPitch,
+        };
+
+        public void ResetSounds()
+        {
+            foreach (ConfigEntryBase e in SoundEntries)
+            {
+                e.BoxedValue = e.DefaultValue;
+            }
         }
 
         public void ResetAll()
@@ -190,6 +277,7 @@ namespace GK2Mounts
             Reset(LanternSwayDegrees); Reset(LanternSwaySeconds); Reset(IdleFidgetEverySeconds); Reset(IdleFidgetSpeed); Reset(IdleCrawlSpeed);
             Reset(LanternShow); Reset(LanternScale); Reset(LanternLightOn); Reset(LanternLightIntensity); Reset(LanternLightRange); Reset(LanternLightColor); Reset(LanternLightShadows); Reset(LanternLightDayDim);
             Reset(LanternSelfLightOn); Reset(LanternSelfLightIntensity); Reset(LanternSelfLightRange); Reset(LanternGlowOn); Reset(LanternGlowAlpha); Reset(LanternGlowScale); Reset(LanternGlassOn);
+            ResetSounds();
         }
 
         private static void Reset<T>(ConfigEntry<T> e)
@@ -222,6 +310,7 @@ namespace GK2Mounts
         internal static ConfigEntry<bool> DismountIndoors;
         internal static ConfigEntry<bool> ShowMessages;
         internal static ConfigEntry<bool> SideViewOnly;
+        internal static ConfigEntry<KeyCode> BellKey;
 
         // [Ride] / [Cart]: position, pose, animation, legs, speed
         internal static StyleSettings Ride;
@@ -250,7 +339,7 @@ namespace GK2Mounts
             MountKey = Config.Bind("General", "MountKey", KeyCode.H,
                 "Key that mounts/dismounts. Pick one the game does not use.");
             Style = Config.Bind("General", "Style", MountStyle.Ride,
-                "Ride: sit on the donkey's back. Cart: the donkey pulls its cart and the keeper stands in it. Each style has its own [Ride] / [Cart] settings section.");
+                "Ride: sit on the donkey's back. Cart: ride the donkey while it pulls its cart. Each style has its own [Ride] / [Cart] settings section.");
             MountWgoId = Config.Bind("General", "MountWgoId", "npc_donkey",
                 "World object id used for the mount's looks. Only npc_donkey has been tested.");
             StayMountedThroughDoors = Config.Bind("General", "StayMountedThroughDoors", Defaults.Get("General", "StayMountedThroughDoors", true),
@@ -261,6 +350,9 @@ namespace GK2Mounts
                 "Show a thought bubble when the keeper cannot mount and why.");
             SideViewOnly = Config.Bind("General", "SideViewOnly", Defaults.Get("General", "SideViewOnly", false),
                 "The donkey only has left/right art. On: while mounted the keeper also only faces left or right (walking up/down keeps the last horizontal facing). Off: the keeper turns as usual and the donkey shows its side. Forced on for poses that only have left/right frames.");
+
+            BellKey = Config.Bind("General", "BellKey", KeyCode.None,
+                "While mounted: ring the donkey's bell. None = no key (the Sounds tab has a button). Pick one the game does not use.");
 
             Ride = new StyleSettings(Config, "Ride",
                 speed: 1.75f, depth: 0.32f, center: 0.48f, riderPx: -4, torsoPx: -3,
