@@ -130,12 +130,9 @@ namespace GK2Mounts
             public Quaternion WrittenRot = Quaternion.identity;
             public bool Written;
             public float LastTiltDeg;
-            // WholeCartPitch: pitched with the cart body, the axle in this part's parent space, and (stretched parent,
-            // the lamp rig under gfx) the child whose world spot is carried along instead of turning the node.
+            // WholeCartPitch: pitched with the cart body, and the axle in this part's parent space.
             public bool Pitched;
-            public bool CarryOnly;
             public Vector3 Pivot;
-            public Transform CarryChild;
             public float LastGround;
             public string LastSource = "-";
         }
@@ -781,7 +778,7 @@ namespace GK2Mounts
                           ?? cartParts.Find(p => p.T.name == "donkey_cart_empty_sway")
                           ?? cartParts.Find(p => p.T.name == "donkey_cart_body_sway");
             ClassifyForPitch();
-            Plugin.Log.LogInfo($"Mount: {cartParts.Count} cart parts follow the ground as one (sampled under {cartBodyPart?.T.name}): " + string.Join(", ", cartParts.ConvertAll(p => p.T.name + (p.Pitched ? (p.CarryOnly ? "(carried)" : "(pitched)") : ""))));
+            Plugin.Log.LogInfo($"Mount: {cartParts.Count} cart parts follow the ground as one (sampled under {cartBodyPart?.T.name}): " + string.Join(", ", cartParts.ConvertAll(p => p.T.name + (p.Pitched ? "(pitched)" : ""))));
         }
 
         // The shafts are one rigid mesh from the donkey's harness to the front of the cart (0.76 long). Their extent
@@ -833,15 +830,10 @@ namespace GK2Mounts
                 }
                 p.Pivot = sway ? p.Base : p.T.parent.InverseTransformPoint(axleWorld);
                 Vector3 sc = p.T.parent.lossyScale;
-                float ax = Mathf.Abs(sc.x), ay = Mathf.Abs(sc.y);
-                p.CarryOnly = ax > 0.0001f && Mathf.Abs(ay / ax - 1f) > 0.05f;
-                if (p.CarryOnly)
+                if (sway)
                 {
-                    p.CarryChild = p.T.childCount > 0 ? p.T.GetChild(0) : null;
-                    if (p.CarryChild == null)
-                    {
-                        p.Pitched = false;
-                    }
+                    Vector3 originW = p.T.parent.TransformPoint(p.Base);
+                    Plugin.Log.LogInfo($"Mount: pitch node {p.T.name} under {p.T.parent.name}: origin {Vector3.Distance(originW, axleWorld):F3} from the axle, parent scale {sc:F3}.");
                 }
                 if (p.T.name != Cargo.ContainerName)
                 {
@@ -1065,23 +1057,8 @@ namespace GK2Mounts
                 {
                     p.LastLift = cartShiftApplied;
                     p.LastTiltDeg = 0f;
-                    if (p.CarryOnly)
-                    {
-                        // Lamp rig under a stretched parent: its node keeps its rotation; it moves so that its child
-                        // (the lamp) lands where the pitched pole head is.
-                        p.T.localRotation = p.AnimRot;
-                        Vector3 restPos = p.Base + fullLift;
-                        p.T.localPosition = restPos;
-                        Vector3 axleW = p.T.parent.TransformPoint(p.Pivot + fullLift);
-                        Vector3 childW = p.CarryChild != null && p.CarryChild ? p.CarryChild.position : p.T.position;
-                        Vector3 turned = axleW + WorldPitch(p.T.parent, pitchDeg) * (childW - axleW);
-                        p.T.localPosition = restPos + p.T.parent.InverseTransformVector(turned - childW);
-                    }
-                    else
-                    {
-                        p.T.localRotation = pitch * p.AnimRot;
-                        p.T.localPosition = p.Pivot + fullLift + pitch * (p.Base - p.Pivot);
-                    }
+                    p.T.localRotation = pitch * p.AnimRot;
+                    p.T.localPosition = p.Pivot + fullLift + pitch * (p.Base - p.Pivot);
                     p.WrittenRot = p.T.localRotation;
                     p.Written = true;
                     continue;
@@ -1105,16 +1082,6 @@ namespace GK2Mounts
                 Vector3 liftVec = Mathf.Abs(lift) < 0.0005f ? Vector3.zero : p.T.parent.InverseTransformVector(Vector3.up * lift);
                 p.T.localPosition = p.Base + liftVec;
             }
-        }
-
-        // The pitch as a world rotation: about the parent's z axis (the axis across the cart), by the angle as seen
-        // in that parent's own axes, so the lamp moves the same way the pole (pitched in Base) does.
-        private static Quaternion WorldPitch(Transform parent, float deg)
-        {
-            Transform basis = swayRefPart != null && swayRefPart.T != null ? swayRefPart.T.parent : parent;
-            Vector3 axis = basis.TransformDirection(Vector3.forward);
-            float sign = Mathf.Sign(basis.lossyScale.x * basis.lossyScale.y);
-            return Quaternion.AngleAxis(deg * sign, axis);
         }
 
         private static CartPart swayRefPart;

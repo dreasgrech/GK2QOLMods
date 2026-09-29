@@ -1166,3 +1166,94 @@ the animator's rock, capped by `CartPitchMaxDegrees` (20). `light_sway` sits und
 would move the lamp along a stretched arc, so it is only translated by what its child (the lamp) must move to stay at
 the pitched pole head, and keeps its rotation (the lamp hangs). Status line on the Riding tab and the geometry log's
 `cart lift:` show style, pitch and whether the cap was hit. Unconfirmed in game.
+
+**First in-game result of WholeCartPitch (screenshots, 2026-09-29):** the cart, shafts and cargo look right. At night
+the glow and lit glass sat beside the lamp frame; by day (glow dimmed, glass hidden) the lamp looked fine, so only the
+light rig was off. Cause: the rig (`light_sway` → `light` → glow, glass, lights) was carried by its node origin, which
+is far from the glass; at 20° the error is (R − I)·offset. Fixed: carried by the glass sprite `light_ut` (log line
+"pitch carries light_sway by its light_ut"), so the glass lands in the pitched frame and the rest follows it.
+
+**Second lamp result (screenshots, daytime):** carried by the glass, the lamp still sat off the hook: the rig hangs
+from the pole head (Lantern.cs anchors it there, `light.localPosition = rest + headShift`), and a point below the
+hook turned about the axle swings sideways relative to it. Fixed: `Lantern.TryGetHangPoint` exposes the posed head
+in the pole sway node's space; the rig is moved by the head's displacement between the unpitched and the pitched pole
+node pose (computed in that node's parent space, so no facing sign), and keeps its rotation. The glass carry stays
+only as a fallback without the lantern's measurement.
+
+**Third lamp result (screenshots) and the real cause:** the log said `light_sway(pitched)`, not `(carried)`: the
+stretched-parent test was false, so none of the lamp carry code ran; the rig node was turned like the others about
+its own rest position. That node sits under `gfx`, whose origin is not Base's, so "(0.36, 0.267)" in gfx space is not
+the axle in the world, and the lamp swung about the wrong point. Fixed: `light_sway` is always carried (moved by the
+pole head's displacement, rotation kept). New log line per sway node at spawn: "pitch node X under P: origin D from
+the axle, parent scale S, carried/turned", so a pivot that is not the axle shows at once.
+
+**Fourth lamp result (screenshots): worse, and the "wrong pivot" theory disproved.** The new spawn log says both
+`light_sway` (under gfx) and `donkey_cart_lantern_sway` (under Base) have their origin 0.000 from the axle, parent
+scale (1, 1, 1). So a rigid turn of light_sway about its origin was already about the axle; the offsets have another
+cause. Stopped changing the pose and added a measurement instead: `[lamp]` log lines (twice a second while pitched)
+with the pole head and the lit glass in world space right after the mod's write and again just before rendering
+(Canvas.willRenderCanvases, after every LateUpdate), the glass-to-head offset against the same offset measured on
+flat ground per facing, and whether anything moved the rig after the mod. The Riding tab's slope status shows the
+error too.
+
+**Lamp probe result (log, 13 lines, both facings, pitch ±20):** nothing moves the rig after the mod (0.000), and the
+glass kept its flat-ground offset to the pole head (error 0.001–0.055). So the pose was carried out as computed,
+and the model was wrong: the dark lamp cage stays at the pole tip while the glow drifts, so the cage belongs to the
+pole's 3D model (pitches rigidly) and the rig's glow and lit glass are an overlay on it. The glass sits about 1.1
+below the head point, so at 20° a head-anchored overlay misses the cage by about 0.4. Fixed (`PlaceLampOnPole`):
+on unpitched frames the lit glass's visual centre is recorded in the pole node's own space (per facing); pitched,
+the rig is moved so the glass lands on that spot of the pitched pole, rotation kept. The probe now reports the glass
+against that spot ("glass off its spot on the pole by ...").
+
+**Confirmed (screenshots + log, 2026-09-29):** with `PlaceLampOnPole` the glow sits in the lamp cage at the pitched
+pole tip in both facings; the probe measured the glass on its pole spot with error 0.000 in all 290 lines (±20°,
+both facings), rig never moved after the mod. The probe now logs only when the glass is off its spot (> 0.02) or the
+rig was moved by something else; the Riding tab keeps the live figure. WholeCartPitch is the default and done,
+pending more slopes. Lesson kept: measure first (the probe settled in one ride what four guessed fixes did not).
+
+**"Two lanterns" (screenshots + video `2026-09-29 18-21-17.mp4`, frames cropped round the lamp at t = 1…88 s):** by day
+only the pole mesh's own lamp shows, hanging from the hook; towards night an upright lit lamp sprite (`light_ut`, a
+whole lamp drawing, not just glass) fades in beside it. On flat ground the sprite and the mesh lamp coincide only on
+screen: they lie on the same line of sight at different depth/height. Turning both about the axle (depth axis) turns
+that along-the-view offset into a sideways one, about 0.4 at 20°, which is what the video shows. The probe's "error
+0.000" measured the glass against a spot derived by the mod itself (circular), so it could not catch this.
+Resolution: the pole node is not pitched; it is translated so that its foot stays where the pitched cart puts it
+(`Lantern.TryGetFoot`), and the rig follows the pole by the same translation (PlaceLampOnPole), so the on-screen
+overlay is exactly as on flat ground. Installed 18:24, after the video.
+
+### The lamp offset is the Lantern tab's tilt, not the slopes (2026-09-29)
+
+Controlled tests on flat ground (user screenshots): flip off/tilt 0, flip on/tilt 0, flip off/tilt 4 each show one
+lamp; tilt 20 shows two lamps with flip off and with flip on (the video `2026-09-29 21-08-54.mp4` shows the two apart
+while the tilt slider moves). The on-screen probe had already shown the slopes change the lit sprite's gap to the
+pole by at most 2.3 px against flat ground: the user's Cart setting (tilt 4, flip on) was the constant offset.
+Cause: `Lantern.Apply` turned the pole mesh (its iron lamp included) about the foot and only translated the lit lamp
+rig by the pole top's displacement. Replaced by `PlaceLit`: the iron lamp is taken as the point on the camera's line
+of sight through the sprite's rest centre at the pole mesh's depth (mesh box centre z 0.26; the sprite's plane is z
+0.125); that point is posed like the pole (mirror, scale, turn, offsets) and the sprite slides in its own plane to
+the line of sight through it (zero shift at rest). Logged on each tilt/lean/flip/scale change ("Lantern: tilt ...:
+lit lamp on the iron lamp's line of sight: sprite z, mesh z, view, shift (the old top rule: ...)"), and shown on the
+Lantern tab. The iron lamp's depth is an assumption (mesh centre); the tilt-20 test decides it.
+
+### How the game handles the lit lamp glass, and the actual fix (2026-09-29)
+
+Studied in the game code and the lantern dump, at the user's request, instead of fitting more formulas:
+- The pole is an `Object3D` (Object3D.cs): a set of `HorizontalSprite`s and `VerticalSprite`s baked into one mesh
+  (`donkey_cart_lantern-MERGE S_OBJ`). The "iron lamp" is baked vertical sprites.
+- The lit glass `light_ut` (`donkey_cart_lantern_ut`, shader Custom/Day Night Object (Unlit)) is a `VerticalSprite`
+  as well, under `lantern` (scale y 1.667) under `light` under `light_sway`. `VerticalSprite`/`GenericSprite` only set
+  shadows; `PerpendicularVerticalSprite` feeds `_ObjectWorldPos` to its material; nothing repositions the glass.
+  The "Lit lantern glass" panel switch hides exactly this sprite (the user's finding: it is the extra lamp).
+- The game's own motion of the pair (GK2-lantern-facts.txt): the walk animation rotates `donkey_cart_lantern_sway`
+  and `gfx/light_sway` by the identical angle (-3..+3 degrees) about the identical pivot, in the same 636 of 702 frames.
+  So the game keeps the glass on the lamp by giving it the same transform as the pole, rotation included.
+- Therefore every rule that moved the rig without turning it was wrong (the pole-top rule, the line-of-sight rule,
+  the anchor sliders, the upright pole on slopes, the "carried" rig). Only tilt 0 looked right because only then
+  was there no rotation to miss.
+
+Fix: `Lantern.Apply` gives the rig the pole's transform (turn r about the foot, the flip mirror, the scale, the
+offsets). `WholeCartPitch` turns `light_sway` about the axle like every other sway node, as the game's rock does,
+so the pole tips with the cart again. Removed: the anchor sliders (`LanternLitAnchor*`, never shipped; an old cfg
+line is ignored), `PlaceLampOnPole`, the upright pole, the carried rig and both lamp probes. The earlier conclusions
+in this file that the sprite "cannot be turned" or sits "along the line of sight at another depth" are wrong.
+Unconfirmed in game.

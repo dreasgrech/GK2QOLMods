@@ -48,6 +48,7 @@ namespace GK2Mounts
         private static bool poleShown = true;
 
         public static bool Attached => pole != null && pole;
+
         public static string Note { get; private set; } = "";
 
         public static void Attach(Wgo donkey)
@@ -367,33 +368,30 @@ namespace GK2Mounts
             pole.localRotation = r * poleRotRest;
             pole.localScale = poleScale;
             pole.localPosition = foot + r * (scale * (poleAt - foot)) + offset;
-            // The lamp rig (sprites and lights) is never rotated, its sprites are upright pixel art. Flipped, it is
-            // mirrored in the same plane: the node goes to the mirrored spot and its x scale turns negative, which
-            // mirrors sprites, glow offset and light positions alike (negative x scale is how the game draws the
-            // donkey facing the other way, so its sprite shader is known to take it). Then the rig follows the top
-            // of the pole.
+            // The lamp rig (glow, lit glass, both lights) gets exactly the pole's transform: the same turn about the same
+            // foot, the same mirror and the same scale. The game does the same: the walk animation rocks the pole's
+            // sway node and the rig's (light_sway) by the identical angle about the identical pivot (GK2-lantern-facts),
+            // and it works because the pole is an Object3D, i.e. baked vertical sprites, and the lit glass is a vertical
+            // sprite too: the same kind of drawing under the same transform stays on top of it at any angle. (Moving the
+            // rig without turning it, as this code did before, put a second lamp beside the pole's own at any tilt or
+            // lean; only tilt 0 looked right. User tests 2026-09-29.)
             Vector3 rig = lightRest;
-            Vector3 rigScale = lightScaleRest;
+            Vector3 rigScale = lightScaleRest * scale;
             if (flip)
             {
                 rig.x = 2f * foot.x - lightRest.x;
-                rigScale.x = -lightScaleRest.x;
+                rigScale.x = -rigScale.x;
             }
-            Vector3 top = head;
-            if (flip)
-            {
-                top.x = 2f * foot.x - head.x;
-            }
-            Vector3 headShift = foot + r * (scale * (top - foot)) - top;
-            light.localRotation = lightRotRest;
+            light.localRotation = r * lightRotRest;
             light.localScale = rigScale;
-            light.localPosition = rig + headShift + offset;
+            light.localPosition = foot + r * (scale * (rig - foot)) + offset;
             lastPolePos = pole.localPosition;
             lastPoleRot = pole.localRotation;
             lastLightPos = light.localPosition;
             aAlong = along; aUp = up; aAcross = across; aTilt = tilt; aLean = lean; aFlip = flip; aScale = scale;
             applied = true;
         }
+
 
         public static string Summary()
         {
