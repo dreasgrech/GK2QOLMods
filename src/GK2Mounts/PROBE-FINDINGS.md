@@ -1292,3 +1292,7 @@ world up), C = turn by d about the hook; lamp local = M⁻¹·C·M (M = the mesh
 mirrors), rig node local = P⁻¹·C·P applied to Lantern's stored rig pose. Detach restores the original mesh before any
 re-measure. Off, hidden pole or any mismatch: the lantern as before. Offline check of the split on the embedded
 data matches the Round 13 table. Unconfirmed in game.
+
+**Confirmed in game (screenshots, 2026-09-29):** one lamp, hanging straight from the hook, lit glass inside, at
+turns of 4.1° (flat ground, tilt 4), 18.0° (slope) and 15.8° (bridge); mirror on. Still to see: mirror off and the
+other facing.
