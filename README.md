@@ -5,7 +5,7 @@ so you can install any subset.
 
 | Mod | Version | In one line |
 |---|---|---|
-| [Global Storage](#global-storage) | 1.1.3 | Craft and build with materials from chests in every area, not just the one you're standing in. |
+| [Global Storage](#global-storage) | 1.1.4 | Craft and build with materials from chests in every area, not just the one you're standing in. |
 | [Built Count](#built-count) | 1.0.4 | Build menus show how many of each building you already have in that area. |
 | [Move Building](#move-building) | 1.1.4 | Pick up a built building and put it down somewhere else, contents and all. |
 | [Owned Count](#owned-count) | 1.0.3 | Item tooltips show how many of that item you own across inventory and every chest. |
@@ -60,6 +60,8 @@ within one area.
 - Settings: `IncludeBuildAndAlchemy` (build desks, town buildings, alchemy, gardens, graves, autopsy pickers and
   requirement tooltips, on by default); `IncludeFuelContainers` and `IncludeConveyorStorage` (off by default so
   remote furnaces and conveyor lines aren't starved); `IncludeZombieOrderDelivery` (off); `VerboseLogging`.
+- Optional: with [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) installed, its settings
+  also appear in the game's Mods menu. The same DLL works without it.
 
 ### Built Count
 

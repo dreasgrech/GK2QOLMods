@@ -32,7 +32,7 @@ namespace GK2OwnedCount
 
         // Every Harmony patch class, patched by name. Not PatchAll(assembly): that lists every type in this DLL, and
         // FrameworkLink's mod class can't be loaded without GK2.Framework.dll, so Harmony would log a warning.
-        // tests/CecilScan-OwnedCount fails if a [HarmonyPatch] class is missing here.
+        // tests/FrameworkScan fails if a [HarmonyPatch] class is missing here.
         internal static readonly Type[] PatchClasses = { typeof(UITooltip_AddItemWidgets_Patch) };
 
         // What the mod is doing, for the Mods menu's status row.

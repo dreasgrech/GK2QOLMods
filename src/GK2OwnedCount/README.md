@@ -94,7 +94,7 @@ stock, items lying on the ground.
   fields exist with the expected types; the patch target is a single method with a body.
 - Round 1 in-game (1.0.0): line correct in inventory and chest tooltips; "all grades" missing for Bones, fixed in 1.0.1 (see below).
 - Round 2 in-game (1.0.1): both Bones grades show `Owned: 1  (all grades: 2)` with the breakdown on its own line; no errors in the log.
-- 1.0.3, Cecil scan additions:
+- 1.0.3, new checks, now in the shared `tests/FrameworkScan`:
   - every `[HarmonyPatch]` class is listed in `Plugin.PatchClasses`;
   - `Plugin` has no method Unity would call by name;
   - only `FrameworkLink.Register` and its mod class touch `GK2.Framework`, `Register` is NoInlining, and the

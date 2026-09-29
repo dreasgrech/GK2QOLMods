@@ -129,7 +129,7 @@ is loaded:
 - patches go in by class (`Plugin.PatchClasses`) and not with `PatchAll(assembly)`. The latter calls
   `Assembly.GetTypes()`, which throws for the unloadable nested class, and HarmonyX then logs a warning.
   BepInEx's Cecil scan catches `AssemblyResolutionException`, so it needs no change;
-- `tests/CecilScan-<Mod>` checks that every `[HarmonyPatch]` class is listed, that no code outside
+- `tests/FrameworkScan` checks, for every integrated mod, that every `[HarmonyPatch]` class is listed, that no code outside
   `FrameworkLink.Register` and its mod class references `GK2.Framework` (in base types, fields, signatures, locals
   or IL), and that `NoInlining` and the soft dependency are in place. A mutation test (a framework-typed field
   added to `Plugin`) made it fail as it should;
@@ -149,7 +149,7 @@ directly "can still require" the DLL. That's a deliberate choice: we checked it 
   the plugin checked the game build and **patched a second time** ("loaded." twice in the log). HarmonyX doesn't
   de-duplicate (`PatchInfo.Add` concatenates), so the tooltip patch ran twice.
   - Fix: renamed it to `StartMod`.
-  - The Cecil scan now fails if `Plugin` has a method named after a Unity message (Start, OnEnable, OnDisable,
+  - The scan (now `tests/FrameworkScan`) fails if `Plugin` has a method named after a Unity message (Start, OnEnable, OnDisable,
     FixedUpdate, LateUpdate, OnGUI, OnApplicationQuit).
 
 **Run A again, after the fix:** "loaded." appears once, with the registration and no warnings or errors. The
@@ -165,8 +165,18 @@ settings page was opened three times, and the cfg ended unchanged.
 afterwards (byte-identical).
 
 **Owned Count 1.0.3 is released:** in `dist/` (byte-identical to the installed and built DLL), with its README,
-the root and dist READMEs, and tests/README updated. Next: Global Storage, then Move Building, Built Count and
-Mounts, each with the same FrameworkLink, the same scan checks, and Run A and Run B.
+the root and dist READMEs, and tests/README updated.
+
+**Global Storage 1.1.4 is released** (2026-09-30).
+- In the menu: Status plus 5 switches.
+- Run A and Run B both passed. Details are in `src/GK2GlobalStorage/FINDINGS.md`, "v1.1.4".
+- Its checks moved into the shared `tests/FrameworkScan`, which now covers both mods.
+
+Next: Move Building, then Built Count and Mounts.
+
+**Rebuilds and git:** each DLL records the git commit it was built from (SourceLink's `+<hash>` in
+AssemblyInformationalVersion). So a rebuild after a commit differs byte-for-byte even when the code hasn't
+changed. `dist/` keeps the copy that was tested in game.
 
 The build's MSB3277 System.IO.Compression warning is older than this change: Global Storage, which has no framework
 reference, shows it too.

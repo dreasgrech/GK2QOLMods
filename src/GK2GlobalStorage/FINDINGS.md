@@ -224,6 +224,35 @@ Storage would be the same set the mod already uses. Each transpiler would check 
 
 ---
 
+## v1.1.4: optional GK2 Mod Framework integration
+
+With [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) (0.1.x, by SuperMan4eg) installed,
+the mod appears in the game's Mods menu:
+- a Status row: Active, Off, or disabled after a game update;
+- "Craft from every area" (`Enabled`) and "Also build, alchemy, gardens and more" (`IncludeBuildAndAlchemy`);
+- fuel containers, conveyor chests and zombie orders (the three `Storage` switches).
+
+`Safety.DisableOnGameUpdate` and `Debug.VerboseLogging` stay in the cfg only. All five switches are read each time
+the game gathers materials, so a change applies at the next bench, build desk or picker. The same DLL works without
+the framework. The pattern and its reasons are in `docs/gk2-mod-framework.md`.
+
+**Code:**
+- `FrameworkLink.cs` is new.
+- `Plugin`:
+  - has a soft `BepInDependency` on the framework;
+  - patches its six classes by name (`Plugin.PatchClasses`) instead of with `PatchAll(assembly)`;
+  - has a `StartMod` step that returns the status text.
+- Patch logic is unchanged.
+
+**Verification:**
+- `tests/FrameworkScan` passes, and removing `MultiInventory_Sort_Patch` from the list was caught.
+- The static suite still reports 24 OK.
+- In game on 2026-09-30:
+  - **Run A (framework installed):** registered Compatible after the framework, with no warnings or errors. In the
+    menu, "Craft from every area" was unticked and then Reset. The cfg values were unchanged afterwards.
+  - **Run B (framework removed):** all five mods loaded, the log had no warnings or errors and nothing mentioning
+    the framework, and "Discovered 20 eligible storage inventories" confirmed the mod ran in the save.
+
 ## Game update 25601286, move to the Steam install: re-audit (v1.1.3)
 
 On 2026-09-29 the mods moved from `C:\Games\Graveyard Keeper 2` (build 25533739) to the Steam install at

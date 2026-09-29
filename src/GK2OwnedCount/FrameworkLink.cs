@@ -12,7 +12,7 @@ namespace GK2OwnedCount
     //
     // Only Register and OwnedCountMod touch GK2.Framework types. Mono loads GK2.Framework.dll the first time a method
     // using its types is compiled, so as long as nothing calls Register while the framework is absent, the DLL is
-    // never needed. tests/CecilScan-OwnedCount checks that no other code references the framework.
+    // never needed. tests/FrameworkScan checks that no other code references the framework.
     internal static class FrameworkLink
     {
         internal const string FrameworkGuid = "ru.superman4eg.gk2.framework";
