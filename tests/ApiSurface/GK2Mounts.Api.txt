@@ -2,6 +2,14 @@ enum GK2Mounts.Api.CartSlopeStyle
   HalfLift = 0
   ShaftsTilt = 1
   WholeCartPitch = 2
+class GK2Mounts.Api.InstanceTuning
+  property System.Collections.Generic.IReadOnlyList<string> Keys { get; }
+  method void Clear(string key)
+  method T Get(string key)
+  method bool IsSet(string key)
+  method void Reset()
+  method T Set(string ownerId, string key, T value)
+  method string SetBy(string key)
 enum GK2Mounts.Api.LegSource
   Body = 0
   Drawn = 1
@@ -20,6 +28,22 @@ enum GK2Mounts.Api.MountFeature
   Sounds = 3
   Bell = 4
   StayThroughDoors = 5
+class GK2Mounts.Api.MountHandle
+  property System.Collections.Generic.IReadOnlyList<string> CargoIds { get; }
+  property bool Exists { get; }
+  property bool FacingRight { get; }
+  property bool HasCart { get; }
+  property bool HasDonkey { get; }
+  property int Id { get; }
+  property bool IsRidden { get; }
+  property string Owner { get; }
+  property UnityEngine.Vector3 Position { get; }
+  property string SceneId { get; }
+  property GK2Mounts.Api.InstanceTuning Tuning { get; }
+  method GK2Mounts.Api.MountResult MoveTo(UnityEngine.Vector3 position, System.Nullable<bool> facingRight = null)
+  method void Remove()
+  method GK2Mounts.Api.MountResult Ride(bool showMessage = True)
+  method string ToString()
 struct GK2Mounts.Api.MountResult
   property bool Ok { get; }
   property string Reason { get; }
@@ -31,27 +55,38 @@ static class GK2Mounts.Api.Mounts
   property static GK2Mounts.Api.MountTuning Behaviour { get; }
   property static System.Collections.Generic.IReadOnlyList<GK2Mounts.Api.MountColorRegion> ColorRegions { get; }
   property static GK2Mounts.Api.MountTuning Colors { get; }
+  property static System.Collections.Generic.IReadOnlyList<GK2Mounts.Api.MountHandle> Instances { get; }
   property static bool IsAvailable { get; }
   property static bool IsMounted { get; }
   property static string Owner { get; }
+  property static GK2Mounts.Api.MountHandle Riding { get; }
   property static GK2Mounts.Api.MountStyle Style { get; }
   event static System.Action<string> CargoLoaded
   event static System.Action<string> CargoUnloaded
   event static System.Action<string> Dismounted
+  event static System.Action<GK2Mounts.Api.MountHandle, GK2Mounts.Api.MountHandle> Hitched
+  event static System.Action<GK2Mounts.Api.MountHandle> InstanceRemoved
+  event static System.Action<GK2Mounts.Api.MountHandle> InstanceSpawned
   event static System.Action<GK2Mounts.Api.MountStyle> Mounted
+  event static System.Action<GK2Mounts.Api.MountHandle, GK2Mounts.Api.MountHandle> Unhitched
   method static System.IDisposable AddFeatureRule(string ownerId, GK2Mounts.Api.MountFeature feature, System.Func<bool> allowed)
   method static System.IDisposable AddMountRule(string ownerId, System.Func<GK2Mounts.Api.MountStyle, string> whyNot)
   method static System.IDisposable AddStayRule(string ownerId, System.Func<string> whyDismount)
   method static void Bray()
   method static void ClearTuning(string ownerId)
   method static void Dismount(string reason = null)
+  method static GK2Mounts.Api.MountResult Hitch(GK2Mounts.Api.MountHandle donkey, GK2Mounts.Api.MountHandle cart)
   method static bool IsFeatureAllowed(GK2Mounts.Api.MountFeature feature)
   method static void RefreshRules()
   method static void RemoveRules(string ownerId)
   method static void RingBell()
+  method static GK2Mounts.Api.MountHandle SpawnCart(string ownerId, UnityEngine.Vector3 position, bool facingRight = True)
+  method static GK2Mounts.Api.MountHandle SpawnDonkey(string ownerId, UnityEngine.Vector3 position, bool withCart = False, bool facingRight = True)
   method static GK2Mounts.Api.MountResult SwitchStyle(GK2Mounts.Api.MountStyle style, bool showMessage = True)
   method static GK2Mounts.Api.MountResult TryMount(string ownerId, GK2Mounts.Api.MountStyle style, bool showMessage = True)
   method static GK2Mounts.Api.MountTuning Tuning(GK2Mounts.Api.MountStyle style)
+  method static GK2Mounts.Api.MountHandle Unhitch(GK2Mounts.Api.MountHandle donkey)
+  method static GK2Mounts.Api.MountHandle UnhitchRidden()
 enum GK2Mounts.Api.MountStyle
   Ride = 0
   Cart = 1

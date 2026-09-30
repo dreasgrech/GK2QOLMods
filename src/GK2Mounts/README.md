@@ -10,7 +10,7 @@ A BepInEx library for Graveyard Keeper 2 that gives the game a rideable donkey:
 - **For mod authors:** the C# API is in [`docs/mounts-api.md`](../../docs/mounts-api.md). You can tie the mount into
   the story, or gate it on the tech tree, quests or story flags.
 
-Version 0.1.0 (API 0.5.0), built and audited against Steam game build 25601286 (Assembly-CSharp MVID
+Version 0.1.0 (API 0.6.0), built and audited against Steam game build 25601286 (Assembly-CSharp MVID
 `3ffadd70-…`, LazyBearTechnology `8a7a5e04-…`; re-audit in `docs/steam-move-audit.md`).
 - Design: [`docs/mounts-api-design.md`](../../docs/mounts-api-design.md) and [`FEASIBILITY.md`](FEASIBILITY.md).
 - Runtime facts the design rests on: [`PROBE-FINDINGS.md`](PROBE-FINDINGS.md).
@@ -45,6 +45,8 @@ A mod built on the API needs none of this code itself; the showcase is about 160
 | `StayMountedThroughDoors` | false | Keep riding through a door that loads another scene (the donkey is summoned again there). A house door isn't one. |
 | `DismountIndoors` | true | Dismount on entering a building, church or dungeon (the game's indoor lighting presets), and refuse to mount indoors. The cart is a 3D object that would cut through furniture and door frames. |
 | `ShowMessages` | true | The keeper's thought bubble when he can't mount ("I'm busy.", "Not in a co-op game.", a mod's own reason). |
+| `InstanceControls` | true | Donkeys and carts standing in the world ([`docs/mounts-instances.md`](../../docs/mounts-instances.md)). The interact key rides a standing donkey you walk up to with empty hands. While riding a donkey without its cart, it takes a free cart you ride up to. A label over it says so. Off: only mods can. |
+| `HitchKey` | J | While riding: leave the cart standing where it is (a free cart with its cargo and settings), or take the free cart in reach. None: the key is off. |
 
 **Behaviour switches with the showcase:** the last three are the core's defaults. The showcase sets them from its
 own settings (its cfg or the Mods menu) as session overrides, so the dev panel shows them locked.
@@ -248,7 +250,7 @@ Each region has its own section, `[Colors.Coat]` and so on, with 10 keys named r
 
 ## In-game test list (with the showcase installed)
 
-1. **Log:** `GK2 Mounts 0.1.0 loaded (API 0.5.0); nothing happens until a mod uses it.`, then the showcase's line,
+1. **Log:** `GK2 Mounts 0.1.0 loaded (API 0.6.0); nothing happens until a mod uses it.`, then the showcase's line,
    with no errors.
 2. **H:** the donkey appears under you and you sit on it. Walk in all four directions: it faces left or right with
    you, the walk animation runs, and you're clearly faster. **H** again gets you off, at normal speed and height.
@@ -271,6 +273,7 @@ Each region has its own section, `[Colors.Coat]` and so on, with 10 keys named r
 10. **Without the showcase:** H and G do nothing.
 11. **Colours:** the test list in [`docs/mounts-colors.md`](../../docs/mounts-colors.md). The one that matters
     most: after recolouring, the game's own delivery donkey still looks normal.
+12. **Donkeys and carts in the world:** the test list in [`docs/mounts-instances.md`](../../docs/mounts-instances.md).
 
 Still untested: carrying zombies (not unlocked in the test save); doors that load another scene; a save while mounted
 (the bed is indoors, so normal play always dismounts first).

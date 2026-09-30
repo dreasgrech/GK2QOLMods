@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace GK2Mounts.Api
 {
@@ -50,7 +51,7 @@ namespace GK2Mounts.Api
     public static class Mounts
     {
         // The API's own version, separate from the mod version: minor for additions, major for breaking changes.
-        public static readonly Version ApiVersion = new Version(0, 5, 0);
+        public static readonly Version ApiVersion = new Version(0, 6, 0);
 
         // False when the core is switched off (General.Enabled) or disabled itself after a game update.
         public static bool IsAvailable => Plugin.Patched && Plugin.Enabled != null && Plugin.Enabled.Value;
@@ -118,6 +119,29 @@ namespace GK2Mounts.Api
                     Mount.Say(reason);
                 }
                 return MountResult.Refused(reason);
+            }
+            if (!Mount.Ridden.Ephemeral)
+            {
+                // A donkey standing in the world has its own cart or none: to Ride leaves the cart standing where it is
+                // (Unhitch), to Cart needs a cart to hitch (Hitch).
+                if (style == MountStyle.Ride)
+                {
+                    if (UnhitchRidden() != null)
+                    {
+                        return MountResult.Success;
+                    }
+                    if (showMessage)
+                    {
+                        Mount.Say("Not right now.");
+                    }
+                    return MountResult.Refused("Not right now.");
+                }
+                const string noCart = "This donkey has no cart here; ride it up to one.";
+                if (showMessage)
+                {
+                    Mount.Say(noCart);
+                }
+                return MountResult.Refused(noCart);
             }
             string keepOwner = owner;
             Mount.DismountFromApi("style change");
@@ -229,13 +253,167 @@ namespace GK2Mounts.Api
         // Hooks, Wheels, Hubs (the cart), Pole, Lamp, Glass (the lantern).
         public static IReadOnlyList<MountColorRegion> ColorRegions => GK2Mounts.Colors.ApiRegions ?? Array.Empty<MountColorRegion>();
 
-        // Removes every tuning, behaviour and colour override this owner set.
+        // Removes every tuning, behaviour and colour override this owner set, on everyone's values and on every
+        // instance's own.
         public static void ClearTuning(string ownerId)
         {
             Tuning(MountStyle.Ride).ClearOwner(ownerId);
             Tuning(MountStyle.Cart).ClearOwner(ownerId);
             Behaviour.ClearOwner(ownerId);
             Colors.ClearOwner(ownerId);
+            foreach (MountHandle h in Instances)
+            {
+                h.Tuning.ClearOwner(ownerId);
+            }
+        }
+
+        // ------------------------------------------------------------------ instances in the world
+
+        // A donkey (withCart: with its cart) standing at position in the keeper's current scene, with its own settings
+        // (MountHandle.Tuning). The keeper rides it with the interact key next to it, or MountHandle.Ride. Null outside
+        // a game or while the core is off.
+        public static MountHandle SpawnDonkey(string ownerId, Vector3 position, bool withCart = false, bool facingRight = true)
+        {
+            return Spawn(ownerId, position, hasDonkey: true, hasCart: withCart, facingRight: facingRight);
+        }
+
+        // A cart on its own (no donkey), shafts on the ground, at position in the keeper's current scene. A donkey
+        // takes it with Hitch, or the keeper rides one up to it and presses the interact key (or General.HitchKey).
+        public static MountHandle SpawnCart(string ownerId, Vector3 position, bool facingRight = true)
+        {
+            return Spawn(ownerId, position, hasDonkey: false, hasCart: true, facingRight: facingRight);
+        }
+
+        private static MountHandle Spawn(string ownerId, Vector3 position, bool hasDonkey, bool hasCart, bool facingRight)
+        {
+            if (string.IsNullOrEmpty(ownerId))
+            {
+                throw new ArgumentException("An owner id (your plugin GUID) is required.", nameof(ownerId));
+            }
+            if (!IsAvailable)
+            {
+                return null;
+            }
+            Mount.Instance i = Mount.Spawn(ownerId, position, hasDonkey, hasCart, facingRight, out string why);
+            if (i == null)
+            {
+                Plugin.Log.LogInfo($"API: {ownerId} could not spawn: {why}");
+            }
+            return i?.Handle;
+        }
+
+        // Every instance in the world (not the summon of TryMount), in spawn order.
+        public static IReadOnlyList<MountHandle> Instances
+        {
+            get
+            {
+                var l = new List<MountHandle>();
+                foreach (Mount.Instance i in Mount.All)
+                {
+                    if (!i.Ephemeral && i.Handle != null)
+                    {
+                        l.Add(i.Handle);
+                    }
+                }
+                return l;
+            }
+        }
+
+        // The instance being ridden; null while on foot or riding the summon of TryMount.
+        public static MountHandle Riding => Mount.Ridden != null && !Mount.Ridden.Ephemeral ? Mount.Ridden.Handle : null;
+
+        // The donkey takes the free cart: the cart's cargo and cart settings come with it, the free cart is gone. A
+        // standing donkey moves to the cart; a ridden one is put there with the keeper.
+        public static MountResult Hitch(MountHandle donkey, MountHandle cart)
+        {
+            if (donkey == null || cart == null || !donkey.Exists || !cart.Exists)
+            {
+                return MountResult.Refused("Gone.");
+            }
+            if (!Mount.Instance.IsInGame(out PlayerController pc, out _))
+            {
+                return MountResult.Refused("Not in a game.");
+            }
+            string why;
+            using (Mount.Bind(donkey.I))
+            {
+                why = donkey.I.Hitch(cart.I, pc);
+            }
+            return why == null ? MountResult.Success : MountResult.Refused(why);
+        }
+
+        // The donkey leaves its cart standing where it is (a new free cart with the cargo and the cart settings) and
+        // goes on without it. Returns the new cart, or null (not a donkey with a cart, or not loaded right now).
+        public static MountHandle Unhitch(MountHandle donkey)
+        {
+            if (donkey == null || !donkey.Exists)
+            {
+                return null;
+            }
+            return UnhitchInstance(donkey.I);
+        }
+
+        // The same for whatever is ridden, the summon of TryMount included.
+        public static MountHandle UnhitchRidden()
+        {
+            return Mount.Ridden != null ? UnhitchInstance(Mount.Ridden) : null;
+        }
+
+        private static MountHandle UnhitchInstance(Mount.Instance i)
+        {
+            if (!Mount.Instance.IsInGame(out PlayerController pc, out _))
+            {
+                return null;
+            }
+            Mount.Instance cart;
+            string why;
+            using (Mount.Bind(i))
+            {
+                cart = i.Unhitch(pc, out why);
+            }
+            if (cart == null)
+            {
+                Plugin.Log.LogInfo("API: unhitch refused: " + why);
+            }
+            return cart?.Handle;
+        }
+
+        // An instance was spawned (also: a cart left standing by unhitching) / is gone (removed, hitched away, the game
+        // left). The ride's own Mounted / Dismounted events still come for instances too.
+        public static event Action<MountHandle> InstanceSpawned;
+
+        public static event Action<MountHandle> InstanceRemoved;
+
+        // (donkey, the free cart it took, which no longer exists) / (donkey, the new free cart).
+        public static event Action<MountHandle, MountHandle> Hitched;
+
+        public static event Action<MountHandle, MountHandle> Unhitched;
+
+        internal static void RaiseInstanceSpawned(MountHandle h) => Raise(InstanceSpawned, h, "InstanceSpawned");
+
+        internal static void RaiseInstanceRemoved(MountHandle h) => Raise(InstanceRemoved, h, "InstanceRemoved");
+
+        internal static void RaiseHitched(MountHandle donkey, MountHandle cart) => Raise2(Hitched, donkey, cart, "Hitched");
+
+        internal static void RaiseUnhitched(MountHandle donkey, MountHandle cart) => Raise2(Unhitched, donkey, cart, "Unhitched");
+
+        private static void Raise2(Action<MountHandle, MountHandle> handlers, MountHandle a, MountHandle b, string name)
+        {
+            if (handlers == null)
+            {
+                return;
+            }
+            foreach (Delegate d in handlers.GetInvocationList())
+            {
+                try
+                {
+                    ((Action<MountHandle, MountHandle>)d)(a, b);
+                }
+                catch (Exception e)
+                {
+                    Plugin.Log.LogWarning($"API: a {name} handler ({d.Method.DeclaringType?.Assembly.GetName().Name}) failed: {e.Message}");
+                }
+            }
         }
 
         private static MountTuning rideTuning, cartTuning, behaviour;
@@ -261,6 +439,12 @@ namespace GK2Mounts.Api
         // ------------------------------------------------------------------ core side
 
         private static string owner;
+
+        // A world instance's ride belongs to the mod that spawned it.
+        internal static void SetRideOwner(string ownerId)
+        {
+            owner = ownerId;
+        }
 
         internal static void RaiseMounted(MountStyle style)
         {

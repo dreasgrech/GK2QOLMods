@@ -147,6 +147,12 @@ namespace GK2Mounts.Api
             }
         }
 
+        internal bool TryFind(string key, out ITuned t)
+        {
+            t = null;
+            return key != null && byKey.TryGetValue(key, out t);
+        }
+
         private ITuned Find(string key)
         {
             if (key == null || !byKey.TryGetValue(key, out ITuned t))

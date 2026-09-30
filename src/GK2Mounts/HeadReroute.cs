@@ -419,6 +419,22 @@ namespace GK2Mounts
 
         private static bool Prefix(PlayerInputHandler __instance)
         {
+            // Donkeys and carts standing in the world (InstanceControls): riding one, or hitching a free cart, when the
+            // game has nothing of its own to do with the key. On foot and in Ride style too, so asked first.
+            if (!CargoSheet.Running && LazyInput.GetKeyDown(GameKey.Interaction))
+            {
+                try
+                {
+                    if (InstanceControls.TryInteract(Controller(__instance)))
+                    {
+                        return false;
+                    }
+                }
+                catch (Exception e)
+                {
+                    Plugin.Log.LogWarning("Mount: the interact key for a standing donkey failed: " + e.Message);
+                }
+            }
             if (!HeadReroute.Active || CargoSheet.Running || !LazyInput.GetKeyDown(GameKey.Interaction))
             {
                 return true;

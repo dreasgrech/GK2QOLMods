@@ -12,16 +12,20 @@ namespace GK2Mounts
     // currently mounted), Lantern, Sounds, Debug, Defaults. Every control edits the live config value and the mount
     // reacts immediately; BepInEx saves the cfg on every change. A row whose value differs from its mod default is
     // yellow, and right-click puts it back to that default (see Defaults.cs for yours against the mod defaults).
-    internal static class TuningWindow
+    internal static partial class TuningWindow
     {
         private const int WindowId = 0x6d6e7431; // 'mnt1'
         private static Rect rect = new Rect(0f, 0f, 470f, 10f);
-        private static GUIStyle label, header, small, changed, overridden, wrapToggle;
+        private static GUIStyle label, header, small, changed, overridden, instanceSet, wrapToggle;
 
         // Cyan while another mod overrides the value this session (the row edits the player's cfg value underneath,
         // which shows again once the override ends); else yellow when it differs from its mod default.
         private static GUIStyle LabelFor(ConfigEntryBase e)
         {
+            if (EditsInstance(e) && editing.Overrides.ContainsKey(e.Definition.Key))
+            {
+                return instanceSet;
+            }
             if (Tuned.OverriddenBy(e) != null)
             {
                 return overridden;
@@ -33,14 +37,15 @@ namespace GK2Mounts
         private static string donkeyEvent = "";
         private static string cargoItemId = "wood";
         private static string spawnItemId = "wood";
-        private static readonly string[] TabNames = { "General", "Riding", "Lantern", "Sounds", "Colors", "Debug", "Defaults" };
+        private static readonly string[] TabNames = { "General", "Riding", "Lantern", "Sounds", "Colors", "Instances", "Debug", "Defaults" };
 
         public static void Draw()
         {
             CargoLayout.SaveIfDue(now: !Mount.IsMounted);
-            if (!Mount.IsMounted || !Plugin.TuningWindowEnabled.Value || Plugin.TuningWindowHidden || CargoSheet.Running)
+            bool inGame = Mount.IsMounted || (MainGame.Instance != null && MainGame.PlayerData != null);
+            if (!inGame || !Plugin.TuningWindowEnabled.Value || Plugin.TuningWindowHidden || CargoSheet.Running)
             {
-                return; // hidden by its key, or while the cargo sheet photographs the cart
+                return; // not in a game, hidden by its key, or while the cargo sheet photographs the cart
             }
             float scale = Mathf.Clamp(Plugin.TuningWindowScale.Value, 0.75f, 3f);
             GUI.matrix = Matrix4x4.Scale(new Vector3(scale, scale, 1f));
@@ -63,6 +68,10 @@ namespace GK2Mounts
             if (drawType == EventType.Layout)
             {
                 want.height = 0f;
+            }
+            if (editing != null && !Mount.IsRegistered(editing))
+            {
+                editing = null; // removed, or hitched away
             }
             Rect got = GUILayout.Window(WindowId, want, DrawContents,
                 Plugin.TuningWindowKey.Value == KeyCode.None ? "GK2 Mounts tuning" : $"GK2 Mounts tuning ({Plugin.TuningWindowKey.Value} hides)",
@@ -87,7 +96,7 @@ namespace GK2Mounts
         private static float maxContentHeight = 800f;
         private static float chromeHeight = 130f;   // measured; 130 is the first-frame guess
         private static float lastScrollHeight;
-        private static readonly float[] contentHeight = new float[7]; // measured per tab, last repaint
+        private static readonly float[] contentHeight = new float[8]; // measured per tab, last repaint
 
         // Panel width in panel units (before the overall scale) and the widths derived from it, so rows shrink and
         // grow with the panel instead of overflowing it.
@@ -128,6 +137,8 @@ namespace GK2Mounts
             changed.normal.textColor = new Color(1f, 0.85f, 0.3f);
             overridden = new GUIStyle(label);
             overridden.normal.textColor = new Color(0.35f, 0.85f, 1f);
+            instanceSet = new GUIStyle(label);
+            instanceSet.normal.textColor = new Color(1f, 0.5f, 0.95f);
             var tex = new Texture2D(1, 1);
             tex.SetPixel(0, 0, new Color(1f, 1f, 1f, 0.35f));
             tex.Apply();
@@ -187,7 +198,12 @@ namespace GK2Mounts
             if (type == EventType.Repaint) repaintRunFrame = Time.frameCount;
             try
             {
-                DrawContentsInner(id);
+                // The edited instance bound (IMGUI calls this at the end of OnGUI, so the binding is made here): rows
+                // that read a setting directly show its value, like Val does.
+                using (Mount.Bind(editing))
+                {
+                    DrawContentsInner(id);
+                }
             }
             catch (Exception e)
             {
@@ -214,6 +230,16 @@ namespace GK2Mounts
                 tab = newTab;
                 scroll = Vector2.zero;
             }
+            if (EditingNow)
+            {
+                GUILayout.BeginHorizontal();
+                GUILayout.Label($"Editing {editing.Describe()}'s own settings: every row changes only this one (magenta: its own value, right-click: back to everyone's). The Riding tab shows its style ({editing.CurrentStyle}).", instanceSet);
+                if (GUILayout.Button("Stop", GUILayout.Width(60f)))
+                {
+                    editing = null;
+                }
+                GUILayout.EndHorizontal();
+            }
             GUILayout.Space(6f);
             // An IMGUI scroll view needs an explicit height, or it collapses; the content's height is measured on
             // each repaint (last frame's value is used) and capped to what fits on the screen.
@@ -232,7 +258,8 @@ namespace GK2Mounts
                 case 2: DrawLantern(); break;
                 case 3: DrawSounds(); break;
                 case 4: DrawColors(); break;
-                case 5: DrawDebug(); break;
+                case 5: DrawInstances(); break;
+                case 6: DrawDebug(); break;
                 default: DrawDefaults(); break;
             }
             GUILayout.EndVertical();
@@ -292,7 +319,7 @@ namespace GK2Mounts
         private static void DrawRiding()
         {
             StyleSettings s = Mount.S;
-            bool ride = Mount.CurrentStyle == MountStyle.Ride;
+            bool ride = PanelStyle == MountStyle.Ride;
 
             Header("Style being tuned: " + (ride ? "riding on the donkey's back" : "the donkey pulling its cart") + "  [" + s.Section + "]");
             GUILayout.BeginHorizontal();
@@ -363,7 +390,7 @@ namespace GK2Mounts
             }
 
             // Everything about the cart itself sits together at the end; the sections only show in Cart style.
-            if (Mount.CurrentStyle == MountStyle.Cart)
+            if (PanelStyle == MountStyle.Cart)
             {
                 Header("Cart on slopes");
                 Toggle("Cart follows the ground under the cart", s.CartFollowsGround, null);
@@ -378,7 +405,7 @@ namespace GK2Mounts
                     GUI.enabled = true;
                     if (compare)
                     {
-                        s.CartSlope.Value = next;
+                        Put(s.CartSlope.Entry, next);
                         Plugin.Log.LogInfo("Mount: cart slope style " + next + ".");
                     }
                     if (s.CartSlope.Value == CartSlopeStyle.WholeCartPitch)
@@ -411,7 +438,7 @@ namespace GK2Mounts
         // per style ([Cart]); the tab shows a note in Ride style, where there is no cart.
         private static void DrawLantern()
         {
-            if (Mount.CurrentStyle != MountStyle.Cart)
+            if (PanelStyle != MountStyle.Cart)
             {
                 GUILayout.Label("The lantern belongs to the cart. Set Style = Cart on the General tab and mount again to see and tune it here.", small);
                 return;
@@ -482,7 +509,7 @@ namespace GK2Mounts
         private static void DrawSounds()
         {
             StyleSettings s = Mount.S;
-            bool cart = Mount.CurrentStyle == MountStyle.Cart;
+            bool cart = PanelStyle == MountStyle.Cart;
             Header("Sounds for this style  [" + s.Section + "]");
             GUILayout.Label("All sounds are the game's own, played at the donkey through the game's sound player, so the in-game SFX volume applies. Volumes and pitches multiply the game's values for that sound (1 = as the game plays it). Sound ids can be any id from the game's list (PROBE-FINDINGS Round 12); an unknown id plays nothing and is marked here. The play buttons preview a sound with the settings below.", small);
             Toggle("All mount sounds on", s.SoundsOn, null);
@@ -576,9 +603,9 @@ namespace GK2Mounts
             GUILayout.EndHorizontal();
             if (locked) { return; }
             if (ResetOnRightClick(entry, null)) { return; }
-            if (id != entry.Value)
+            if (id != Val(entry))
             {
-                entry.Value = id;
+                Put(entry, id);
             }
         }
 
@@ -601,7 +628,7 @@ namespace GK2Mounts
             if (locked) { return; }
             if (n != c)
             {
-                entry.Value = Lantern.ToHex(n);
+                Put(entry, Lantern.ToHex(n));
                 onChange?.Invoke();
             }
         }
@@ -816,17 +843,17 @@ namespace GK2Mounts
             }
             if (clear)
             {
-                s.Swaps.Value = "";
+                Put(s.Swaps.Entry, "");
             }
             else if (remove)
             {
                 swaps.Remove(src);
-                s.Swaps.Value = Colors.FormatSwaps(swaps);
+                Put(s.Swaps.Entry, Colors.FormatSwaps(swaps));
             }
             else if (n != c)
             {
                 swaps[src] = Colors.Hex(n);
-                s.Swaps.Value = Colors.FormatSwaps(swaps);
+                Put(s.Swaps.Entry, Colors.FormatSwaps(swaps));
             }
         }
 
@@ -860,7 +887,7 @@ namespace GK2Mounts
             if (!locked && ResetOnRightClick(entry, onChange)) { return; }
             if (clicked)
             {
-                entry.Value = on ? "" : whenOn;
+                Put(entry, on ? "" : whenOn);
                 onChange?.Invoke();
                 return;
             }
@@ -877,7 +904,7 @@ namespace GK2Mounts
             GUI.enabled = true;
             if (!locked && n != c)
             {
-                entry.Value = Colors.Hex(n);
+                Put(entry, Colors.Hex(n));
                 onChange?.Invoke();
             }
         }
@@ -1107,7 +1134,7 @@ namespace GK2Mounts
             if (ResetOnRightClick(entry, null)) { return; }
             if (clicked)
             {
-                entry.Value = on ? 0f : 0.48f;
+                Put(entry, on ? 0f : 0.48f);
             }
         }
 
@@ -1231,18 +1258,18 @@ namespace GK2Mounts
             GUI.enabled = !locked;
             if (GUILayout.Button("-", GUILayout.Width(30f)) && !locked)
             {
-                entry.Value = Mathf.Max(min, (float)Math.Round(entry.Value - step, 2));
+                Put(entry, Mathf.Max(min, (float)Math.Round(Val(entry) - step, 2)));
             }
             GUILayout.Label(shown.ToString(format), label, GUILayout.Width(50f));
             Rect r = GUILayoutUtility.GetLastRect();
             if (!locked && Event.current.type == EventType.MouseDown && Event.current.button == 1 && r.Contains(Event.current.mousePosition))
             {
-                Defaults.ResetToDefault(entry);
+                if (EditsInstance(entry)) Unput(entry); else Defaults.ResetToDefault(entry);
                 Event.current.Use();
             }
             if (GUILayout.Button("+", GUILayout.Width(30f)) && !locked)
             {
-                entry.Value = Mathf.Min(max, (float)Math.Round(entry.Value + step, 2));
+                Put(entry, Mathf.Min(max, (float)Math.Round(Val(entry) + step, 2)));
             }
             GUI.enabled = true;
             GUILayout.EndHorizontal();
@@ -1295,9 +1322,9 @@ namespace GK2Mounts
             GUILayout.EndHorizontal();
             if (locked) { return; }
             if (ResetOnRightClick(entry, onChange)) { return; }
-            if (Mathf.Abs(v - entry.Value) > 0.00001f)
+            if (Mathf.Abs(v - Val(entry)) > 0.00001f)
             {
-                entry.Value = v;
+                Put(entry, v);
                 onChange?.Invoke();
             }
         }
@@ -1311,17 +1338,17 @@ namespace GK2Mounts
             bool pressed = false;
             bool locked = Locked(entry, out int shown);
             GUI.enabled = !locked;
-            if (GUILayout.Button("-", GUILayout.Width(22f)) && !locked && entry.Value > min) { entry.Value--; pressed = true; onChange?.Invoke(); }
-            int v = Mathf.RoundToInt(GUILayout.HorizontalSlider(locked ? shown : entry.Value, min, max, GUILayout.Width(50f)));
-            if (GUILayout.Button("+", GUILayout.Width(22f)) && !locked && entry.Value < max) { entry.Value++; pressed = true; onChange?.Invoke(); }
+            if (GUILayout.Button("-", GUILayout.Width(22f)) && !locked && Val(entry) > min) { Put(entry, Val(entry) - 1); pressed = true; onChange?.Invoke(); }
+            int v = Mathf.RoundToInt(GUILayout.HorizontalSlider(locked ? shown : Val(entry), min, max, GUILayout.Width(50f)));
+            if (GUILayout.Button("+", GUILayout.Width(22f)) && !locked && Val(entry) < max) { Put(entry, Val(entry) + 1); pressed = true; onChange?.Invoke(); }
             GUI.enabled = true;
-            GUILayout.Label((locked ? shown : entry.Value).ToString(), label, GUILayout.Width(30f));
+            GUILayout.Label((locked ? shown : Val(entry)).ToString(), label, GUILayout.Width(30f));
             GUILayout.EndHorizontal();
             if (locked) { return; }
             if (ResetOnRightClick(entry, onChange)) { return; }
-            if (!pressed && v != entry.Value)
+            if (!pressed && v != Val(entry))
             {
-                entry.Value = v;
+                Put(entry, v);
                 onChange?.Invoke();
             }
         }
@@ -1346,7 +1373,7 @@ namespace GK2Mounts
             if (ResetOnRightClick(entry, onChange)) { return; }
             if (clicked)
             {
-                entry.Value = !entry.Value;
+                Put(entry, !Val(entry));
                 onChange?.Invoke();
             }
         }
@@ -1360,7 +1387,7 @@ namespace GK2Mounts
         private static void EnumCycler<T>(string name, ConfigEntry<T> entry, Action onChange) where T : struct, Enum
         {
             T[] values = (T[])Enum.GetValues(typeof(T));
-            int idx = Array.IndexOf(values, entry.Value);
+            int idx = Array.IndexOf(values, Val(entry));
             bool locked = Locked(entry, out T shown);
             GUILayout.BeginHorizontal();
             GUILayout.Label(name, LabelFor(entry), GUILayout.Width(LabelW));
@@ -1375,7 +1402,7 @@ namespace GK2Mounts
             if (ResetOnRightClick(entry, onChange)) { return; }
             if (changed)
             {
-                entry.Value = values[idx];
+                Put(entry, values[idx]);
                 onChange?.Invoke();
             }
         }
@@ -1385,12 +1412,17 @@ namespace GK2Mounts
         // something that the override then ignores. Once the override ends the row shows and edits the cfg again.
         private static bool Locked<T>(ConfigEntry<T> entry, out T shown)
         {
+            if (EditsInstance(entry))
+            {
+                shown = Val(entry);
+                return false;
+            }
             if (Tuned.OverriddenBy(entry) != null && Tuned.ByEntry.TryGetValue(entry, out ITuned t) && t.Current is T v)
             {
                 shown = v;
                 return true;
             }
-            shown = entry.Value;
+            shown = Val(entry);
             return false;
         }
 
@@ -1408,10 +1440,18 @@ namespace GK2Mounts
                 return false;
             }
             e.Use();
-            T def = (T)Defaults.DefaultFor(entry);
-            if (!Equals(entry.Value, def))
+            if (EditsInstance(entry))
             {
-                entry.Value = def;
+                if (Unput(entry))
+                {
+                    onChange?.Invoke();
+                }
+                return true;
+            }
+            T def = (T)Defaults.DefaultFor(entry);
+            if (!Equals(Val(entry), def))
+            {
+                Put(entry, def);
                 onChange?.Invoke();
             }
             return true;

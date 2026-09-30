@@ -192,6 +192,65 @@ Cart tuning key `LanternLightColor`.
 Changes show within a frame while mounted. A colour that isn't one of a region's `SourceColors` as a swap source
 does nothing.
 
+## Donkeys and carts in the world (0.6.0)
+
+Besides the one summoned under the keeper (`TryMount`), the core keeps any number of donkeys and carts standing in
+the world. Each one has its own settings. The design and every choice behind it are in
+[`mounts-instances.md`](mounts-instances.md).
+
+```csharp
+MountHandle donkey = Mounts.SpawnDonkey("you.gk2.mymod", pos, withCart: false, facingRight: true);
+MountHandle cart = Mounts.SpawnCart("you.gk2.mymod", pos2);
+donkey.Tuning.Set("you.gk2.mymod", "SpeedMultiplier", 2.5f);     // this donkey only
+donkey.Tuning.Set("you.gk2.mymod", "CoatColorize", "C040FF");    // any key of Tuning, Behaviour or Colors
+Mounts.Hitch(donkey, cart);                                       // cart, cargo and cart settings join the donkey
+MountHandle left = Mounts.Unhitch(donkey);                        // the cart stays standing, a free cart again
+```
+
+**Spawning and reading**
+
+| Member | Does |
+|---|---|
+| `Mounts.SpawnDonkey(owner, position, withCart = false, facingRight = true)` | A standing donkey (with its cart) in the keeper's scene; the ground height is found under `position`. Null outside a game or while the core is off. |
+| `Mounts.SpawnCart(owner, position, facingRight = true)` | A cart on its own: the donkey prefab with the donkey's renderers off, the shafts resting on the ground. |
+| `Mounts.Instances` | Every one standing, in spawn order (not the `TryMount` summon). |
+| `Mounts.Riding` | The ridden one, or null (on foot, or riding the `TryMount` summon). |
+
+**Hitching**
+
+| Member | Does |
+|---|---|
+| `Mounts.Hitch(donkey, cart)` | The donkey takes the free cart, which is gone afterwards. Its cargo and its cart keys come too. A standing donkey moves to the cart; a ridden one is put there with the keeper. |
+| `Mounts.Unhitch(donkey)`, `Mounts.UnhitchRidden()` | The cart stays standing where it is, as a new free cart with the cargo and the cart keys; that cart is returned. The ride goes on in Ride style. |
+
+**`MountHandle`**
+
+| Member | Does |
+|---|---|
+| `Id`, `Owner`, `Exists`, `HasDonkey`, `HasCart`, `IsRidden` | Identity and state. |
+| `SceneId`, `Position`, `FacingRight` | Where it stands. |
+| `CargoIds` | What is on its cart. |
+| `Tuning` | Its own settings (`InstanceTuning`: `Get`, `Set`, `Clear`, `Reset`, `IsSet`, `SetBy`, `Keys`). Keys are those of `Mounts.Tuning(style)`, `Mounts.Behaviour` and `Mounts.Colors`; a style key applies in whichever style it is in. This donkey's value wins over everyone's (cfg and session overrides). |
+| `Ride(showMessage)` | The keeper gets on and is put on the seat. The same checks and rules as `TryMount`. |
+| `MoveTo(position, facingRight)` | Moves a standing one. |
+| `Remove()` | Gone, with anything on its cart; a ridden one is dismounted first. |
+
+**Events:** `InstanceSpawned`, `InstanceRemoved`, `Hitched(donkey, oldCart)`, `Unhitched(donkey, newCart)`. The
+ride's own `Mounted` and `Dismounted` come for instances too.
+
+**Behaviour and limits**
+
+- **Dismounting** an instance (any dismount, the showcase's key included) leaves it standing, cart and cargo
+  included. `SwitchStyle` on a ridden instance: to Ride unhitches, and to Cart is refused (hitch a cart).
+- **Carts:** the cargo goes onto the ridden cart only; a standing or free cart takes no pickups.
+- **Keys that travel with the cart:** `Cart*`, `Cargo*`, `Lantern*`, the Cart and Lantern colour regions, and
+  `GlowColor`, `LitGlassTint`, `CharacterLightColor`.
+- **Saves:** instances aren't saved. At each save their cargo is set down at their cart (in the save) and taken
+  back right after, so a reload finds the items where the cart stood. After a game restart or load, the mod that
+  spawned them spawns them again; `Instances` gives everything a mod needs to keep its own record.
+- **In-game controls:** `General.InstanceControls` (on) makes the interact key ride a standing donkey and hitch a
+  free cart. `General.HitchKey` (J) unhitches, and hitches too.
+
 ## Gating on the game's progress
 
 All of this is the game's own state, reached through `MainGame.Instance.GameSave` (reference `Assembly-CSharp.dll`).
@@ -240,3 +299,4 @@ History:
 - 0.3.0: tuning.
 - 0.4.0: behaviour, and the core without keys.
 - 0.5.0: colours (`Mounts.Colors`, `Mounts.ColorRegions`, `MountColorRegion`, `SpriteColorMethod`); the style keys `CargoSetDownBehindCart`, `CargoSetDownGap`.
+- 0.6.0: donkeys and carts in the world (`SpawnDonkey`, `SpawnCart`, `Instances`, `Riding`, `Hitch`, `Unhitch`, `UnhitchRidden`, `MountHandle`, `InstanceTuning`, and the events `InstanceSpawned`, `InstanceRemoved`, `Hitched`, `Unhitched`); `SwitchStyle` on a ridden instance unhitches or refuses.

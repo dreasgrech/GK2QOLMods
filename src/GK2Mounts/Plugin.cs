@@ -318,6 +318,8 @@ namespace GK2Mounts
         internal static Tuned<bool> StayMountedThroughDoors;
         internal static Tuned<bool> DismountIndoors;
         internal static Tuned<bool> ShowMessages;
+        internal static ConfigEntry<bool> InstanceControls;
+        internal static ConfigEntry<KeyCode> HitchKey;
 
         // [Ride] / [Cart]: position, pose, animation, legs, speed
         internal static StyleSettings Ride;
@@ -357,6 +359,10 @@ namespace GK2Mounts
                 "Dismount automatically when entering a building, church or dungeon (the game's indoor lighting presets), and refuse to mount while indoors. The cart cannot avoid furniture and door frames inside.");
             ShowMessages = Config.Bind("General", "ShowMessages", Defaults.Get("General", "ShowMessages", true),
                 "Show a thought bubble when the keeper cannot mount and why.");
+            InstanceControls = Config.Bind("General", "InstanceControls", Defaults.Get("General", "InstanceControls", true),
+                "Donkeys and carts a mod left standing in the world (Mounts.SpawnDonkey / SpawnCart): the interact key next to a standing donkey rides it (empty hands), and next to a free cart while riding a donkey without its cart hitches it; a label over it says so. Off: only mods can do that (MountHandle.Ride, Mounts.Hitch).");
+            HitchKey = Config.Bind("General", "HitchKey", Defaults.Get("General", "HitchKey", KeyCode.J),
+                "With InstanceControls, while riding: leave the cart standing where it is (a free cart with its cargo and settings), or take the free cart in reach. None: the key is off (the interact key still hitches).");
 
 
             Ride = new StyleSettings(Config, "Ride",
@@ -429,7 +435,7 @@ namespace GK2Mounts
             {
                 // Switched off mid-ride: hand the cargo back and restore the keeper instead of leaving a frozen
                 // donkey, a raised speed and the cart reroute behind (the patches stay installed until restart).
-                if (Mount.IsMounted)
+                if (Mount.IsMounted || Mount.All.Count > 0)
                 {
                     Mount.ForceCleanup("disabled in the config");
                 }
@@ -465,6 +471,14 @@ namespace GK2Mounts
             }
             try
             {
+                try
+                {
+                    GK2Mounts.InstanceControls.OnGUI();
+                }
+                catch (Exception e)
+                {
+                    Log.LogWarning("Instance label failed: " + e.Message);
+                }
                 TuningWindow.Draw();
             }
             catch (Exception e)

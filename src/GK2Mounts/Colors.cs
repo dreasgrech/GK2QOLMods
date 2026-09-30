@@ -26,7 +26,7 @@ namespace GK2Mounts
     //   the cart.
     // Nothing is touched while every region is at its defaults. The donkey's parts come from the game's pool (the
     // delivery donkey reuses them), so Detach puts every material, keyword and LUT back before the view is destroyed.
-    internal static class Colors
+    internal static partial class Colors
     {
         internal const string Section = "Colors";
 
@@ -419,670 +419,708 @@ namespace GK2Mounts
             public bool Warned;
         }
 
-        private static readonly List<SpriteTarget> sprites = new List<SpriteTarget>();
-        private static readonly List<MeshTarget> meshes = new List<MeshTarget>();
-        private static readonly Texture2D[] palettes = new Texture2D[GroupCount];
-        private static readonly Texture2D[] luts = new Texture2D[GroupCount];
-        private static readonly bool[] groupActive = new bool[GroupCount];
-        private static Wgo attachedTo;
-        private static bool dirty = true;
-        private static float nextVerify;
-        private static SpriteColorMethod appliedMethod;
-        public static string Note { get; private set; } = "not attached";
+        // ------------------------------------------------------------------ per instance (the bound one: Mount.Current)
 
-        private static readonly int IdPalette = Shader.PropertyToID("_Palette");
-        private static readonly int IdLut = Shader.PropertyToID("_ReplaceLUT");
-        private const string KwPalette = "USE_PALETTE_COLOR_REPLACE";
-        private const string KwLut = "USE_LUT_COLOR_REPLACE";
+        private static Rig Current => Mount.Current?.ColorsRig;
+        public static string Note => Current?.Note ?? "not attached";
+        internal static IReadOnlyList<MountColorRegion> RegionList => ApiRegions;
+        internal static string Diagnose() => Current?.Diagnose() ?? "[colors] no donkey";
+        internal static Color GlowRgb(Color game) => Rig.GlowRgb(game);
+        internal static Color CharacterLight(Color current) => Rig.CharacterLight(current);
+        internal static Color32 Preview(string regionKey, Color32 src) => Rig.Preview(regionKey, src);
+        internal static bool RegionChanged(string regionKey) => Rig.RegionChanged(regionKey);
+        internal static int LutIndex(Color32 c) => Rig.LutIndex(c);
 
+        // A colour setting changed (cfg, panel, API, an instance override): every instance rebuilds at its next frame,
+        // each with its own values.
         internal static void MarkDirty()
         {
-            dirty = true;
+            Mount.ForEachInstance(i => i.ColorsRig.MarkDirty(), bind: false);
         }
 
-        // After PrepareParts: the view's parts are in place (and again after a cargo change: nothing new to find, the
-        // lists are rebuilt the same way).
-        internal static void Attach(Wgo donkey)
+        // One per instance (Mount.Instance.Colors).
+        internal sealed partial class Rig
         {
-            Detach();
-            if (donkey == null || !donkey)
+            private readonly List<SpriteTarget> sprites = new List<SpriteTarget>();
+            private readonly List<MeshTarget> meshes = new List<MeshTarget>();
+            private readonly Texture2D[] palettes = new Texture2D[GroupCount];
+            private readonly Texture2D[] luts = new Texture2D[GroupCount];
+            private readonly bool[] groupActive = new bool[GroupCount];
+            private Wgo attachedTo;
+            private bool dirty = true;
+            private float nextVerify;
+            private SpriteColorMethod appliedMethod;
+            public string Note { get; private set; } = "not attached";
+
+            private static readonly int IdPalette = Shader.PropertyToID("_Palette");
+            private static readonly int IdLut = Shader.PropertyToID("_ReplaceLUT");
+            private const string KwPalette = "USE_PALETTE_COLOR_REPLACE";
+            private const string KwLut = "USE_LUT_COLOR_REPLACE";
+
+            internal void MarkDirty()
             {
-                return;
+                dirty = true;
             }
-            attachedTo = donkey;
-            try
+
+            // After PrepareParts: the view's parts are in place (and again after a cargo change: nothing new to find, the
+            // lists are rebuilt the same way).
+            internal void Attach(Wgo donkey)
             {
-                foreach (SpriteRenderer sr in donkey.GetComponentsInChildren<SpriteRenderer>(includeInactive: true))
+                Detach();
+                if (donkey == null || !donkey)
                 {
-                    if (UnderCargo(sr.transform)) continue;
-                    if (sr.name == "bdy" || sr.name == "hed")
-                    {
-                        sprites.Add(new SpriteTarget { R = sr, G = Group.DonkeySprites });
-                    }
-                    else if (HasAncestorNamed(sr.transform, "wheel_left") || HasAncestorNamed(sr.transform, "wheel_right"))
-                    {
-                        sprites.Add(new SpriteTarget { R = sr, G = Group.WheelSprites });
-                    }
-                }
-                foreach (Object3DMesh m in donkey.GetComponentsInChildren<Object3DMesh>(includeInactive: true))
-                {
-                    if (UnderCargo(m.transform)) continue;
-                    Group? g = MeshGroup(m);
-                    if (g.HasValue)
-                    {
-                        meshes.Add(new MeshTarget { M = m, G = g.Value });
-                    }
-                }
-                Note = $"{sprites.Count} sprites ({Count(sprites, Group.DonkeySprites)} donkey, {Count(sprites, Group.WheelSprites)} wheel), {meshes.Count} cart meshes";
-                Plugin.Log.LogInfo("Colors: attached; " + Note + ".");
-            }
-            catch (Exception e)
-            {
-                Note = "attach failed: " + e.Message;
-                Plugin.Log.LogWarning("Colors: " + Note);
-            }
-            dirty = true;
-            Tick();
-        }
-
-        private static int Count(List<SpriteTarget> list, Group g)
-        {
-            int n = 0;
-            foreach (SpriteTarget t in list) if (t.G == g) n++;
-            return n;
-        }
-
-        private static bool UnderCargo(Transform t)
-        {
-            return HasAncestorNamed(t, Cargo.ContainerName);
-        }
-
-        private static bool HasAncestorNamed(Transform t, string name)
-        {
-            for (Transform p = t; p != null; p = p.parent)
-            {
-                if (p.name == name) return true;
-            }
-            return false;
-        }
-
-        private static Group? MeshGroup(Object3DMesh m)
-        {
-            for (int i = 0; i < m.SubMeshCount; i++)
-            {
-                string tex = m.GetSubMesh(i)?.MainTextureName;
-                if (string.IsNullOrEmpty(tex)) continue;
-                foreach (var mt in MeshTextures)
-                {
-                    if (tex.StartsWith(mt.Prefix, StringComparison.Ordinal)) return mt.G;
-                }
-                return null; // a texture of something else
-            }
-            // No texture known yet (a part not initialised): by the cart node it hangs under. The loaded-cart body
-            // (donkey_cart_body_sway, the corpse shroud) is left out on purpose.
-            if (HasAncestorNamed(m.transform, "donkey_cart_empty_sway")) return Group.CartBody;
-            if (HasAncestorNamed(m.transform, "donkey_cart_bars")) return Group.Bars;
-            if (HasAncestorNamed(m.transform, "donkey_cart_wheel_f") || HasAncestorNamed(m.transform, "donkey_cart_wheel_b")) return Group.Wheels3D;
-            if (HasAncestorNamed(m.transform, "donkey_cart_lantern_sway")) return Group.Lantern;
-            return null;
-        }
-
-        // Every frame while mounted, after the lantern (LampHang copies the pole's look onto the hanging lamp, LUT
-        // included, so the lamp needs nothing of its own).
-        internal static void Tick()
-        {
-            if (attachedTo == null)
-            {
-                return;
-            }
-            try
-            {
-                if (dirty)
-                {
-                    dirty = false;
-                    var watch = System.Diagnostics.Stopwatch.StartNew();
-                    int uploaded = Rebuild();
-                    ApplyAll();
-                    double ms = watch.Elapsed.TotalMilliseconds;
-                    // A slider drag rebuilds every frame: say so when that is not cheap (at most every 2 s).
-                    if (ms > 4.0 && Time.unscaledTime >= nextSlowLog)
-                    {
-                        nextSlowLog = Time.unscaledTime + 2f;
-                        Plugin.Log.LogInfo($"Colors: an update took {ms:F1} ms ({uploaded} texture(s) uploaded).");
-                    }
                     return;
                 }
-                // The game may re-skin the donkey (SkinChangerGK2 takes sprite.material and clears the replace
-                // keywords): put ours back.
-                foreach (SpriteTarget t in sprites)
+                attachedTo = donkey;
+                try
                 {
-                    if (t.Mine == null || t.R == null || !t.R) continue;
-                    string kw = appliedMethod == SpriteColorMethod.Palette ? KwPalette : KwLut;
-                    if (t.R.sharedMaterial != t.Mine || !t.Mine.IsKeywordEnabled(kw))
+                    foreach (SpriteRenderer sr in donkey.GetComponentsInChildren<SpriteRenderer>(includeInactive: true))
                     {
-                        if (!t.Warned)
+                        if (UnderCargo(sr.transform)) continue;
+                        if (sr.name == "bdy" || sr.name == "hed")
                         {
-                            t.Warned = true;
-                            Plugin.Log.LogInfo($"Colors: the game changed the material of '{t.R.name}' ({t.R.sharedMaterial?.name}); the colours are put back.");
+                            sprites.Add(new SpriteTarget { R = sr, G = Group.DonkeySprites });
                         }
-                        t.R.sharedMaterial = t.Mine;
-                        SetSpriteKeywords(t);
+                        else if (HasAncestorNamed(sr.transform, "wheel_left") || HasAncestorNamed(sr.transform, "wheel_right"))
+                        {
+                            sprites.Add(new SpriteTarget { R = sr, G = Group.WheelSprites });
+                        }
                     }
-                }
-                if (Time.unscaledTime >= nextVerify)
-                {
-                    nextVerify = Time.unscaledTime + 1f;
-                    foreach (MeshTarget t in meshes)
+                    foreach (Object3DMesh m in donkey.GetComponentsInChildren<Object3DMesh>(includeInactive: true))
                     {
-                        if (!t.Applied || t.M == null || !t.M) continue;
-                        Object3DSubMesh sm = t.M.GetSubMesh(0);
-                        // An inactive part (Ride style's cart, the loaded-cart body) was never initialised by the game:
-                        // its LUT is stored and applies when it starts; its materials say nothing yet.
-                        bool slotsOk = !t.M.gameObject.activeInHierarchy || AllSlotsLut(t.M);
-                        if ((sm != null && sm.LutTexture != luts[(int)t.G]) || !slotsOk)
+                        if (UnderCargo(m.transform)) continue;
+                        Group? g = MeshGroup(m);
+                        if (g.HasValue)
+                        {
+                            meshes.Add(new MeshTarget { M = m, G = g.Value });
+                        }
+                    }
+                    Note = $"{sprites.Count} sprites ({Count(sprites, Group.DonkeySprites)} donkey, {Count(sprites, Group.WheelSprites)} wheel), {meshes.Count} cart meshes";
+                    Plugin.Log.LogInfo("Colors: attached; " + Note + ".");
+                }
+                catch (Exception e)
+                {
+                    Note = "attach failed: " + e.Message;
+                    Plugin.Log.LogWarning("Colors: " + Note);
+                }
+                dirty = true;
+                Tick();
+            }
+
+            private int Count(List<SpriteTarget> list, Group g)
+            {
+                int n = 0;
+                foreach (SpriteTarget t in list) if (t.G == g) n++;
+                return n;
+            }
+
+            private bool UnderCargo(Transform t)
+            {
+                return HasAncestorNamed(t, Cargo.ContainerName);
+            }
+
+            private bool HasAncestorNamed(Transform t, string name)
+            {
+                for (Transform p = t; p != null; p = p.parent)
+                {
+                    if (p.name == name) return true;
+                }
+                return false;
+            }
+
+            private Group? MeshGroup(Object3DMesh m)
+            {
+                for (int i = 0; i < m.SubMeshCount; i++)
+                {
+                    string tex = m.GetSubMesh(i)?.MainTextureName;
+                    if (string.IsNullOrEmpty(tex)) continue;
+                    foreach (var mt in MeshTextures)
+                    {
+                        if (tex.StartsWith(mt.Prefix, StringComparison.Ordinal)) return mt.G;
+                    }
+                    return null; // a texture of something else
+                }
+                // No texture known yet (a part not initialised): by the cart node it hangs under. The loaded-cart body
+                // (donkey_cart_body_sway, the corpse shroud) is left out on purpose.
+                if (HasAncestorNamed(m.transform, "donkey_cart_empty_sway")) return Group.CartBody;
+                if (HasAncestorNamed(m.transform, "donkey_cart_bars")) return Group.Bars;
+                if (HasAncestorNamed(m.transform, "donkey_cart_wheel_f") || HasAncestorNamed(m.transform, "donkey_cart_wheel_b")) return Group.Wheels3D;
+                if (HasAncestorNamed(m.transform, "donkey_cart_lantern_sway")) return Group.Lantern;
+                return null;
+            }
+
+            // Every frame while mounted, after the lantern (LampHang copies the pole's look onto the hanging lamp, LUT
+            // included, so the lamp needs nothing of its own).
+            internal void Tick()
+            {
+                if (attachedTo == null)
+                {
+                    return;
+                }
+                try
+                {
+                    if (dirty)
+                    {
+                        dirty = false;
+                        var watch = System.Diagnostics.Stopwatch.StartNew();
+                        int uploaded = Rebuild();
+                        ApplyAll();
+                        double ms = watch.Elapsed.TotalMilliseconds;
+                        // A slider drag rebuilds every frame: say so when that is not cheap (at most every 2 s).
+                        if (ms > 4.0 && Time.unscaledTime >= nextSlowLog)
+                        {
+                            nextSlowLog = Time.unscaledTime + 2f;
+                            Plugin.Log.LogInfo($"Colors: an update took {ms:F1} ms ({uploaded} texture(s) uploaded).");
+                        }
+                        return;
+                    }
+                    // The game may re-skin the donkey (SkinChangerGK2 takes sprite.material and clears the replace
+                    // keywords): put ours back.
+                    foreach (SpriteTarget t in sprites)
+                    {
+                        if (t.Mine == null || t.R == null || !t.R) continue;
+                        string kw = appliedMethod == SpriteColorMethod.Palette ? KwPalette : KwLut;
+                        if (t.R.sharedMaterial != t.Mine || !t.Mine.IsKeywordEnabled(kw))
                         {
                             if (!t.Warned)
                             {
                                 t.Warned = true;
-                                Plugin.Log.LogInfo($"Colors: '{t.M.name}' lost its colours ({MaterialNames(t.M.ObjRenderer)}); set again.");
+                                Plugin.Log.LogInfo($"Colors: the game changed the material of '{t.R.name}' ({t.R.sharedMaterial?.name}); the colours are put back.");
                             }
-                            SetLut(t.M, luts[(int)t.G]);
+                            t.R.sharedMaterial = t.Mine;
+                            SetSpriteKeywords(t);
                         }
                     }
-                }
-            }
-            catch (Exception e)
-            {
-                Plugin.Log.LogWarning("Colors: update failed, colours off for this ride: " + e.Message);
-                Detach();
-            }
-        }
-
-        // Wgo.OnDestroy prefix: any Wgo; only ours (still attached) matters.
-        internal static void OnWgoDestroyed(Wgo wgo)
-        {
-            if (attachedTo != null && ReferenceEquals(wgo, attachedTo))
-            {
-                Plugin.Log.LogInfo("Colors: the donkey view was destroyed by the game (scene change); colours restored first.");
-                Detach();
-            }
-        }
-
-        // Before the donkey view is destroyed (its parts go back to the game's pool) and when attaching again.
-        internal static void Detach()
-        {
-            foreach (SpriteTarget t in sprites)
-            {
-                RestoreSprite(t);
-            }
-            foreach (MeshTarget t in meshes)
-            {
-                RestoreMesh(t);
-            }
-            sprites.Clear();
-            meshes.Clear();
-            RestoreGlass(); // the lit glass's property block too (idempotent: Lantern.Detach calls it again)
-            attachedTo = null;
-            Note = "not attached";
-        }
-
-        private static float nextSlowLog;
-        private static readonly Color32[][] lastDst = new Color32[GroupCount][];
-        private static readonly bool[] builtFor = new bool[GroupCount]; // textures hold this group's current mapping
-
-        // Returns how many textures were uploaded: only the groups whose mapping changed.
-        private static int Rebuild()
-        {
-            int uploads = 0;
-            bool on = Enabled.Value;
-            var maps = new Dictionary<RegionDef, RegionMap>();
-            foreach (RegionDef d in Regions)
-            {
-                maps[d] = new RegionMap(d.S);
-            }
-            for (int gi = 0; gi < GroupCount; gi++)
-            {
-                Group g = (Group)gi;
-                // source colour -> mapped, for every colour the group's art has
-                var pairs = new List<(Color32 Src, Color32 Dst)>();
-                bool any = false;
-                foreach (RegionDef d in Regions)
-                {
-                    RegionMap map = maps[d];
-                    foreach (var part in d.Parts)
+                    if (Time.unscaledTime >= nextVerify)
                     {
-                        if (part.G != g) continue;
-                        foreach (string hex in part.Colors)
+                        nextVerify = Time.unscaledTime + 1f;
+                        foreach (MeshTarget t in meshes)
                         {
-                            TryHex(hex, out Color32 src);
-                            Color32 dst = on ? map.Apply(src) : src;
-                            pairs.Add((src, dst));
-                            any |= !Same(src, dst);
+                            if (!t.Applied || t.M == null || !t.M) continue;
+                            Object3DSubMesh sm = t.M.GetSubMesh(0);
+                            // An inactive part (Ride style's cart, the loaded-cart body) was never initialised by the game:
+                            // its LUT is stored and applies when it starts; its materials say nothing yet.
+                            bool slotsOk = !t.M.gameObject.activeInHierarchy || AllSlotsLut(t.M);
+                            if ((sm != null && sm.LutTexture != luts[(int)t.G]) || !slotsOk)
+                            {
+                                if (!t.Warned)
+                                {
+                                    t.Warned = true;
+                                    Plugin.Log.LogInfo($"Colors: '{t.M.name}' lost its colours ({MaterialNames(t.M.ObjRenderer)}); set again.");
+                                }
+                                SetLut(t.M, luts[(int)t.G]);
+                            }
                         }
                     }
                 }
-                if (Unassigned.TryGetValue(g, out string[] extra))
+                catch (Exception e)
                 {
-                    foreach (string hex in extra)
-                    {
-                        TryHex(hex, out Color32 src);
-                        pairs.Add((src, src));
-                    }
+                    Plugin.Log.LogWarning("Colors: update failed, colours off for this ride: " + e.Message);
+                    Detach();
                 }
-                groupActive[gi] = on && any;
-                if (!groupActive[gi])
+            }
+
+            // Wgo.OnDestroy prefix: any Wgo; only ours (still attached) matters.
+            internal void OnWgoDestroyed(Wgo wgo)
+            {
+                if (attachedTo != null && ReferenceEquals(wgo, attachedTo))
                 {
-                    continue;
+                    Plugin.Log.LogInfo("Colors: the donkey view was destroyed by the game (scene change); colours restored first.");
+                    Detach();
                 }
-                if (builtFor[gi] && SameDst(lastDst[gi], pairs))
+            }
+
+            // Before the donkey view is destroyed (its parts go back to the game's pool) and when attaching again.
+            // The instance is gone for good: its textures too (Unity does not collect them). After Detach.
+            internal void Release()
+            {
+                for (int i = 0; i < GroupCount; i++)
                 {
-                    continue; // this change was in another group
+                    if (palettes[i] != null) UnityEngine.Object.Destroy(palettes[i]);
+                    if (luts[i] != null) UnityEngine.Object.Destroy(luts[i]);
+                    palettes[i] = null;
+                    luts[i] = null;
+                    builtFor[i] = false;
+                    lastDst[i] = null;
                 }
-                if (IsSpriteGroup(g))
-                {
-                    palettes[gi] = BuildPalette(palettes[gi], pairs, "gk2mounts palette " + g);
-                    uploads++;
-                }
-                luts[gi] = BuildLut(luts[gi], pairs, "gk2mounts lut " + g);
-                uploads++;
-                var mapped = new Color32[pairs.Count];
-                for (int i = 0; i < mapped.Length; i++) mapped[i] = pairs[i].Dst;
-                lastDst[gi] = mapped;
-                builtFor[gi] = true;
+                dirty = true;
             }
-            return uploads;
-        }
 
-        private static bool SameDst(Color32[] last, List<(Color32 Src, Color32 Dst)> pairs)
-        {
-            if (last == null || last.Length != pairs.Count) return false;
-            for (int i = 0; i < last.Length; i++)
+            internal void Detach()
             {
-                if (!Same(last[i], pairs[i].Dst)) return false;
-            }
-            return true;
-        }
-
-        private static bool Same(Color32 a, Color32 b) => a.r == b.r && a.g == b.g && a.b == b.b;
-
-        // Width N, height 2: row 1 the source colours, row 0 their replacements (the game's layout,
-        // PaletteReplaceHelper.CombinePalettes). Point-sampled, uncompressed, no mipmaps: the shader samples texel centres.
-        private static Texture2D BuildPalette(Texture2D tex, List<(Color32 Src, Color32 Dst)> pairs, string name)
-        {
-            int n = pairs.Count;
-            if (tex == null || tex.width != n)
-            {
-                if (tex != null) UnityEngine.Object.Destroy(tex);
-                tex = new Texture2D(n, 2, TextureFormat.RGBA32, mipChain: false) { name = name, filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
-            }
-            var px = new Color32[n * 2];
-            for (int i = 0; i < n; i++)
-            {
-                px[i] = pairs[i].Dst;
-                px[n + i] = pairs[i].Src;
-            }
-            tex.SetPixels32(px);
-            tex.Apply(updateMipmaps: false);
-            return tex;
-        }
-
-        // The game's 32-cube as 1024x32 (x = blue slice * 32 + red, y = green), point-sampled. Identity everywhere,
-        // then each known colour's own cell holds its exact mapped value. The shaders look up
-        // u = r*31/1024 + 0.5/1024 + floor(b*31)/32, v = g*31/32 + 0.5/32 (Round 16).
-        private static Texture2D BuildLut(Texture2D tex, List<(Color32 Src, Color32 Dst)> pairs, string name)
-        {
-            if (tex == null)
-            {
-                tex = new Texture2D(1024, 32, TextureFormat.RGBA32, mipChain: false) { name = name, filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
-            }
-            var px = (Color32[])IdentityLut.Clone();
-            foreach (var p in pairs)
-            {
-                px[LutIndex(p.Src)] = p.Dst;
-            }
-            tex.SetPixels32(px);
-            tex.Apply(updateMipmaps: false);
-            return tex;
-        }
-
-        private static Color32[] identityLut;
-
-        private static Color32[] IdentityLut
-        {
-            get
-            {
-                if (identityLut != null) return identityLut;
-                var px = new Color32[1024 * 32];
-                for (int g = 0; g < 32; g++)
-                {
-                    byte gv = (byte)Mathf.RoundToInt(g * 255f / 31f);
-                    for (int b = 0; b < 32; b++)
-                    {
-                        // a blue cell k holds b in [k/31, (k+1)/31): its middle, the last cell 255
-                        byte bv = (byte)Mathf.Min(255, Mathf.RoundToInt((b + (b == 31 ? 0f : 0.5f)) * 255f / 31f));
-                        for (int r = 0; r < 32; r++)
-                        {
-                            px[g * 1024 + b * 32 + r] = new Color32((byte)Mathf.RoundToInt(r * 255f / 31f), gv, bv, 255);
-                        }
-                    }
-                }
-                identityLut = px;
-                return px;
-            }
-        }
-
-        internal static int LutIndex(Color32 c)
-        {
-            int r = Mathf.FloorToInt(c.r / 255f * 31f + 0.5f);
-            int g = Mathf.FloorToInt(c.g / 255f * 31f + 0.5f);
-            int b = Mathf.FloorToInt(c.b / 255f * 31f);
-            return Mathf.Clamp(g, 0, 31) * 1024 + Mathf.Clamp(b, 0, 31) * 32 + Mathf.Clamp(r, 0, 31);
-        }
-
-        private static void ApplyAll()
-        {
-            appliedMethod = SpriteMethod.Value;
-            foreach (SpriteTarget t in sprites)
-            {
-                if (t.R == null || !t.R) continue;
-                if (!groupActive[(int)t.G])
+                foreach (SpriteTarget t in sprites)
                 {
                     RestoreSprite(t);
-                    continue;
                 }
-                if (t.Mine == null)
-                {
-                    t.Orig = t.R.sharedMaterial;
-                    if (t.Orig == null) continue;
-                    t.Mine = new Material(t.Orig) { name = t.Orig.name + " (GK2 Mounts colours)" };
-                    t.R.sharedMaterial = t.Mine;
-                    SetSpriteKeywords(t);
-                }
-                else if (!SpriteUpToDate(t))
-                {
-                    SetSpriteKeywords(t); // the method changed (the textures themselves are updated in place)
-                }
-            }
-            foreach (MeshTarget t in meshes)
-            {
-                if (t.M == null || !t.M) continue;
-                if (!groupActive[(int)t.G])
+                foreach (MeshTarget t in meshes)
                 {
                     RestoreMesh(t);
-                    continue;
                 }
-                if (!t.Applied)
+                sprites.Clear();
+                meshes.Clear();
+                RestoreGlass(); // the lit glass's property block too (idempotent: Lantern.Detach calls it again)
+                attachedTo = null;
+                Note = "not attached";
+            }
+
+            private float nextSlowLog;
+            private readonly Color32[][] lastDst = new Color32[GroupCount][];
+            private readonly bool[] builtFor = new bool[GroupCount]; // textures hold this group's current mapping
+
+            // Returns how many textures were uploaded: only the groups whose mapping changed.
+            private int Rebuild()
+            {
+                int uploads = 0;
+                bool on = Enabled.Value;
+                var maps = new Dictionary<RegionDef, RegionMap>();
+                foreach (RegionDef d in Regions)
                 {
-                    t.OrigLut = t.M.GetSubMesh(0)?.LutTexture;
-                    t.OrigMaterials = MaterialNames(t.M.ObjRenderer);
-                    t.OrigMats = t.M.ObjRenderer != null ? t.M.ObjRenderer.sharedMaterials : null;
-                    t.Applied = true;
+                    maps[d] = new RegionMap(d.S);
                 }
-                if (t.M.GetSubMesh(0)?.LutTexture == luts[(int)t.G])
+                for (int gi = 0; gi < GroupCount; gi++)
                 {
-                    continue; // already ours: the texture was updated in place
-                }
-                SetLut(t.M, luts[(int)t.G]);
-                if (t.M.gameObject.activeInHierarchy && !AllSlotsLut(t.M))
-                {
-                    Plugin.Log.LogWarning($"Colors: '{t.M.name}' has {MaterialNames(t.M.ObjRenderer)} after the LUT was set; some of it keeps the game's colours.");
-                }
-            }
-        }
-
-        // Object3DSubMesh keeps its own copy of the renderer's material list (cachedSharedMaterials) and, on a LUT
-        // change, writes its slot into that copy and assigns the whole copy to the renderer. On a mesh already
-        // initialised, submesh 1's older copy then overwrites submesh 0's new material: only the last submesh changed
-        // (found in game 2026-09-30: the cart body's corner posts, submesh 1, recoloured and the planks, submesh 0,
-        // did not). The game only sets LUTs before a part initialises, while every cache is still empty, so each
-        // submesh reads the renderer's current list in turn. Emptying the caches first gives that same order.
-        private static readonly AccessTools.FieldRef<Object3DSubMesh, Material[]> SubMeshMaterialCache =
-            AccessTools.FieldRefAccess<Object3DSubMesh, Material[]>("cachedSharedMaterials");
-
-        private static void SetLut(Object3DMesh m, Texture2D lut)
-        {
-            for (int i = 0; i < m.SubMeshCount; i++)
-            {
-                Object3DSubMesh sm = m.GetSubMesh(i);
-                if (sm != null) SubMeshMaterialCache(sm) = null;
-            }
-            m.SetLutTexture(lut);
-        }
-
-        // True when every material slot of the mesh has the game's LUT material (the check behind SetLut).
-        private static bool AllSlotsLut(Object3DMesh m)
-        {
-            Renderer r = m.ObjRenderer;
-            Material lutMat = LazyBearTechnology.LazySingletonSO<GlobalResources>.Instance?.matObject3DLUT;
-            if (r == null || lutMat == null) return true; // nothing to compare against
-            Material[] mats = r.sharedMaterials;
-            for (int i = 0; i < mats.Length && i < m.SubMeshCount; i++)
-            {
-                if (mats[i] != lutMat) return false;
-            }
-            return true;
-        }
-
-        private static bool SpriteUpToDate(SpriteTarget t)
-        {
-            Material m = t.Mine;
-            int gi = (int)t.G;
-            return appliedMethod == SpriteColorMethod.Palette
-                ? m.IsKeywordEnabled(KwPalette) && !m.IsKeywordEnabled(KwLut) && m.GetTexture(IdPalette) == palettes[gi]
-                : m.IsKeywordEnabled(KwLut) && !m.IsKeywordEnabled(KwPalette) && m.GetTexture(IdLut) == luts[gi];
-        }
-
-        private static void SetSpriteKeywords(SpriteTarget t)
-        {
-            Material m = t.Mine;
-            int gi = (int)t.G;
-            if (appliedMethod == SpriteColorMethod.Palette)
-            {
-                m.DisableKeyword(KwLut);
-                m.EnableKeyword(KwPalette);
-                m.SetTexture(IdPalette, palettes[gi]);
-            }
-            else
-            {
-                m.DisableKeyword(KwPalette);
-                m.EnableKeyword(KwLut);
-                m.SetTexture(IdLut, luts[gi]);
-            }
-        }
-
-        private static void RestoreSprite(SpriteTarget t)
-        {
-            if (t.Mine == null) return;
-            try
-            {
-                if (t.R != null && t.R && t.R.sharedMaterial == t.Mine)
-                {
-                    t.R.sharedMaterial = t.Orig;
-                }
-                UnityEngine.Object.Destroy(t.Mine);
-            }
-            catch
-            {
-                // the view may be half destroyed
-            }
-            t.Mine = null;
-            t.Orig = null;
-            t.Warned = false;
-        }
-
-        private static void RestoreMesh(MeshTarget t)
-        {
-            if (!t.Applied) return;
-            try
-            {
-                if (t.M != null && t.M)
-                {
-                    SetLut(t.M, t.OrigLut); // null: the game's own material again (matObject3D)
-                    Renderer r = t.M.ObjRenderer;
-                    string now = MaterialNames(r);
-                    if (now != t.OrigMaterials && r != null && t.OrigMats != null)
+                    Group g = (Group)gi;
+                    // source colour -> mapped, for every colour the group's art has
+                    var pairs = new List<(Color32 Src, Color32 Dst)>();
+                    bool any = false;
+                    foreach (RegionDef d in Regions)
                     {
-                        // exactly what the part had, for the pool; the submeshes then re-read it
-                        r.sharedMaterials = t.OrigMats;
-                        for (int i = 0; i < t.M.SubMeshCount; i++)
+                        RegionMap map = maps[d];
+                        foreach (var part in d.Parts)
                         {
-                            Object3DSubMesh sm = t.M.GetSubMesh(i);
-                            if (sm != null) SubMeshMaterialCache(sm) = null;
+                            if (part.G != g) continue;
+                            foreach (string hex in part.Colors)
+                            {
+                                TryHex(hex, out Color32 src);
+                                Color32 dst = on ? map.Apply(src) : src;
+                                pairs.Add((src, dst));
+                                any |= !Same(src, dst);
+                            }
                         }
-                        Plugin.Log.LogInfo($"Colors: '{t.M.name}' had {now} after the LUT was removed; put back to {t.OrigMaterials}.");
+                    }
+                    if (Unassigned.TryGetValue(g, out string[] extra))
+                    {
+                        foreach (string hex in extra)
+                        {
+                            TryHex(hex, out Color32 src);
+                            pairs.Add((src, src));
+                        }
+                    }
+                    groupActive[gi] = on && any;
+                    if (!groupActive[gi])
+                    {
+                        continue;
+                    }
+                    if (builtFor[gi] && SameDst(lastDst[gi], pairs))
+                    {
+                        continue; // this change was in another group
+                    }
+                    if (IsSpriteGroup(g))
+                    {
+                        palettes[gi] = BuildPalette(palettes[gi], pairs, "gk2mounts palette " + g);
+                        uploads++;
+                    }
+                    luts[gi] = BuildLut(luts[gi], pairs, "gk2mounts lut " + g);
+                    uploads++;
+                    var mapped = new Color32[pairs.Count];
+                    for (int i = 0; i < mapped.Length; i++) mapped[i] = pairs[i].Dst;
+                    lastDst[gi] = mapped;
+                    builtFor[gi] = true;
+                }
+                return uploads;
+            }
+
+            private static bool SameDst(Color32[] last, List<(Color32 Src, Color32 Dst)> pairs)
+            {
+                if (last == null || last.Length != pairs.Count) return false;
+                for (int i = 0; i < last.Length; i++)
+                {
+                    if (!Same(last[i], pairs[i].Dst)) return false;
+                }
+                return true;
+            }
+
+            private static bool Same(Color32 a, Color32 b) => a.r == b.r && a.g == b.g && a.b == b.b;
+
+            // Width N, height 2: row 1 the source colours, row 0 their replacements (the game's layout,
+            // PaletteReplaceHelper.CombinePalettes). Point-sampled, uncompressed, no mipmaps: the shader samples texel centres.
+            private static Texture2D BuildPalette(Texture2D tex, List<(Color32 Src, Color32 Dst)> pairs, string name)
+            {
+                int n = pairs.Count;
+                if (tex == null || tex.width != n)
+                {
+                    if (tex != null) UnityEngine.Object.Destroy(tex);
+                    tex = new Texture2D(n, 2, TextureFormat.RGBA32, mipChain: false) { name = name, filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
+                }
+                var px = new Color32[n * 2];
+                for (int i = 0; i < n; i++)
+                {
+                    px[i] = pairs[i].Dst;
+                    px[n + i] = pairs[i].Src;
+                }
+                tex.SetPixels32(px);
+                tex.Apply(updateMipmaps: false);
+                return tex;
+            }
+
+            // The game's 32-cube as 1024x32 (x = blue slice * 32 + red, y = green), point-sampled. Identity everywhere,
+            // then each known colour's own cell holds its exact mapped value. The shaders look up
+            // u = r*31/1024 + 0.5/1024 + floor(b*31)/32, v = g*31/32 + 0.5/32 (Round 16).
+            private static Texture2D BuildLut(Texture2D tex, List<(Color32 Src, Color32 Dst)> pairs, string name)
+            {
+                if (tex == null)
+                {
+                    tex = new Texture2D(1024, 32, TextureFormat.RGBA32, mipChain: false) { name = name, filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
+                }
+                var px = (Color32[])IdentityLut.Clone();
+                foreach (var p in pairs)
+                {
+                    px[LutIndex(p.Src)] = p.Dst;
+                }
+                tex.SetPixels32(px);
+                tex.Apply(updateMipmaps: false);
+                return tex;
+            }
+
+            private static Color32[] identityLut;
+
+            private static Color32[] IdentityLut
+            {
+                get
+                {
+                    if (identityLut != null) return identityLut;
+                    var px = new Color32[1024 * 32];
+                    for (int g = 0; g < 32; g++)
+                    {
+                        byte gv = (byte)Mathf.RoundToInt(g * 255f / 31f);
+                        for (int b = 0; b < 32; b++)
+                        {
+                            // a blue cell k holds b in [k/31, (k+1)/31): its middle, the last cell 255
+                            byte bv = (byte)Mathf.Min(255, Mathf.RoundToInt((b + (b == 31 ? 0f : 0.5f)) * 255f / 31f));
+                            for (int r = 0; r < 32; r++)
+                            {
+                                px[g * 1024 + b * 32 + r] = new Color32((byte)Mathf.RoundToInt(r * 255f / 31f), gv, bv, 255);
+                            }
+                        }
+                    }
+                    identityLut = px;
+                    return px;
+                }
+            }
+
+            internal static int LutIndex(Color32 c)
+            {
+                int r = Mathf.FloorToInt(c.r / 255f * 31f + 0.5f);
+                int g = Mathf.FloorToInt(c.g / 255f * 31f + 0.5f);
+                int b = Mathf.FloorToInt(c.b / 255f * 31f);
+                return Mathf.Clamp(g, 0, 31) * 1024 + Mathf.Clamp(b, 0, 31) * 32 + Mathf.Clamp(r, 0, 31);
+            }
+
+            private void ApplyAll()
+            {
+                appliedMethod = SpriteMethod.Value;
+                foreach (SpriteTarget t in sprites)
+                {
+                    if (t.R == null || !t.R) continue;
+                    if (!groupActive[(int)t.G])
+                    {
+                        RestoreSprite(t);
+                        continue;
+                    }
+                    if (t.Mine == null)
+                    {
+                        t.Orig = t.R.sharedMaterial;
+                        if (t.Orig == null) continue;
+                        t.Mine = new Material(t.Orig) { name = t.Orig.name + " (GK2 Mounts colours)" };
+                        t.R.sharedMaterial = t.Mine;
+                        SetSpriteKeywords(t);
+                    }
+                    else if (!SpriteUpToDate(t))
+                    {
+                        SetSpriteKeywords(t); // the method changed (the textures themselves are updated in place)
+                    }
+                }
+                foreach (MeshTarget t in meshes)
+                {
+                    if (t.M == null || !t.M) continue;
+                    if (!groupActive[(int)t.G])
+                    {
+                        RestoreMesh(t);
+                        continue;
+                    }
+                    if (!t.Applied)
+                    {
+                        t.OrigLut = t.M.GetSubMesh(0)?.LutTexture;
+                        t.OrigMaterials = MaterialNames(t.M.ObjRenderer);
+                        t.OrigMats = t.M.ObjRenderer != null ? t.M.ObjRenderer.sharedMaterials : null;
+                        t.Applied = true;
+                    }
+                    if (t.M.GetSubMesh(0)?.LutTexture == luts[(int)t.G])
+                    {
+                        continue; // already ours: the texture was updated in place
+                    }
+                    SetLut(t.M, luts[(int)t.G]);
+                    if (t.M.gameObject.activeInHierarchy && !AllSlotsLut(t.M))
+                    {
+                        Plugin.Log.LogWarning($"Colors: '{t.M.name}' has {MaterialNames(t.M.ObjRenderer)} after the LUT was set; some of it keeps the game's colours.");
                     }
                 }
             }
-            catch
+
+            // Object3DSubMesh keeps its own copy of the renderer's material list (cachedSharedMaterials) and, on a LUT
+            // change, writes its slot into that copy and assigns the whole copy to the renderer. On a mesh already
+            // initialised, submesh 1's older copy then overwrites submesh 0's new material: only the last submesh changed
+            // (found in game 2026-09-30: the cart body's corner posts, submesh 1, recoloured and the planks, submesh 0,
+            // did not). The game only sets LUTs before a part initialises, while every cache is still empty, so each
+            // submesh reads the renderer's current list in turn. Emptying the caches first gives that same order.
+            private static readonly AccessTools.FieldRef<Object3DSubMesh, Material[]> SubMeshMaterialCache =
+                AccessTools.FieldRefAccess<Object3DSubMesh, Material[]>("cachedSharedMaterials");
+
+            private void SetLut(Object3DMesh m, Texture2D lut)
             {
-            }
-            t.Applied = false;
-            t.OrigLut = null;
-        }
-
-        private static string MaterialNames(Renderer r)
-        {
-            if (r == null) return "-";
-            var names = new List<string>();
-            foreach (Material m in r.sharedMaterials)
-            {
-                names.Add(m != null ? m.name : "null");
-            }
-            return string.Join("+", names);
-        }
-
-        // ------------------------------------------------------------------ lamp colours (called by Lantern.ApplyLight)
-
-        internal static Color GlowRgb(Color game)
-        {
-            if (Enabled.Value && TryHex(GlowColor.Value, out Color32 c))
-            {
-                Color k = c;
-                k.a = game.a;
-                return k;
-            }
-            return game;
-        }
-
-        internal static Color CharacterLight(Color current)
-        {
-            return Enabled.Value && TryHex(CharacterLightColor.Value, out Color32 c) ? (Color)c : current;
-        }
-
-        private static readonly int IdTintColor = Shader.PropertyToID("_TintColor");
-        private static SpriteRenderer glassTinted;
-        private static bool glassHadBlock;
-        private static MaterialPropertyBlock glassOrigBlock, glassBlock;
-
-        // The lit glass (Custom/Day Night Object (Unlit)): its _TintColor times the tint, through a property block.
-        internal static void ApplyGlass(SpriteRenderer glass)
-        {
-            if (glass == null || !glass) return;
-            bool want = Enabled.Value && TryHex(LitGlassTint.Value, out Color32 tint) && !(tint.r == 255 && tint.g == 255 && tint.b == 255);
-            if (!want)
-            {
-                RestoreGlass();
-                return;
-            }
-            TryHex(LitGlassTint.Value, out Color32 t);
-            if (glassTinted != glass)
-            {
-                RestoreGlass();
-                glassTinted = glass;
-                glassHadBlock = glass.HasPropertyBlock();
-                glassOrigBlock = new MaterialPropertyBlock();
-                if (glassHadBlock) glass.GetPropertyBlock(glassOrigBlock);
-                glassBlock = new MaterialPropertyBlock();
-            }
-            Material mat = glass.sharedMaterial;
-            Color baseTint = mat != null && mat.HasProperty(IdTintColor) ? mat.GetColor(IdTintColor) : new Color(0.5f, 0.5f, 0.5f, 0.5f);
-            Color tc = t;
-            glass.GetPropertyBlock(glassBlock);
-            glassBlock.SetColor(IdTintColor, new Color(baseTint.r * tc.r, baseTint.g * tc.g, baseTint.b * tc.b, baseTint.a));
-            glass.SetPropertyBlock(glassBlock);
-        }
-
-        internal static void RestoreGlass()
-        {
-            if (glassTinted == null) return;
-            try
-            {
-                if (glassTinted)
+                for (int i = 0; i < m.SubMeshCount; i++)
                 {
-                    glassTinted.SetPropertyBlock(glassHadBlock ? glassOrigBlock : null);
+                    Object3DSubMesh sm = m.GetSubMesh(i);
+                    if (sm != null) SubMeshMaterialCache(sm) = null;
+                }
+                m.SetLutTexture(lut);
+            }
+
+            // True when every material slot of the mesh has the game's LUT material (the check behind SetLut).
+            private bool AllSlotsLut(Object3DMesh m)
+            {
+                Renderer r = m.ObjRenderer;
+                Material lutMat = LazyBearTechnology.LazySingletonSO<GlobalResources>.Instance?.matObject3DLUT;
+                if (r == null || lutMat == null) return true; // nothing to compare against
+                Material[] mats = r.sharedMaterials;
+                for (int i = 0; i < mats.Length && i < m.SubMeshCount; i++)
+                {
+                    if (mats[i] != lutMat) return false;
+                }
+                return true;
+            }
+
+            private bool SpriteUpToDate(SpriteTarget t)
+            {
+                Material m = t.Mine;
+                int gi = (int)t.G;
+                return appliedMethod == SpriteColorMethod.Palette
+                    ? m.IsKeywordEnabled(KwPalette) && !m.IsKeywordEnabled(KwLut) && m.GetTexture(IdPalette) == palettes[gi]
+                    : m.IsKeywordEnabled(KwLut) && !m.IsKeywordEnabled(KwPalette) && m.GetTexture(IdLut) == luts[gi];
+            }
+
+            private void SetSpriteKeywords(SpriteTarget t)
+            {
+                Material m = t.Mine;
+                int gi = (int)t.G;
+                if (appliedMethod == SpriteColorMethod.Palette)
+                {
+                    m.DisableKeyword(KwLut);
+                    m.EnableKeyword(KwPalette);
+                    m.SetTexture(IdPalette, palettes[gi]);
+                }
+                else
+                {
+                    m.DisableKeyword(KwPalette);
+                    m.EnableKeyword(KwLut);
+                    m.SetTexture(IdLut, luts[gi]);
                 }
             }
-            catch
+
+            private void RestoreSprite(SpriteTarget t)
             {
-            }
-            glassTinted = null;
-        }
-
-        // ------------------------------------------------------------------ panel helpers
-
-        internal static IReadOnlyList<MountColorRegion> RegionList => ApiRegions;
-
-        // What a source colour of a region becomes with the current settings (the panel's swatches).
-        internal static Color32 Preview(string regionKey, Color32 src)
-        {
-            foreach (RegionDef d in Regions)
-            {
-                if (d.Key == regionKey)
+                if (t.Mine == null) return;
+                try
                 {
-                    return Enabled.Value ? new RegionMap(d.S).Apply(src) : src;
+                    if (t.R != null && t.R && t.R.sharedMaterial == t.Mine)
+                    {
+                        t.R.sharedMaterial = t.Orig;
+                    }
+                    UnityEngine.Object.Destroy(t.Mine);
                 }
+                catch
+                {
+                    // the view may be half destroyed
+                }
+                t.Mine = null;
+                t.Orig = null;
+                t.Warned = false;
             }
-            return src;
-        }
 
-        internal static bool RegionChanged(string regionKey)
-        {
-            RegionSettings s = SettingsOf(regionKey);
-            return s != null && !s.IsIdentity;
-        }
+            private void RestoreMesh(MeshTarget t)
+            {
+                if (!t.Applied) return;
+                try
+                {
+                    if (t.M != null && t.M)
+                    {
+                        SetLut(t.M, t.OrigLut); // null: the game's own material again (matObject3D)
+                        Renderer r = t.M.ObjRenderer;
+                        string now = MaterialNames(r);
+                        if (now != t.OrigMaterials && r != null && t.OrigMats != null)
+                        {
+                            // exactly what the part had, for the pool; the submeshes then re-read it
+                            r.sharedMaterials = t.OrigMats;
+                            for (int i = 0; i < t.M.SubMeshCount; i++)
+                            {
+                                Object3DSubMesh sm = t.M.GetSubMesh(i);
+                                if (sm != null) SubMeshMaterialCache(sm) = null;
+                            }
+                            Plugin.Log.LogInfo($"Colors: '{t.M.name}' had {now} after the LUT was removed; put back to {t.OrigMaterials}.");
+                        }
+                    }
+                }
+                catch
+                {
+                }
+                t.Applied = false;
+                t.OrigLut = null;
+            }
 
-        // One line per recoloured renderer, for reports from the game (the panel's Diagnose button).
-        internal static string Diagnose()
-        {
-            var sb = new StringBuilder();
-            sb.Append($"[colors] enabled {Enabled.Value}, sprite method {SpriteMethod.Value}; {Note}; active groups:");
-            for (int gi = 0; gi < GroupCount; gi++)
+            private static string MaterialNames(Renderer r)
             {
-                if (groupActive[gi]) sb.Append(' ').Append((Group)gi);
+                if (r == null) return "-";
+                var names = new List<string>();
+                foreach (Material m in r.sharedMaterials)
+                {
+                    names.Add(m != null ? m.name : "null");
+                }
+                return string.Join("+", names);
             }
-            sb.AppendLine();
-            foreach (SpriteTarget t in sprites)
-            {
-                if (t.R == null || !t.R) { sb.AppendLine("  sprite (destroyed)"); continue; }
-                Material m = t.R.sharedMaterial;
-                sb.AppendLine($"  sprite '{Path(t.R.transform)}' {t.G}: sprite {t.R.sprite?.name}, enabled {t.R.enabled}, color {t.R.color}, material {m?.name} (ours {m == t.Mine && m != null}), shader {m?.shader?.name}, keywords [{(m != null ? string.Join(" ", m.shaderKeywords) : "")}], palette {Tex(m, IdPalette)}, lut {Tex(m, IdLut)}");
-            }
-            foreach (MeshTarget t in meshes)
-            {
-                if (t.M == null || !t.M) { sb.AppendLine("  mesh (destroyed)"); continue; }
-                Object3DSubMesh sm = t.M.GetSubMesh(0);
-                sb.AppendLine($"  mesh '{Path(t.M.transform)}' {t.G}: texture {sm?.MainTextureName}, submeshes {t.M.SubMeshCount}, lut {(sm?.LutTexture != null ? sm.LutTexture.name : "none")}, active {t.M.gameObject.activeInHierarchy}, materials {MaterialNames(t.M.ObjRenderer)}");
-            }
-            sb.Append($"  glass tint {(glassTinted != null ? "on" : "off")}, glow {GlowColor.Value}, character light {CharacterLightColor.Value}");
-            return sb.ToString();
-        }
 
-        private static string Tex(Material m, int id)
-        {
-            if (m == null || !m.HasProperty(id)) return "-";
-            Texture t = m.GetTexture(id);
-            return t != null ? $"{t.name} {t.width}x{t.height}" : "none";
-        }
+            // ------------------------------------------------------------------ lamp colours (called by Lantern.ApplyLight)
 
-        private static string Path(Transform t)
-        {
-            string p = t.name;
-            for (Transform q = t.parent; q != null && q.parent != null; q = q.parent)
+            internal static Color GlowRgb(Color game)
             {
-                p = q.name + "/" + p;
-                if (p.Length > 90) break;
+                if (Enabled.Value && TryHex(GlowColor.Value, out Color32 c))
+                {
+                    Color k = c;
+                    k.a = game.a;
+                    return k;
+                }
+                return game;
             }
-            return p;
+
+            internal static Color CharacterLight(Color current)
+            {
+                return Enabled.Value && TryHex(CharacterLightColor.Value, out Color32 c) ? (Color)c : current;
+            }
+
+            private static readonly int IdTintColor = Shader.PropertyToID("_TintColor");
+            private SpriteRenderer glassTinted;
+            private bool glassHadBlock;
+            private MaterialPropertyBlock glassOrigBlock, glassBlock;
+
+            // The lit glass (Custom/Day Night Object (Unlit)): its _TintColor times the tint, through a property block.
+            internal void ApplyGlass(SpriteRenderer glass)
+            {
+                if (glass == null || !glass) return;
+                bool want = Enabled.Value && TryHex(LitGlassTint.Value, out Color32 tint) && !(tint.r == 255 && tint.g == 255 && tint.b == 255);
+                if (!want)
+                {
+                    RestoreGlass();
+                    return;
+                }
+                TryHex(LitGlassTint.Value, out Color32 t);
+                if (glassTinted != glass)
+                {
+                    RestoreGlass();
+                    glassTinted = glass;
+                    glassHadBlock = glass.HasPropertyBlock();
+                    glassOrigBlock = new MaterialPropertyBlock();
+                    if (glassHadBlock) glass.GetPropertyBlock(glassOrigBlock);
+                    glassBlock = new MaterialPropertyBlock();
+                }
+                Material mat = glass.sharedMaterial;
+                Color baseTint = mat != null && mat.HasProperty(IdTintColor) ? mat.GetColor(IdTintColor) : new Color(0.5f, 0.5f, 0.5f, 0.5f);
+                Color tc = t;
+                glass.GetPropertyBlock(glassBlock);
+                glassBlock.SetColor(IdTintColor, new Color(baseTint.r * tc.r, baseTint.g * tc.g, baseTint.b * tc.b, baseTint.a));
+                glass.SetPropertyBlock(glassBlock);
+            }
+
+            internal void RestoreGlass()
+            {
+                if (glassTinted == null) return;
+                try
+                {
+                    if (glassTinted)
+                    {
+                        glassTinted.SetPropertyBlock(glassHadBlock ? glassOrigBlock : null);
+                    }
+                }
+                catch
+                {
+                }
+                glassTinted = null;
+            }
+
+            // ------------------------------------------------------------------ panel helpers
+
+            internal static IReadOnlyList<MountColorRegion> RegionList => ApiRegions;
+
+            // What a source colour of a region becomes with the current settings (the panel's swatches).
+            internal static Color32 Preview(string regionKey, Color32 src)
+            {
+                foreach (RegionDef d in Regions)
+                {
+                    if (d.Key == regionKey)
+                    {
+                        return Enabled.Value ? new RegionMap(d.S).Apply(src) : src;
+                    }
+                }
+                return src;
+            }
+
+            internal static bool RegionChanged(string regionKey)
+            {
+                RegionSettings s = SettingsOf(regionKey);
+                return s != null && !s.IsIdentity;
+            }
+
+            // One line per recoloured renderer, for reports from the game (the panel's Diagnose button).
+            internal string Diagnose()
+            {
+                var sb = new StringBuilder();
+                sb.Append($"[colors] enabled {Enabled.Value}, sprite method {SpriteMethod.Value}; {Note}; active groups:");
+                for (int gi = 0; gi < GroupCount; gi++)
+                {
+                    if (groupActive[gi]) sb.Append(' ').Append((Group)gi);
+                }
+                sb.AppendLine();
+                foreach (SpriteTarget t in sprites)
+                {
+                    if (t.R == null || !t.R) { sb.AppendLine("  sprite (destroyed)"); continue; }
+                    Material m = t.R.sharedMaterial;
+                    sb.AppendLine($"  sprite '{Path(t.R.transform)}' {t.G}: sprite {t.R.sprite?.name}, enabled {t.R.enabled}, color {t.R.color}, material {m?.name} (ours {m == t.Mine && m != null}), shader {m?.shader?.name}, keywords [{(m != null ? string.Join(" ", m.shaderKeywords) : "")}], palette {Tex(m, IdPalette)}, lut {Tex(m, IdLut)}");
+                }
+                foreach (MeshTarget t in meshes)
+                {
+                    if (t.M == null || !t.M) { sb.AppendLine("  mesh (destroyed)"); continue; }
+                    Object3DSubMesh sm = t.M.GetSubMesh(0);
+                    sb.AppendLine($"  mesh '{Path(t.M.transform)}' {t.G}: texture {sm?.MainTextureName}, submeshes {t.M.SubMeshCount}, lut {(sm?.LutTexture != null ? sm.LutTexture.name : "none")}, active {t.M.gameObject.activeInHierarchy}, materials {MaterialNames(t.M.ObjRenderer)}");
+                }
+                sb.Append($"  glass tint {(glassTinted != null ? "on" : "off")}, glow {GlowColor.Value}, character light {CharacterLightColor.Value}");
+                return sb.ToString();
+            }
+
+            private static string Tex(Material m, int id)
+            {
+                if (m == null || !m.HasProperty(id)) return "-";
+                Texture t = m.GetTexture(id);
+                return t != null ? $"{t.name} {t.width}x{t.height}" : "none";
+            }
+
+            private static string Path(Transform t)
+            {
+                string p = t.name;
+                for (Transform q = t.parent; q != null && q.parent != null; q = q.parent)
+                {
+                    p = q.name + "/" + p;
+                    if (p.Length > 90) break;
+                }
+                return p;
+            }
         }
     }
 }

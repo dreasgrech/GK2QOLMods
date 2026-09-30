@@ -175,9 +175,10 @@ namespace GK2Mounts
         }
     }
 
-    // Our donkey's view destroyed by the game rather than by the mod (its scene unloaded behind a door): the colours
-    // come off first, while the parts still exist, so they go back to the game's pool with the game's own look.
-    // (The mod's own dismount restores them before it destroys the view; this is only the other way out.)
+    // One of our views destroyed by the game rather than by the mod (its scene unloaded behind a door): everything the
+    // mod changed (renderers, colours, lantern, cargo holder, cart parts) comes off first, while the parts still exist,
+    // so they go back to the game's pool with the game's own look (Mount.Instance.ReleaseView). The mod's own removal
+    // restores them before it destroys the view; this is only the other way out.
     [HarmonyPatch(typeof(Wgo), "OnDestroy")]
     internal static class Wgo_OnDestroy_Patch
     {
@@ -185,11 +186,11 @@ namespace GK2Mounts
         {
             try
             {
-                Colors.OnWgoDestroyed(__instance);
+                Mount.OnWgoDestroyed(__instance);
             }
             catch (Exception e)
             {
-                Plugin.Log.LogWarning("Colors: restoring the colours of a destroyed donkey failed: " + e.Message);
+                Plugin.Log.LogWarning("Mount: restoring a donkey view the game destroyed failed: " + e.Message);
             }
         }
     }
@@ -204,11 +205,14 @@ namespace GK2Mounts
         {
             try
             {
-                if (Mount.IsMounted && Cargo.Count > 0)
+                if (Mount.IsMounted && Mount.Ridden.Ephemeral && Cargo.Count > 0)
                 {
                     Cargo.SuppressAnnounce = true; // the cargo comes back in the postfix; not an unload for the API
                     Cargo.Unload("save");
                 }
+                // Every instance in the world lends its cargo to the save as drops at its cart (Mount.LendCargoToSave).
+                Cargo.SuppressAnnounce = true;
+                Mount.LendCargoToSave();
             }
             catch (Exception e)
             {
@@ -221,6 +225,7 @@ namespace GK2Mounts
         {
             try
             {
+                Mount.TakeCargoBackFromSave();
                 if (Mount.IsMounted && Mount.CurrentStyle == MountStyle.Cart && Cargo.Attached)
                 {
                     Cargo.LoadFromHead("after the save");
@@ -236,12 +241,19 @@ namespace GK2Mounts
         // failed reload) as unloaded, and never leave the announcing held.
         private static Exception Finalizer(Exception __exception)
         {
+            try
+            {
+                Mount.TakeCargoBackFromSave(); // after a throw the postfix did not run (a second call does nothing)
+            }
+            catch
+            {
+            }
             if (Cargo.SuppressAnnounce)
             {
                 Cargo.SuppressAnnounce = false;
                 try
                 {
-                    Cargo.Announce();
+                    Mount.ForEachInstance(i => i.CargoRig.Announce());
                 }
                 catch
                 {
