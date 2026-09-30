@@ -138,11 +138,34 @@ namespace GK2Mounts
 
             // Where this foal belongs next to its parent: behind it (behind its cart when it has one), each sibling in its
             // own slot so they do not stack. Body points.
+            // (distance to the side of the parent, towards or away from the camera). Each sibling has its own.
             private static readonly Vector2[] Slots =
             {
-                new Vector2(-1.1f, 0.35f), new Vector2(-1.1f, -0.35f), new Vector2(-1.7f, 0f),
-                new Vector2(0.9f, 0.45f), new Vector2(0.9f, -0.45f), new Vector2(-2.2f, 0.3f),
+                new Vector2(1.1f, 0.35f), new Vector2(1.1f, -0.35f), new Vector2(1.7f, 0f),
+                new Vector2(1.7f, 0.5f), new Vector2(2.2f, -0.3f), new Vector2(2.2f, 0.3f),
             };
+
+            // The side of the parent (along the screen's horizontal, +1 = 'right') this foal keeps. Not the parent's
+            // behind: that flips with every turn of the parent, and with a cart behind it the slot jumped five units
+            // to the other side, so the foals trotted through the cart at each turn (found 2026-09-30). Riding away
+            // leaves a foal behind anyway; it changes side only when it is clearly on the other one.
+            private float foalSide;
+
+            private void UpdateFoalSide(Vector3 body)
+            {
+                Instance p = Parent;
+                Vector3 right = Vector3.Cross(Vector3.up, AwayFromCamera()).normalized;
+                float rel = Vector3.Dot(body - p.BodyPoint(), right);
+                if (foalSide == 0f)
+                {
+                    float worldToRight = Vector3.Dot(Vector3.right, right) >= 0f ? 1f : -1f;
+                    foalSide = Mathf.Abs(rel) > 0.05f ? Mathf.Sign(rel) : -p.riderFacingX * worldToRight; // behind it at first
+                }
+                else if (Mathf.Abs(rel) > 0.3f)
+                {
+                    foalSide = Mathf.Sign(rel);
+                }
+            }
 
             private Vector3 SlotNearParent(int index)
             {
@@ -150,10 +173,11 @@ namespace GK2Mounts
                 Vector3 away = AwayFromCamera();
                 Vector3 right = Vector3.Cross(Vector3.up, away).normalized;
                 float worldToRight = Vector3.Dot(Vector3.right, right) >= 0f ? 1f : -1f;
-                Vector3 forward = right * (p.riderFacingX * worldToRight);
+                float side = foalSide != 0f ? foalSide : -p.riderFacingX * worldToRight;
                 Vector2 s = Slots[index % Slots.Length];
-                float x = s.x < 0f && p.HasCart ? s.x - 1.5f : s.x; // the cart is behind the donkey
-                Vector3 at = p.BodyPoint() + forward * x + away * s.y;
+                bool cartSide = p.HasCart && side == -p.riderFacingX * worldToRight; // the cart is behind the donkey
+                float x = s.x + (cartSide ? 1.5f : 0f);
+                Vector3 at = p.BodyPoint() + right * (side * x) + away * s.y;
                 at.y = p.Position.y;
                 return at;
             }
@@ -184,6 +208,7 @@ namespace GK2Mounts
                     return true;
                 }
                 Vector3 body = BodyAt(Position, riderFacingX);
+                UpdateFoalSide(body);
                 // The reachable target only while trotting (it costs a few ground checks every 0.5 s).
                 Vector3 slot = shufflePhase == ShufflePhase.Following ? FollowTarget(body) : SlotNearParent(SiblingIndex());
                 float d = FlatDistance(body, slot);                // arriving: at its slot (or the reachable one)
@@ -216,7 +241,7 @@ namespace GK2Mounts
                 }
                 if (followLost)
                 {
-                    if (dHome < homeRange && !wedged)
+                    if (d < homeRange && !wedged)
                     {
                         followLost = false; // the parent came back to it
                     }
@@ -258,7 +283,7 @@ namespace GK2Mounts
                     LoseParent(body, "too far to follow");
                     return false;
                 }
-                if (dHome > homeRange && !IsStepping)
+                if (d > homeRange && !IsStepping) // left its own spot's area (the parent moved away)
                 {
                     shufflePhase = ShufflePhase.Following;
                     nextAheadCheck = 0f;

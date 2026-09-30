@@ -171,7 +171,7 @@ namespace GK2Mounts
                 {
                     // First frame, or moved by something else (MoveTo, ComeToKeeper, a dismount, a hitch): home is here.
                     followLost = false;
-                    shuffleHome = parentHome ? Parent.BodyPoint() : BodyAt(Position, riderFacingX);
+                    shuffleHome = parentHome ? SlotNearParent(SiblingIndex()) : BodyAt(Position, riderFacingX);
                     shuffleHomeSet = true;
                     shuffleWrote = Position;
                     if (shufflePhase == ShufflePhase.Turning)
@@ -187,7 +187,7 @@ namespace GK2Mounts
                 }
                 if (parentHome && !followLost)
                 {
-                    shuffleHome = Parent.BodyPoint();
+                    shuffleHome = SlotNearParent(SiblingIndex()); // its own spot next to the parent (Foals.cs)
                 }
                 if (FollowParentTick(pc))
                 {

@@ -176,7 +176,11 @@ never needs route finding.
 - **Following** (`FollowParentTick`):
   - **Home** is the parent's body, taken again every frame.
   - **Trotting starts** when the foal is further from the parent than its area plus 0.6.
-  - **Target:** its slot, behind the parent (behind the cart when the parent has one). Each sibling has its own slot.
+  - **Target:** its slot on the side of the parent the foal keeps. With a cart, the cart side's slots are 1.5 further
+    out. Each sibling has its own slot, and the shuffle's area is centred on it.
+    - A foal changes side only when it is clearly (over 0.3) on the other one. Riding away leaves it behind anyway.
+    - The first build put the slots behind the parent's facing. Every turn of a donkey with a cart then moved them
+      five units, and the foals trotted through the cart (found 2026-09-30).
     It trots to a target it can reach in a straight line: its own slot, else the nearest other free slot, else the
     side of the parent it comes from. The target is picked again every 0.5 s.
   - **Speed:** `ShuffleFollowSpeed` (4; riding is about 6.6), slowing over the last 0.6.
