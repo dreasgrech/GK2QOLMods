@@ -23,6 +23,64 @@ namespace GK2Mounts
             internal Instance Parent;
             internal bool RemoveWithParent = true;
 
+            private float nextRejoinCheck;
+            private int rejoinBackoff;
+            private float rejoinedAt = -1000f;
+            private int followTargetSlot = NoSlot;
+            private float nextTargetPick;
+            private const int NoSlot = -2, NearSide = -1;
+
+            // Where it trots to: its own slot if the straight way there is clear, else the nearest other slot that is,
+            // else the side of the parent it comes from. Picked again every 0.5 s (the parent moves).
+            private Vector3 FollowTarget(Vector3 body)
+            {
+                if (Time.time >= nextTargetPick || followTargetSlot == NoSlot)
+                {
+                    nextTargetPick = Time.time + 0.5f;
+                    int k = PickReachableSlot(body);
+                    groundFail = null;
+                    followTargetSlot = k == NoSlot ? SiblingIndex() : k; // nothing clear: its own (the trot's check stops it)
+                }
+                return followTargetSlot == NearSide ? NearSideOfParent(body) : SlotNearParent(followTargetSlot);
+            }
+
+            private int PickReachableSlot(Vector3 body)
+            {
+                int own = SiblingIndex();
+                if (LineWalkable(body, SlotNearParent(own), "slot"))
+                {
+                    return own;
+                }
+                int best = NoSlot;
+                float bestD = float.MaxValue;
+                for (int k = 0; k < Slots.Length; k++)
+                {
+                    if (k == own) continue;
+                    Vector3 s = SlotNearParent(k);
+                    float dk = FlatDistance(body, s);
+                    if (dk < bestD && LineWalkable(body, s, "slot"))
+                    {
+                        best = k;
+                        bestD = dk;
+                    }
+                }
+                if (best != NoSlot)
+                {
+                    return best;
+                }
+                return LineWalkable(body, NearSideOfParent(body), "near side") ? NearSide : NoSlot;
+            }
+
+            private Vector3 NearSideOfParent(Vector3 body)
+            {
+                Vector3 pb = Parent.BodyPoint();
+                Vector3 dir = body - pb;
+                dir.y = 0f;
+                dir = dir.sqrMagnitude > 0.0001f ? dir.normalized : Vector3.back;
+                Vector3 at = pb + dir * 0.9f;
+                at.y = Parent.Position.y;
+                return at;
+            }
             private bool followLost;            // could not follow (blocked or too far): shuffles where it is until caught up
             private bool wedged;                // no step fits where it stands (spawned against a wall): caught up like a lost one
             private int pickFailsInRow;
@@ -125,9 +183,10 @@ namespace GK2Mounts
                     }
                     return true;
                 }
-                Vector3 slot = SlotNearParent(SiblingIndex());
                 Vector3 body = BodyAt(Position, riderFacingX);
-                float d = FlatDistance(body, slot);                // arriving: at its slot
+                // The reachable target only while trotting (it costs a few ground checks every 0.5 s).
+                Vector3 slot = shufflePhase == ShufflePhase.Following ? FollowTarget(body) : SlotNearParent(SiblingIndex());
+                float d = FlatDistance(body, slot);                // arriving: at its slot (or the reachable one)
                 float dHome = FlatDistance(body, p.BodyPoint());   // starting and giving up: from the parent itself
                 float homeRange = Mathf.Max(IdleShuffle.AreaWidth.Value, IdleShuffle.AreaDepth.Value) + 0.6f;
                 float maxFollow = IdleShuffle.FollowMaxDistance.Value;
@@ -137,6 +196,7 @@ namespace GK2Mounts
                     {
                         StopFollowing();
                         EndStep(firstPause: true);
+                        rejoinBackoff = 0; // it got there: the next rejoin is quick again
                         return false;
                     }
                     if (dHome > maxFollow)
@@ -160,6 +220,29 @@ namespace GK2Mounts
                     {
                         followLost = false; // the parent came back to it
                     }
+                    else if (!wedged && dHome <= maxFollow * 0.8f && Time.time >= nextRejoinCheck)
+                    {
+                        // The parent is back in reach (ridden or not): follow again if a place next to it can be reached in a
+                        // straight line (the same test the trot uses; testing only the line to the parent itself sent a
+                        // foal into an obstacle on its way to a slot behind it, lost again at once, many times a second,
+                        // found 2026-09-30). Each rejoin that is lost again within 1.5 s doubles the wait, up to 8 s.
+                        nextRejoinCheck = Time.time + Mathf.Min(8f, 0.5f * Mathf.Pow(2f, rejoinBackoff));
+                        nextTargetPick = 0f;
+                        int k = PickReachableSlot(body);
+                        groundFail = null;
+                        if (k != NoSlot)
+                        {
+                            followLost = false;
+                            followTargetSlot = k;
+                            nextTargetPick = Time.time + 0.5f;
+                            shufflePhase = ShufflePhase.Following;
+                            nextAheadCheck = 0f;
+                            rejoinedAt = Time.time;
+                            Plugin.Log.LogInfo($"[foal] {Describe()} follows its parent #{p.Id} again ({dHome:F1} away, to {(k == NearSide ? "its near side" : "slot " + k)}).");
+                            return true;
+                        }
+                        return false;
+                    }
                     else if (!p.IsRidden && still >= 1.5f && (OffScreen(body) || still >= 6f))
                     {
                         CatchUp("its parent stands again");
@@ -179,6 +262,7 @@ namespace GK2Mounts
                 {
                     shufflePhase = ShufflePhase.Following;
                     nextAheadCheck = 0f;
+                    nextTargetPick = 0f;
                     if (followsLogged < 5)
                     {
                         followsLogged++;
@@ -213,8 +297,13 @@ namespace GK2Mounts
                 }
                 if (Time.time >= nextAheadCheck)
                 {
-                    nextAheadCheck = Time.time + 0.25f;
-                    if (!LineWalkable(body, body + dir * Mathf.Min(0.6f, dist), "follow"))
+                    // Far enough to cover everything it moves before the next check, plus a body's room: with 0.6 at a
+                    // 4 u/s trot (1 unit per check) a foal ran into an obstacle between two checks (found 2026-09-30).
+                    const float AheadInterval = 0.2f;
+                    nextAheadCheck = Time.time + AheadInterval;
+                    groundFail = null;
+                    float ahead = Mathf.Min(dist, IdleShuffle.FollowSpeed.Value * AheadInterval + 0.4f);
+                    if (!LineWalkable(body, body + dir * ahead, "follow"))
                     {
                         LoseParent(body, "the way is blocked");
                         EndStep(firstPause: false);
@@ -242,11 +331,16 @@ namespace GK2Mounts
             private void LoseParent(Vector3 body, string why)
             {
                 StopFollowing();
+                if (!followLost && Time.time - rejoinedAt < 1.5f)
+                {
+                    rejoinBackoff = Mathf.Min(rejoinBackoff + 1, 4);
+                }
                 if (!followLost)
                 {
                     followLost = true;
                     shuffleHome = body;
-                    Plugin.Log.LogInfo($"[foal] {Describe()} can't follow its parent #{Parent.Id} ({why}); it waits and catches up out of sight.");
+                    Plugin.Log.LogInfo($"[foal] {Describe()} can't follow its parent #{Parent.Id} ({why}{(groundFail != null ? ": " + groundFail : "")}); it waits, follows again when the parent comes back in reach, or catches up out of sight once it stands.");
+                    groundFail = null;
                 }
             }
 

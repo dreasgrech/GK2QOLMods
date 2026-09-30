@@ -168,7 +168,8 @@ when one is hitched.
     for where the keeper can stand (`PlayerColliderTester`).
   - **First build (2026-09-30), found in game:** it required navmesh ground and never stepped. The log said "ground
     120" rejected. The NPC navmesh doesn't cover everywhere the keeper walks.
-  - The rise between two samples is at most 0.12, and 0.3 over the whole step.
+  - The rise between two samples is at most 0.45, and 0.6 over the whole step. The first build had 0.12 and 0.3, and
+    foals got stuck on a corpse's walkable top, 0.4 above the ground (found 2026-09-30).
 - **Spacing:** no step ends within 1.1 of another donkey or cart, or within `ShuffleKeeperDistance` of the keeper.
 - **Pause:** when the game's update manager is paused (menus), the donkey holds.
 - **Being moved:** anything that moves the donkey (`MoveTo`, `ComeToKeeper`, a dismount, a hitch) is noticed because

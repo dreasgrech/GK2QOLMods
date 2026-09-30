@@ -127,8 +127,12 @@ namespace GK2Mounts
 
             private const float StepEase = 0.12f;        // world units eased in and out at both ends of a step
             private const int PickTries = 12;
-            private const float MaxRisePerSample = 0.12f; // ground height change between two samples of a step's line
-            private const float MaxRise = 0.3f;           // and over the whole step
+            // Ground height change allowed between two samples of a step's line, and over the whole step. A dropped corpse
+            // (and any big drop) has a walkable top 0.4 above the ground that the keeper walks over; with 0.12 the foals
+            // climbed onto one and could never step down again, and ordinary slopes the keeper rides were refused too
+            // (found 2026-09-30). Cliffs are far higher, and walls have keeper-blocking colliders.
+            private const float MaxRisePerSample = 0.45f;
+            private const float MaxRise = 0.6f;
             private const float InstanceGap = 1.1f;       // no step ends this close to another donkey or cart
 
             // A frame of a standing instance, before Stand(): the shuffle moves Position; Stand() draws it.
@@ -156,6 +160,11 @@ namespace GK2Mounts
                     shuffleFacingFrame = Time.frameCount;
                 }
                 MeasureLateral();
+                if (Time.time >= nextInsideCheck && !IsStepping)
+                {
+                    nextInsideCheck = Time.time + 1f;
+                    StepOutIfInside();
+                }
                 // A foal's home is its parent's body (while it can follow; Foals.cs).
                 bool parentHome = Parent != null && !followLost && IsRegistered(Parent) && Parent.SceneId == SceneId && Parent.Ready;
                 if (!shuffleHomeSet || (Position - shuffleWrote).sqrMagnitude > 0.000001f)
@@ -445,6 +454,71 @@ namespace GK2Mounts
                         NoteGroundFail($"{what} sample {i} at {foot:F2}: blocked by {c.name} (layer {LayerMask.LayerToName(c.gameObject.layer)})");
                         return false;
                     }
+                }
+                return true;
+            }
+
+            // Standing inside something the keeper can't walk through (spawned or left there, or walked in before this was
+            // guarded): every step's first sample fails there, so it could never move again. It moves to the nearest free
+            // spot within about a unit (a small jump, only in that case).
+            private float nextInsideCheck;
+
+            private void StepOutIfInside()
+            {
+                Vector3 body = BodyAt(Position, riderFacingX);
+                if (FreeAt(body, out Collider inside))
+                {
+                    return;
+                }
+                Vector3 right = Vector3.Cross(Vector3.up, AwayFromCamera()).normalized;
+                for (float r = 0.3f; r <= 1.21f; r += 0.3f)
+                {
+                    for (int k = 0; k < 12; k++)
+                    {
+                        float a = k * Mathf.PI / 6f;
+                        Vector3 p = body + new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * r;
+                        float g = GroundHeight(p, out _);
+                        if (float.IsNaN(g) || Mathf.Abs(g - body.y) > MaxRise)
+                        {
+                            continue;
+                        }
+                        p.y = g;
+                        if (!FreeAt(p, out _) || !FreeAt(p - right * LateralFor(riderFacingX), out _))
+                        {
+                            continue;
+                        }
+                        Vector3 root = p - right * LateralFor(riderFacingX);
+                        root.y = g;
+                        SetShufflePosition(root);
+                        if (Parent == null)
+                        {
+                            shuffleHome = p; // a donkey's home moves with it; a foal's is its parent
+                        }
+                        followLost = wedged = false;
+                        pickFailsInRow = 0;
+                        Plugin.Log.LogInfo($"[shuffle] {Describe()} stood inside {inside?.name} ({(inside != null ? LayerMask.LayerToName(inside.gameObject.layer) : "?")}); moved {r:F1} out to {p:F2}.");
+                        return;
+                    }
+                }
+            }
+
+            // Nothing keeper-blocking at a ground point (the capsule LineWalkable uses).
+            private bool FreeAt(Vector3 foot, out Collider hit)
+            {
+                hit = null;
+                keeperBody = MainGame.PlayerController?.PhysicalBody?.Rb;
+                int n = Physics.OverlapCapsuleNonAlloc(foot + Vector3.up * (BodyRadius + 0.1f), foot + Vector3.up * 0.9f, BodyRadius,
+                    blockers, BlockingLayers, QueryTriggerInteraction.Ignore);
+                for (int k = 0; k < n; k++)
+                {
+                    Collider c = blockers[k];
+                    if (c == null || !c || donkey != null && donkey && c.transform.IsChildOf(donkey.transform)
+                        || keeperBody != null && c.attachedRigidbody == keeperBody)
+                    {
+                        continue;
+                    }
+                    hit = c;
+                    return false;
                 }
                 return true;
             }

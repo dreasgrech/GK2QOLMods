@@ -177,6 +177,8 @@ never needs route finding.
   - **Home** is the parent's body, taken again every frame.
   - **Trotting starts** when the foal is further from the parent than its area plus 0.6.
   - **Target:** its slot, behind the parent (behind the cart when the parent has one). Each sibling has its own slot.
+    It trots to a target it can reach in a straight line: its own slot, else the nearest other free slot, else the
+    side of the parent it comes from. The target is picked again every 0.5 s.
   - **Speed:** `ShuffleFollowSpeed` (4; riding is about 6.6), slowing over the last 0.6.
   - **Facing:** it turns only when the direction's sideways part is over 0.35, keeping the body in place. The same
     one-frame turn as the shuffle.
@@ -185,11 +187,21 @@ never needs route finding.
 - **Losing the parent:**
   - When: the way is blocked, or the parent is further than `ShuffleFollowMaxDistance` (10). At the defaults a foal keeps up for about 4 s of riding.
   - Then: the foal shuffles around where it is.
+  - **Rejoining:** it trots after the parent again as soon as the parent is back within 0.8 ×
+    `ShuffleFollowMaxDistance` (8) and the straight line to it is clear, ridden or not. This is checked every 0.5 s,
+    using the same reachable-target test. A rejoin that is lost again within 1.5 s doubles the wait, up to 8 s. It
+    used to test only the line to the parent: a foal then looped, following and losing it several times a second on
+    an obstacle before its slot (found 2026-09-30).
+    Added 2026-09-30: before this, only a parent coming within about 2 units brought it back.
   - **Catch-up:** it goes to its slot once the parent has stood for 1.5 s and the foal is off screen, or once the
     parent has stood for 6 s. The slot needs a clear line from the parent, else any free slot, else next to the
     parent.
   - **Other scenes:** the foal is moved into the parent's scene. With its own scene unloaded, this runs from
     `StandTick`'s no-view branch.
+- **Checking the way ahead while trotting:** every 0.2 s, as far as it moves in that time plus 0.4. At first it
+  checked 0.6 every 0.25 s, and at a 4 u/s trot a foal ran into an obstacle between two checks (found 2026-09-30).
+- **Stuck inside something:** once a second a standing donkey or foal checks whether its spot is blocked. If it is,
+  it moves to the nearest free spot within 1.2, and the log line `[shuffle] ... stood inside ...` says so.
 - **Spacing:** the gap is `1.1 × (scale A + scale B) / 2`. That is 1.1 between two donkeys, 0.88 between a foal and
   its parent, and 0.66 between two foals.
 - **`SpawnFoal`'s own settings** for the foal, owned by the caller:
