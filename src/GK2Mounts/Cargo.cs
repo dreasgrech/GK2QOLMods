@@ -45,6 +45,7 @@ namespace GK2Mounts
         {
             public string Id;
             public bool OnTop;
+            public bool Alone; // the only item on the cart
             public Vector3 Box;
         }
 
@@ -593,7 +594,9 @@ namespace GK2Mounts
             var onTop = new bool[drawn.Count];
             Drawn first = drawn[0];
             CargoLayout.ItemEntry e0 = CargoLayout.ForItem(first.Item.id);
-            target[0] = new Vector3(0f, floor, 0f) + (e0 != null ? e0.Base : Vector3.zero);
+            // Alone on the cart: the item's own alone offsets when it has them, else the bottom/beside ones.
+            bool aloneOwn = drawn.Count == 1 && e0 != null && e0.HasAlone;
+            target[0] = new Vector3(0f, floor, 0f) + (e0 == null ? Vector3.zero : aloneOwn ? e0.Alone : e0.Base);
 
             for (int i = 1; i < drawn.Count; i++)
             {
@@ -638,14 +641,14 @@ namespace GK2Mounts
             }
             if (drawn.Count == 1)
             {
-                note.Append(first.Item.id + " alone");
+                note.Append(first.Item.id + " alone" + (aloneOwn ? " (own alone correction)" : ""));
             }
 
             for (int i = 0; i < drawn.Count; i++)
             {
                 Bounds b = drawn[i].Box;
                 drawn[i].View.transform.localPosition = new Vector3(target[i].x - b.center.x, target[i].y - b.min.y, target[i].z - b.center.z);
-                Placed.Add(new PlacedItem { Id = drawn[i].Item.id, OnTop = onTop[i], Box = b.size });
+                Placed.Add(new PlacedItem { Id = drawn[i].Item.id, OnTop = onTop[i], Alone = drawn.Count == 1, Box = b.size });
             }
             LastLayoutNote = note.ToString();
         }

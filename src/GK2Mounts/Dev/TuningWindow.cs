@@ -1113,7 +1113,7 @@ namespace GK2Mounts
         private static void DrawCargoCorrections()
         {
             Header("Cart cargo: corrections (cargo-layout.cfg)");
-            GUILayout.Label("Each item has one correction per role, shared by every item of its size: 'bottom / beside' when it stands on the bed, 'on top' when it is stacked. A stacked item rides on the one below, so moving the lower item moves both; side by side, each moves alone. " + CargoLayout.Summary(), small);
+            GUILayout.Label("Each item has one correction per role, shared by every item of its size: 'alone' when it is the only item on the cart, 'bottom / beside' when it stands on the bed next to or under another item, 'on top' when it is stacked. Each role moves the item only in that situation. A stacked item rides on the one below, so moving the lower item moves both; side by side, each moves alone. " + CargoLayout.Summary(), small);
             if (Cargo.Placed.Count == 0)
             {
                 GUILayout.Label("Load items onto the cart to edit the corrections for their size classes.", small);
@@ -1125,14 +1125,27 @@ namespace GK2Mounts
             foreach (Cargo.PlacedItem p in placed)
             {
                 CargoLayout.ItemEntry e = CargoLayout.EditItem(p.Id);
-                string role = p.OnTop ? "on top" : "bottom / beside";
+                string role = p.OnTop ? "on top" : p.Alone ? "alone" : "bottom / beside";
                 if (!seen.Add(e.Id + role))
                 {
                     continue;
                 }
                 GUILayout.BeginVertical(GUI.skin.box);
                 GUILayout.Label($"{p.Id} ({role}; class entry '{e.Id}', box {p.Box.x:0.00} × {p.Box.y:0.00} × {p.Box.z:0.00})", label);
-                if (p.OnTop)
+                if (p.Alone)
+                {
+                    // Alone always has its own correction here: moving a single item never moves it in pairs or
+                    // stacks. An entry without one starts from its bottom/beside values, where it sits now.
+                    if (!e.HasAlone)
+                    {
+                        e.HasAlone = true;
+                        e.Alone = e.Base;
+                    }
+                    refresh |= RawSlider("  along (tail - / head +)", ref e.Alone.x, -0.5f, 0.5f);
+                    refresh |= RawSlider("  up", ref e.Alone.y, -0.4f, 0.4f);
+                    refresh |= RawSlider("  across (camera - / away +)", ref e.Alone.z, -0.5f, 0.5f);
+                }
+                else if (p.OnTop)
                 {
                     refresh |= RawSlider("  along (tail - / head +)", ref e.Top.x, -0.5f, 0.5f);
                     refresh |= RawSlider("  up", ref e.Top.y, -0.4f, 0.4f);

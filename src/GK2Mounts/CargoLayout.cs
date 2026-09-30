@@ -13,7 +13,10 @@ namespace GK2Mounts
     //
     //   [item <id>]   applies to every item whose measured box matches <id>'s box within the size tolerance, i.e. to
     //                 the whole size class (stone's entry also covers iron ore; box_appliances_1's covers 15 crates).
-    //                 along/up/across: offsets when the item is alone, at the bottom or beside another item.
+    //                 along/up/across: offsets when the item is at the bottom or beside another item, and when
+    //                 alone unless it has its own alone offsets.
+    //                 alone_along/alone_up/alone_across: offsets when it is the only item on the cart (optional;
+    //                 added 2026-09-30, because a correction tuned for two logs side by side also moved one log).
     //                 top_along/top_up/top_across: offsets when it is stacked on top of another item.
     //   [pair <a>+<b>] applies to that pair of size classes in either order: mode = auto|side|along|stack, and
     //                 along/up/across shift the second-placed item relative to where the packer put it.
@@ -73,7 +76,9 @@ namespace GK2Mounts
             public string Id;
             public Vector3 Base;   // along, up, across
             public Vector3 Top;    // when stacked on top
-            public bool IsEmpty => Base == Vector3.zero && Top == Vector3.zero;
+            public bool HasAlone;  // alone on the cart: Alone instead of Base
+            public Vector3 Alone;
+            public bool IsEmpty => Base == Vector3.zero && Top == Vector3.zero && !HasAlone;
         }
 
         public class PairEntry
@@ -181,6 +186,9 @@ namespace GK2Mounts
                         case "top_along": item.Top.x = f; break;
                         case "top_up": item.Top.y = f; break;
                         case "top_across": item.Top.z = f; break;
+                        case "alone_along": item.Alone.x = f; item.HasAlone = true; break;
+                        case "alone_up": item.Alone.y = f; item.HasAlone = true; break;
+                        case "alone_across": item.Alone.z = f; item.HasAlone = true; break;
                     }
                 }
                 else if (pair != null)
@@ -203,7 +211,8 @@ namespace GK2Mounts
             sb.AppendLine("# GK2 Mounts cargo layout: corrections on top of the size-based cargo packer (see CargoLayout.cs).");
             sb.AppendLine("# Embedded into the DLL at build time. The tuning panel writes this file as you edit; rebuild to ship it.");
             sb.AppendLine("# [item <id>] applies to every item of the same size class (measured box within " + SizeTolerance.ToString("0.00", CultureInfo.InvariantCulture) + ").");
-            sb.AppendLine("#   along / up / across: alone, at the bottom or beside another item; top_along / top_up / top_across: stacked on top.");
+            sb.AppendLine("#   along / up / across: at the bottom or beside another item (and alone, without alone_*); top_along / top_up / top_across: stacked on top.");
+            sb.AppendLine("#   alone_along / alone_up / alone_across: the only item on the cart (all three written when set, zeros included).");
             sb.AppendLine("# [pair <a>+<b>] applies to that pair of size classes in either order: mode = auto | side (across the bed) | along (end to end) | stack; along / up / across move the second item.");
             sb.AppendLine("#");
             sb.AppendLine("# Size classes at the time of writing (27 items): log (wood); flour sack (box_flour); tall crate (box_beer,");
@@ -222,6 +231,13 @@ namespace GK2Mounts
                 sb.AppendLine().AppendLine("[item " + id + "]");
                 Line(sb, "along", e.Base.x); Line(sb, "up", e.Base.y); Line(sb, "across", e.Base.z);
                 Line(sb, "top_along", e.Top.x); Line(sb, "top_up", e.Top.y); Line(sb, "top_across", e.Top.z);
+                if (e.HasAlone)
+                {
+                    // all three, zeros too: their presence is what says "own alone offsets"
+                    sb.AppendLine("alone_along = " + e.Alone.x.ToString("0.###", CultureInfo.InvariantCulture));
+                    sb.AppendLine("alone_up = " + e.Alone.y.ToString("0.###", CultureInfo.InvariantCulture));
+                    sb.AppendLine("alone_across = " + e.Alone.z.ToString("0.###", CultureInfo.InvariantCulture));
+                }
             }
             foreach (PairEntry p in Pairs)
             {
