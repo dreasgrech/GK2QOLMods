@@ -37,6 +37,7 @@ class GK2Mounts.Api.MountHandle
   property int Id { get; }
   property bool IsReady { get; }
   property bool IsRidden { get; }
+  property bool IsStepping { get; }
   property string Owner { get; }
   property UnityEngine.Vector3 Position { get; }
   property string SceneId { get; }
@@ -63,6 +64,7 @@ static class GK2Mounts.Api.Mounts
   property static bool IsMounted { get; }
   property static string Owner { get; }
   property static GK2Mounts.Api.MountHandle Riding { get; }
+  property static GK2Mounts.Api.MountTuning Shuffle { get; }
   property static GK2Mounts.Api.MountStyle Style { get; }
   event static System.Action<string> CargoLoaded
   event static System.Action<string> CargoUnloaded

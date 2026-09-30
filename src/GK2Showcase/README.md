@@ -5,7 +5,7 @@ Ride the donkey in Graveyard Keeper 2, or drive its cart. This is the playable m
 It uses nothing but the public GK2 Mounts API ([`docs/mounts-api.md`](../../docs/mounts-api.md)), so it's also the
 reference example for mod authors.
 
-Version 0.1.0, for GK2 Mounts 0.1.0 (API 0.6.0 or newer) and Steam game build 25601286.
+Version 0.1.0, for GK2 Mounts 0.1.0 (API 0.7.0 or newer) and Steam game build 25601286.
 
 ## Playing
 
@@ -48,6 +48,7 @@ in the game's **Mods** menu and apply at once. Otherwise edit the cfg with the g
 | `Behaviour.DismountIndoors` | true | Get off when entering a building, church or dungeon, and don't mount inside. The cart would cut through furniture. |
 | `Behaviour.StayMountedThroughDoors` | false | Keep riding through a door that loads another area. A house door isn't one. |
 | `Behaviour.ShowMessages` | true | The keeper says in a thought bubble why he can't mount. |
+| `Behaviour.IdleShuffle` | true | Your donkey, left standing without its cart, takes a few slow steps now and then instead of standing perfectly still. |
 
 **Where the other settings are:**
 - The look and sound values (speed, seat, lantern, volumes) are GK2 Mounts' settings, in `dreas.gk2.mounts.cfg`.

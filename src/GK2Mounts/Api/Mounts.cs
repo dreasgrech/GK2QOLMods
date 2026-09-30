@@ -51,7 +51,7 @@ namespace GK2Mounts.Api
     public static class Mounts
     {
         // The API's own version, separate from the mod version: minor for additions, major for breaking changes.
-        public static readonly Version ApiVersion = new Version(0, 6, 0);
+        public static readonly Version ApiVersion = new Version(0, 7, 0);
 
         // False when the core is switched off (General.Enabled) or disabled itself after a game update.
         public static bool IsAvailable => Plugin.Patched && Plugin.Enabled != null && Plugin.Enabled.Value;
@@ -218,6 +218,8 @@ namespace GK2Mounts.Api
         //   StayMountedThroughDoors  keep riding through doors that load another scene
         //   DismountIndoors          dismount entering a building, church or dungeon, and refuse to mount inside
         //   ShowMessages             the keeper's thought bubble for refusals
+        //   IdleShuffle              donkeys standing in the world without a cart take a few slow steps now and then
+        //                            (off in the core; how they step: Mounts.Shuffle). Per donkey: MountHandle.Tuning.
         public static MountTuning Behaviour
         {
             get
@@ -228,8 +230,25 @@ namespace GK2Mounts.Api
                 }
                 return behaviour ?? (behaviour = new MountTuning("General", new ITuned[]
                 {
-                    Plugin.StayMountedThroughDoors, Plugin.DismountIndoors, Plugin.ShowMessages,
+                    Plugin.StayMountedThroughDoors, Plugin.DismountIndoors, Plugin.ShowMessages, IdleShuffle.On,
                 }));
+            }
+        }
+
+        // How a standing donkey shuffles when IdleShuffle is on, overridable like tuning (keys = their [Shuffle] cfg
+        // names): ShuffleAreaWidth / ShuffleAreaDepth (the box around its home spot, either way), ShuffleStepMin /
+        // ShuffleStepMax, ShuffleSpeed, ShuffleAnimSpeed, ShufflePauseMin / ShufflePauseMax, ShuffleMaxAngle (steepest
+        // step from the screen's horizontal), ShuffleTurnChance, ShuffleKeeperDistance (holds still while the keeper
+        // is closer). Its home spot is where it was spawned, left or last moved (MountHandle.MoveTo, ComeToKeeper).
+        public static MountTuning Shuffle
+        {
+            get
+            {
+                if (IdleShuffle.On == null)
+                {
+                    throw new InvalidOperationException("GK2 Mounts has not loaded its settings yet.");
+                }
+                return shuffle ?? (shuffle = new MountTuning(IdleShuffle.Section, IdleShuffle.Settings));
             }
         }
 
@@ -260,6 +279,7 @@ namespace GK2Mounts.Api
             Tuning(MountStyle.Ride).ClearOwner(ownerId);
             Tuning(MountStyle.Cart).ClearOwner(ownerId);
             Behaviour.ClearOwner(ownerId);
+            Shuffle.ClearOwner(ownerId);
             Colors.ClearOwner(ownerId);
             foreach (MountHandle h in Instances)
             {
@@ -416,7 +436,7 @@ namespace GK2Mounts.Api
             }
         }
 
-        private static MountTuning rideTuning, cartTuning, behaviour;
+        private static MountTuning rideTuning, cartTuning, behaviour, shuffle;
 
         // Removes every rule this owner added.
         public static void RemoveRules(string ownerId)

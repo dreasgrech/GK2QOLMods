@@ -30,13 +30,13 @@ namespace GK2Showcase
         public const string Guid = "dreas.gk2.showcase";
         public const string Version = "0.1.0";
 
-        // The API this mod is written against: 0.6 added donkeys and carts in the world (MountHandle).
-        private static readonly Version NeedsApi = new Version(0, 6, 0);
+        // The API this mod is written against: 0.7 added the idle shuffle (Mounts.Behaviour IdleShuffle).
+        private static readonly Version NeedsApi = new Version(0, 7, 0);
 
         internal static ManualLogSource Log;
 
         internal ConfigEntry<KeyboardShortcut> rideKey, cartKey, bellKey, sendAwayKey;
-        internal ConfigEntry<bool> stayThroughDoors, dismountIndoors, showMessages;
+        internal ConfigEntry<bool> stayThroughDoors, dismountIndoors, showMessages, idleShuffle;
         private bool ready;
 
         // What the mod is doing, for the Mods menu's status row.
@@ -61,6 +61,8 @@ namespace GK2Showcase
                 "Dismount when entering a building, church or dungeon, and don't mount inside: the cart cannot avoid furniture and door frames.");
             showMessages = Config.Bind("Behaviour", "ShowMessages", true,
                 "The keeper says in a thought bubble why he cannot mount.");
+            idleShuffle = Config.Bind("Behaviour", "IdleShuffle", true,
+                "Your donkey, left standing without its cart, takes a few slow steps now and then instead of standing perfectly still.");
 
             if (Mounts.ApiVersion < NeedsApi)
             {
@@ -72,7 +74,7 @@ namespace GK2Showcase
             Mounts.InstanceRemoved += OnInstanceRemoved;
             Mounts.Hitched += OnHitched;
             Mounts.Unhitched += OnUnhitched;
-            foreach (ConfigEntry<bool> e in new[] { stayThroughDoors, dismountIndoors, showMessages })
+            foreach (ConfigEntry<bool> e in new[] { stayThroughDoors, dismountIndoors, showMessages, idleShuffle })
             {
                 ConfigEntry<bool> entry = e;
                 entry.SettingChanged += (_, __) => ApplyBehaviour(entry);

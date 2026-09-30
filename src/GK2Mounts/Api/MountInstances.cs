@@ -45,8 +45,12 @@ namespace GK2Mounts.Api
         // The item ids on its cart, in load order (empty without a cart).
         public IReadOnlyList<string> CargoIds => I.CargoRig.Ids();
 
-        // This instance's own settings: any key of Mounts.Tuning, Mounts.Behaviour or Mounts.Colors.
+        // This instance's own settings: any key of Mounts.Tuning, Mounts.Behaviour, Mounts.Shuffle or Mounts.Colors.
+        // E.g. Tuning.Set(myId, "IdleShuffle", true) lets just this donkey shuffle.
         public InstanceTuning Tuning { get; }
+
+        // Taking an idle-shuffle step right now (Mounts.Behaviour "IdleShuffle"). Only a standing donkey without a cart.
+        public bool IsStepping => Exists && I.IsStepping;
 
         // The keeper gets on (it must have a donkey, stand in the keeper's scene with its view ready, and every mount
         // rule must allow). The keeper is put on its seat.
@@ -145,8 +149,8 @@ namespace GK2Mounts.Api
     }
 
     // The settings of one instance: overrides by key on top of everyone's value (the cfg and the session overrides of
-    // Mounts.Tuning / Behaviour / Colors). Keys and types are those of Mounts.Tuning(style), Mounts.Behaviour and
-    // Mounts.Colors; style keys apply in whichever style the instance is in. Values are clamped like everywhere else.
+    // Mounts.Tuning / Behaviour / Shuffle / Colors). Keys and types are those of Mounts.Tuning(style), Mounts.Behaviour,
+    // Mounts.Shuffle and Mounts.Colors; style keys apply in whichever style the instance is in. Values are clamped like everywhere else.
     // Cart keys (Cart*, Cargo*, Lantern*, the Cart and Lantern colour regions, the lamp colours) travel with the cart
     // when it is left standing or hitched.
     public sealed class InstanceTuning
@@ -253,11 +257,11 @@ namespace GK2Mounts.Api
         {
             MountStyle other = i.CurrentStyle == MountStyle.Cart ? MountStyle.Ride : MountStyle.Cart;
             if (Mounts.Tuning(i.CurrentStyle).TryFind(key, out ITuned t) || Mounts.Tuning(other).TryFind(key, out t)
-                || Mounts.Behaviour.TryFind(key, out t) || Mounts.Colors.TryFind(key, out t))
+                || Mounts.Behaviour.TryFind(key, out t) || Mounts.Shuffle.TryFind(key, out t) || Mounts.Colors.TryFind(key, out t))
             {
                 return t;
             }
-            throw new ArgumentException($"No setting '{key}'. See Mounts.Tuning(style).Keys, Mounts.Behaviour.Keys and Mounts.Colors.Keys.", nameof(key));
+            throw new ArgumentException($"No setting '{key}'. See Mounts.Tuning(style).Keys, Mounts.Behaviour.Keys, Mounts.Shuffle.Keys and Mounts.Colors.Keys.", nameof(key));
         }
     }
 }

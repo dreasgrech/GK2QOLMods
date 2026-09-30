@@ -80,12 +80,100 @@ namespace GK2Mounts
             }
         }
 
+        // Under the tab bar of every tab: who the rows change. Either one donkey's own values (editing), or everyone's (the
+        // cfg), which every donkey uses where it has no value of its own.
+        private static void DrawScope()
+        {
+            if (EditingNow)
+            {
+                GUILayout.BeginHorizontal();
+                GUILayout.Label($"Editing {editing.Describe()}'s own settings (marked in the world). Every row changes only this one: magenta = its own value, right-click = back to everyone's. The style tabs show its style ({editing.CurrentStyle}).", instanceSet);
+                if (GUILayout.Button("Stop", GUILayout.Width(60f)))
+                {
+                    editing = null;
+                }
+                GUILayout.EndHorizontal();
+                return;
+            }
+            Mount.Instance r = Mount.Ridden;
+            int standing = 0;
+            foreach (Mount.Instance i in Mount.All)
+            {
+                if (!i.Ephemeral && !i.IsRidden) standing++;
+            }
+            string ride = r != null
+                ? $"the donkey you ride ({(r.Ephemeral ? "the summoned donkey" : r.Describe())}, {r.CurrentStyle} style)"
+                : "nothing is ridden right now";
+            GUILayout.Label($"Editing everyone's settings (your cfg). They apply to {ride}, to {standing} donkey(s) and cart(s) standing in the world, and to every later ride; a donkey keeps its own value where it has one. Style rows ([Ride] / [Cart]) apply to donkeys in that style; the style tabs show the {PanelStyle} set. One donkey only: Instances tab, Edit its settings.", small);
+        }
+
+        // Over every donkey and cart in the keeper's scene while the Instances tab is open or one is edited: its number,
+        // so the list and the world can be matched.
+        private static GUIStyle markerStyle, markerEditStyle;
+
+        private static void DrawWorldMarkers(float scale)
+        {
+            if (tab != 5 && !EditingNow)
+            {
+                return;
+            }
+            PlayerData pd = MainGame.Instance != null ? MainGame.PlayerData : null;
+            if (CameraSystem.Instance == null || pd == null)
+            {
+                return;
+            }
+            if (markerStyle == null)
+            {
+                markerStyle = new GUIStyle(GUI.skin.box) { fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
+                markerStyle.normal.textColor = Color.white;
+                markerEditStyle = new GUIStyle(markerStyle);
+                markerEditStyle.normal.textColor = new Color(1f, 0.45f, 1f);
+            }
+            foreach (Mount.Instance i in Mount.All)
+            {
+                if (i.Ephemeral || i.SceneId != pd.currentGameSceneId || !i.Ready)
+                {
+                    continue;
+                }
+                // The game's own projection (as its bubbles use): its world camera renders into a smaller pixel-art
+                // texture that is scaled to the screen, so Camera.main's screen points are in that texture's pixels
+                // (found 2026-09-30: the labels sat down and left of the donkeys).
+                Vector3 sp = CameraSystem.WorldToScreenPoint(i.HintPoint() + Vector3.up * 0.35f);
+                if (sp.z <= 0f)
+                {
+                    continue;
+                }
+                bool ed = editing == i;
+                string text = $"#{i.Id}{(ed ? " editing" : "")}{(i.IsStepping ? " ~" : "")}";
+                GUIStyle st = ed ? markerEditStyle : markerStyle;
+                Vector2 size = st.CalcSize(new GUIContent(text));
+                float x = sp.x / scale - size.x / 2f;
+                float y = (Screen.height - sp.y) / scale - size.y;
+                GUI.Label(new Rect(x, y, size.x, size.y), text, st);
+            }
+        }
+
         private static void DrawInstances()
         {
             Header("Donkeys and carts standing in the world");
             GUILayout.Label("Each is its own donkey (with or without its cart) or a cart on its own, with its own settings on top of everyone's. Walk up to a donkey with empty hands and press E to ride it; a dismount leaves it where it is, with its cart and cargo. Riding a donkey without its cart, ride up to a free cart's shafts and press E (or the hitch key) to take it; with the cart, the hitch key leaves it standing. Mods do the same through the API (Mounts.SpawnDonkey, SpawnCart, Hitch, Unhitch, MountHandle.Tuning). They are not saved: a cart's cargo is set down at it for each save, so nothing is lost on a reload.", small);
             Toggle("Controls in the game (the interact key rides and hitches, the label shows)", Plugin.InstanceControls, null);
             HitchKeyRow();
+
+            Header("Idle shuffle (standing donkeys without a cart)");
+            GUILayout.Label($"A few slow steps now and then inside a small box around where it was left, never straight up or down, never with a cart, and not while the keeper is close. Off in GK2 Mounts; mods switch it on (Mounts.Behaviour IdleShuffle, per donkey through MountHandle.Tuning). {(EditingNow ? $"These rows are {editing.Describe()}'s own values." : "These rows are everyone's values: every standing donkey without its own value uses them.")} Each donkey's status is in the list below.", small);
+            Toggle("Idle shuffle", IdleShuffle.On, null);
+            FloatSlider("Area sideways (either way)", IdleShuffle.AreaWidth, 0.1f, 4f, 2, null);
+            FloatSlider("Area up/down (either way)", IdleShuffle.AreaDepth, 0f, 2f, 2, null);
+            FloatSlider("Shortest step", IdleShuffle.StepMin, 0.05f, 2f, 2, null);
+            FloatSlider("Longest step", IdleShuffle.StepMax, 0.1f, 3f, 2, null);
+            FloatSlider("Speed (units/s)", IdleShuffle.Speed, 0.1f, 2f, 2, null);
+            FloatSlider("Walk animation rate", IdleShuffle.AnimSpeed, 0.2f, 3f, 2, null);
+            FloatSlider("Shortest pause (s)", IdleShuffle.PauseMin, 0.5f, 120f, 1, null);
+            FloatSlider("Longest pause (s)", IdleShuffle.PauseMax, 0.5f, 300f, 1, null);
+            FloatSlider("Steepest step (degrees)", IdleShuffle.MaxAngle, 0f, 60f, 0, null);
+            FloatSlider("Turn chance", IdleShuffle.TurnChance, 0f, 1f, 2, null);
+            FloatSlider("Hold still with the keeper within", IdleShuffle.KeeperDistance, 0f, 10f, 1, null);
 
             Header("Spawn one in front of the keeper");
             GUILayout.BeginHorizontal();
@@ -174,6 +262,10 @@ namespace GK2Mounts
                     };
                 }
                 GUILayout.EndHorizontal();
+                if (i.HasDonkey)
+                {
+                    GUILayout.Label("Idle shuffle: " + i.ShuffleStatusText(), small);
+                }
                 if (i.Overrides.Count > 0)
                 {
                     var parts = new List<string>();

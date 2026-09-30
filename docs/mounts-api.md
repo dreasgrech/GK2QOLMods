@@ -107,8 +107,9 @@ A handler that throws is logged and skipped.
 
 ## Tuning and behaviour
 
-`Mounts.Tuning(MountStyle.Ride / Cart)` holds a style's 96 look and sound values. `Mounts.Behaviour` holds the four
-behaviour switches, which apply to both styles. Both are `MountTuning`, addressed by the value's cfg key.
+`Mounts.Tuning(MountStyle.Ride / Cart)` holds a style's 96 look and sound values. `Mounts.Behaviour` holds the
+behaviour switches, which apply to both styles, and `Mounts.Shuffle` how the idle shuffle steps. All are
+`MountTuning`, addressed by the value's cfg key.
 
 ```csharp
 MountTuning cart = Mounts.Tuning(MountStyle.Cart);
@@ -131,6 +132,8 @@ Mounts.ClearTuning("you.gk2.mymod");                  // all your overrides, eve
 - `StayMountedThroughDoors`
 - `DismountIndoors`
 - `ShowMessages`
+- `IdleShuffle` (0.7.0, off in the core): donkeys standing in the world **without a cart** take a few slow steps now
+  and then, so they don't stand perfectly still. See "Idle shuffle" below.
 
 While mounted the keeper always faces only left or right, like the donkey. That isn't a setting.
 
@@ -230,7 +233,7 @@ MountHandle left = Mounts.Unhitch(donkey);                        // the cart st
 | `Id`, `Owner`, `Exists`, `HasDonkey`, `HasCart`, `IsRidden` | Identity and state. |
 | `SceneId`, `Position`, `FacingRight` | Where it stands. |
 | `CargoIds` | What is on its cart. |
-| `Tuning` | Its own settings (`InstanceTuning`: `Get`, `Set`, `Clear`, `Reset`, `IsSet`, `SetBy`, `Keys`). Keys are those of `Mounts.Tuning(style)`, `Mounts.Behaviour` and `Mounts.Colors`; a style key applies in whichever style it is in. This donkey's value wins over everyone's (cfg and session overrides). |
+| `Tuning` | Its own settings (`InstanceTuning`: `Get`, `Set`, `Clear`, `Reset`, `IsSet`, `SetBy`, `Keys`). Keys are those of `Mounts.Tuning(style)`, `Mounts.Behaviour`, `Mounts.Shuffle` and `Mounts.Colors`; a style key applies in whichever style it is in. This donkey's value wins over everyone's (cfg and session overrides). |
 | `Ride(showMessage)` | The keeper gets on and is put on the seat. The same checks and rules as `TryMount`. |
 | `MoveTo(position, facingRight)` | Moves a standing one. |
 | `IsReady` | Its view is loaded in the keeper's scene: `Ride` works. It takes a few frames after a spawn, `ComeToKeeper`, a hitch or an unhitch. |
@@ -253,6 +256,37 @@ ride's own `Mounted` and `Dismounted` come for instances too.
   spawned them spawns them again; `Instances` gives everything a mod needs to keep its own record.
 - **In-game controls:** `General.InstanceControls` (on) makes the interact key ride a standing donkey and hitch a
   free cart. `General.HitchKey` (J) unhitches, and hitches too.
+
+## Idle shuffle (0.7.0)
+
+A standing donkey without a cart takes a few slow steps now and then, inside a small box around its home spot.
+
+- **Switching it on:**
+
+  ```csharp
+  Mounts.Behaviour.Set("you.gk2.mymod", "IdleShuffle", true);       // every standing donkey without a cart
+  donkey.Tuning.Set("you.gk2.mymod", "IdleShuffle", true);           // or just this one (a MountHandle)
+  donkey.Tuning.Set("you.gk2.mymod", "ShuffleAreaWidth", 0.6f);      // its own box, speed, pauses, ...
+  ```
+
+- **Who moves:** only a donkey with no cart, not ridden and not the `TryMount` summon. A donkey with a cart and a free
+  cart never move. It starts when its cart is unhitched and stops when one is hitched.
+- **Its home spot** is where it was spawned, left by a dismount, or last moved (`MoveTo`, `ComeToKeeper`). It never
+  drifts away from it.
+- **Never straight up or down:** every step is within `ShuffleMaxAngle` of the screen's horizontal, and the donkey
+  always faces the way it walks. It turns around first when there is no room ahead, or by `ShuffleTurnChance`.
+- **Ground:** each step checks for level ground and nothing in the way along its line. Nothing in the way means no
+  keeper-blocking collider, the game's own test for where the keeper can stand.
+- **It holds still** while the keeper is within `ShuffleKeeperDistance`, so riding it doesn't chase a moving target,
+  and while the game is paused.
+- **No game events:** the core moves the donkey itself. The game's `MovementComponent` isn't used, because it fires a
+  global "go-to finished" event under the definition id `npc_donkey`, which quests listen for.
+- **`MountHandle.IsStepping`** is true during a step.
+
+**`Mounts.Shuffle` keys** (section "Shuffle", all float): `ShuffleAreaWidth` (1, sideways either way),
+`ShuffleAreaDepth` (0.5, up/down either way), `ShuffleStepMin` / `ShuffleStepMax` (0.3 / 0.9), `ShuffleSpeed` (0.5
+units/s), `ShuffleAnimSpeed` (1 = the walk cycle matches the ground), `ShufflePauseMin` / `ShufflePauseMax` (5 / 15
+s), `ShuffleMaxAngle` (35°), `ShuffleTurnChance` (0.25), `ShuffleKeeperDistance` (2).
 
 ## Gating on the game's progress
 
@@ -303,3 +337,4 @@ History:
 - 0.4.0: behaviour, and the core without keys.
 - 0.5.0: colours (`Mounts.Colors`, `Mounts.ColorRegions`, `MountColorRegion`, `SpriteColorMethod`); the style keys `CargoSetDownBehindCart`, `CargoSetDownGap`.
 - 0.6.0: donkeys and carts in the world (`SpawnDonkey`, `SpawnCart`, `Instances`, `Riding`, `Hitch`, `Unhitch`, `UnhitchRidden`, `MountHandle`, `InstanceTuning`, and the events `InstanceSpawned`, `InstanceRemoved`, `Hitched`, `Unhitched`); `SwitchStyle` on a ridden instance unhitches or refuses.
+- 0.7.0: the idle shuffle (`Mounts.Behaviour` key `IdleShuffle`, `Mounts.Shuffle`, `MountHandle.IsStepping`).

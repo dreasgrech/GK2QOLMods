@@ -10,7 +10,7 @@ A BepInEx library for Graveyard Keeper 2 that gives the game a rideable donkey:
 - **For mod authors:** the C# API is in [`docs/mounts-api.md`](../../docs/mounts-api.md). You can tie the mount into
   the story, or gate it on the tech tree, quests or story flags.
 
-Version 0.1.0 (API 0.6.0), built and audited against Steam game build 25601286 (Assembly-CSharp MVID
+Version 0.1.0 (API 0.7.0), built and audited against Steam game build 25601286 (Assembly-CSharp MVID
 `3ffadd70-…`, LazyBearTechnology `8a7a5e04-…`; re-audit in `docs/steam-move-audit.md`).
 - Design: [`docs/mounts-api-design.md`](../../docs/mounts-api-design.md) and [`FEASIBILITY.md`](FEASIBILITY.md).
 - Runtime facts the design rests on: [`PROBE-FINDINGS.md`](PROBE-FINDINGS.md).
@@ -47,8 +47,15 @@ A mod built on the API needs none of this code itself; the showcase is about 160
 | `ShowMessages` | true | The keeper's thought bubble when he can't mount ("I'm busy.", "Not in a co-op game.", a mod's own reason). |
 | `InstanceControls` | true | Donkeys and carts standing in the world ([`docs/mounts-instances.md`](../../docs/mounts-instances.md)). The interact key rides a standing donkey you walk up to with empty hands. While riding a donkey without its cart, it takes a free cart you ride up to. A label over it says so. Off: only mods can. |
 | `HitchKey` | J | While riding: leave the cart standing where it is (a free cart with its cargo and settings), or take the free cart in reach. None: the key is off. |
+| `IdleShuffle` | false | Donkeys standing in the world without a cart take a few slow steps now and then, inside a small area around where they were left ([`docs/mounts-roaming.md`](../../docs/mounts-roaming.md)). Never with a cart, while ridden, or with the keeper close. The showcase switches it on. |
 
-**Behaviour switches with the showcase:** the last three are the core's defaults. The showcase sets them from its
+`[Shuffle]` says how: `ShuffleAreaWidth` (1) and `ShuffleAreaDepth` (0.5), the area either way; `ShuffleStepMin` /
+`ShuffleStepMax` (0.3 / 0.9); `ShuffleSpeed` (0.5 units/s); `ShuffleAnimSpeed` (1); `ShufflePauseMin` /
+`ShufflePauseMax` (5 / 15 s); `ShuffleMaxAngle` (35°, from the screen's horizontal); `ShuffleTurnChance` (0.25);
+`ShuffleKeeperDistance` (2). They're on the dev panel's Instances tab.
+
+**Behaviour switches with the showcase:** `StayMountedThroughDoors`, `DismountIndoors`, `ShowMessages` and
+`IdleShuffle` are the core's defaults. The showcase sets them from its
 own settings (its cfg or the Mods menu) as session overrides, so the dev panel shows them locked.
 
 **Cargo (Cart style), no key of its own:**
@@ -250,7 +257,7 @@ Each region has its own section, `[Colors.Coat]` and so on, with 10 keys named r
 
 ## In-game test list (with the showcase installed)
 
-1. **Log:** `GK2 Mounts 0.1.0 loaded (API 0.6.0); nothing happens until a mod uses it.`, then the showcase's line,
+1. **Log:** `GK2 Mounts 0.1.0 loaded (API 0.7.0); nothing happens until a mod uses it.`, then the showcase's line,
    with no errors.
 2. **H:** the donkey appears under you and you sit on it. Walk in all four directions: it faces left or right with
    you, the walk animation runs, and you're clearly faster. **H** again gets you off, at normal speed and height.
@@ -274,6 +281,7 @@ Each region has its own section, `[Colors.Coat]` and so on, with 10 keys named r
 11. **Colours:** the test list in [`docs/mounts-colors.md`](../../docs/mounts-colors.md). The one that matters
     most: after recolouring, the game's own delivery donkey still looks normal.
 12. **Donkeys and carts in the world:** the test list in [`docs/mounts-instances.md`](../../docs/mounts-instances.md).
+13. **Idle shuffle:** the test list in [`docs/mounts-roaming.md`](../../docs/mounts-roaming.md).
 
 Still untested: carrying zombies (not unlocked in the test save); doors that load another scene; a save while mounted
 (the bed is indoors, so normal play always dismounts first).

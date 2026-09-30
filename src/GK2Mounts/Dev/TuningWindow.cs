@@ -89,6 +89,7 @@ namespace GK2Mounts
             {
                 chromeHeight = Mathf.Clamp(rect.height - lastScrollHeight, 60f, 600f);
             }
+            DrawWorldMarkers(scale);
             GUI.matrix = Matrix4x4.identity;
         }
 
@@ -230,16 +231,7 @@ namespace GK2Mounts
                 tab = newTab;
                 scroll = Vector2.zero;
             }
-            if (EditingNow)
-            {
-                GUILayout.BeginHorizontal();
-                GUILayout.Label($"Editing {editing.Describe()}'s own settings: every row changes only this one (magenta: its own value, right-click: back to everyone's). The Riding tab shows its style ({editing.CurrentStyle}).", instanceSet);
-                if (GUILayout.Button("Stop", GUILayout.Width(60f)))
-                {
-                    editing = null;
-                }
-                GUILayout.EndHorizontal();
-            }
+            DrawScope();
             GUILayout.Space(6f);
             // An IMGUI scroll view needs an explicit height, or it collapses; the content's height is measured on
             // each repaint (last frame's value is used) and capped to what fits on the screen.

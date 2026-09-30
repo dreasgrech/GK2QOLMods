@@ -375,6 +375,8 @@ namespace GK2Mounts
                 legs: false, legSource: LegSource.Body, legHeight: 10, legX: 0, legY: 0);
             // [Colors] and [Colors.<region>]: the same donkey in both styles, so one set (Colors.cs).
             Colors.Bind(Config);
+            // General.IdleShuffle and [Shuffle]: standing donkeys without a cart take a few slow steps (IdleShuffle.cs).
+            IdleShuffle.Bind(Config);
 
             TuningWindowEnabled = Config.Bind("Debug", "TuningWindow", false,
                 "Dev tool for mod authors: a tuning panel for every mount value in the top-right corner while mounted, plus the investigation tools on its Debug tab (and F5). Values apply live and are saved to this file as you change them.");

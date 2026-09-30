@@ -227,9 +227,13 @@ namespace GK2Mounts
                 if (tracked == null)
                 {
                     tracked = new List<(string, ConfigEntryBase)>();
-                    foreach (ConfigEntryBase e in new ConfigEntryBase[] { Plugin.StayMountedThroughDoors, Plugin.DismountIndoors, Plugin.ShowMessages, Plugin.InstanceControls, Plugin.HitchKey })
+                    foreach (ConfigEntryBase e in new ConfigEntryBase[] { Plugin.StayMountedThroughDoors, Plugin.DismountIndoors, Plugin.ShowMessages, Plugin.InstanceControls, Plugin.HitchKey, IdleShuffle.On })
                     {
                         tracked.Add(("General", e));
+                    }
+                    foreach (ConfigEntryBase e in IdleShuffle.Entries)
+                    {
+                        tracked.Add((IdleShuffle.Section, e));
                     }
                     foreach (StyleSettings s in new[] { Plugin.Ride, Plugin.Cart })
                     {

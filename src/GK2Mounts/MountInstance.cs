@@ -80,6 +80,7 @@ namespace GK2Mounts
                         partsReady = false;
                         cartParts.Clear();
                     }
+                    StopShuffle(); // a step in progress ends where it is; home is taken again with the new view
                     GameScene scene = LoadedScene(SceneId);
                     if (scene == null || Time.unscaledTime < nextSpawnTry)
                     {
@@ -108,6 +109,7 @@ namespace GK2Mounts
                         return;
                     }
                 }
+                ShuffleTick(pc);
                 Stand();
                 RevealDonkeyIfDue();
                 if (HasCart)
@@ -121,11 +123,7 @@ namespace GK2Mounts
             {
                 donkey.Data.MovableDirection = new Vector2(riderFacingX, 0f);
                 donkey.Data.Position = VisualConsts.GetRoundedPosXYZ(Position, PixelSize());
-                if (lastMirrored != AnimationState.Idle)
-                {
-                    lastMirrored = AnimationState.Idle;
-                    donkey.Data.SetStateToAnimator(AnimationState.Idle);
-                }
+                ApplyStandState(); // Idle, or Walk during an idle-shuffle step (IdleShuffle.cs)
                 if (cartParts.Count > 0)
                 {
                     Vector3 bodyGround = bodySprite != null && bodySprite ? bodySprite.position : donkey.transform.position;
@@ -188,8 +186,9 @@ namespace GK2Mounts
 
             // ------------------------------------------------------------------ a free cart's look
 
-            // The donkey's own renderers under the prefab (GK2-mount-probe.txt): the body and head sprites, the up/down
-            // body, its shadow and the grass it bends. Everything else is the cart.
+            // The donkey's own renderers under the prefab (GK2-mount-probe.txt): the body and head sprites, the shadow
+            // caster body (-bdy, not up/down art: the donkey has side views only), its shadow and the grass it bends.
+            // Everything else is the cart.
             private static readonly string[] DonkeyOnlyNames = { "bdy", "hed", "-bdy", "Cylinder Shadowcaster", "DeformTextureSprite" };
             private readonly HashSet<Renderer> donkeyOnly = new HashSet<Renderer>();
 

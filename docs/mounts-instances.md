@@ -24,7 +24,9 @@ Each one says why.
   That hasn't changed.
 - **No walking on its own.** A standing donkey is posed by the mod (`Data.Position`, `MovableDirection`,
   `SetStateToAnimator(Idle)`); it never goes through the game's movement system. "A donkey approaches the cart"
-  therefore means the player rides it there. No path-finding was built.
+  therefore means the player rides it there. No path-finding was built. (Since 0.7.0 a donkey without a cart can take
+  a few slow steps on its own, the idle shuffle: [mounts-roaming.md](mounts-roaming.md). It is moved by the mod too,
+  not by the game's movement system.)
 
 ## Model
 
