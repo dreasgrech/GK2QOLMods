@@ -174,6 +174,8 @@ never needs route finding.
 - **Walk cycle rate:** `speed × ShuffleAnimSpeed / scale`. It is updated while trotting, when the speed changes by
   more than 0.15.
 - **Following** (`FollowParentTick`):
+  - **Around obstacles:** since 2026-09-30, a blocked straight line starts a route search (docs/mounts-foals-pathing.md).
+    The straight-line rules below still hold in the open.
   - **Home** is the parent's body, taken again every frame.
   - **Trotting starts** when the foal is further from the parent than its area plus 0.6.
   - **Target:** its slot on the side of the parent the foal keeps, `ShuffleFollowGap` (0.9) from the parent's body.

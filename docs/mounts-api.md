@@ -368,4 +368,4 @@ History:
 - 0.6.0: donkeys and carts in the world (`SpawnDonkey`, `SpawnCart`, `Instances`, `Riding`, `Hitch`, `Unhitch`, `UnhitchRidden`, `MountHandle`, `InstanceTuning`, and the events `InstanceSpawned`, `InstanceRemoved`, `Hitched`, `Unhitched`); `SwitchStyle` on a ridden instance unhitches or refuses.
 - 0.7.0: the idle shuffle (`Mounts.Behaviour` key `IdleShuffle`, `Mounts.Shuffle`, `MountHandle.IsStepping`).
 - 0.8.0: `Mounts.Spawn(ownerId, MountSpawn)`, `Mounts.SpawnFoal`, `MountSpawn`, `MountHandle.Scale`, `IsRideable`,
-  `Parent`, `Children`; the `Mounts.Shuffle` keys `ShuffleFollowSpeed`, `ShuffleFollowMaxDistance`, `ShuffleFollowGap` (how close to the parent it settles, 0.9), `ShuffleFollowAlways` (bool: follow however far, stopping only when blocked).
+  `Parent`, `Children`; the `Mounts.Shuffle` keys `ShuffleFollowSpeed`, `ShuffleFollowMaxDistance`, `ShuffleFollowGap` (how close to the parent it settles, 0.9), `ShuffleFollowAlways` (bool: follow however far, stopping only when blocked), `ShuffleFollowRoutes` (bool, on: a way round obstacles), `ShuffleRouteRange` (8).

@@ -178,6 +178,8 @@ namespace GK2Mounts
             FloatSlider("Foals: follow only within", IdleShuffle.FollowMaxDistance, 1f, 30f, 1, null);
             FloatSlider("Foals: settle this close to the parent", IdleShuffle.FollowGap, 0.3f, 4f, 2, null);
             Toggle("Foals: follow however far (stop only when blocked)", IdleShuffle.FollowAlways, null);
+            Toggle("Foals: find a way round fences and buildings", IdleShuffle.FollowRoutes, null);
+            FloatSlider("Foals: a way round may reach this far", IdleShuffle.RouteRange, 2f, 8f, 1, null);
 
             Header("Spawn one in front of the keeper");
             GUILayout.BeginHorizontal();

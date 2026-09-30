@@ -25,8 +25,8 @@ namespace GK2Mounts
 
         // [Shuffle]: how (Mounts.Shuffle).
         internal static Tuned<float> AreaWidth, AreaDepth, StepMin, StepMax, Speed, AnimSpeed, PauseMin, PauseMax,
-            MaxAngle, TurnChance, KeeperDistance, FollowSpeed, FollowMaxDistance, FollowGap;
-        internal static Tuned<bool> FollowAlways;
+            MaxAngle, TurnChance, KeeperDistance, FollowSpeed, FollowMaxDistance, FollowGap, RouteRange;
+        internal static Tuned<bool> FollowAlways, FollowRoutes;
 
         internal static void Bind(ConfigFile cfg)
         {
@@ -58,6 +58,10 @@ namespace GK2Mounts
                 "A donkey with a parent (a foal): how fast it trots after its parent when the parent moves away, world units per second.");
             FollowAlways = cfg.Bind(Section, "ShuffleFollowAlways", Defaults.Get(Section, "ShuffleFollowAlways", false),
                 "A donkey with a parent (a foal): keep following the parent however far it goes (ShuffleFollowMaxDistance is ignored); it stops only when its way is blocked, and then follows again as soon as a straight way to the parent is clear, or catches up out of sight once the parent stands.");
+            FollowRoutes = cfg.Bind(Section, "ShuffleFollowRoutes", Defaults.Get(Section, "ShuffleFollowRoutes", true),
+                "A donkey with a parent (a foal): when a fence, a building or anything else the keeper can't walk through is in the straight way to the parent, work out a way round it (a small grid search) and follow that. Off: straight lines only; a blocked foal waits and catches up out of sight.");
+            RouteRange = F(cfg, "ShuffleRouteRange", 8f, 2f, 8f,
+                "A donkey with a parent (a foal), with ShuffleFollowRoutes: how far from the foal a way round may reach, world units either way (the search's area). Beyond it the route leads towards the parent and the next one goes on from there.");
             FollowGap = F(cfg, "ShuffleFollowGap", 0.9f, 0.3f, 4f,
                 "A donkey with a parent (a foal): how close to the parent's body it settles after following, world units (the nearest of the siblings' spots; the others are a little further out). With a cart, the foals on the cart's side settle alongside the cart, level with the donkey.");
             FollowMaxDistance = F(cfg, "ShuffleFollowMaxDistance", 10f, 1f, 30f,
@@ -73,7 +77,7 @@ namespace GK2Mounts
         internal static ITuned[] Settings => new ITuned[]
         {
             AreaWidth, AreaDepth, StepMin, StepMax, Speed, AnimSpeed, PauseMin, PauseMax, MaxAngle, TurnChance, KeeperDistance,
-            FollowSpeed, FollowMaxDistance, FollowGap, FollowAlways,
+            FollowSpeed, FollowMaxDistance, FollowGap, FollowAlways, FollowRoutes, RouteRange,
         };
 
         internal static ConfigEntryBase[] Entries
@@ -241,6 +245,8 @@ namespace GK2Mounts
             private void StopShuffle()
             {
                 FinishTurn(); // not if something else just moved it (a hitch): its place wins
+                route = null;
+                routeSearch = null; // its tests use the view, which may be gone
                 shufflePhase = ShufflePhase.Off;
                 shuffleHomeSet = false;
             }
@@ -637,7 +643,9 @@ namespace GK2Mounts
                             s = $"stepping {(riderFacingX > 0f ? "right" : "left")}, {stepDone:F2} of {stepLength:F2}";
                             break;
                         case ShufflePhase.Following:
-                            s = $"trotting after its parent #{Parent?.Id} at {followSpeedNow:F1}/s";
+                            s = RoutePlanning ? $"working out a way round to its parent #{Parent?.Id}"
+                                : route != null ? $"trotting round an obstacle to its parent #{Parent?.Id}, corner {routeIndex + 1} of {route.Count}"
+                                : $"trotting after its parent #{Parent?.Id} at {followSpeedNow:F1}/s";
                             break;
                         default:
                             s = "starting";
@@ -669,7 +677,8 @@ namespace GK2Mounts
             private string BodyNowForLog() => bodySprite != null && bodySprite ? bodySprite.position.ToString("F3") : "?";
 
             // The animator state Stand() keeps: Walk during a step, Idle otherwise.
-            private AnimationState StandState => shufflePhase == ShufflePhase.Stepping || shufflePhase == ShufflePhase.Following ? AnimationState.Walk : AnimationState.Idle;
+            // Walk while stepping or trotting; a foal working out a route stands for those frames.
+            private AnimationState StandState => shufflePhase == ShufflePhase.Stepping || shufflePhase == ShufflePhase.Following && !RoutePlanning ? AnimationState.Walk : AnimationState.Idle;
 
             // The walk cycle's rate for the speed it moves at: shorter legs (ViewScale) step faster for the same ground.
             private float StandWalkSpeed => (shufflePhase == ShufflePhase.Following ? followSpeedNow : IdleShuffle.Speed.Value)

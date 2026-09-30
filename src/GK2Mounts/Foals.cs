@@ -23,6 +23,20 @@ namespace GK2Mounts
             internal Instance Parent;
             internal bool RemoveWithParent = true;
 
+            // A route around obstacles (FoalRoute.cs): the search in progress, or the corners being walked.
+            private FoalRouteSearch routeSearch;
+            private List<Vector3> route;
+            private int routeIndex;
+            private float nextRouteAt;
+            private float nextStraightCheck;
+            private float routeProgressAt;
+            private float routeBestDist;
+            private int routesLogged;
+
+            internal bool RoutePlanning => routeSearch != null;
+
+            private static bool RoutesOn => IdleShuffle.FollowRoutes == null || IdleShuffle.FollowRoutes.Value;
+
             private float nextRejoinCheck;
             private int rejoinBackoff;
             private float rejoinedAt = -1000f;
@@ -255,7 +269,7 @@ namespace GK2Mounts
                     }
                     else
                     {
-                        FollowStep(slot, body, d, Mathf.Min(Time.deltaTime, 0.1f));
+                        FollowWithRoute(p, slot, body, d);
                         return true;
                     }
                 }
@@ -290,6 +304,20 @@ namespace GK2Mounts
                             Plugin.Log.LogInfo($"[foal] {Describe()} follows its parent #{p.Id} again ({dHome:F1} away, to {(k == NearSide ? "its near side" : "slot " + k)}).");
                             return true;
                         }
+                        // No straight way to any place next to it: a route around, when the parent is within the route's
+                        // reach (further away, the catch-up out of sight does it).
+                        if (RoutesOn && dHome <= RouteRange && Time.time >= nextRouteAt)
+                        {
+                            followLost = false;
+                            followTargetSlot = SiblingIndex();
+                            nextTargetPick = Time.time + 0.5f;
+                            shufflePhase = ShufflePhase.Following;
+                            nextAheadCheck = 0f;
+                            rejoinedAt = Time.time;
+                            route = null;
+                            StartRoute(body, SlotNearParent(followTargetSlot), "rejoin");
+                            return true;
+                        }
                         return false;
                     }
                     else if (!p.IsRidden && still >= 1.5f && (OffScreen(body) || still >= 6f))
@@ -312,6 +340,8 @@ namespace GK2Mounts
                     shufflePhase = ShufflePhase.Following;
                     nextAheadCheck = 0f;
                     nextTargetPick = 0f;
+                    route = null;
+                    routeSearch = null;
                     if (followsLogged < 5)
                     {
                         followsLogged++;
@@ -322,9 +352,137 @@ namespace GK2Mounts
                 return false;
             }
 
+            private float RouteRange => IdleShuffle.RouteRange != null ? IdleShuffle.RouteRange.Value : 8f;
+
+            // A frame of following: straight to the target while the way is clear; around obstacles on a route when it is
+            // not (FoalRoute.cs; planned over a few frames, standing meanwhile); lost when there is no way round.
+            private void FollowWithRoute(Instance p, Vector3 slot, Vector3 body, float dFinal)
+            {
+                float dt = Mathf.Min(Time.deltaTime, 0.1f);
+                if (routeSearch != null)
+                {
+                    FoalRouteSearch.State st = routeSearch.Step();
+                    if (st == FoalRouteSearch.State.Running)
+                    {
+                        return; // standing while it works the way out (a frame or a few)
+                    }
+                    LogRoute(p, routeSearch);
+                    FoalRouteSearch done = routeSearch;
+                    routeSearch = null;
+                    if (st == FoalRouteSearch.State.NoRoute)
+                    {
+                        LoseParent(body, "no way around: " + done.Why);
+                        EndStep(firstPause: false);
+                        return;
+                    }
+                    route = done.Corners;
+                    routeIndex = 0;
+                    routeBestDist = float.MaxValue;
+                    routeProgressAt = Time.time;
+                    nextStraightCheck = Time.time + 0.5f;
+                }
+                Vector3 aim = slot;
+                if (route != null)
+                {
+                    if (FlatDistance(route[route.Count - 1], slot) > 1.5f && Time.time >= nextRouteAt)
+                    {
+                        StartRoute(body, slot, "the parent moved on"); // the route leads to where it was
+                        return;
+                    }
+                    if (Time.time >= nextStraightCheck)
+                    {
+                        nextStraightCheck = Time.time + 0.5f;
+                        groundFail = null;
+                        if (LineWalkable(body, slot, "straight"))
+                        {
+                            route = null; // the way is clear again: straight there
+                        }
+                        groundFail = null;
+                    }
+                }
+                if (route != null)
+                {
+                    if (FlatDistance(body, route[routeIndex]) < 0.2f)
+                    {
+                        routeIndex++;
+                        routeBestDist = float.MaxValue;
+                        routeProgressAt = Time.time;
+                        if (routeIndex >= route.Count)
+                        {
+                            route = null;
+                        }
+                    }
+                }
+                if (route != null)
+                {
+                    aim = route[routeIndex];
+                    float dc = FlatDistance(body, aim);
+                    if (dc < routeBestDist - 0.1f) // corners can be close: 0.3 of headway never showed on a short leg
+                    {
+                        routeBestDist = dc;
+                        routeProgressAt = Time.time;
+                    }
+                    else if (Time.time - routeProgressAt > 2f)
+                    {
+                        // No headway for 2 s: plan again, or give up when it just did.
+                        if (Time.time >= nextRouteAt)
+                        {
+                            StartRoute(body, slot, "no headway");
+                        }
+                        else
+                        {
+                            LoseParent(body, "stuck on its route");
+                            EndStep(firstPause: false);
+                        }
+                        return;
+                    }
+                }
+                if (!FollowStep(aim, body, FlatDistance(body, aim), dFinal, dt))
+                {
+                    if (RoutesOn && Time.time >= nextRouteAt)
+                    {
+                        StartRoute(body, slot, route != null ? "the route is blocked" : "the straight way is blocked");
+                        return;
+                    }
+                    LoseParent(body, "the way is blocked");
+                    EndStep(firstPause: false);
+                }
+            }
+
+            private void StartRoute(Vector3 body, Vector3 slot, string why)
+            {
+                if (!RoutesOn)
+                {
+                    return;
+                }
+                route = null;
+                nextRouteAt = Time.time + 1f; // at most one plan a second
+                routeSearch = new FoalRouteSearch(body, slot, RouteRange, MaxRisePerSample,
+                    pt => GroundHeight(pt, out _), foot => FreeAt(foot, out _));
+                if (routesLogged < 30)
+                {
+                    Plugin.Log.LogInfo($"[foal] {Describe()} works out a way round ({why}), {FlatDistance(body, slot):F1} to go.");
+                }
+            }
+
+            private void LogRoute(Instance p, FoalRouteSearch s)
+            {
+                if (routesLogged++ >= 30)
+                {
+                    return;
+                }
+                double us = s.Tests > 0 ? s.TestMs * 1000.0 / s.Tests : 0.0;
+                string what = s.Result == FoalRouteSearch.State.Found
+                    ? $"found, {s.Corners.Count} corner(s)"
+                    : $"none ({s.Why})";
+                Plugin.Log.LogInfo($"[foal] {Describe()} route to its parent #{p.Id}: {what}; {s.Tests} cell tests in {s.Frames} frame(s), {s.TestMs:F1} ms ({us:F0} µs per test).");
+            }
+
             // One frame of trotting towards the slot: the body moves in a straight line, the root stays half a (scaled)
             // body behind it on the facing side; a clear change of side turns it around first (the body kept in place).
-            private void FollowStep(Vector3 slot, Vector3 body, float dist, float dt)
+            // aim: the next corner (or the target); dFinal: to the target, for the slow-down. False when the way ahead is
+            // blocked (nothing moved).
+            private bool FollowStep(Vector3 slot, Vector3 body, float dist, float dFinal, float dt)
             {
                 Vector3 away = AwayFromCamera();
                 Vector3 right = Vector3.Cross(Vector3.up, away).normalized;
@@ -342,7 +500,7 @@ namespace GK2Mounts
                     shuffleTurnFrame = Time.frameCount;
                     shufflePhase = ShufflePhase.Turning;
                     afterTurn = ShufflePhase.Following;
-                    return;
+                    return true;
                 }
                 if (Time.time >= nextAheadCheck)
                 {
@@ -354,22 +512,21 @@ namespace GK2Mounts
                     float ahead = Mathf.Min(dist, IdleShuffle.FollowSpeed.Value * 1.75f * AheadInterval + 0.4f);
                     if (!LineWalkable(body, body + dir * ahead, "follow"))
                     {
-                        LoseParent(body, "the way is blocked");
-                        EndStep(firstPause: false);
-                        return;
+                        return false;
                     }
                 }
                 // Full speed until the last half unit, then slowing down to arrive.
                 // Full speed until the last half unit, then slowing down to arrive; far behind (from 2 units out, fully at 8)
                 // up to 1.75 times as fast, so a foal can make up ground on a parent that has stopped or slowed.
-                followSpeedNow = IdleShuffle.FollowSpeed.Value * Mathf.Lerp(0.35f, 1f, Mathf.Clamp01(dist / 0.6f))
-                    * Mathf.Lerp(1f, 1.75f, Mathf.Clamp01((dist - 2f) / 6f));
+                followSpeedNow = IdleShuffle.FollowSpeed.Value * Mathf.Lerp(0.35f, 1f, Mathf.Clamp01(dFinal / 0.6f))
+                    * Mathf.Lerp(1f, 1.75f, Mathf.Clamp01((dFinal - 2f) / 6f));
                 float move = Mathf.Min(followSpeedNow * dt, dist);
                 Vector3 bodyNew = body + dir * move;
                 float g = GroundHeight(bodyNew, out _);
                 Vector3 root = bodyNew - right * LateralFor(riderFacingX);
                 root.y = float.IsNaN(g) ? Position.y : g;
                 SetShufflePosition(root);
+                return true;
             }
 
             private void StopFollowing()
@@ -378,6 +535,8 @@ namespace GK2Mounts
                 {
                     shufflePhase = ShufflePhase.Waiting;
                 }
+                route = null;
+                routeSearch = null;
             }
 
             private void LoseParent(Vector3 body, string why)
@@ -458,6 +617,8 @@ namespace GK2Mounts
                 }
                 Vector3 root = SnapToGround(slot - right * LateralFor(riderFacingX));
                 SetShufflePosition(root);
+                route = null;
+                routeSearch = null;
                 followLost = false;
                 wedged = false;
                 pickFailsInRow = 0;
