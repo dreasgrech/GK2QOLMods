@@ -33,8 +33,8 @@ Decisions made (2026-09-30):
 | Lantern | `Lantern.cs`, `LampHang.cs` | pole pose, the hanging lamp, lights, glow |
 | Sounds | `MountSounds.cs` (2 patches) | hoofsteps, graze, brays, wheels, bell, cargo thump |
 | Safety | `WhyCannotMount`, the `SaveSystem.Save` prefix and postfix, the MVID guard | co-op, indoors, saves, the side-effect guard on `MountWgoId` |
-| Tuning panel | `TuningWindow.cs` (1,000 lines), `Defaults.cs` | a dev tool: live sliders, defaults written back to the repo |
-| Probes and dumps | `CarryProbe`, `HeadProbe`, `LanternProbe`, `ScriptDump`, `CargoSheet` | investigation tools; not gameplay |
+| Tuning panel | `Dev/TuningWindow.cs` (1,000 lines), `Defaults.cs` (the defaults loader, also used at runtime) | a dev tool: live sliders, defaults written back to the repo |
+| Probes and dumps | `Dev/`: `CarryProbe`, `HeadProbe`, `LanternProbe`, `HeldItemProbe`, `ScriptDump`, `CargoSheet` | investigation tools; not gameplay |
 
 The two refusal functions already return a **reason text**, which the thought bubble shows: "Not indoors.",
 "I'm busy.", "Not while building.", and so on. An author's rule plugs in at exactly that point, so "You haven't

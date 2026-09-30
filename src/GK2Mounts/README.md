@@ -24,6 +24,16 @@ donkey NPC and its schedule are untouched.
 - Whatever he holds when mounting goes onto the cart, or is set down first.
 - The keeper always faces left or right, like the donkey.
 
+## Source layout
+
+| Where | Lines (approx.) | What |
+|---|---|---|
+| `Api/` (+ `Tuned.cs`) | 760 | The public API other mods call ([`docs/mounts-api.md`](../../docs/mounts-api.md)). |
+| the files at the top | 6,400 | The mount itself: `Mount.cs` (spawning, following, the cart on slopes, dismount rules), `Cargo.cs`, `CargoLayout.cs` and `HeadReroute.cs` (the cart as the keeper's hands), `Lantern.cs` and `LampHang.cs`, `MountSounds.cs`, `RiderLeg.cs`, `Patches.cs`, `Plugin.cs` (settings, the game-update guard), `Defaults.cs` (the mod defaults). |
+| `Dev/` | 3,450 | The dev panel (`TuningWindow.cs`) and the investigation tools behind it: probes, dumps, the cargo photo sheet. They're in the same DLL, but only reachable with `Debug.TuningWindow = true`. |
+
+A mod built on the API needs none of this code itself; the showcase is about 160 lines.
+
 ## Settings (`BepInEx\config\dreas.gk2.mounts.cfg`, read at game start)
 
 ### `[General]`
