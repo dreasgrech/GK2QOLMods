@@ -25,7 +25,8 @@ namespace GK2Mounts
 
         // [Shuffle]: how (Mounts.Shuffle).
         internal static Tuned<float> AreaWidth, AreaDepth, StepMin, StepMax, Speed, AnimSpeed, PauseMin, PauseMax,
-            MaxAngle, TurnChance, KeeperDistance, FollowSpeed, FollowMaxDistance;
+            MaxAngle, TurnChance, KeeperDistance, FollowSpeed, FollowMaxDistance, FollowGap;
+        internal static Tuned<bool> FollowAlways;
 
         internal static void Bind(ConfigFile cfg)
         {
@@ -55,6 +56,10 @@ namespace GK2Mounts
                 "The donkey holds still while the keeper is closer than this, world units, so riding it does not chase a moving target. Donkeys that can't be ridden (foals) ignore the keeper.");
             FollowSpeed = F(cfg, "ShuffleFollowSpeed", 4f, 0.3f, 8f,
                 "A donkey with a parent (a foal): how fast it trots after its parent when the parent moves away, world units per second.");
+            FollowAlways = cfg.Bind(Section, "ShuffleFollowAlways", Defaults.Get(Section, "ShuffleFollowAlways", false),
+                "A donkey with a parent (a foal): keep following the parent however far it goes (ShuffleFollowMaxDistance is ignored); it stops only when its way is blocked, and then follows again as soon as a straight way to the parent is clear, or catches up out of sight once the parent stands.");
+            FollowGap = F(cfg, "ShuffleFollowGap", 0.9f, 0.3f, 4f,
+                "A donkey with a parent (a foal): how close to the parent's body it settles after following, world units (the nearest of the siblings' spots; the others are a little further out). With a cart, the foals on the cart's side settle alongside the cart, level with the donkey.");
             FollowMaxDistance = F(cfg, "ShuffleFollowMaxDistance", 10f, 1f, 30f,
                 "A donkey with a parent (a foal): it trots after its parent only while it is closer than this, world units. Further (or blocked, or in another place), it waits, shuffling where it is, and catches up out of sight once the parent stands again.");
         }
@@ -68,7 +73,7 @@ namespace GK2Mounts
         internal static ITuned[] Settings => new ITuned[]
         {
             AreaWidth, AreaDepth, StepMin, StepMax, Speed, AnimSpeed, PauseMin, PauseMax, MaxAngle, TurnChance, KeeperDistance,
-            FollowSpeed, FollowMaxDistance,
+            FollowSpeed, FollowMaxDistance, FollowGap, FollowAlways,
         };
 
         internal static ConfigEntryBase[] Entries
@@ -420,7 +425,9 @@ namespace GK2Mounts
                 keeperBody = MainGame.PlayerController?.PhysicalBody?.Rb;
                 float prev = float.NaN;
                 float start = float.NaN;
-                const int Samples = 5;
+                // At least 5 intervals, and no more than 0.2 apart on long lines (a foal rejoining from far away), up to 80.
+                float len = new Vector2(b.x - a.x, b.z - a.z).magnitude;
+                int Samples = Mathf.Clamp(Mathf.CeilToInt(len / 0.2f), 5, 80);
                 for (int i = 0; i <= Samples; i++)
                 {
                     Vector3 p = Vector3.Lerp(a, b, i / (float)Samples);

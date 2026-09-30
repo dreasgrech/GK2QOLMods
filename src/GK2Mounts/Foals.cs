@@ -138,18 +138,26 @@ namespace GK2Mounts
 
             // Where this foal belongs next to its parent: behind it (behind its cart when it has one), each sibling in its
             // own slot so they do not stack. Body points.
-            // (distance to the side of the parent, towards or away from the camera). Each sibling has its own.
+            // (extra distance to the side of the parent beyond ShuffleFollowGap, towards or away from the camera). Each
+            // sibling has its own.
             private static readonly Vector2[] Slots =
             {
-                new Vector2(1.1f, 0.35f), new Vector2(1.1f, -0.35f), new Vector2(1.7f, 0f),
-                new Vector2(1.7f, 0.5f), new Vector2(2.2f, -0.3f), new Vector2(2.2f, 0.3f),
+                new Vector2(0f, 0.35f), new Vector2(0f, -0.35f), new Vector2(0.6f, 0f),
+                new Vector2(0.6f, 0.5f), new Vector2(1.1f, -0.3f), new Vector2(1.1f, 0.3f),
             };
+
+            // With a cart, the cart side's slots are alongside the cart, level with the donkey (towards or away from the
+            // camera), not behind it: behind the cart they stood about 2.6 from the donkey (the user, 2026-09-30).
+            private const float BesideCart = 0.75f;
 
             // The side of the parent (along the screen's horizontal, +1 = 'right') this foal keeps. Not the parent's
             // behind: that flips with every turn of the parent, and with a cart behind it the slot jumped five units
             // to the other side, so the foals trotted through the cart at each turn (found 2026-09-30). Riding away
             // leaves a foal behind anyway; it changes side only when it is clearly on the other one.
             private float foalSide;
+
+            // The foal's own ShuffleFollowGap (read while it is bound: its own override, else everyone's).
+            private static float IdleShuffleGap(Instance p) => IdleShuffle.FollowGap != null ? IdleShuffle.FollowGap.Value : 0.9f;
 
             private void UpdateFoalSide(Vector3 body)
             {
@@ -176,8 +184,18 @@ namespace GK2Mounts
                 float side = foalSide != 0f ? foalSide : -p.riderFacingX * worldToRight;
                 Vector2 s = Slots[index % Slots.Length];
                 bool cartSide = p.HasCart && side == -p.riderFacingX * worldToRight; // the cart is behind the donkey
-                float x = s.x + (cartSide ? 1.5f : 0f);
-                Vector3 at = p.BodyPoint() + right * (side * x) + away * s.y;
+                float gap = IdleShuffleGap(p);
+                Vector3 at;
+                if (cartSide)
+                {
+                    // Beside the cart: near its front (the donkey's end), in front of or behind it on screen.
+                    float depth = (s.y >= 0f ? 1f : -1f) * (BesideCart + Mathf.Abs(s.y) * 0.5f);
+                    at = p.BodyPoint() + right * (side * (gap * 0.5f + s.x)) + away * depth;
+                }
+                else
+                {
+                    at = p.BodyPoint() + right * (side * (gap + s.x)) + away * s.y;
+                }
                 at.y = p.Position.y;
                 return at;
             }
@@ -214,7 +232,8 @@ namespace GK2Mounts
                 float d = FlatDistance(body, slot);                // arriving: at its slot (or the reachable one)
                 float dHome = FlatDistance(body, p.BodyPoint());   // starting and giving up: from the parent itself
                 float homeRange = Mathf.Max(IdleShuffle.AreaWidth.Value, IdleShuffle.AreaDepth.Value) + 0.6f;
-                float maxFollow = IdleShuffle.FollowMaxDistance.Value;
+                // ShuffleFollowAlways: no distance limit, it follows until the way is blocked.
+                float maxFollow = IdleShuffle.FollowAlways != null && IdleShuffle.FollowAlways.Value ? float.MaxValue : IdleShuffle.FollowMaxDistance.Value;
                 if (shufflePhase == ShufflePhase.Following)
                 {
                     if (d < 0.25f)
@@ -245,7 +264,7 @@ namespace GK2Mounts
                     {
                         followLost = false; // the parent came back to it
                     }
-                    else if (!wedged && dHome <= maxFollow * 0.8f && Time.time >= nextRejoinCheck)
+                    else if (!wedged && (maxFollow == float.MaxValue || dHome <= maxFollow * 0.8f) && Time.time >= nextRejoinCheck)
                     {
                         // The parent is back in reach (ridden or not): follow again if a place next to it can be reached in a
                         // straight line (the same test the trot uses; testing only the line to the parent itself sent a
@@ -327,7 +346,7 @@ namespace GK2Mounts
                     const float AheadInterval = 0.2f;
                     nextAheadCheck = Time.time + AheadInterval;
                     groundFail = null;
-                    float ahead = Mathf.Min(dist, IdleShuffle.FollowSpeed.Value * AheadInterval + 0.4f);
+                    float ahead = Mathf.Min(dist, IdleShuffle.FollowSpeed.Value * 1.75f * AheadInterval + 0.4f);
                     if (!LineWalkable(body, body + dir * ahead, "follow"))
                     {
                         LoseParent(body, "the way is blocked");
@@ -336,7 +355,10 @@ namespace GK2Mounts
                     }
                 }
                 // Full speed until the last half unit, then slowing down to arrive.
-                followSpeedNow = IdleShuffle.FollowSpeed.Value * Mathf.Lerp(0.35f, 1f, Mathf.Clamp01(dist / 0.6f));
+                // Full speed until the last half unit, then slowing down to arrive; far behind (from 2 units out, fully at 8)
+                // up to 1.75 times as fast, so a foal can make up ground on a parent that has stopped or slowed.
+                followSpeedNow = IdleShuffle.FollowSpeed.Value * Mathf.Lerp(0.35f, 1f, Mathf.Clamp01(dist / 0.6f))
+                    * Mathf.Lerp(1f, 1.75f, Mathf.Clamp01((dist - 2f) / 6f));
                 float move = Mathf.Min(followSpeedNow * dt, dist);
                 Vector3 bodyNew = body + dir * move;
                 float g = GroundHeight(bodyNew, out _);

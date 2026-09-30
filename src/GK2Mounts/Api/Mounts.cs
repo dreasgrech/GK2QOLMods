@@ -365,8 +365,8 @@ namespace GK2Mounts.Api
             foal.I.PlaceNearParent(); // a free slot next to the parent, checked for ground and room
             InstanceTuning t = foal.Tuning;
             t.Set(ownerId, "IdleShuffle", true);
-            t.Set(ownerId, "ShuffleAreaWidth", 1.6f);
-            t.Set(ownerId, "ShuffleAreaDepth", 0.7f);
+            t.Set(ownerId, "ShuffleAreaWidth", 0.9f);
+            t.Set(ownerId, "ShuffleAreaDepth", 0.45f);
             t.Set(ownerId, "ShuffleStepMin", 0.2f);
             t.Set(ownerId, "ShuffleStepMax", 0.6f);
             t.Set(ownerId, "ShuffleSpeed", 0.45f);

@@ -176,6 +176,8 @@ namespace GK2Mounts
             FloatSlider("Hold still with the keeper within", IdleShuffle.KeeperDistance, 0f, 10f, 1, null);
             FloatSlider("Foals: trot speed after the parent", IdleShuffle.FollowSpeed, 0.3f, 8f, 1, null);
             FloatSlider("Foals: follow only within", IdleShuffle.FollowMaxDistance, 1f, 30f, 1, null);
+            FloatSlider("Foals: settle this close to the parent", IdleShuffle.FollowGap, 0.3f, 4f, 2, null);
+            Toggle("Foals: follow however far (stop only when blocked)", IdleShuffle.FollowAlways, null);
 
             Header("Spawn one in front of the keeper");
             GUILayout.BeginHorizontal();

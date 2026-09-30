@@ -52,7 +52,7 @@ A mod built on the API needs none of this code itself; the showcase is about 160
 `[Shuffle]` says how: `ShuffleAreaWidth` (1) and `ShuffleAreaDepth` (0.5), the area either way; `ShuffleStepMin` /
 `ShuffleStepMax` (0.3 / 0.9); `ShuffleSpeed` (0.5 units/s); `ShuffleAnimSpeed` (1); `ShufflePauseMin` /
 `ShufflePauseMax` (5 / 15 s); `ShuffleMaxAngle` (35°, from the screen's horizontal); `ShuffleTurnChance` (0.25);
-`ShuffleKeeperDistance` (2); for foals, `ShuffleFollowSpeed` (4) and `ShuffleFollowMaxDistance` (10). They're on
+`ShuffleKeeperDistance` (2); for foals, `ShuffleFollowSpeed` (4), `ShuffleFollowMaxDistance` (10) `ShuffleFollowGap` (0.9) and `ShuffleFollowAlways` (off: follow however far, stopping only when blocked). They're on
 the dev panel's Instances tab. Foals (small donkeys that stay with a parent, `Mounts.SpawnFoal`):
 [`docs/mounts-foals.md`](../../docs/mounts-foals.md).
 

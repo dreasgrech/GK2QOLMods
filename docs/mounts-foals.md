@@ -176,14 +176,18 @@ never needs route finding.
 - **Following** (`FollowParentTick`):
   - **Home** is the parent's body, taken again every frame.
   - **Trotting starts** when the foal is further from the parent than its area plus 0.6.
-  - **Target:** its slot on the side of the parent the foal keeps. With a cart, the cart side's slots are 1.5 further
-    out. Each sibling has its own slot, and the shuffle's area is centred on it.
+  - **Target:** its slot on the side of the parent the foal keeps, `ShuffleFollowGap` (0.9) from the parent's body.
+    The siblings' slots are up to 1.1 further out. With a cart, the cart side's slots are alongside the cart, level
+    with the donkey. Behind the cart they stood about 2.6 from the donkey (the user, 2026-09-30). Each sibling has its own slot, and the shuffle's area is centred on it.
     - A foal changes side only when it is clearly (over 0.3) on the other one. Riding away leaves it behind anyway.
     - The first build put the slots behind the parent's facing. Every turn of a donkey with a cart then moved them
       five units, and the foals trotted through the cart (found 2026-09-30).
     It trots to a target it can reach in a straight line: its own slot, else the nearest other free slot, else the
     side of the parent it comes from. The target is picked again every 0.5 s.
-  - **Speed:** `ShuffleFollowSpeed` (4; riding is about 6.6), slowing over the last 0.6.
+  - **Speed:** `ShuffleFollowSpeed` (4; riding is about 6.6), slowing over the last 0.6. Far behind it goes faster,
+    up to 1.75× from 8 units out.
+  - **`ShuffleFollowAlways`** (off): no distance limit. It stops only when blocked, and rejoins from any distance when a
+    straight way is clear. Long lines are sampled every 0.2, up to 80 samples.
   - **Facing:** it turns only when the direction's sideways part is over 0.35, keeping the body in place. The same
     one-frame turn as the shuffle.
   - **The way ahead** is checked 0.6 ahead every 0.25 s, with the shuffle's ground and collider test. The keeper's
@@ -210,7 +214,7 @@ never needs route finding.
   its parent, and 0.66 between two foals.
 - **`SpawnFoal`'s own settings** for the foal, owned by the caller:
   - `IdleShuffle` on;
-  - area 1.6 × 0.7;
+  - area 0.9 × 0.45 (1.6 × 0.7 at first: they wandered too far from their spot);
   - steps 0.2–0.6 at 0.45/s;
   - pauses 2.5–8 s;
   - turn chance 0.35.
