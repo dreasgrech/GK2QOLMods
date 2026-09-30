@@ -421,7 +421,48 @@ namespace GK2Mounts
         // game (why says so).
         internal static Instance Spawn(string ownerId, Vector3 position, bool hasDonkey, bool hasCart, bool facingRight, out string why)
         {
+            return Spawn(ownerId, position, hasDonkey, hasCart, facingRight, 1f, true, null, true, out why);
+        }
+
+        // Also the foal properties (Foals.cs): the view's scale, whether it can be ridden, the parent it stays with and
+        // whether it goes when the parent does. The combinations the ride code can't take are refused here.
+        internal static Instance Spawn(string ownerId, Vector3 position, bool hasDonkey, bool hasCart, bool facingRight,
+            float scale, bool rideable, Instance parent, bool removeWithParent, out string why)
+        {
             why = null;
+            if (float.IsNaN(scale) || scale < 0.2f || scale > 2f)
+            {
+                why = "Scale must be between 0.2 and 2.";
+                return null;
+            }
+            if (Mathf.Abs(scale - 1f) > 0.001f && (rideable || hasCart || !hasDonkey))
+            {
+                why = "Only a donkey without a cart that can't be ridden can have another scale (the ride and the cart are made for a full-size donkey).";
+                return null;
+            }
+            if (parent != null)
+            {
+                if (!IsRegistered(parent) || parent.Ephemeral || !parent.HasDonkey)
+                {
+                    why = "The parent must be a donkey in the world (not a cart, not the summon).";
+                    return null;
+                }
+                if (parent.Parent != null)
+                {
+                    why = "The parent has a parent itself (no chains).";
+                    return null;
+                }
+                if (!hasDonkey)
+                {
+                    why = "A cart can't have a parent.";
+                    return null;
+                }
+                if (parent.Children().Count >= MaxChildren)
+                {
+                    why = $"The parent already has {MaxChildren} children.";
+                    return null;
+                }
+            }
             if (!Instance.IsInGame(out PlayerController pc, out GameScene scene))
             {
                 why = "Not in a game.";
@@ -444,16 +485,22 @@ namespace GK2Mounts
             var i = new Instance(NextId(), ownerId, ephemeral: false, hasDonkey: hasDonkey, hasCart: hasCart)
             {
                 Position = SnapToGround(position),
-                SceneId = scene.Id,
+                SceneId = parent != null ? parent.SceneId : scene.Id,
+                ViewScale = scale,
+                Rideable = rideable,
+                Parent = parent,
+                RemoveWithParent = removeWithParent,
             };
             using (Bind(i))
             {
                 i.MoveTo(i.Position, facingRight ? 1f : -1f);
             }
             Register(i);
-            Plugin.Log.LogInfo($"Mount: spawned {i.Describe()} for {ownerId} at {i.Position:F2} in {i.SceneId}.");
+            Plugin.Log.LogInfo($"Mount: spawned {i.Describe()} for {ownerId} at {i.Position:F2} in {i.SceneId}{(scale != 1f ? $", scale {scale:F2}" : "")}{(!rideable ? ", not rideable" : "")}{(parent != null ? $", child of #{parent.Id}" : "")}.");
             return i;
         }
+
+        internal const int MaxChildren = 6;
 
         internal static void Remove(Instance i, string why)
         {
@@ -471,6 +518,22 @@ namespace GK2Mounts
             }
             Unregister(i);
             Plugin.Log.LogInfo($"Mount: removed {i.Describe()} ({why}); {i.CargoRig.Count} item(s) on it are gone with it.");
+            // Its children go with it (MountSpawn.RemoveWithParent), or stay as orphans shuffling where they are.
+            foreach (Instance c in new List<Instance>(All))
+            {
+                if (c.Parent != i)
+                {
+                    continue;
+                }
+                if (c.RemoveWithParent)
+                {
+                    Remove(c, $"its parent #{i.Id} was removed");
+                }
+                else
+                {
+                    c.Parent = null;
+                }
+            }
         }
 
         // The ground under a point (the navigation mesh, else the ground raycast); the point's own height if neither.

@@ -56,7 +56,7 @@ namespace GK2Mounts
                 {
                     if (!pc.PlayerData.HasOverheadItem)
                     {
-                        target = Nearest(pc, pc.PlayerData.position.Value, RideReach, i => i.HasDonkey);
+                        target = Nearest(pc, pc.PlayerData.position.Value, RideReach, i => i.HasDonkey && i.Rideable);
                         if (target != null)
                         {
                             label = HintText(target.HasCart ? "Drive" : "Ride");
@@ -67,7 +67,7 @@ namespace GK2Mounts
                 Mount.Instance r = Mount.Ridden;
                 if (r.HasDonkey && !r.HasCart && r.Ready)
                 {
-                    target = Nearest(pc, r.BodyPoint(), HitchReach, i => !i.HasDonkey);
+                    target = Nearest(pc, r.BodyPoint(), HitchReach, i => !i.HasDonkey && i.Parent == null);
                     if (target != null)
                     {
                         label = HintText("Hitch the cart");

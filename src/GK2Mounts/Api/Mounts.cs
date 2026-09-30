@@ -51,7 +51,7 @@ namespace GK2Mounts.Api
     public static class Mounts
     {
         // The API's own version, separate from the mod version: minor for additions, major for breaking changes.
-        public static readonly Version ApiVersion = new Version(0, 7, 0);
+        public static readonly Version ApiVersion = new Version(0, 8, 0);
 
         // False when the core is switched off (General.Enabled) or disabled itself after a game update.
         public static bool IsAvailable => Plugin.Patched && Plugin.Enabled != null && Plugin.Enabled.Value;
@@ -302,6 +302,78 @@ namespace GK2Mounts.Api
         public static MountHandle SpawnCart(string ownerId, Vector3 position, bool facingRight = true)
         {
             return Spawn(ownerId, position, hasDonkey: false, hasCart: true, facingRight: facingRight);
+        }
+
+        // Any instance, with every property (MountSpawn): a donkey, a donkey with its cart, a free cart (Donkey = false),
+        // and the foal properties (Scale, Rideable, Parent). Null when refused; the log says why.
+        public static MountHandle Spawn(string ownerId, MountSpawn spec)
+        {
+            if (string.IsNullOrEmpty(ownerId))
+            {
+                throw new ArgumentException("An owner id (your plugin GUID) is required.", nameof(ownerId));
+            }
+            if (spec == null)
+            {
+                throw new ArgumentNullException(nameof(spec));
+            }
+            if (!IsAvailable)
+            {
+                return null;
+            }
+            if (spec.Parent != null && !spec.Parent.Exists)
+            {
+                Plugin.Log.LogInfo($"API: {ownerId} could not spawn: the parent is gone.");
+                return null;
+            }
+            Mount.Instance i = Mount.Spawn(ownerId, spec.Position, spec.Donkey, spec.WithCart, spec.FacingRight, spec.Scale,
+                spec.Rideable, spec.Parent?.I, spec.RemoveWithParent, out string why);
+            if (i == null)
+            {
+                Plugin.Log.LogInfo($"API: {ownerId} could not spawn: {why}");
+            }
+            return i?.Handle;
+        }
+
+        // A foal of a donkey in the world: small (scale, 0.6 by default), not rideable, next to its parent, and with its
+        // own idle shuffle switched on and made for a foal (smaller, quicker steps, a wider area around the parent; its
+        // own settings, owned by ownerId, changeable through MountHandle.Tuning). It trots after the parent when the
+        // parent moves, and goes when the parent is removed. Null when refused (see Mounts.Spawn).
+        public static MountHandle SpawnFoal(string ownerId, MountHandle parent, float scale = 0.6f)
+        {
+            if (parent == null)
+            {
+                throw new ArgumentNullException(nameof(parent));
+            }
+            if (!parent.Exists)
+            {
+                return null;
+            }
+            Mount.Instance p = parent.I;
+            Vector3 at = p.BodyPoint() + new Vector3(UnityEngine.Random.Range(-1.2f, 1.2f), 0f, UnityEngine.Random.Range(-0.5f, 0.5f));
+            MountHandle foal = Spawn(ownerId, new MountSpawn
+            {
+                Position = at,
+                FacingRight = UnityEngine.Random.value < 0.5f,
+                Scale = scale,
+                Rideable = false,
+                Parent = parent,
+            });
+            if (foal == null)
+            {
+                return null;
+            }
+            foal.I.PlaceNearParent(); // a free slot next to the parent, checked for ground and room
+            InstanceTuning t = foal.Tuning;
+            t.Set(ownerId, "IdleShuffle", true);
+            t.Set(ownerId, "ShuffleAreaWidth", 1.6f);
+            t.Set(ownerId, "ShuffleAreaDepth", 0.7f);
+            t.Set(ownerId, "ShuffleStepMin", 0.2f);
+            t.Set(ownerId, "ShuffleStepMax", 0.6f);
+            t.Set(ownerId, "ShuffleSpeed", 0.45f);
+            t.Set(ownerId, "ShufflePauseMin", 2.5f);
+            t.Set(ownerId, "ShufflePauseMax", 8f);
+            t.Set(ownerId, "ShuffleTurnChance", 0.35f);
+            return foal;
         }
 
         private static MountHandle Spawn(string ownerId, Vector3 position, bool hasDonkey, bool hasCart, bool facingRight)

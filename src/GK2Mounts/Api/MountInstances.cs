@@ -49,8 +49,32 @@ namespace GK2Mounts.Api
         // E.g. Tuning.Set(myId, "IdleShuffle", true) lets just this donkey shuffle.
         public InstanceTuning Tuning { get; }
 
-        // Taking an idle-shuffle step right now (Mounts.Behaviour "IdleShuffle"). Only a standing donkey without a cart.
+        // Taking an idle-shuffle step right now (Mounts.Behaviour "IdleShuffle"), or a foal trotting after its parent.
+        // Only a standing donkey without a cart.
         public bool IsStepping => Exists && I.IsStepping;
+
+        // The size of its view (1 = a full-size donkey; a foal is smaller). Set at spawn (MountSpawn.Scale).
+        public float Scale => I.ViewScale;
+
+        // False for a foal (MountSpawn.Rideable): no interact prompt, Ride and Hitch refused.
+        public bool IsRideable => I.Rideable && I.HasDonkey;
+
+        // The donkey it stays with (MountSpawn.Parent, Mounts.SpawnFoal), or null.
+        public MountHandle Parent => I.Parent?.Handle;
+
+        // The instances whose parent it is, in spawn order.
+        public IReadOnlyList<MountHandle> Children
+        {
+            get
+            {
+                var l = new List<MountHandle>();
+                foreach (Mount.Instance c in I.Children())
+                {
+                    if (c.Handle != null) l.Add(c.Handle);
+                }
+                return l;
+            }
+        }
 
         // The keeper gets on (it must have a donkey, stand in the keeper's scene with its view ready, and every mount
         // rule must allow). The keeper is put on its seat.
@@ -146,6 +170,35 @@ namespace GK2Mounts.Api
         }
 
         public override string ToString() => $"MountHandle {I.Describe()}{(Exists ? "" : " (gone)")}";
+    }
+
+    // What to spawn (Mounts.Spawn). Fields can be added in later API versions without breaking callers.
+    public sealed class MountSpawn
+    {
+        // Where its root stands (ground height found under it), in the keeper's scene (a child: its parent's scene).
+        public Vector3 Position;
+
+        public bool FacingRight = true;
+
+        // False: a cart on its own (WithCart must be true).
+        public bool Donkey = true;
+
+        public bool WithCart;
+
+        // The view's size (0.2 to 2; 1 = full size). Anything but 1 needs Rideable = false and no cart: the ride and the
+        // cart are made for a full-size donkey.
+        public float Scale = 1f;
+
+        // False: the keeper can't ride it (no interact prompt, Ride refused) and it is never hitched.
+        public bool Rideable = true;
+
+        // A donkey in the world it stays with: its idle-shuffle home is the parent (switch the shuffle on for it, as
+        // Mounts.SpawnFoal does), it trots after the parent when the parent moves, and catches up out of sight when it
+        // can't. No chains (a child can't be a parent); up to 6 children per parent.
+        public MountHandle Parent;
+
+        // With a Parent: removed when the parent is (default), else it stays as an orphan and shuffles where it is.
+        public bool RemoveWithParent = true;
     }
 
     // The settings of one instance: overrides by key on top of everyone's value (the cfg and the session overrides of

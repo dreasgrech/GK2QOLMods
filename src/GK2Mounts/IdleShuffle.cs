@@ -25,7 +25,7 @@ namespace GK2Mounts
 
         // [Shuffle]: how (Mounts.Shuffle).
         internal static Tuned<float> AreaWidth, AreaDepth, StepMin, StepMax, Speed, AnimSpeed, PauseMin, PauseMax,
-            MaxAngle, TurnChance, KeeperDistance;
+            MaxAngle, TurnChance, KeeperDistance, FollowSpeed, FollowMaxDistance;
 
         internal static void Bind(ConfigFile cfg)
         {
@@ -52,7 +52,11 @@ namespace GK2Mounts
             TurnChance = F(cfg, "ShuffleTurnChance", 0.25f, 0f, 1f,
                 "Chance that a step starts with turning around (the donkey always walks the way it faces). It also turns when there is no room ahead.");
             KeeperDistance = F(cfg, "ShuffleKeeperDistance", 2f, 0f, 10f,
-                "The donkey holds still while the keeper is closer than this, world units, so riding it does not chase a moving target.");
+                "The donkey holds still while the keeper is closer than this, world units, so riding it does not chase a moving target. Donkeys that can't be ridden (foals) ignore the keeper.");
+            FollowSpeed = F(cfg, "ShuffleFollowSpeed", 4f, 0.3f, 8f,
+                "A donkey with a parent (a foal): how fast it trots after its parent when the parent moves away, world units per second.");
+            FollowMaxDistance = F(cfg, "ShuffleFollowMaxDistance", 10f, 1f, 30f,
+                "A donkey with a parent (a foal): it trots after its parent only while it is closer than this, world units. Further (or blocked, or in another place), it waits, shuffling where it is, and catches up out of sight once the parent stands again.");
         }
 
         private static ConfigEntry<float> F(ConfigFile cfg, string key, float def, float min, float max, string desc)
@@ -64,6 +68,7 @@ namespace GK2Mounts
         internal static ITuned[] Settings => new ITuned[]
         {
             AreaWidth, AreaDepth, StepMin, StepMax, Speed, AnimSpeed, PauseMin, PauseMax, MaxAngle, TurnChance, KeeperDistance,
+            FollowSpeed, FollowMaxDistance,
         };
 
         internal static ConfigEntryBase[] Entries
@@ -91,7 +96,10 @@ namespace GK2Mounts
                 Waiting,  // standing, until shuffleAt
                 Turning,  // the facing is flipped this frame; the root moves next frame, when the view shows it
                 Stepping, // walking from stepFrom to stepTo
+                Following, // a foal trotting after its parent (Foals.cs)
             }
+
+            private ShufflePhase afterTurn = ShufflePhase.Stepping; // what a turn goes on with
 
             private ShufflePhase shufflePhase;
             private float shuffleAt;
@@ -115,7 +123,7 @@ namespace GK2Mounts
             private int failBox, failGround, failNear, failTurnRoom, failNoOffset;
 
             // Walking a step right now (MountHandle.IsStepping).
-            internal bool IsStepping => shufflePhase == ShufflePhase.Stepping || shufflePhase == ShufflePhase.Turning;
+            internal bool IsStepping => shufflePhase == ShufflePhase.Stepping || shufflePhase == ShufflePhase.Turning || shufflePhase == ShufflePhase.Following;
 
             private const float StepEase = 0.12f;        // world units eased in and out at both ends of a step
             private const int PickTries = 12;
@@ -148,10 +156,13 @@ namespace GK2Mounts
                     shuffleFacingFrame = Time.frameCount;
                 }
                 MeasureLateral();
+                // A foal's home is its parent's body (while it can follow; Foals.cs).
+                bool parentHome = Parent != null && !followLost && IsRegistered(Parent) && Parent.SceneId == SceneId && Parent.Ready;
                 if (!shuffleHomeSet || (Position - shuffleWrote).sqrMagnitude > 0.000001f)
                 {
                     // First frame, or moved by something else (MoveTo, ComeToKeeper, a dismount, a hitch): home is here.
-                    shuffleHome = BodyAt(Position, riderFacingX);
+                    followLost = false;
+                    shuffleHome = parentHome ? Parent.BodyPoint() : BodyAt(Position, riderFacingX);
                     shuffleHomeSet = true;
                     shuffleWrote = Position;
                     if (shufflePhase == ShufflePhase.Turning)
@@ -164,6 +175,15 @@ namespace GK2Mounts
                         shuffleAnnounced = true;
                         Plugin.Log.LogInfo($"[shuffle] {Describe()} shuffles around {shuffleHome:F2} in {SceneId} (body offset {shuffleLateral:F2}, navmesh {(MainGame.PlayerController?.SceneRecastGraph != null ? "yes" : "no")}, first step in {shuffleAt - Time.time:F1} s).");
                     }
+                }
+                if (parentHome && !followLost)
+                {
+                    shuffleHome = Parent.BodyPoint();
+                }
+                if (FollowParentTick(pc))
+                {
+                    LogTurn();
+                    return;
                 }
                 if (KeeperClose(pc, BodyAt(Position, riderFacingX)))
                 {
@@ -183,6 +203,7 @@ namespace GK2Mounts
                     case ShufflePhase.Waiting:
                         if (Time.time >= shuffleAt && !TryStartStep(pc))
                         {
+                            NotePickFailed();
                             LogFailedPick();
                             shuffleAt = Time.time + UnityEngine.Random.Range(IdleShuffle.PauseMin.Value, Mathf.Max(IdleShuffle.PauseMin.Value, IdleShuffle.PauseMax.Value)) * 0.5f;
                         }
@@ -192,7 +213,8 @@ namespace GK2Mounts
                         {
                             SetShufflePosition(turnRoot);
                             stepFrom = Position;
-                            shufflePhase = ShufflePhase.Stepping;
+                            shufflePhase = afterTurn;
+                            afterTurn = ShufflePhase.Stepping;
                         }
                         break;
                     case ShufflePhase.Stepping:
@@ -316,10 +338,12 @@ namespace GK2Mounts
                         stepDone = 0f;
                         stepsTaken++;
                         lastStepAt = Time.time;
+                        NotePickOk();
                         if (turn)
                         {
                             riderFacingX = nf; // Stand() shows the new facing this frame; the view flips in the next
                             turnRoot = root;
+                            afterTurn = ShufflePhase.Stepping;
                             shuffleTurnFrame = Time.frameCount;
                             shufflePhase = ShufflePhase.Turning;
                             if (Plugin.TuningWindowEnabled.Value)
@@ -380,9 +404,11 @@ namespace GK2Mounts
             private const int BlockingLayers = 256;          // layer 8: what PlayerColliderTester checks the keeper against
             private const float BodyRadius = 0.25f;
             private static readonly Collider[] blockers = new Collider[8];
+            private static Rigidbody keeperBody;
 
             private bool LineWalkable(Vector3 a, Vector3 b, string what)
             {
+                keeperBody = MainGame.PlayerController?.PhysicalBody?.Rb;
                 float prev = float.NaN;
                 float start = float.NaN;
                 const int Samples = 5;
@@ -411,9 +437,10 @@ namespace GK2Mounts
                     for (int k = 0; k < n; k++)
                     {
                         Collider c = blockers[k];
-                        if (c == null || !c || donkey != null && donkey && c.transform.IsChildOf(donkey.transform))
+                        if (c == null || !c || donkey != null && donkey && c.transform.IsChildOf(donkey.transform)
+                            || keeperBody != null && c.attachedRigidbody == keeperBody)
                         {
-                            continue;
+                            continue; // its own view, or the keeper (KeeperClose handles him; a foal trots right behind him)
                         }
                         NoteGroundFail($"{what} sample {i} at {foot:F2}: blocked by {c.name} (layer {LayerMask.LayerToName(c.gameObject.layer)})");
                         return false;
@@ -432,6 +459,10 @@ namespace GK2Mounts
 
             private bool KeeperClose(PlayerController pc, Vector3 point)
             {
+                if (!Rideable)
+                {
+                    return false; // nobody gets on a foal, so it needs no stillness for the keeper
+                }
                 float dist = IdleShuffle.KeeperDistance.Value;
                 if (dist <= 0f || pc == null || pc.PlayerData.currentGameSceneId != SceneId)
                 {
@@ -452,7 +483,8 @@ namespace GK2Mounts
                     }
                     Vector3 b = o.BodyPoint();
                     float dx = b.x - point.x, dz = b.z - point.z;
-                    if (dx * dx + dz * dz < InstanceGap * InstanceGap)
+                    float gap = InstanceGap * 0.5f * (ViewScale + o.ViewScale); // two full donkeys 1.1, a foal and its parent less
+                    if (dx * dx + dz * dz < gap * gap)
                     {
                         return true;
                     }
@@ -520,6 +552,9 @@ namespace GK2Mounts
                         case ShufflePhase.Stepping:
                             s = $"stepping {(riderFacingX > 0f ? "right" : "left")}, {stepDone:F2} of {stepLength:F2}";
                             break;
+                        case ShufflePhase.Following:
+                            s = $"trotting after its parent #{Parent?.Id} at {followSpeedNow:F1}/s";
+                            break;
                         default:
                             s = "starting";
                             break;
@@ -531,6 +566,10 @@ namespace GK2Mounts
                     Vector3 right = Vector3.Cross(Vector3.up, away).normalized;
                     Vector3 rel = BodyAt(Position, riderFacingX) - shuffleHome;
                     s += $"; {Vector3.Dot(rel, right):+0.00;-0.00} sideways, {Vector3.Dot(rel, away):+0.00;-0.00} up/down from home";
+                }
+                if (followLost && Parent != null)
+                {
+                    s += $"; lost its parent #{Parent.Id}, catches up out of sight";
                 }
                 if (stepsTaken > 0)
                 {
@@ -546,13 +585,24 @@ namespace GK2Mounts
             private string BodyNowForLog() => bodySprite != null && bodySprite ? bodySprite.position.ToString("F3") : "?";
 
             // The animator state Stand() keeps: Walk during a step, Idle otherwise.
-            private AnimationState StandState => shufflePhase == ShufflePhase.Stepping ? AnimationState.Walk : AnimationState.Idle;
+            private AnimationState StandState => shufflePhase == ShufflePhase.Stepping || shufflePhase == ShufflePhase.Following ? AnimationState.Walk : AnimationState.Idle;
+
+            // The walk cycle's rate for the speed it moves at: shorter legs (ViewScale) step faster for the same ground.
+            private float StandWalkSpeed => (shufflePhase == ShufflePhase.Following ? followSpeedNow : IdleShuffle.Speed.Value)
+                * IdleShuffle.AnimSpeed.Value / Mathf.Max(0.1f, ViewScale);
+
+            private float walkSpeedApplied = -1f;
 
             private void ApplyStandState()
             {
                 AnimationState want = StandState;
                 if (lastMirrored == want)
                 {
+                    if (want == AnimationState.Walk && Mathf.Abs(StandWalkSpeed - walkSpeedApplied) > 0.15f)
+                    {
+                        walkSpeedApplied = StandWalkSpeed;
+                        donkey.MainWgoPart?.AnimationComponent?.SetWalkAnimationSpeedMultiplier(walkSpeedApplied);
+                    }
                     return;
                 }
                 lastMirrored = want;
@@ -565,7 +615,8 @@ namespace GK2Mounts
                 donkey.Data.SetStateToAnimator(want);
                 if (anim != null)
                 {
-                    anim.SetWalkAnimationSpeedMultiplier(want == AnimationState.Walk ? IdleShuffle.Speed.Value * IdleShuffle.AnimSpeed.Value : 1.5f);
+                    walkSpeedApplied = want == AnimationState.Walk ? StandWalkSpeed : 1.5f;
+                    anim.SetWalkAnimationSpeedMultiplier(walkSpeedApplied);
                 }
             }
         }

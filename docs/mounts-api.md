@@ -288,6 +288,35 @@ A standing donkey without a cart takes a few slow steps now and then, inside a s
 units/s), `ShuffleAnimSpeed` (1 = the walk cycle matches the ground), `ShufflePauseMin` / `ShufflePauseMax` (5 / 15
 s), `ShuffleMaxAngle` (35°), `ShuffleTurnChance` (0.25), `ShuffleKeeperDistance` (2).
 
+## Foals and spawning with every property (0.8.0)
+
+```csharp
+MountHandle mother = Mounts.SpawnDonkey("you.gk2.mymod", at);
+MountHandle foal = Mounts.SpawnFoal("you.gk2.mymod", mother);        // size 0.6, not rideable, shuffles and follows
+MountHandle big = Mounts.Spawn("you.gk2.mymod", new MountSpawn { Position = at2, Scale = 1.4f, Rideable = false });
+```
+
+- **`MountSpawn` fields:**
+  - `Position`, `FacingRight`, `Donkey` (false: a free cart), `WithCart`.
+  - `Scale` (0.2–2).
+  - `Rideable`.
+  - `Parent`, and `RemoveWithParent` (default true).
+- **Scale other than 1:** only for a donkey without a cart that can't be ridden. The ride and the cart are made for a
+  full-size donkey.
+- **A not-rideable instance** has no interact prompt, and `Ride` and `Hitch` refuse it.
+- **A child's idle-shuffle home is its parent.**
+  - While the way is clear it trots after the parent (`ShuffleFollowSpeed`), within `ShuffleFollowMaxDistance`.
+  - Otherwise it waits, shuffling where it is, and catches up out of sight once the parent stands again (into the
+    parent's scene too).
+  - No chains: a child can't be a parent. Up to 6 children per parent.
+  - The child's shuffle must be on for it: `SpawnFoal` switches it on for the foal only.
+- **`SpawnFoal`** also gives the foal its own shuffle settings (smaller, quicker steps, a wider area around the
+  parent), owned by you and changeable through `MountHandle.Tuning`.
+- **`Mounts.ClearTuning(yourId)`** also clears the foal's own `IdleShuffle` set by your `SpawnFoal`. The foal then
+  stands still; set it again if you clear your tuning mid-session.
+- **On `MountHandle`:** `Scale`, `IsRideable`, `Parent`, `Children`. `IsStepping` is also true while trotting after
+  the parent.
+
 ## Gating on the game's progress
 
 All of this is the game's own state, reached through `MainGame.Instance.GameSave` (reference `Assembly-CSharp.dll`).
@@ -338,3 +367,5 @@ History:
 - 0.5.0: colours (`Mounts.Colors`, `Mounts.ColorRegions`, `MountColorRegion`, `SpriteColorMethod`); the style keys `CargoSetDownBehindCart`, `CargoSetDownGap`.
 - 0.6.0: donkeys and carts in the world (`SpawnDonkey`, `SpawnCart`, `Instances`, `Riding`, `Hitch`, `Unhitch`, `UnhitchRidden`, `MountHandle`, `InstanceTuning`, and the events `InstanceSpawned`, `InstanceRemoved`, `Hitched`, `Unhitched`); `SwitchStyle` on a ridden instance unhitches or refuses.
 - 0.7.0: the idle shuffle (`Mounts.Behaviour` key `IdleShuffle`, `Mounts.Shuffle`, `MountHandle.IsStepping`).
+- 0.8.0: `Mounts.Spawn(ownerId, MountSpawn)`, `Mounts.SpawnFoal`, `MountSpawn`, `MountHandle.Scale`, `IsRideable`,
+  `Parent`, `Children`; the `Mounts.Shuffle` keys `ShuffleFollowSpeed`, `ShuffleFollowMaxDistance`.

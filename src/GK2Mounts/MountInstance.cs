@@ -58,7 +58,7 @@ namespace GK2Mounts
                 ColorsRig = new Colors.Rig();
             }
 
-            internal string KindName => !HasDonkey ? "free cart" : HasCart ? "donkey with cart" : "donkey";
+            internal string KindName => !HasDonkey ? "free cart" : HasCart ? "donkey with cart" : !Rideable && ViewScale < 1f ? "foal" : "donkey";
 
             internal string Describe() => $"#{Id} {KindName}";
 
@@ -81,6 +81,7 @@ namespace GK2Mounts
                         cartParts.Clear();
                     }
                     StopShuffle(); // a step in progress ends where it is; home is taken again with the new view
+                    FollowWithoutView(); // a foal goes to its parent's place when that is somewhere else (Foals.cs)
                     GameScene scene = LoadedScene(SceneId);
                     if (scene == null || Time.unscaledTime < nextSpawnTry)
                     {
@@ -346,6 +347,10 @@ namespace GK2Mounts
                 {
                     return "That is a cart without a donkey.";
                 }
+                if (!Rideable)
+                {
+                    return "This one is too small to ride.";
+                }
                 if (Ridden != null)
                 {
                     return "Already mounted.";
@@ -563,6 +568,10 @@ namespace GK2Mounts
                 if (!HasDonkey || HasCart)
                 {
                     return "This donkey already pulls a cart.";
+                }
+                if (!Rideable || ViewScale != 1f)
+                {
+                    return "This one can't pull a cart.";
                 }
                 if (cart == null || cart.HasDonkey || cart.IsRidden || !IsRegistered(cart))
                 {

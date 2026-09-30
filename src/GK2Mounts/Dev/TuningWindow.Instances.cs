@@ -174,6 +174,8 @@ namespace GK2Mounts
             FloatSlider("Steepest step (degrees)", IdleShuffle.MaxAngle, 0f, 60f, 0, null);
             FloatSlider("Turn chance", IdleShuffle.TurnChance, 0f, 1f, 2, null);
             FloatSlider("Hold still with the keeper within", IdleShuffle.KeeperDistance, 0f, 10f, 1, null);
+            FloatSlider("Foals: trot speed after the parent", IdleShuffle.FollowSpeed, 0.3f, 8f, 1, null);
+            FloatSlider("Foals: follow only within", IdleShuffle.FollowMaxDistance, 1f, 30f, 1, null);
 
             Header("Spawn one in front of the keeper");
             GUILayout.BeginHorizontal();
@@ -190,6 +192,14 @@ namespace GK2Mounts
                 pending = () => SpawnHere(false, true);
             }
             GUILayout.EndHorizontal();
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button($"A donkey family: a donkey and {familyFoals} foal{(familyFoals == 1 ? "" : "s")}"))
+            {
+                pending = SpawnFamily;
+            }
+            GUILayout.EndHorizontal();
+            familyFoals = SessionIntRow("Foals in a family", familyFoals, 1, Mount.MaxChildren);
+            foalScale = SessionFloatRow("Foal size (1 = a full-size donkey)", foalScale, 0.3f, 0.9f);
             GUILayout.Label(spawnNote, small);
 
             Mount.Instance r = Mount.Ridden;
@@ -223,13 +233,15 @@ namespace GK2Mounts
                     ? $"{Vector3.Distance(pd.position.Value, i.BodyPoint()):F1} away"
                     : $"in {i.SceneId}";
                 List<string> cargo = i.CargoRig.Ids();
-                GUILayout.Label($"{i.Describe()}: {where}, facing {(i.FacingRight ? "right" : "left")}{(i.HasCart ? $", cargo [{string.Join(", ", cargo)}]" : "")}; {i.Overrides.Count} own setting(s); by {i.OwnerId}", editing == i ? instanceSet : label);
+                string family = i.Parent != null ? $" foal of #{i.Parent.Id}, size {i.ViewScale:F2};"
+                    : i.Children().Count > 0 ? $" parent of {string.Join(", ", i.Children().ConvertAll(c => "#" + c.Id))};" : "";
+                GUILayout.Label($"{i.Describe()}:{family} {where}, facing {(i.FacingRight ? "right" : "left")}{(i.HasCart ? $", cargo [{string.Join(", ", cargo)}]" : "")}; {i.Overrides.Count} own setting(s); by {i.OwnerId}", editing == i ? instanceSet : label);
                 GUILayout.BeginHorizontal();
                 if (GUILayout.Button(editing == i ? "Stop editing" : "Edit its settings", GUILayout.Width(120f)))
                 {
                     editing = editing == i ? null : i;
                 }
-                GUI.enabled = i.HasDonkey && !i.IsRidden && !Mount.IsMounted && i.Ready;
+                GUI.enabled = i.HasDonkey && i.Rideable && !i.IsRidden && !Mount.IsMounted && i.Ready;
                 if (GUILayout.Button("Ride", GUILayout.Width(60f)))
                 {
                     pending = () => i.Handle.Ride();
@@ -245,7 +257,7 @@ namespace GK2Mounts
                     pending = () => Mounts.Unhitch(i.Handle);
                 }
                 Mount.Instance cart = NearestFreeCart(i);
-                GUI.enabled = i.HasDonkey && !i.HasCart && cart != null;
+                GUI.enabled = i.HasDonkey && i.Rideable && !i.HasCart && cart != null;
                 if (GUILayout.Button(cart != null ? $"Hitch #{cart.Id}" : "Hitch", GUILayout.Width(90f)))
                 {
                     pending = () =>
@@ -264,6 +276,19 @@ namespace GK2Mounts
                     };
                 }
                 GUILayout.EndHorizontal();
+                if (i.HasDonkey && i.Parent == null && i.Rideable)
+                {
+                    GUI.enabled = i.Children().Count < Mount.MaxChildren;
+                    if (GUILayout.Button($"Add a foal (size {foalScale:F2})"))
+                    {
+                        pending = () =>
+                        {
+                            MountHandle f = Mounts.SpawnFoal(PanelOwner, i.Handle, foalScale);
+                            spawnNote = f != null ? $"{f.I.Describe()} is a foal of {i.Describe()}." : "Could not add a foal (see the log).";
+                        };
+                    }
+                    GUI.enabled = true;
+                }
                 if (i.HasDonkey)
                 {
                     GUILayout.Label("Idle shuffle: " + i.ShuffleStatusText(), small);
@@ -313,6 +338,59 @@ namespace GK2Mounts
             bool right = pd.Direction.x >= 0f;
             MountHandle h = donkey ? Mounts.SpawnDonkey(PanelOwner, at, cart, right) : Mounts.SpawnCart(PanelOwner, at, right);
             spawnNote = h != null ? $"Spawned {h.I.Describe()} at {h.Position:F1}." : "Could not spawn (see the log).";
+        }
+
+        // The panel's own spawn choices (this session only, not settings).
+        private static int familyFoals = 2;
+        private static float foalScale = 0.6f;
+
+        // A donkey with foals in front of the keeper; the donkey's own idle shuffle is switched on too, so the family
+        // moves even when no mod switches the shuffle on for everyone.
+        private static void SpawnFamily()
+        {
+            PlayerData pd = MainGame.Instance != null ? MainGame.PlayerData : null;
+            if (pd == null)
+            {
+                spawnNote = "Not in a game.";
+                return;
+            }
+            MountHandle parent = Mounts.SpawnDonkey(PanelOwner, InFront(pd, 2.6f), false, pd.Direction.x >= 0f);
+            if (parent == null)
+            {
+                spawnNote = "Could not spawn the donkey (see the log).";
+                return;
+            }
+            parent.Tuning.Set(PanelOwner, "IdleShuffle", true);
+            int n = 0;
+            for (int k = 0; k < familyFoals; k++)
+            {
+                if (Mounts.SpawnFoal(PanelOwner, parent, foalScale) != null)
+                {
+                    n++;
+                }
+            }
+            spawnNote = $"Spawned {parent.I.Describe()} with {n} foal(s) of size {foalScale:F2}.";
+        }
+
+        private static int SessionIntRow(string name, int value, int min, int max)
+        {
+            GUILayout.BeginHorizontal();
+            GUILayout.Label(name, label, GUILayout.Width(LabelW));
+            if (GUILayout.Button("-", GUILayout.Width(22f)) && value > min) value--;
+            GUILayout.Label(value.ToString(), label, GUILayout.Width(30f));
+            if (GUILayout.Button("+", GUILayout.Width(22f)) && value < max) value++;
+            GUILayout.EndHorizontal();
+            return value;
+        }
+
+        private static float SessionFloatRow(string name, float value, float min, float max)
+        {
+            GUILayout.BeginHorizontal();
+            GUILayout.Label(name, label, GUILayout.Width(LabelW));
+            value = (float)Math.Round(GUILayout.HorizontalSlider(value, min, max, GUILayout.Width(90f)), 2);
+            GUILayout.Label(value.ToString("F2"), label, GUILayout.Width(45f));
+            GUILayout.EndHorizontal();
+            return value;
         }
 
         private static Vector3 InFront(PlayerData pd, float distance)

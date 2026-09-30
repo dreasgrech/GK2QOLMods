@@ -790,6 +790,9 @@ namespace GK2Mounts
                         // Not interactable: the game's interaction scan (PlayerInteractionComponent) skips such objects, so the
                         // donkey never offers the NPC's "[E] Speak", not even for the frame before PrepareParts.
                         data = new WgoData(id, mounted ? pc.PlayerData.position.Value : Position, scene.Id) { isTempObject = true, IsInteractable = false };
+                        // The game's own scale (Wgo.Spawn puts it on the view's new root, never on the pooled parts); 1 but
+                        // for a foal (Foals.cs).
+                        data.Scale = Vector3.one * ViewScale;
                     }
                     finally
                     {

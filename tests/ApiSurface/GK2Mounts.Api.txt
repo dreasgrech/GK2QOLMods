@@ -30,6 +30,7 @@ enum GK2Mounts.Api.MountFeature
   StayThroughDoors = 5
 class GK2Mounts.Api.MountHandle
   property System.Collections.Generic.IReadOnlyList<string> CargoIds { get; }
+  property System.Collections.Generic.IReadOnlyList<GK2Mounts.Api.MountHandle> Children { get; }
   property bool Exists { get; }
   property bool FacingRight { get; }
   property bool HasCart { get; }
@@ -37,9 +38,12 @@ class GK2Mounts.Api.MountHandle
   property int Id { get; }
   property bool IsReady { get; }
   property bool IsRidden { get; }
+  property bool IsRideable { get; }
   property bool IsStepping { get; }
   property string Owner { get; }
+  property GK2Mounts.Api.MountHandle Parent { get; }
   property UnityEngine.Vector3 Position { get; }
+  property float Scale { get; }
   property string SceneId { get; }
   property GK2Mounts.Api.InstanceTuning Tuning { get; }
   method GK2Mounts.Api.MountResult ComeToKeeper(System.Nullable<bool> facingRight = null)
@@ -85,13 +89,25 @@ static class GK2Mounts.Api.Mounts
   method static void RefreshRules()
   method static void RemoveRules(string ownerId)
   method static void RingBell()
+  method static GK2Mounts.Api.MountHandle Spawn(string ownerId, GK2Mounts.Api.MountSpawn spec)
   method static GK2Mounts.Api.MountHandle SpawnCart(string ownerId, UnityEngine.Vector3 position, bool facingRight = True)
   method static GK2Mounts.Api.MountHandle SpawnDonkey(string ownerId, UnityEngine.Vector3 position, bool withCart = False, bool facingRight = True)
+  method static GK2Mounts.Api.MountHandle SpawnFoal(string ownerId, GK2Mounts.Api.MountHandle parent, float scale = 0.6)
   method static GK2Mounts.Api.MountResult SwitchStyle(GK2Mounts.Api.MountStyle style, bool showMessage = True)
   method static GK2Mounts.Api.MountResult TryMount(string ownerId, GK2Mounts.Api.MountStyle style, bool showMessage = True)
   method static GK2Mounts.Api.MountTuning Tuning(GK2Mounts.Api.MountStyle style)
   method static GK2Mounts.Api.MountHandle Unhitch(GK2Mounts.Api.MountHandle donkey)
   method static GK2Mounts.Api.MountHandle UnhitchRidden()
+class GK2Mounts.Api.MountSpawn
+  field bool Donkey
+  field bool FacingRight
+  field GK2Mounts.Api.MountHandle Parent
+  field UnityEngine.Vector3 Position
+  field bool RemoveWithParent
+  field bool Rideable
+  field float Scale
+  field bool WithCart
+  method void .ctor()
 enum GK2Mounts.Api.MountStyle
   Ride = 0
   Cart = 1
