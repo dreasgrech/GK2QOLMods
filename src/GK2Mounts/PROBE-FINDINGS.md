@@ -1369,3 +1369,11 @@ picks anything up. If the keeper mounts while holding something the cart can't t
 - Shutdown showed 8 `NullReferenceException`s, all from the game's own bubble teardown (`UIObjectBubble.Hide`,
   `UICraftHintWidget.Hide` in `Wgo.OnDestroy` / `GameScene.OnDestroy`), with no mod or Harmony frames. The count
   varies with how many objects have bubbles when the scene is torn down.
+
+**Corpses refused by mistake (found by the user, 2026-09-30):** after the outline patch, a log could be picked up
+onto the cart but a corpse couldn't.
+- Cause: the patches refused `ZombieDropInteractionHandler` while mounted. But the game gives that handler to every
+  drop with `DropType != 0` or item group "body" (`DropView.cs`, where the handler is chosen), so corpses were
+  refused too.
+- Fix: `HeadReroute.RefuseGroundItem` judges the **item** with the cart's own test (`Cargo.Allowed`, which refuses
+  item group "zombie"). It's used by both the `HasInteraction` and `CanInteractWithDrop` postfixes.

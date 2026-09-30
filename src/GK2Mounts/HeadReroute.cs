@@ -48,6 +48,22 @@ namespace GK2Mounts
         // hands: Ride style, Cargo switched off by a rule. Not during the mod's own unload (the save hand-back).
         internal static bool HandsLocked => Mount.IsMounted && !Active && !Cargo.Unloading && !GateAnswersForHead;
 
+        // A ground item the keeper may not take while mounted: anything while the hands are locked, and what the cart
+        // refuses (zombies) in either style.
+        internal static bool RefuseGroundItem(DropView drop)
+        {
+            if (!Mount.IsMounted || drop == null)
+            {
+                return false;
+            }
+            if (HandsLocked)
+            {
+                return true;
+            }
+            Item item = drop.Data?.Item;
+            return item != null && !item.IsEmpty && !Cargo.Allowed(item);
+        }
+
         // Puts an item the game wanted on the head onto the cart, with the pickup's side effects. False when the cart
         // is full or refuses the item (the caller then falls back).
         internal static bool TakeToCart(PlayerData pd, Item item)
@@ -187,14 +203,18 @@ namespace GK2Mounts
     // Picking an item up from the ground (BigDropInteractionHandler.Interact: remove the drop, AddOverheadItem) asks
     // no gate, so while the hands are locked the ground item offers no interaction at all: no prompt, E does nothing.
     // Measured 2026-09-30: without this the item was picked up and the AddOverheadItem sink set it straight down
-    // again. A zombie on the ground (ZombieDropInteractionHandler, whose HasInteraction calls this one) is refused while
-    // mounted in either style, as the cart cannot take zombies either.
+    // again. A zombie on the ground is refused while mounted in either style, as the cart cannot take zombies either.
+    // Judged by the item (Cargo.Allowed), not the handler: the game gives ZombieDropInteractionHandler to corpses too
+    // (DropView: DropType != 0 or item group "body"), and corpses do go on the cart (found in game 2026-09-30).
     [HarmonyPatch(typeof(BigDropInteractionHandler), nameof(BigDropInteractionHandler.HasInteraction))]
     internal static class BigDropInteractionHandler_HasInteraction_Patch
     {
+        private static readonly AccessTools.FieldRef<BigDropInteractionHandler, DropView> DropRef =
+            AccessTools.FieldRefAccess<BigDropInteractionHandler, DropView>("drop");
+
         private static void Postfix(BigDropInteractionHandler __instance, ref bool __result)
         {
-            if (__result && (HeadReroute.HandsLocked || (Mount.IsMounted && __instance is ZombieDropInteractionHandler)))
+            if (__result && HeadReroute.RefuseGroundItem(DropRef(__instance)))
             {
                 __result = false;
             }
@@ -210,8 +230,7 @@ namespace GK2Mounts
     {
         private static void Postfix(DropView dropView, ref bool __result)
         {
-            if (__result && dropView != null
-                && (HeadReroute.HandsLocked || (Mount.IsMounted && dropView.InteractionHandler is ZombieDropInteractionHandler)))
+            if (__result && HeadReroute.RefuseGroundItem(dropView))
             {
                 __result = false;
             }
