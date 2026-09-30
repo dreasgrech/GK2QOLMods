@@ -17,6 +17,8 @@ namespace GK2Showcase
     // shows them locked and set by this mod.
     [BepInPlugin(Guid, "GK2 Showcase", Version)]
     [BepInDependency("dreas.gk2.mounts", "0.1.0")]
+    // Soft: with GK2 Mod Framework installed its Mods menu shows the keys and switches (FrameworkLink); without it nothing changes.
+    [BepInDependency(FrameworkLink.FrameworkGuid, BepInDependency.DependencyFlags.SoftDependency)]
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "dreas.gk2.showcase";
@@ -27,18 +29,23 @@ namespace GK2Showcase
 
         internal static ManualLogSource Log;
 
-        private ConfigEntry<KeyCode> rideKey, cartKey, bellKey;
-        private ConfigEntry<bool> stayThroughDoors, dismountIndoors, showMessages, sideViewOnly;
+        internal ConfigEntry<KeyboardShortcut> rideKey, cartKey, bellKey;
+        internal ConfigEntry<bool> stayThroughDoors, dismountIndoors, showMessages;
         private bool ready;
+
+        // What the mod is doing, for the Mods menu's status row.
+        internal static string Status = "not started";
+        internal static Plugin Instance;
 
         private void Awake()
         {
             Log = Logger;
-            rideKey = Config.Bind("Keys", "RideKey", KeyCode.H,
+            Instance = this;
+            rideKey = Config.Bind("Keys", "RideKey", new KeyboardShortcut(KeyCode.H),
                 "Summon the donkey and ride on its back; press again to dismount. While in the cart: switch to riding. Pick a key the game does not use.");
-            cartKey = Config.Bind("Keys", "CartKey", KeyCode.G,
+            cartKey = Config.Bind("Keys", "CartKey", new KeyboardShortcut(KeyCode.G),
                 "Summon the donkey with its cart and ride it while it pulls; press again to dismount. While riding: switch to the cart.");
-            bellKey = Config.Bind("Keys", "BellKey", KeyCode.None,
+            bellKey = Config.Bind("Keys", "BellKey", KeyboardShortcut.Empty,
                 "While mounted: ring the donkey's bell. None = no key.");
             stayThroughDoors = Config.Bind("Behaviour", "StayMountedThroughDoors", false,
                 "Keep riding through doors that load another area (the donkey is summoned again there). Off: the ride ends at such a door.");
@@ -46,21 +53,23 @@ namespace GK2Showcase
                 "Dismount when entering a building, church or dungeon, and don't mount inside: the cart cannot avoid furniture and door frames.");
             showMessages = Config.Bind("Behaviour", "ShowMessages", true,
                 "The keeper says in a thought bubble why he cannot mount.");
-            sideViewOnly = Config.Bind("Behaviour", "SideViewOnly", false,
-                "The donkey only has left/right art. On: while mounted the keeper also faces only left or right. (Some riding poses force this on.)");
 
             if (Mounts.ApiVersion < NeedsApi)
             {
                 Log.LogError($"GK2 Mounts API {Mounts.ApiVersion} is too old (this mod needs {NeedsApi} or newer). Update GK2 Mounts. The mount is off.");
+                Status = $"Off: GK2 Mounts is too old (API {Mounts.ApiVersion}, needs {NeedsApi}).";
+                FrameworkLink.TryRegister(Config);
                 return;
             }
-            foreach (ConfigEntry<bool> e in new[] { stayThroughDoors, dismountIndoors, showMessages, sideViewOnly })
+            foreach (ConfigEntry<bool> e in new[] { stayThroughDoors, dismountIndoors, showMessages })
             {
                 ConfigEntry<bool> entry = e;
                 entry.SettingChanged += (_, __) => ApplyBehaviour(entry);
                 ApplyBehaviour(entry);
             }
             ready = true;
+            Status = "Active";
+            FrameworkLink.TryRegister(Config);
             Log.LogInfo($"GK2 Showcase {Version} loaded (GK2 Mounts API {Mounts.ApiVersion}): ride {rideKey.Value}, cart {cartKey.Value}.");
         }
 
@@ -104,9 +113,10 @@ namespace GK2Showcase
             }
         }
 
-        private static bool Pressed(ConfigEntry<KeyCode> key)
+        // KeyboardShortcut.IsDown: the main key pressed this frame with exactly its modifiers held (e.g. Shift+H).
+        private static bool Pressed(ConfigEntry<KeyboardShortcut> key)
         {
-            return key.Value != KeyCode.None && UnityInput.Current.GetKeyDown(key.Value);
+            return key.Value.MainKey != KeyCode.None && key.Value.IsDown();
         }
 
         // On foot: mount in that style. Mounted in that style: dismount. Mounted in the other style: switch.

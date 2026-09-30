@@ -194,7 +194,6 @@ namespace GK2Mounts.Api
         //   StayMountedThroughDoors  keep riding through doors that load another scene
         //   DismountIndoors          dismount entering a building, church or dungeon, and refuse to mount inside
         //   ShowMessages             the keeper's thought bubble for refusals
-        //   SideViewOnly             the keeper faces only left/right while riding
         public static MountTuning Behaviour
         {
             get
@@ -205,7 +204,7 @@ namespace GK2Mounts.Api
                 }
                 return behaviour ?? (behaviour = new MountTuning("General", new ITuned[]
                 {
-                    Plugin.StayMountedThroughDoors, Plugin.DismountIndoors, Plugin.ShowMessages, Plugin.SideViewOnly,
+                    Plugin.StayMountedThroughDoors, Plugin.DismountIndoors, Plugin.ShowMessages,
                 }));
             }
         }

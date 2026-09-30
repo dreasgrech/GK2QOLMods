@@ -317,8 +317,26 @@ alter the save, which is the reason Built Count never evaluates one.
      - On the panel's General tab those rows are locked and cyan while the showcase is installed. The bell-key row
        is gone.
      - The style button calls `Mounts.SwitchStyle`.
-6. **API docs** (`docs/mounts-api.md`, with a small example plugin: "cart only after tech X") and the `ApiSurface`
-   test.
+6. **API docs and an example:** done 2026-09-30.
+   - **Example tested in game:**
+     - Run 1 (`resurrection_advanced`, not unlocked): the cart was refused with the rule's text; riding worked. The
+       log listed 67 of 236 techs unlocked.
+     - Run 2 (`wood_basic` unlocked, lamp `fishing_3` not): the cart worked, and the lamp was dark
+       (`API: feature LanternLight switched off by …techgate`).
+   - **Expected, not a bug:** before a save is loaded, the example's gates read as closed (no save, so no techs).
+     Rules are asked again when they matter.
+   - `docs/mounts-api.md` is the author guide:
+     - setup and the dependency;
+     - the rules of the road;
+     - riding, rules, features, events;
+     - tuning and behaviour, with every key and its type;
+     - gating recipes from the survey;
+     - the examples, and the versioning rules and history.
+   - `examples/GK2MountsTechGate`, never shipped:
+     - `Gates.CartTech` (default `resurrection_advanced`) is a mount rule on Cart, with a reason;
+     - `Gates.LanternLightTech` (default empty) is a feature rule on LanternLight;
+     - it listens to `KnowledgeSystem.OnTechUnlocked`, then calls `RefreshRules()`;
+     - it logs the unlocked techs at every `MainGame.OnGameStarted`.
 7. **Release both:** core and showcase in `dist/`, and a root README section for players (install both) and for
    authors (reference the core).
 
@@ -334,6 +352,14 @@ alter the save, which is the reason Built Count never evaluates one.
     and the mouse buttons.
   - G and H are unbound. The user's current bindings are the same as the defaults.
   - F1–F12 can't be bound at all (`UIGameBindingElement.IsForbiddenKey`).
+
+## Removed: SideViewOnly (2026-09-30)
+
+The user asked what the point of "Face only left/right while riding" was, since the donkey can't turn. There
+wasn't one. It dated from when the Walk pose, which has four facings, was the riding pose. With it off, the keeper
+faced up or down on a sideways donkey, and the FishingIdle poses in use force it on anyway.
+- Now `Mount.SideView` is simply "mounted".
+- The setting is gone from the core cfg, `Mounts.Behaviour`, the panel, the showcase and the docs.
 
 ## Open questions
 

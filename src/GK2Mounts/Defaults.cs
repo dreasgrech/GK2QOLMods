@@ -227,7 +227,7 @@ namespace GK2Mounts
                 if (tracked == null)
                 {
                     tracked = new List<(string, ConfigEntryBase)>();
-                    foreach (ConfigEntryBase e in new ConfigEntryBase[] { Plugin.SideViewOnly, Plugin.StayMountedThroughDoors, Plugin.DismountIndoors, Plugin.ShowMessages })
+                    foreach (ConfigEntryBase e in new ConfigEntryBase[] { Plugin.StayMountedThroughDoors, Plugin.DismountIndoors, Plugin.ShowMessages })
                     {
                         tracked.Add(("General", e));
                     }

@@ -18,8 +18,10 @@
     <EmbeddedResource Include="assets\lantern-indices.bin" LogicalName="GK2Mounts.lantern-indices.bin" />
   </ItemGroup>
 
-  <!-- The source folder, so the panel can read and write defaults.cfg / cargo-layout.cfg in place on this machine. -->
-  <ItemGroup>
+  <!-- The source folder, so the panel can read and write defaults.cfg / cargo-layout.cfg in place on this machine.
+       Left out of a release build (-p:ForDist=true): the DLL then uses its embedded copies and the panel has no
+       "Make these the mod defaults" button. -->
+  <ItemGroup Condition="'$(ForDist)' != 'true'">
     <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
       <_Parameter1>GK2MountsSourceDir</_Parameter1>
       <_Parameter2>$(MSBuildProjectDirectory)</_Parameter2>
@@ -43,7 +45,6 @@
     <Reference Include="UnityEngine.ScreenCaptureModule"><HintPath>$(Managed)\UnityEngine.ScreenCaptureModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.ImageConversionModule"><HintPath>$(Managed)\UnityEngine.ImageConversionModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.AudioModule"><HintPath>$(Managed)\UnityEngine.AudioModule.dll</HintPath><Private>false</Private></Reference>
-    <Reference Include="UnityEngine.UIModule"><HintPath>$(Managed)\UnityEngine.UIModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="BepInEx"><HintPath>$(BepInExCore)\BepInEx.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="0Harmony"><HintPath>$(BepInExCore)\0Harmony.dll</HintPath><Private>false</Private></Reference>
   </ItemGroup>

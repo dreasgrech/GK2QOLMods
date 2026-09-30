@@ -221,11 +221,7 @@ namespace GK2Mounts
             Toggle("Stay mounted when going through doors (scene changes)", Plugin.StayMountedThroughDoors, null);
             Toggle("Dismount when entering a building, church or dungeon (no mounting indoors)", Plugin.DismountIndoors, null);
             Toggle("Show a thought bubble when mounting is refused", Plugin.ShowMessages, null);
-            Toggle("Keeper only faces left/right while riding", Plugin.SideViewOnly, null);
-            if (!Plugin.SideViewOnly.Value && Mount.PoseNeedsSideView)
-            {
-                GUILayout.Label("Forced on: the " + Mount.S.Pose.Value + " pose only has left/right frames; facing up or down would show no body.", small);
-            }
+            GUILayout.Label("While mounted the keeper faces only left or right, like the donkey.", small);
             GUILayout.Label("You always dismount for work, ladders, building, fishing, fighting, sleep and co-op; chests and inventory keep you mounted.", small);
 
             Header("Setup");
@@ -580,7 +576,7 @@ namespace GK2Mounts
             if (GUILayout.Button("Write values to log"))
             {
                 StyleSettings s = Mount.S;
-                Plugin.Log.LogInfo($"[tune] [{s.Section}] speed {s.SpeedMultiplier.Value}, depth {s.Depth.Value}, centering {s.CenterOffset.Value}, rider {s.RiderOffsetPx.Value} px, torso {s.TorsoOffsetPx.Value} px, autoSeat {s.AutoSeat.Value}, seat adjust {s.SeatAdjustPx.Value} px, seat offset {s.SeatOffset.Value}, bob {s.Bob.Value}, freeze {s.FreezePoseWhenIdle.Value}, pose {s.Pose.Value}, legs {s.NearLeg.Value}/{s.LegSource.Value} h {s.LegHeightPx.Value} x {s.LegAdjustXPx.Value} y {s.LegAdjustYPx.Value} | general: sideView {Plugin.SideViewOnly.Value}, doors {Plugin.StayMountedThroughDoors.Value}");
+                Plugin.Log.LogInfo($"[tune] [{s.Section}] speed {s.SpeedMultiplier.Value}, depth {s.Depth.Value}, centering {s.CenterOffset.Value}, rider {s.RiderOffsetPx.Value} px, torso {s.TorsoOffsetPx.Value} px, autoSeat {s.AutoSeat.Value}, seat adjust {s.SeatAdjustPx.Value} px, seat offset {s.SeatOffset.Value}, bob {s.Bob.Value}, freeze {s.FreezePoseWhenIdle.Value}, pose {s.Pose.Value}, legs {s.NearLeg.Value}/{s.LegSource.Value} h {s.LegHeightPx.Value} x {s.LegAdjustXPx.Value} y {s.LegAdjustYPx.Value} | general: doors {Plugin.StayMountedThroughDoors.Value}");
             }
             if (GUILayout.Button("Write geometry to log"))
             {

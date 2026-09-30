@@ -10,7 +10,7 @@ using Mono.Cecil.Cil;
 //     interfaces, attributes, fields, signatures, locals and every IL operand are checked;
 //  4. Register is NoInlining, and Plugin has a soft BepInDependency on the framework.
 // Usage: dotnet run -c Release [ModName ...]   (default: every mod below; each must be built in Release first)
-string[] integrated = { "GK2OwnedCount", "GK2GlobalStorage", "GK2MoveBuilding", "GK2BuiltCount" };
+string[] integrated = { "GK2OwnedCount", "GK2GlobalStorage", "GK2MoveBuilding", "GK2BuiltCount", "GK2Showcase" };
 string[] mods = args.Length > 0 ? args : integrated;
 
 var res = new DefaultAssemblyResolver();
@@ -49,7 +49,8 @@ static int Check(ModuleDefinition mod, string ns)
         .Where(i => i.OpCode == OpCodes.Ldtoken && i.Operand is TypeReference)
         .Select(i => ((TypeReference)i.Operand).FullName).ToHashSet();
     var patchClasses = mod.GetTypes().Where(t => t.CustomAttributes.Any(a => a.AttributeType.FullName == "HarmonyLib.HarmonyPatch")).ToList();
-    Result(patchClasses.Count > 0, $"{patchClasses.Count} [HarmonyPatch] classes found");
+    // A mod without patches (the showcase) has nothing to list; the PatchAll(Assembly) check below still applies.
+    Console.WriteLine($"INFO {patchClasses.Count} [HarmonyPatch] classes found");
     foreach (var t in patchClasses)
     {
         Result(listed.Contains(t.FullName), $"patch class {t.Name} in Plugin.PatchClasses");

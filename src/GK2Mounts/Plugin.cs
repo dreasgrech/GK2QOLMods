@@ -314,7 +314,6 @@ namespace GK2Mounts
         internal static Tuned<bool> StayMountedThroughDoors;
         internal static Tuned<bool> DismountIndoors;
         internal static Tuned<bool> ShowMessages;
-        internal static Tuned<bool> SideViewOnly;
 
         // [Ride] / [Cart]: position, pose, animation, legs, speed
         internal static StyleSettings Ride;
@@ -354,8 +353,6 @@ namespace GK2Mounts
                 "Dismount automatically when entering a building, church or dungeon (the game's indoor lighting presets), and refuse to mount while indoors. The cart cannot avoid furniture and door frames inside.");
             ShowMessages = Config.Bind("General", "ShowMessages", Defaults.Get("General", "ShowMessages", true),
                 "Show a thought bubble when the keeper cannot mount and why.");
-            SideViewOnly = Config.Bind("General", "SideViewOnly", Defaults.Get("General", "SideViewOnly", false),
-                "The donkey only has left/right art. On: while mounted the keeper also only faces left or right (walking up/down keeps the last horizontal facing). Off: the keeper turns as usual and the donkey shows its side. Forced on for poses that only have left/right frames.");
 
 
             Ride = new StyleSettings(Config, "Ride",
@@ -367,8 +364,8 @@ namespace GK2Mounts
                 autoSeat: false, seatAdjustPx: 0, seatOffset: 0f, bob: false, pose: RiderPose.Walk, freeze: false,
                 legs: false, legSource: LegSource.Body, legHeight: 10, legX: 0, legY: 0);
 
-            TuningWindowEnabled = Config.Bind("Debug", "TuningWindow", true,
-                "Show a tuning panel for all mount settings in the top-right corner while mounted. Values apply live; Save writes them to this file. Turn off for normal play.");
+            TuningWindowEnabled = Config.Bind("Debug", "TuningWindow", false,
+                "Dev tool for mod authors: a tuning panel for every mount value in the top-right corner while mounted, plus the investigation tools on its Debug tab (and F5). Values apply live and are saved to this file as you change them.");
             TuningWindowKey = Config.Bind("Debug", "TuningWindowKey", KeyCode.F11,
                 "Hides or shows the tuning panel, e.g. for screenshots. Only for this session: the panel is back after a restart. The game doesn't use F11 on its own (it can't be bound in its controls; Shift+F11 is its Workshop creator). None = no key.");
             TuningWindowScale = Config.Bind("Debug", "TuningWindowScale", 1.5f,
@@ -377,7 +374,7 @@ namespace GK2Mounts
                 "Text size inside the tuning panel, relative (1 = normal). Lower it so long rows fit.");
             TuningWindowWidth = Config.Bind("Debug", "TuningWindowWidth", 470f,
                 "Width of the tuning panel in panel units before the overall size is applied (470 = original).");
-            TuningKeys = Config.Bind("Debug", "TuningKeys", true,
+            TuningKeys = Config.Bind("Debug", "TuningKeys", false,
                 "While mounted: PageUp/PageDown move the torso, Home/End the legs sideways, Insert/Delete the legs up/down, one art pixel per press, editing the current style's values. Development aid, turn off for normal play.");
 
             DisableOnGameUpdate = Config.Bind("Safety", "DisableOnGameUpdate", true,

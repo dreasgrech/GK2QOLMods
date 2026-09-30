@@ -95,8 +95,18 @@ namespace GK2Mounts
             }
             Cargo.RefreshViews();
             cartParts.Clear();
-            CollectCartParts();
+            logGeometry = false; // measured and logged at mount already; a cargo change only re-collects
+            try
+            {
+                CollectCartParts();
+            }
+            finally
+            {
+                logGeometry = true;
+            }
         }
+
+        private static bool logGeometry = true;
         private static float facingSign = 1f; // +1 when the donkey shows its right-facing sprite, -1 for left
         private static AnimationState lastMirrored = (AnimationState)(-1);
         private static Transform bodySprite; // the donkey's "bdy" sprite; its offset from the root is what centering cancels
@@ -187,14 +197,16 @@ namespace GK2Mounts
 
         // Side view is on when the setting says so, or when the selected pose only exists as left/right art
         // (FishingIdle): with the keeper facing up or down the animator has no frame and the body renders nothing.
-        public static bool PoseNeedsSideView => S.Pose.Value == RiderPose.FishingIdle;
-        public static bool SideView => Plugin.SideViewOnly.Value || (mounted && PoseNeedsSideView);
+        // While mounted the keeper faces only left or right, like the donkey (it has no up/down art, and the riding
+        // poses in use have only left/right frames). The option to let him turn freely is gone (2026-09-30): it only
+        // ever looked wrong.
+        public static bool SideView => mounted;
 
         // The animator state the keeper is held in while riding (see the SetState prefix); Cart keeps the walk.
         public static AnimationState RiderPoseState =>
             (AnimationState)(int)S.Pose.Value;
 
-        // Horizontal facing shared by rider and mount while SideViewOnly is on: +1 right, -1 left.
+        // Horizontal facing shared by rider and mount while mounted: +1 right, -1 left.
         private static float riderFacingX = 1f;
 
         // Called from the SetDirection prefix for the keeper's animation component (see Patches.cs).
@@ -878,7 +890,7 @@ namespace GK2Mounts
                           ?? cartParts.Find(p => p.T.name == "donkey_cart_empty_sway")
                           ?? cartParts.Find(p => p.T.name == "donkey_cart_body_sway");
             ClassifyForPitch();
-            Plugin.Log.LogInfo($"Mount: {cartParts.Count} cart parts follow the ground as one (sampled under {cartBodyPart?.T.name}): " + string.Join(", ", cartParts.ConvertAll(p => p.T.name + (p.Pitched ? "(pitched)" : ""))));
+            if (logGeometry) Plugin.Log.LogInfo($"Mount: {cartParts.Count} cart parts follow the ground as one (sampled under {cartBodyPart?.T.name}): " + string.Join(", ", cartParts.ConvertAll(p => p.T.name + (p.Pitched ? "(pitched)" : ""))));
         }
 
         // The shafts are one rigid mesh from the donkey's harness to the front of the cart (0.76 long). Their extent
@@ -903,7 +915,7 @@ namespace GK2Mounts
             part.Harness = new Vector3(harnessX, part.Base.y + b.center.y, part.Base.z + b.center.z);
             part.ReachX = cartEndX - harnessX;
             part.IsShafts = Mathf.Abs(part.ReachX) > 0.05f;
-            Plugin.Log.LogInfo($"Mount: shafts x {minX:F2}..{maxX:F2} in {t.parent.name} space, cart body at x {bodyX:F2}: harness end x {harnessX:F2}, cart end x {cartEndX:F2}, reach {part.ReachX:F2}.");
+            if (logGeometry) Plugin.Log.LogInfo($"Mount: shafts x {minX:F2}..{maxX:F2} in {t.parent.name} space, cart body at x {bodyX:F2}: harness end x {harnessX:F2}, cart end x {cartEndX:F2}, reach {part.ReachX:F2}.");
         }
 
         // WholeCartPitch: everything that belongs to the cart body turns with it about the axle, the point the walk
@@ -933,7 +945,7 @@ namespace GK2Mounts
                 if (sway)
                 {
                     Vector3 originW = p.T.parent.TransformPoint(p.Base);
-                    Plugin.Log.LogInfo($"Mount: pitch node {p.T.name} under {p.T.parent.name}: origin {Vector3.Distance(originW, axleWorld):F3} from the axle, parent scale {sc:F3}.");
+                    if (logGeometry) Plugin.Log.LogInfo($"Mount: pitch node {p.T.name} under {p.T.parent.name}: origin {Vector3.Distance(originW, axleWorld):F3} from the axle, parent scale {sc:F3}.");
                 }
                 if (p.T.name != Cargo.ContainerName)
                 {
@@ -1437,8 +1449,8 @@ namespace GK2Mounts
         private static void Follow(PlayerController pc)
         {
             PlayerData pd = pc.PlayerData;
-            // With SideViewOnly the keeper's sprite is already locked to left/right (SetDirection prefix); give the
-            // donkey that same facing so the two never disagree. Otherwise mirror the keeper's real direction.
+            // The keeper's sprite is locked to left/right while mounted (SetDirection prefix); give the donkey that
+            // same facing so the two never disagree.
             if (Mathf.Abs(pd.Direction.x) > 0.05f)
             {
                 riderFacingX = pd.Direction.x > 0f ? 1f : -1f; // the one facing source for torso shift and legs
