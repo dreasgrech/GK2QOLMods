@@ -34,11 +34,19 @@ namespace GK2Mounts
 
         // The reroute is on only while the cart is the keeper's hands. During the mod's own unload the head is the
         // destination again.
-        internal static bool Active => Mount.IsMounted && Mount.CurrentStyle == MountStyle.Cart && Cargo.Attached && !Cargo.Unloading;
+        internal static bool Active => Mount.IsMounted && Mount.CurrentStyle == MountStyle.Cart && Cargo.Attached && !Cargo.Unloading
+            && MountRules.Allowed(MountFeature.Cargo);
 
         // While the game's own AddOverheadItem runs for an item the cart refuses (a zombie), the gate answers for the
         // real head, so the original drops for the head's limit and not for the cart's.
         internal static bool GateAnswersForHead;
+
+        // While mounted the keeper's hands stay empty: only the cart carries (the user's rule, 2026-09-30). The riding
+        // pose has no clip on the animator's Overhead layer, and that layer's clips are what switch the held-item view
+        // on, so anything held while riding would be invisible (measured with HeldItemProbe: the view 'overhead/item'
+        // inactive, the Overhead layer at weight 1 with no clip). Locked whenever mounted and the cart is not the
+        // hands: Ride style, Cargo switched off by a rule. Not during the mod's own unload (the save hand-back).
+        internal static bool HandsLocked => Mount.IsMounted && !Active && !Cargo.Unloading && !GateAnswersForHead;
 
         // Puts an item the game wanted on the head onto the cart, with the pickup's side effects. False when the cart
         // is full or refuses the item (the caller then falls back).
@@ -128,6 +136,16 @@ namespace GK2Mounts
         {
             try
             {
+                if (HeadReroute.HandsLocked && item != null && !item.IsEmpty)
+                {
+                    // The item has already left wherever it was, so it goes on the ground in front of the keeper.
+                    if (Cargo.DropAtKeeper(__instance, item))
+                    {
+                        Plugin.Log.LogInfo($"Mount: {item.id} set down in front of the keeper (the hands stay empty while riding).");
+                        return false;
+                    }
+                    return true; // the game refused the drop: the head, rather than losing it (Mount.Tick sets it down later)
+                }
                 if (!HeadReroute.Active || HeadReroute.GateAnswersForHead || item == null || item.IsEmpty)
                 {
                     return true; // off, or a deliberate head add from the mod's own fallback: the game's path
@@ -164,6 +182,42 @@ namespace GK2Mounts
         }
     }
 
+    // ---------------------------------------------------------------------- ground items
+
+    // Picking an item up from the ground (BigDropInteractionHandler.Interact: remove the drop, AddOverheadItem) asks
+    // no gate, so while the hands are locked the ground item offers no interaction at all: no prompt, E does nothing.
+    // Measured 2026-09-30: without this the item was picked up and the AddOverheadItem sink set it straight down
+    // again. A zombie on the ground (ZombieDropInteractionHandler, whose HasInteraction calls this one) is refused while
+    // mounted in either style, as the cart cannot take zombies either.
+    [HarmonyPatch(typeof(BigDropInteractionHandler), nameof(BigDropInteractionHandler.HasInteraction))]
+    internal static class BigDropInteractionHandler_HasInteraction_Patch
+    {
+        private static void Postfix(BigDropInteractionHandler __instance, ref bool __result)
+        {
+            if (__result && (HeadReroute.HandsLocked || (Mount.IsMounted && __instance is ZombieDropInteractionHandler)))
+            {
+                __result = false;
+            }
+        }
+    }
+
+    // The yellow outline on a ground item (PlayerInteractionComponent.HandleDropInteractionEnter ->
+    // SetInteractionVisualState) is the game's only sign that it can be picked up; ground items have no text hint.
+    // The selection behind it asks only CanInteractWithDrop (exists, not despawning, not in the river), not
+    // HasInteraction, so the same refusal goes here as well: no outline for what the donkey cannot take.
+    [HarmonyPatch(typeof(PlayerInteractionComponent), "CanInteractWithDrop")]
+    internal static class PlayerInteractionComponent_CanInteractWithDrop_Patch
+    {
+        private static void Postfix(DropView dropView, ref bool __result)
+        {
+            if (__result && dropView != null
+                && (HeadReroute.HandsLocked || (Mount.IsMounted && dropView.InteractionHandler is ZombieDropInteractionHandler)))
+            {
+                __result = false;
+            }
+        }
+    }
+
     // ---------------------------------------------------------------------- the gate
 
     [HarmonyPatch(typeof(PlayerData), nameof(PlayerData.HasFreeOverheadSlot), MethodType.Getter)]
@@ -172,6 +226,11 @@ namespace GK2Mounts
         private static bool Prefix(ref bool __result)
         {
             if (HeadProbe.ForceNoFreeSlot)
+            {
+                __result = false;
+                return false;
+            }
+            if (HeadReroute.HandsLocked)
             {
                 __result = false;
                 return false;

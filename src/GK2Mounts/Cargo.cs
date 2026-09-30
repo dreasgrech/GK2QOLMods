@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
+using GK2Mounts.Api;
+
 namespace GK2Mounts
 {
     // Cargo on the cart. The cart's cargo is the mounted donkey's own inventory, exactly as in the game's delivery
@@ -115,7 +117,7 @@ namespace GK2Mounts
         public static void LoadFromHead(string reason)
         {
             PlayerData pd = MainGame.PlayerData;
-            if (inv == null || donkey == null || pd == null || !pd.HasOverheadItem)
+            if (inv == null || donkey == null || pd == null || !pd.HasOverheadItem || !MountRules.Allowed(MountFeature.Cargo))
             {
                 return;
             }
@@ -185,6 +187,46 @@ namespace GK2Mounts
             {
                 mirror.AddRange(inv.Data.Inventory);
             }
+            Announce();
+        }
+
+        // What the API events last reported as on the cart (item GUID -> id). Diffing against it, rather than raising
+        // at each call site, reports every way items come and go exactly once, and nothing for the core's own
+        // bookkeeping: the cart summoned again after a door holds the same GUIDs, and around a save the announcing is
+        // held (SuppressAnnounce) until the cargo is back.
+        private static readonly Dictionary<string, string> announced = new Dictionary<string, string>();
+        internal static bool SuppressAnnounce;
+
+        internal static void Announce()
+        {
+            if (SuppressAnnounce)
+            {
+                return;
+            }
+            var now = new Dictionary<string, string>();
+            foreach (Item it in inv != null ? inv.Data.Inventory : mirror)
+            {
+                if (it != null && !it.IsEmpty && it.UniqueId != null)
+                {
+                    now[it.UniqueId.ToString()] = it.id;
+                }
+            }
+            foreach (var kv in new List<KeyValuePair<string, string>>(announced))
+            {
+                if (!now.ContainsKey(kv.Key))
+                {
+                    announced.Remove(kv.Key);
+                    Mounts.RaiseCargoUnloaded(kv.Value);
+                }
+            }
+            foreach (var kv in now)
+            {
+                if (!announced.ContainsKey(kv.Key))
+                {
+                    announced[kv.Key] = kv.Value;
+                    Mounts.RaiseCargoLoaded(kv.Value);
+                }
+            }
         }
 
         // Sets the top cart item down on the ground in front of the keeper: what the game's interact press does with
@@ -226,7 +268,11 @@ namespace GK2Mounts
 
         // Everything back to the keeper: hands while they are free, the rest dropped at his feet (the game's own
         // drop position in front of him). Used at every ride end and before a save.
-        public static void Unload(string reason)
+        public static void Unload(string reason) => Unload(reason, toHands: true);
+
+        // toHands false: straight onto the ground (used while still riding, when the hands must stay empty); the
+        // hands are then only the fallback for an item the game refuses to drop, so nothing is lost.
+        public static void Unload(string reason, bool toHands)
         {
             if (CargoSheet.Running)
             {
@@ -237,6 +283,7 @@ namespace GK2Mounts
             if (items.Count == 0)
             {
                 mirror.Clear();
+                Announce();
                 return;
             }
             if (Plugin.Quitting)
@@ -271,13 +318,17 @@ namespace GK2Mounts
                             lost++;
                             Plugin.Log.LogWarning($"Cargo: {it.id} LOST on unload ({reason}): no player data.");
                         }
-                        else if (pd.TryAddOverheadItemNoReplace(it))
+                        else if (toHands && pd.TryAddOverheadItemNoReplace(it))
                         {
                             hands++;
                         }
                         else if (DropAtKeeper(pd, it))
                         {
                             dropped++;
+                        }
+                        else if (!toHands && pd.TryAddOverheadItemNoReplace(it))
+                        {
+                            hands++;
                         }
                         else
                         {
@@ -317,12 +368,49 @@ namespace GK2Mounts
                 unloading = false;
             }
             mirror.Clear();
+            Announce();
             if (inv != null)
             {
                 Mount.OnCargoChanged();
             }
             Plugin.Log.LogInfo($"Cargo: unloaded on {reason}: {hands} in hand, {dropped} dropped{(lost > 0 ? $", {lost} LOST (see warnings)" : "")}.");
         }
+
+        // Sets whatever the keeper holds down in front of him, the way the game's own drop does it (drop, then take it
+        // off the head), for the empty-hands rule while riding. An item the game refuses to drop stays in hand.
+        internal static int SetDownHeld(PlayerData pd)
+        {
+            if (pd == null || !pd.HasOverheadItem)
+            {
+                return 0;
+            }
+            int n = 0;
+            foreach (Item it in new List<Item>(pd.OverheadItems))
+            {
+                if (it == null || it.IsEmpty || refusedDrops.Contains(it.UniqueId.ToString()))
+                {
+                    continue; // called every frame while riding: an item the game refused is tried once, not 60 times a second
+                }
+                Vector3 pos;
+                if (!SpecialPhysicsCastUtils.GetPlayerDropPosition(pd.position.Value, pd.Direction, out pos))
+                {
+                    pos = pd.position.Value;
+                }
+                if (MainGame.Instance.dropSystem.DropItem(it, pd.currentGameSceneId, pos))
+                {
+                    pd.RemoveOverheadItem(it);
+                    n++;
+                }
+                else
+                {
+                    refusedDrops.Add(it.UniqueId.ToString());
+                    Plugin.Log.LogWarning($"Mount: the game refused to set {it.id} down; it stays in the keeper's hands.");
+                }
+            }
+            return n;
+        }
+
+        private static readonly HashSet<string> refusedDrops = new HashSet<string>();
 
         private static bool InHands(PlayerData pd, Item item)
         {

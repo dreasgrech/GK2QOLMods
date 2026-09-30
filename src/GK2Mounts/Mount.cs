@@ -257,6 +257,7 @@ namespace GK2Mounts
                 Dismount(pc, why);
                 return;
             }
+            MountRules.Poll(force: false);
             string ruleWhy = MountRules.WhyMustDismountIfDue();
             if (ruleWhy != null)
             {
@@ -276,7 +277,7 @@ namespace GK2Mounts
                     // set the cargo down at the old door; waiting puts it at his feet where he arrives.
                     return;
                 }
-                if (!Plugin.StayMountedThroughDoors.Value)
+                if (!Plugin.StayMountedThroughDoors.Value || !MountRules.Allowed(MountFeature.StayThroughDoors))
                 {
                     Dismount(pc, "scene changed");
                     return;
@@ -292,6 +293,17 @@ namespace GK2Mounts
             if (!partsReady && donkey.MainWgoPart != null)
             {
                 PrepareParts(pc);
+            }
+            // Empty hands while riding (HeadReroute.HandsLocked). Checked once the parts are ready, because in Cart style
+            // PrepareParts attaches the cart, which first takes what the keeper holds; what is still held after that
+            // (Ride style, Cargo off, cart full, a zombie) is set down.
+            if (partsReady && !Cargo.Unloading && !CargoSheet.Running && pc.PlayerData.HasOverheadItem)
+            {
+                int n = Cargo.SetDownHeld(pc.PlayerData);
+                if (n > 0)
+                {
+                    Plugin.Log.LogInfo($"Mount: set down {n} held item(s); the keeper rides with empty hands.");
+                }
             }
 
             // Only the attack states touch SpeedMultiplier, and we dismount before they can run; still, keep it ours.
@@ -418,6 +430,24 @@ namespace GK2Mounts
             return TryMount(pc, scene, style, showMessage);
         }
 
+        // A feature rule changed its answer (MountRules.Poll). Lantern, light, sounds, bell and doors are read where
+        // they are used; cargo already on the cart has to be handed back when cargo is switched off.
+        internal static void OnFeatureChanged(MountFeature feature, bool allowed)
+        {
+            if (!mounted)
+            {
+                return;
+            }
+            if (feature == MountFeature.Cargo && !allowed && Cargo.Count > 0)
+            {
+                Cargo.Unload("cargo switched off", toHands: false); // still riding: the hands stay empty
+            }
+            if (feature == MountFeature.Lantern || feature == MountFeature.LanternLight)
+            {
+                Lantern.Refresh();
+            }
+        }
+
         // Mounts.Dismount: the normal dismount in a game, the cleanup otherwise.
         internal static void DismountFromApi(string reason)
         {
@@ -445,6 +475,7 @@ namespace GK2Mounts
                 }
                 return reason;
             }
+            MountRules.Poll(force: true);
             activeStyle = style;
             if (!TrySpawn(pc, scene))
             {

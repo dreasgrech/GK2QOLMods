@@ -1,6 +1,8 @@
 using System;
 using UnityEngine;
 
+using GK2Mounts.Api;
+
 namespace GK2Mounts
 {
     // Moves and tilts the cart's lantern pole, which the prefab puts at the front rail where the rider's head hides it.
@@ -178,7 +180,8 @@ namespace GK2Mounts
         // but not the cart's: here intensity × lerp(1, DayDim, sun), with sun the game's global shader value.
         private static void ApplyLight(StyleSettings s)
         {
-            bool show = s.LanternShow.Value;
+            bool show = s.LanternShow.Value && MountRules.Allowed(MountFeature.Lantern);
+            bool lit = MountRules.Allowed(MountFeature.LanternLight);
             if (show != poleShown)
             {
                 poleShown = show;
@@ -201,7 +204,7 @@ namespace GK2Mounts
             Color color = ParseColor(s.LanternLightColor.Value, mainColor);
             if (mainLight != null && mainLight)
             {
-                mainLight.enabled = s.LanternLightOn.Value;
+                mainLight.enabled = lit && s.LanternLightOn.Value;
                 mainLight.intensity = mainIntensity * s.LanternLightIntensity.Value * day;
                 mainLight.range = mainRange * s.LanternLightRange.Value;
                 mainLight.color = color;
@@ -209,14 +212,14 @@ namespace GK2Mounts
             }
             if (selfLight != null && selfLight)
             {
-                selfLight.enabled = s.LanternSelfLightOn.Value;
+                selfLight.enabled = lit && s.LanternSelfLightOn.Value;
                 selfLight.intensity = selfIntensity * s.LanternSelfLightIntensity.Value * day;
                 selfLight.range = selfRange * s.LanternSelfLightRange.Value;
                 selfLight.color = string.IsNullOrEmpty(s.LanternLightColor.Value) ? selfColor : color;
             }
             if (glow != null && glow)
             {
-                glow.enabled = s.LanternGlowOn.Value;
+                glow.enabled = lit && s.LanternGlowOn.Value;
                 Color c = glowColor;
                 c.a = Mathf.Clamp01(glowColor.a * s.LanternGlowAlpha.Value * day);
                 glow.color = c;
@@ -224,7 +227,7 @@ namespace GK2Mounts
             }
             if (glass != null && glass)
             {
-                glass.enabled = s.LanternGlassOn.Value;
+                glass.enabled = lit && s.LanternGlassOn.Value;
             }
         }
 

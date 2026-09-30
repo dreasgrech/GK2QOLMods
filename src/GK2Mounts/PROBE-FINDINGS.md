@@ -1296,3 +1296,76 @@ data matches the Round 13 table. Unconfirmed in game.
 **Confirmed in game (screenshots, 2026-09-29):** one lamp, hanging straight from the hook, lit glass inside, at
 turns of 4.1° (flat ground, tilt 4), 18.0° (slope) and 15.8° (bridge); mirror on. Still to see: mirror off and the
 other facing.
+
+## Round 14 (2026-09-30): an item held while riding is invisible
+
+**Symptom:** the user switched Cargo off mid-ride with the API probe (F10). One wood was handed back into the
+keeper's hands, as the log confirmed ("1 in hand"), but nothing was drawn. Pressing E set the "invisible" item
+down.
+
+**Measured** with `HeldItemProbe` (F5 / a Debug-tab button), one reading on foot and one riding, both holding one
+wood:
+
+| | On foot (visible) | Riding (invisible) |
+|---|---|---|
+| Base layer | `static_right` | `fishing_idle_right` (the riding pose; both styles use `FishingIdle`), animator speed 0.05 |
+| Overhead layer (3) | weight 1, clip `overhead_idle_right` | weight 1, **no clip** |
+| `main_character/gfx/overhead/item` | active, local y 0.80, log mesh visible | **inactive**, local y 0.23, 0 renderers on |
+
+**Cause:** the game draws a held item through the Overhead animator layer. `PlayerController.SetOverheadItems`
+sets that layer to weight 1 and activates the drop view, and the layer's clips also key the item's position and
+active flag. There is no Overhead-layer clip for the fishing idle state, so the animator writes the defaults and the
+item stays hidden. Nothing in the mod hides it directly.
+
+**Decision (the user):** while mounted, the keeper's hands stay empty; only the cart carries. A donkey alone never
+picks anything up. If the keeper mounts while holding something the cart can't take, he sets it down first.
+
+**Built:**
+- `HeadReroute.HandsLocked` is true while mounted and the cart isn't the hands (Ride style, Cargo off). It isn't set
+  during the mod's own unload.
+- While it's true:
+  - the `HasFreeOverheadSlot` gate answers false, so the game refuses pickups its usual way;
+  - `AddOverheadItem` sets the item down in front of the keeper instead.
+- `Mount.Tick` sets down whatever is still held once the parts are ready, using the game's order: drop, then remove
+  from the head. In Cart style, the cart has taken what fits by then. Anything the game refuses to drop is tried
+  once, and it stays in hand rather than being lost.
+- A Cargo switch-off mid-ride unloads to the ground (`Cargo.Unload(reason, toHands: false)`). The hands are only the
+  fallback for a refused drop.
+- **Unchanged:** a dismount hands the cargo back to the keeper's hands as before (he's on foot again), and so does
+  the hand-back around a save.
+- **Not yet testable (zombies aren't unlocked):**
+  - a zombie picked up while riding the cart goes to the head (the cart refuses zombies), and is then set down on
+    the next frame by the rule above;
+  - whether the game lets a zombie be dropped that way is unconfirmed.
+
+**In-game test of the rule (2026-09-30, `Player.log`):**
+- Passed:
+  - the Cart mount loaded the held item;
+  - Cargo off dropped it on the ground ("0 in hand, 1 dropped");
+  - a Cart-to-Ride switch and a Ride mount while holding both set the item down;
+  - there were no warnings.
+- **Found:** a pickup from the ground while the hands were locked wasn't refused. It was picked up and then set
+  straight down by the sink (logged 3 times).
+  - Cause: `BigDropInteractionHandler.Interact` removes the drop and calls `AddOverheadItem` with no gate check.
+    Round 9's gate list covers piles, scripts, stations and tables, not ground drops.
+  - Fix: a postfix on `BigDropInteractionHandler.HasInteraction` answers false while `HandsLocked`, and for a zombie
+    (`ZombieDropInteractionHandler`, whose override calls the base) whenever mounted. The ground item then offers no
+    interaction at all.
+  - Not yet tested in game.
+- **The outline too:** a ground item's yellow outline is the game's only "can pick up" sign; its hint text is empty.
+  - It comes from the selection check `PlayerInteractionComponent.CanInteractWithDrop`, a private static method
+    that doesn't ask `HasInteraction`. A postfix there refuses the same cases, so there's no outline for what the
+    donkey can't take.
+  - `HasInteraction` keeps its patch as well, so E does nothing even if an item was already selected.
+  - Not yet tested in game.
+
+**Outline and ground refusal, tested in game (2026-09-30):** passed.
+- The patches applied with no "Patching failed", and the user saw no outline and no pickup while the hands were
+  locked, in Ride style and with Cargo off.
+- The log has no "set down in front of the keeper (the hands stay empty…)" lines, so nothing was picked up and
+  set back down.
+- With Cargo on, pickups went onto the cart (1/2, 2/2) and set-downs worked. Switching Cargo off with two items put
+  both on the ground ("0 in hand, 2 dropped").
+- Shutdown showed 8 `NullReferenceException`s, all from the game's own bubble teardown (`UIObjectBubble.Hide`,
+  `UICraftHintWidget.Hide` in `Wgo.OnDestroy` / `GameScene.OnDestroy`), with no mod or Harmony frames. The count
+  varies with how many objects have bubbles when the scene is torn down.

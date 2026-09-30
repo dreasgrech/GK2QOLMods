@@ -223,7 +223,35 @@ alter the save, which is the reason Built Count never evaluates one.
      - Cargo on and off worked as before.
      - No warnings. The only exception was the game's own, at shutdown (`UICraftHintWidget.Hide` during
        `GameScene.OnDestroy`, with no mod frames in the stack).
-3. **Feature rules wired in:** cart, cargo, pickups to cart, lantern, sounds, doors and bell each check their rule.
+3. **Feature rules wired in:** built 2026-09-30 (API 0.2.0).
+   - **Tested in game:** Cargo (switch-off hands the cargo back onto the ground; the pickup refusal) and the cargo
+     events.
+   - **Toggled but not yet looked at:** Lantern, LanternLight, Sounds, Bell and StayThroughDoors.
+   - **Found on the way:** an item held while riding is invisible (the riding pose has no Overhead-layer clip).
+     The user's rule followed: the keeper's hands stay empty while mounted. See `PROBE-FINDINGS.md` Round 14.
+   - `MountFeature` has six members: `Cargo`, `Lantern`, `LanternLight`, `Sounds`, `Bell`, `StayThroughDoors`.
+     Also added: `AddFeatureRule(owner, feature, Func<bool>)`, `IsFeatureAllowed`, `RefreshRules`.
+   - The first sketch had two more features; neither was kept:
+     - "Cart": use a mount rule on the Cart style instead, which can say why.
+     - "PickupsToCart": merged into `Cargo`, because a cart without pickups has little left to do.
+   - How it works:
+     - The answers are cached. They're refreshed at mount, twice a second while riding, when a rule is added or
+       removed, and on `RefreshRules()`.
+     - Each checkpoint reads the cached answer ANDed with the core's own setting:
+       - `HeadReroute.Active` and `Cargo.LoadFromHead` (Cargo);
+       - `Lantern.ApplyLight` (Lantern hides the pole and lamp; LanternLight turns off the main light,
+         character light, glow and lit glass);
+       - `MountSounds` (Sounds; Bell for the bell key, the set-off bell and `Mounts.RingBell`);
+       - the scene-change branch of `Mount.Tick` (StayThroughDoors).
+     - Cargo switched off mid-ride hands the cargo back (`Cargo.Unload("cargo switched off")`).
+     - A feature change is logged: `API: feature X switched off by <owner>` / `allowed again`.
+     - The panel's sound Preview buttons ignore the rules on purpose, since they're a dev tool.
+   - `CargoLoaded` / `CargoUnloaded(itemId)` come from one diff in `Cargo.Announce()`, which compares item GUIDs with
+     what was last reported:
+     - it's called on every cart inventory change and at every unload;
+     - a door re-summon keeps the same GUIDs, so it reports nothing;
+     - around a save, announcing is held (`SuppressAnnounce`), and a Harmony finalizer on `SaveSystem.Save`
+       reports whatever didn't come back.
 4. **Tuning through `MountTuning`:** typed values that read the session override first, then the `StyleSettings`
    entry. Setting one from the API writes only the override. The panel edits the entries, as today.
 5. **The showcase project:** keys, player settings and the framework link move there. The core loses its keys.

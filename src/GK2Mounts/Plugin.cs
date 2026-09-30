@@ -465,6 +465,11 @@ namespace GK2Mounts
                 }
                 return;
             }
+            // Investigation: F5 writes the keeper's held-item view to the log (works on foot too, unlike the panel).
+            if (TuningWindowEnabled.Value && UnityInput.Current.GetKeyDown(KeyCode.F5))
+            {
+                HeldItemProbe.Write();
+            }
             // Plain key only: Shift+F11 opens the game's Workshop creator (when enabled), so leave that combination to it.
             if (TuningWindowKey.Value != KeyCode.None && UnityInput.Current.GetKeyDown(TuningWindowKey.Value)
                 && !UnityInput.Current.GetKey(KeyCode.LeftShift) && !UnityInput.Current.GetKey(KeyCode.RightShift))

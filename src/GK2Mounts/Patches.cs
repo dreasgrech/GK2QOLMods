@@ -158,6 +158,7 @@ namespace GK2Mounts
             {
                 if (Mount.IsMounted && Cargo.Count > 0)
                 {
+                    Cargo.SuppressAnnounce = true; // the cargo comes back in the postfix; not an unload for the API
                     Cargo.Unload("save");
                 }
             }
@@ -181,6 +182,24 @@ namespace GK2Mounts
             {
                 Plugin.Log.LogWarning("Cargo: reloading the cart after the save failed: " + e.Message);
             }
+        }
+
+        // Runs after the postfix, and also when the save threw: report whatever did not come back (hands full, a
+        // failed reload) as unloaded, and never leave the announcing held.
+        private static Exception Finalizer(Exception __exception)
+        {
+            if (Cargo.SuppressAnnounce)
+            {
+                Cargo.SuppressAnnounce = false;
+                try
+                {
+                    Cargo.Announce();
+                }
+                catch
+                {
+                }
+            }
+            return __exception;
         }
     }
 }

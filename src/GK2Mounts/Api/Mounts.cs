@@ -10,6 +10,19 @@ namespace GK2Mounts.Api
         Cart,
     }
 
+    // Parts of a ride another mod can switch off (Mounts.AddFeatureRule). Each also has the core's own settings; a
+    // feature is on when those say so and every rule allows it. Riding in Cart style at all is not a feature: refuse
+    // it with a mount rule on MountStyle.Cart, which can say why.
+    public enum MountFeature
+    {
+        Cargo,            // the cart carries items: pickups land on it, set down with the interact key
+        Lantern,          // the cart's lantern pole and lamp are shown
+        LanternLight,     // the lamp is lit: its lights, glow and lit glass
+        Sounds,           // every mount sound (hoofs, wheels, brays, graze, bell, cargo thump)
+        Bell,             // the bell rings (on setting off, the bell key, Mounts.RingBell)
+        StayThroughDoors, // the ride goes on through doors (the donkey is summoned again in the next scene)
+    }
+
     // The answer to TryMount / SwitchStyle: Ok, or the reason it was refused (the text the keeper's bubble shows).
     public readonly struct MountResult
     {
@@ -37,7 +50,7 @@ namespace GK2Mounts.Api
     public static class Mounts
     {
         // The API's own version, separate from the mod version: minor for additions, major for breaking changes.
-        public static readonly Version ApiVersion = new Version(0, 1, 0);
+        public static readonly Version ApiVersion = new Version(0, 2, 0);
 
         // Owner id the core uses for its built-in mount key (until the showcase mod takes over the keys).
         public const string BuiltInKeyOwner = "dreas.gk2.mounts.key";
@@ -115,9 +128,10 @@ namespace GK2Mounts.Api
             return result;
         }
 
+        // Both respect the Sounds feature (and RingBell the Bell feature).
         public static void RingBell()
         {
-            if (Mount.IsMounted)
+            if (Mount.IsMounted && MountRules.Allowed(MountFeature.Sounds) && MountRules.Allowed(MountFeature.Bell))
             {
                 MountSounds.RingBell();
             }
@@ -125,7 +139,7 @@ namespace GK2Mounts.Api
 
         public static void Bray()
         {
-            if (Mount.IsMounted)
+            if (Mount.IsMounted && MountRules.Allowed(MountFeature.Sounds))
             {
                 MountSounds.Bray();
             }
@@ -145,6 +159,26 @@ namespace GK2Mounts.Api
             return MountRules.AddStay(ownerId, whyDismount);
         }
 
+        // A rule for one part of the ride: return false to switch it off. Asked at mount, about twice a second while
+        // riding, and on RefreshRules(). Switching Cargo off mid-ride hands the cargo back to the keeper.
+        public static IDisposable AddFeatureRule(string ownerId, MountFeature feature, Func<bool> allowed)
+        {
+            return MountRules.AddFeature(ownerId, feature, allowed);
+        }
+
+        // What the feature rules say right now (the core's own settings are not part of it).
+        public static bool IsFeatureAllowed(MountFeature feature)
+        {
+            return MountRules.Allowed(feature);
+        }
+
+        // Ask the feature rules again now instead of within the next half second (e.g. right after your mod
+        // unlocked something).
+        public static void RefreshRules()
+        {
+            MountRules.Poll(force: true);
+        }
+
         // Removes every rule this owner added.
         public static void RemoveRules(string ownerId)
         {
@@ -156,6 +190,12 @@ namespace GK2Mounts.Api
 
         // After the ride ended, cargo handed back (argument: the reason, e.g. "dismounted", "indoors", a rule's text).
         public static event Action<string> Dismounted;
+
+        // An item went onto the cart / left it (argument: the item id, e.g. "wood", "body_corpse"). Not raised for
+        // the core's own bookkeeping: the hand-back around a save, or the cart summoned again after a door.
+        public static event Action<string> CargoLoaded;
+
+        public static event Action<string> CargoUnloaded;
 
         // ------------------------------------------------------------------ core side
 
@@ -170,6 +210,16 @@ namespace GK2Mounts.Api
         {
             owner = null;
             Raise(Dismounted, reason, "Dismounted");
+        }
+
+        internal static void RaiseCargoLoaded(string itemId)
+        {
+            Raise(CargoLoaded, itemId, "CargoLoaded");
+        }
+
+        internal static void RaiseCargoUnloaded(string itemId)
+        {
+            Raise(CargoUnloaded, itemId, "CargoUnloaded");
         }
 
         private static void Raise<T>(Action<T> handlers, T arg, string name)
@@ -200,6 +250,8 @@ namespace GK2Mounts.Api
             public string Owner;
             public Func<MountStyle, string> Mount;
             public Func<string> Stay;
+            public Func<bool> Feature;
+            public MountFeature Which;
             public bool Warned;
         }
 
@@ -217,13 +269,95 @@ namespace GK2Mounts.Api
                 if (rule != null)
                 {
                     rules.Remove(rule);
+                    bool feature = rule.Feature != null;
                     rule = null;
+                    if (feature)
+                    {
+                        Poll(force: true);
+                    }
                 }
             }
         }
 
         private static readonly List<Rule> rules = new List<Rule>();
         private static float nextStayCheck;
+        private static float nextFeatureCheck;
+        private static readonly int FeatureCount = Enum.GetValues(typeof(MountFeature)).Length;
+        private static readonly bool[] allowed = NewAllowed();
+
+        private static bool[] NewAllowed()
+        {
+            bool[] a = new bool[Enum.GetValues(typeof(MountFeature)).Length];
+            for (int i = 0; i < a.Length; i++)
+            {
+                a[i] = true;
+            }
+            return a;
+        }
+
+        // The cached answer; refreshed by Poll (at mount, twice a second while riding, on RefreshRules).
+        internal static bool Allowed(MountFeature f)
+        {
+            int i = (int)f;
+            return i < 0 || i >= allowed.Length || allowed[i];
+        }
+
+        internal static IDisposable AddFeature(string ownerId, MountFeature f, Func<bool> fn)
+        {
+            IDisposable h = Add(new Rule { Owner = Check(ownerId, fn), Feature = fn, Which = f });
+            Poll(force: true);
+            return h;
+        }
+
+        // Re-asks the feature rules (when due, or now with force) and reacts to the features that changed.
+        internal static void Poll(bool force)
+        {
+            float now = UnityEngine.Time.unscaledTime;
+            if (!force && now < nextFeatureCheck)
+            {
+                return;
+            }
+            nextFeatureCheck = now + 0.5f;
+            for (int i = 0; i < FeatureCount; i++)
+            {
+                MountFeature f = (MountFeature)i;
+                bool ok = true;
+                string by = null;
+                foreach (Rule r in rules.ToArray())
+                {
+                    if (r.Feature == null || r.Which != f)
+                    {
+                        continue;
+                    }
+                    bool yes;
+                    try
+                    {
+                        yes = r.Feature();
+                    }
+                    catch (Exception e)
+                    {
+                        if (!r.Warned)
+                        {
+                            r.Warned = true;
+                            Plugin.Log.LogWarning($"API: a feature rule of {r.Owner} failed and is ignored (it allows): {e.Message}");
+                        }
+                        yes = true;
+                    }
+                    if (!yes)
+                    {
+                        ok = false;
+                        by = r.Owner;
+                        break;
+                    }
+                }
+                if (ok != allowed[i])
+                {
+                    allowed[i] = ok;
+                    Plugin.Log.LogInfo($"API: feature {f} {(ok ? "allowed again" : "switched off by " + by)}.");
+                    Mount.OnFeatureChanged(f, ok);
+                }
+            }
+        }
 
         internal static IDisposable AddMount(string ownerId, Func<MountStyle, string> f)
         {
@@ -238,6 +372,7 @@ namespace GK2Mounts.Api
         internal static void RemoveAll(string ownerId)
         {
             rules.RemoveAll(r => r.Owner == ownerId);
+            Poll(force: true);
         }
 
         private static string Check(string ownerId, object f)

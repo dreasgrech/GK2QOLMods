@@ -590,6 +590,13 @@ namespace GK2Mounts
             GUILayout.EndHorizontal();
             GUILayout.Label("Both write one line to BepInEx/LogOutput.log. Geometry: press once per facing (and once while walking) when reporting a placement problem.", small);
 
+            Header("Held item (investigation)");
+            if (GUILayout.Button("Write the keeper's held-item view to the log (also F5, on foot too)"))
+            {
+                HeldItemProbe.Write();
+            }
+            GUILayout.Label("One [held] line: the items in the keeper's hands, the animator's layers with their weights and clips, and the drop view that draws a held item (active, position, renderers). Press once on foot carrying something and once riding.", small);
+
             Header("Lantern pole (investigation)");
             if (GUILayout.Button("Sample the lantern for 6 s, then write GK2-lantern-facts.txt") && !LanternProbe.Running)
             {

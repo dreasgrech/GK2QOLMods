@@ -41,7 +41,7 @@ namespace GK2Mounts
             float now = Time.time;
             idleSince = now;
             nextBray = now + NextBrayDelay();
-            if (S.SoundsOn.Value && UnityEngine.Random.value < S.BrayOnMountChance.Value)
+            if (S.SoundsOn.Value && MountRules.Allowed(MountFeature.Sounds) && UnityEngine.Random.value < S.BrayOnMountChance.Value)
             {
                 mountBrayAt = now + UnityEngine.Random.Range(0.3f, 0.8f);
             }
@@ -82,18 +82,19 @@ namespace GK2Mounts
             float stoodFor = now - idleSince;
             wasWalking = walking;
 
-            if (!S.SoundsOn.Value || ac == null)
+            if (!S.SoundsOn.Value || !MountRules.Allowed(MountFeature.Sounds) || ac == null)
             {
                 StopGraze();
                 return;
             }
             Transform at = donkey.transform;
 
-            if (Plugin.BellKey.Value != KeyCode.None && UnityInput.Current.GetKeyDown(Plugin.BellKey.Value))
+            bool bell = MountRules.Allowed(MountFeature.Bell);
+            if (bell && Plugin.BellKey.Value != KeyCode.None && UnityInput.Current.GetKeyDown(Plugin.BellKey.Value))
             {
                 RingBell();
             }
-            if (setOff && S.BellOnSetOff.Value && stoodFor >= S.BellSetOffIdleSeconds.Value
+            if (bell && setOff && S.BellOnSetOff.Value && stoodFor >= S.BellSetOffIdleSeconds.Value
                 && (!S.BellOnlyWithCargo.Value || Cargo.Count > 0) && !CargoSheet.Running)
             {
                 RingBell();
@@ -333,7 +334,8 @@ namespace GK2Mounts
         // An item landed on the cart (a pickup or the head's load at mount).
         public static void CargoLanded()
         {
-            if (Mount.CurrentStyle != MountStyle.Cart || CargoSheet.Running || !S.SoundsOn.Value || !S.CargoThumpOn.Value)
+            if (Mount.CurrentStyle != MountStyle.Cart || CargoSheet.Running || !S.SoundsOn.Value || !S.CargoThumpOn.Value
+                || !MountRules.Allowed(MountFeature.Sounds))
             {
                 return;
             }
