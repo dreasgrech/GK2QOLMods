@@ -31,6 +31,11 @@ If the mount is only an extra for your mod, use a soft dependency instead, and o
 code that runs when the plugin is present (`Chainloader.PluginInfos.ContainsKey("dreas.gk2.mounts")`). The pattern
 is in `docs/gk2-mod-framework.md`.
 
+**Keys:** if you read a BepInEx `KeyboardShortcut` for a gameplay key, don't use `KeyboardShortcut.IsDown()`. It
+also requires that no other key at all is held, so it never fires while the player walks (W/A/S/D). Check
+`UnityInput.Current.GetKeyDown(shortcut.MainKey)` plus `GetKey` for each of `shortcut.Modifiers`, as the showcase
+does.
+
 **Rules of the road:**
 - **Main thread only:** call from Update, from event handlers, and from Harmony patches of game code.
 - **Owner id:** pass your plugin GUID wherever it's asked for. It's how the core tells mods apart in rules, rides,

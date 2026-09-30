@@ -113,10 +113,24 @@ namespace GK2Showcase
             }
         }
 
-        // KeyboardShortcut.IsDown: the main key pressed this frame with exactly its modifiers held (e.g. Shift+H).
+        // The main key pressed this frame with the shortcut's own modifiers held (e.g. Shift+H); other keys held don't
+        // matter. Not KeyboardShortcut.IsDown(): that also demands that no other key at all is held, so it never fires
+        // while the player walks (W/A/S/D down), which is exactly when mounting matters (found in game 2026-09-30).
         private static bool Pressed(ConfigEntry<KeyboardShortcut> key)
         {
-            return key.Value.MainKey != KeyCode.None && key.Value.IsDown();
+            KeyboardShortcut k = key.Value;
+            if (k.MainKey == KeyCode.None || !UnityInput.Current.GetKeyDown(k.MainKey))
+            {
+                return false;
+            }
+            foreach (KeyCode m in k.Modifiers)
+            {
+                if (!UnityInput.Current.GetKey(m))
+                {
+                    return false;
+                }
+            }
+            return true;
         }
 
         // On foot: mount in that style. Mounted in that style: dismount. Mounted in the other style: switch.

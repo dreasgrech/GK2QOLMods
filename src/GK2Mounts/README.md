@@ -1,33 +1,53 @@
 # GK2 Mounts
 
-BepInEx plugin for Graveyard Keeper 2: press a key and the keeper rides a donkey. You walk 1.75× as fast while
-mounted (configurable), the donkey follows your every step, faces the way you walk and animates when you do. Press
-the key again to get off. Two looks: **Ride** (on the donkey's back) and **Cart** (you ride the donkey while it pulls
-its cart).
+A BepInEx library for Graveyard Keeper 2 that gives the game a rideable donkey:
+- **Ride:** on its back.
+- **Cart:** the donkey pulls its cart, with cargo, a lantern and sounds.
 
-Version 0.1.0 (first playable build), built and audited against Steam game build 25601286 (Assembly-CSharp MVID `3ffadd70-…`, LazyBearTechnology
-`8a7a5e04-…`; re-audit in `docs/steam-move-audit.md`). Before that 25533739 (`97f92f0d-…`).
-Design notes: [`FEASIBILITY.md`](FEASIBILITY.md); runtime facts the design rests on: [`PROBE-FINDINGS.md`](PROBE-FINDINGS.md).
+**On its own it does nothing.** A mod built on it decides when the keeper may mount, and what the ride can do:
+- **For players:** the showcase mod (`src/GK2Showcase`, placeholder name) is the playable version, with ride on H,
+  cart on G and a bell key. Install both.
+- **For mod authors:** the C# API is in [`docs/mounts-api.md`](../../docs/mounts-api.md). You can tie the mount into
+  the story, or gate it on the tech tree, quests or story flags.
 
-The game has no mount of its own. The donkey you ride is the corpse-delivery donkey's *looks* only; the real donkey
-NPC and its schedule are untouched.
+Version 0.1.0 (API 0.4.0), built and audited against Steam game build 25601286 (Assembly-CSharp MVID
+`3ffadd70-…`, LazyBearTechnology `8a7a5e04-…`; re-audit in `docs/steam-move-audit.md`).
+- Design: [`docs/mounts-api-design.md`](../../docs/mounts-api-design.md) and [`FEASIBILITY.md`](FEASIBILITY.md).
+- Runtime facts the design rests on: [`PROBE-FINDINGS.md`](PROBE-FINDINGS.md).
+
+The game has no mount of its own. The donkey you ride uses only the corpse-delivery donkey's *looks*; the real
+donkey NPC and its schedule are untouched.
+
+**While mounted, the keeper's hands stay empty. Only the cart carries.**
+- In Cart style, pickups land on the cart.
+- In Ride style, the game refuses pickups, and ground items show no outline.
+- Whatever he holds when mounting goes onto the cart, or is set down first.
+- The keeper always faces left or right, like the donkey.
 
 ## Settings (`BepInEx\config\dreas.gk2.mounts.cfg`, read at game start)
 
-### `[General]`: behaviour
+### `[General]`
 
 | Key | Default | Meaning |
 |---|---|---|
-| `Enabled` | true | Master switch. |
-| `MountKey` | `H` | Mount / dismount. Pick a key the game does not use. |
-| `BellKey` | `None` | While mounted: ring the donkey's bell. None = no key; the Sounds tab can set one (click, press a key, Escape clears) and has a play button. |
-| (cargo) | | Cart style, no key of its own. Press the game's interact key with nothing in front of you to set the top cart item down on the ground in front of you, one item per press, as the game drops a held item on foot. Loading needs no key either: while you ride the cart there is no head storage, so anything you pick up (a log, stone, ore, crate or corpse from the ground, a pile, a pallet or a table) goes straight onto the cart, and piles, pallets, tables, graves and quest hand-ins take their items from the cart as if you held them. A full cart puts a ground pickup back down in front of you ("The cart is full.") and piles simply offer no take. The cart holds two items, like the game's own delivery cart. Zombies are refused and stay on your head. Cargo is handed back automatically at every dismount and before every save (it lives in a temporary inventory that no save contains) and goes back onto the cart after the save; through doors it stays on the cart. |
-| `Style` | `Ride` | `Ride` (on the donkey's back) or `Cart` (you ride the donkey while it pulls its cart). Each style has its own section below. |
+| `Enabled` | true | Master switch. Off: no mod can mount. It's the kill switch if a mod built on this misbehaves. |
 | `MountWgoId` | `npc_donkey` | Which world object's looks to use. Only the donkey is tested. |
-| `StayMountedThroughDoors` | true | After a scene change the donkey is re-summoned and you keep riding. Off: dismount at every door. |
-| `DismountIndoors` | true | Dismount automatically when entering a building, church or dungeon (the game's indoor lighting presets), and refuse to mount indoors. The cart is a 3D object that would cut through furniture and door frames inside. |
-| `ShowMessages` | true | Thought bubble when you cannot mount ("I'm busy.", "Not in a co-op game."). |
-| `SideViewOnly` | false | While mounted the keeper only faces left or right (the donkey has no up/down art). Forced on for poses that only have left/right frames (`FishingIdle`). |
+| `StayMountedThroughDoors` | false | Keep riding through a door that loads another scene (the donkey is summoned again there). A house door isn't one. |
+| `DismountIndoors` | true | Dismount on entering a building, church or dungeon (the game's indoor lighting presets), and refuse to mount indoors. The cart is a 3D object that would cut through furniture and door frames. |
+| `ShowMessages` | true | The keeper's thought bubble when he can't mount ("I'm busy.", "Not in a co-op game.", a mod's own reason). |
+
+**Behaviour switches with the showcase:** the last three are the core's defaults. The showcase sets them from its
+own settings (its cfg or the Mods menu) as session overrides, so the dev panel shows them locked.
+
+**Cargo (Cart style), no key of its own:**
+- **Loading:** anything the keeper picks up goes straight onto the cart, which holds two items like the game's own
+  delivery cart. That covers logs, stone, ore, crates and corpses from the ground, piles, pallets and tables. Piles,
+  pallets, tables, graves and quest hand-ins take their items from the cart as if he held them.
+- **Setting down:** press the game's interact key with nothing in front to set the top item down.
+- **A full cart** puts a ground pickup back down ("The cart is full.").
+- **Zombies can't be carried while mounted.**
+- **Handing back:** cargo goes back to the keeper at every dismount, and before every save, because it lives in a
+  temporary inventory that no save contains. Through doors, it stays on the cart.
 
 ### `[Ride]` and `[Cart]`: position, pose, animation, legs, speed
 
@@ -124,10 +144,11 @@ nothing, is flagged on the tab and logged once), and each has a play button on t
 
 | Key | Default | Meaning |
 |---|---|---|
-| `TuningWindow` | true | While mounted, a panel in the top-right corner with tabs General / Riding / Lantern / Sounds / Debug / Defaults. Changes apply live and are saved as you make them; yellow rows differ from the mod default; right-click a row to put it back to the mod default. `TuningWindowScale` (1.5) sets its overall size, `TuningWindowFontScale` (1) the text size inside it, `TuningWindowWidth` (470) its width; all three have - / + steppers on the Debug tab and the rows scale with the width. Turn off for normal play. |
+| `TuningWindow` | false | **Dev tool for mod authors.** While mounted, a panel in the top-right corner with tabs General / Riding / Lantern / Sounds / Debug / Defaults. Changes apply live and are saved as you make them; yellow rows differ from the mod default; right-click a row to put it back to the mod default. `TuningWindowScale` (1.5) sets its overall size, `TuningWindowFontScale` (1) the text size inside it, `TuningWindowWidth` (470) its width; all three have - / + steppers on the Debug tab and the rows scale with the width. Rows another mod overrides this session are cyan and locked. In a release build (`-p:ForDist=true`) there is no "Make these the mod defaults" button. |
 | `TuningWindowKey` | F11 | Hides / shows the panel (e.g. for screenshots), for this session only. The game doesn't bind F-keys; Shift+F11 is left to its Workshop creator. `None` = no key. |
-| `TuningKeys` | true | PageUp/PageDown torso, Home/End legs sideways, Insert/Delete legs up/down, one art pixel per press, editing the current style's values. Turn off for normal play. |
+| `TuningKeys` | false | PageUp/PageDown torso, Home/End legs sideways, Insert/Delete legs up/down, one art pixel per press, editing the current style's values. Turn off for normal play. |
 | (Debug tab buttons) | | "Start a real delivery now" fires the game donkey's own `full_cycle` script event with its body roll forced to pass (a Harmony prefix on `Flow_Body.DoAction`, active for two frames after the press, drop chance untouched), so the real cart can be watched on the same ground as ours. "Dump the game donkey's script" writes the `npc_donkey` flow graph to `BepInEx/GK2-script-npc_donkey.json`; the text field sends any of its events. See `PROBE-FINDINGS.md` for the routine. "Dump carry facts" writes `BepInEx/GK2-carry-facts.txt` (the donkey prefab's drawer rules, its inventory filters, every big item, the overhead mesh elements) and "Put in cart inventory" / "Take first out" add or remove a plain test item on the mounted donkey's own 2-slot inventory to watch the game's loaded-cart mesh react (Round 7 of the findings; groundwork for carrying cargo). "Drop it here" spawns any big item in front of the keeper with the game's own drop routine (a normal, saved world drop; `<` `>` cycle through all of them; a corpse comes from the delivery script's body definition; zombies cannot be spawned from an id). "Photograph all cargo combinations" puts every distinct item shape alone and every ordered pair on the mounted cart in turn, screenshots and crops each, and writes `BepInEx/GK2-cargo-sheet/index.html`, a grid of all pictures (rows: first item, columns: second) with the settings used; the cart must be empty to start (a dismount mid-run aborts the sheet and discards its test copies). |
+| (F5, with the panel on) | | Writes a `[held]` line: the keeper's held-item view and animator layers (Round 14 of the findings). |
 | `DisableOnGameUpdate` | true | Do nothing if the game's code changed since the audit. |
 
 ## How it works
@@ -150,7 +171,7 @@ nothing, is flagged on the tab and logged once), and each has a play button on t
   keeper's `PlayerAnimation` turns any facing with a horizontal component into pure left/right and keeps the last
   horizontal facing for vertical movement. The donkey is given the same facing. Side effect: the game places the
   interaction box on the side the keeper faces, so while riding up or down you interact with things beside you,
-  not above or below. Dismount (or set `SideViewOnly = false`) for the normal behaviour.
+  not above or below. This always applies while mounted; dismount for the normal behaviour.
 - **Attached script suppression** (the one Harmony patch): `WgoData`'s constructor starts the definition's attached
   flow script, and the donkey's script would teleport it to its delivery point and walk its route. A prefix on
   `WgoDataScriptsManager.CreateScript` skips creation only while the mod is constructing its own `WgoData`.
@@ -176,22 +197,32 @@ nothing, is flagged on the tab and logged once), and each has a play button on t
 - MVID guard, `Access.Verify()` of every game member used, and all-or-nothing patching as in the other mods.
   Refuses in co-op.
 
-## In-game test list
+## In-game test list (with the showcase installed)
 
-1. Log shows `GK2 Mounts 0.1.0 loaded.`; no errors.
-2. Press `H` in the open: donkey appears under you, you sit on it (legs hidden), thought bubble none. Walk all four
-   directions: donkey faces left/right with you, walk animation runs, speed clearly higher.
-3. Press `H` again: donkey gone, normal speed, keeper at normal height.
-4. Open a chest and your inventory while mounted: still mounted afterwards.
-5. Walk through a door to another scene: donkey re-appears, still fast. (`StayMountedThroughDoors`)
-6. Use a workbench / climb a ladder / draw a weapon while mounted: automatic dismount, normal speed after.
-7. Try to mount while working or in build mode: refused with a bubble.
-8. Sleep while mounted: dismounted; next morning normal.
-9. Set `Style = Cart`, restart, mount: keeper on the donkey, the donkey pulling its cart with the lantern.
-10. Quit to menu while mounted, load again: on foot, normal speed, no errors in the log.
-11. Sounds: hoofsteps while walking (on grass, a road, a wooden floor), none of the keeper's steps while riding;
-    graze chewing when the donkey grazes; brays now and then; in the cart the wheel rumble, a thump on loading and
-    the bell when setting off with cargo. Game SFX slider at 0 silences all of them.
+1. **Log:** `GK2 Mounts 0.1.0 loaded (API 0.4.0); nothing happens until a mod uses it.`, then the showcase's line,
+   with no errors.
+2. **H:** the donkey appears under you and you sit on it. Walk in all four directions: it faces left or right with
+   you, the walk animation runs, and you're clearly faster. **H** again gets you off, at normal speed and height.
+3. **G:** the cart, with its lantern. **H** in the cart switches to riding, **G** back to the cart, and **G** again
+   dismounts.
+4. **Stays mounted:** opening a chest or the inventory keeps you mounted.
+5. **Automatic dismount:** a workbench, a ladder or a weapon. Mounting while working or in build mode is refused,
+   with a bubble.
+6. **Indoors:** a building door ends the ride (`DismountIndoors`).
+7. **Cargo:**
+   - two pickups go onto the cart;
+   - interact with nothing in front sets the top one down;
+   - in Ride style, ground items show no outline and can't be picked up.
+8. **Quit to the menu while mounted and load again:** you're on foot at normal speed, with no errors.
+9. **Sounds:**
+   - hoofsteps on grass, road and wooden floor, and none of the keeper's own steps;
+   - graze chewing and the occasional bray;
+   - in the cart: the wheel rumble, a thump on loading, and the bell when setting off with cargo;
+   - the game's SFX slider at 0 silences all of them.
+10. **Without the showcase:** H and G do nothing.
+
+Still untested: carrying zombies (not unlocked in the test save); doors that load another scene; a save while mounted
+(the bed is indoors, so normal play always dismounts first).
 
 ## Probe (`tools/GK2MountProbe/`)
 

@@ -337,8 +337,26 @@ alter the save, which is the reason Built Count never evaluates one.
      - `Gates.LanternLightTech` (default empty) is a feature rule on LanternLight;
      - it listens to `KnowledgeSystem.OnTechUnlocked`, then calls `RefreshRules()`;
      - it logs the unlocked techs at every `MainGame.OnGameStarted`.
-7. **Release both:** core and showcase in `dist/`, and a root README section for players (install both) and for
-   authors (reference the core).
+7. **Release both:** done 2026-09-30, apart from the name and publishing.
+   - **Code:**
+     - the dev panel and tuning keys are off by default;
+     - `-p:ForDist=true` leaves out `GK2MountsSourceDir`, so the embedded defaults and cargo layout are used and
+       there's no "Make these the mod defaults" button;
+     - the UIModule reference is dropped;
+     - the geometry log is written once per mount;
+     - the showcase is in the Mods menu (`FrameworkLink`) and its keys are `KeyboardShortcut`.
+   - **Docs:** new READMEs for the core (library) and the showcase (player), plus the root README and
+     `dist/README.md`. `dist/` holds `GK2Mounts.dll` and `GK2Showcase.dll`, release builds at 0.1.0.
+   - **Player test with the exact dist DLLs**, a fresh cfg and no probe: the fresh cfg had the panel and keys off and
+     the speeds from the embedded defaults (Cart 1.68, Ride 1.99), and riding and the Mods menu worked.
+     - **Found:** you couldn't mount or dismount while walking. `KeyboardShortcut.IsDown()` requires that no other
+       key is held (`ModifierKeyTest`, with only mouse buttons exempt).
+     - Fixed: main key down plus the shortcut's own modifiers. A warning for authors is in `docs/mounts-api.md`.
+       Re-tested while walking, including switching style.
+   - The user's cfg, the dev builds and the probe were put back afterwards. The example stays out of the plugins
+     folder.
+   - **Still open:** the showcase's real name (a rename of project, GUID and cfg before publishing), zombies, doors to
+     another scene, and a save while mounted.
 
 ## Answered (2026-09-30)
 
