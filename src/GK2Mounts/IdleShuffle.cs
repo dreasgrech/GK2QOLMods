@@ -229,7 +229,10 @@ namespace GK2Mounts
                 float speed = IdleShuffle.Speed.Value * Mathf.Lerp(0.25f, 1f, ease * ease * (3f - 2f * ease));
                 stepDone = Mathf.Min(stepLength, stepDone + speed * dt);
                 Vector3 p = Vector3.Lerp(stepFrom, stepTo, stepLength > 0.0001f ? stepDone / stepLength : 1f);
-                float g = GroundHeight(p, out _);
+                // The height of the ground under the body, not under the root half a unit beside it: that is how Follow
+                // places the ridden donkey (ground under the body sprite), and on a slope the root's ground put the body
+                // into the hill (found 2026-09-30).
+                float g = GroundHeight(BodyAt(p, riderFacingX), out _);
                 p.y = float.IsNaN(g) ? Position.y : g;
                 SetShufflePosition(p);
                 if (stepDone >= stepLength - 0.0001f)

@@ -217,11 +217,13 @@ namespace GK2Mounts
             foreach (Mount.Instance i in list)
             {
                 GUILayout.BeginVertical(GUI.skin.box);
-                string where = pd != null && pd.currentGameSceneId == i.SceneId
-                    ? $"{Vector3.Distance(pd.position.Value, i.Position):F1} away"
+                // Ridden: under the keeper (a distance to its root would jitter with the ride). Standing: to its body.
+                string where = i.IsRidden ? "ridden by you"
+                    : pd != null && pd.currentGameSceneId == i.SceneId
+                    ? $"{Vector3.Distance(pd.position.Value, i.BodyPoint()):F1} away"
                     : $"in {i.SceneId}";
                 List<string> cargo = i.CargoRig.Ids();
-                GUILayout.Label($"{i.Describe()}{(i.IsRidden ? " (ridden)" : "")}: {where}, facing {(i.FacingRight ? "right" : "left")}{(i.HasCart ? $", cargo [{string.Join(", ", cargo)}]" : "")}; {i.Overrides.Count} own setting(s); by {i.OwnerId}", editing == i ? instanceSet : label);
+                GUILayout.Label($"{i.Describe()}: {where}, facing {(i.FacingRight ? "right" : "left")}{(i.HasCart ? $", cargo [{string.Join(", ", cargo)}]" : "")}; {i.Overrides.Count} own setting(s); by {i.OwnerId}", editing == i ? instanceSet : label);
                 GUILayout.BeginHorizontal();
                 if (GUILayout.Button(editing == i ? "Stop editing" : "Edit its settings", GUILayout.Width(120f)))
                 {
