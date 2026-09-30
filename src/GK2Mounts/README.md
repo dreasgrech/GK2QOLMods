@@ -10,7 +10,7 @@ A BepInEx library for Graveyard Keeper 2 that gives the game a rideable donkey:
 - **For mod authors:** the C# API is in [`docs/mounts-api.md`](../../docs/mounts-api.md). You can tie the mount into
   the story, or gate it on the tech tree, quests or story flags.
 
-Version 0.1.0 (API 0.4.0), built and audited against Steam game build 25601286 (Assembly-CSharp MVID
+Version 0.1.0 (API 0.5.0), built and audited against Steam game build 25601286 (Assembly-CSharp MVID
 `3ffadd70-…`, LazyBearTechnology `8a7a5e04-…`; re-audit in `docs/steam-move-audit.md`).
 - Design: [`docs/mounts-api-design.md`](../../docs/mounts-api-design.md) and [`FEASIBILITY.md`](FEASIBILITY.md).
 - Runtime facts the design rests on: [`PROBE-FINDINGS.md`](PROBE-FINDINGS.md).
@@ -150,6 +150,43 @@ nothing, is flagged on the tab and logged once), and each has a play button on t
 | `BellOnSetOff` | false / true | Ring the bell when setting off; see the next row. |
 | `BellOnlyWithCargo` / `BellSetOffIdleSeconds` | true / 4 | Ring when the donkey sets off after standing at least that long (optionally only with cargo). |
 
+### Colours (`[Colors]` and `[Colors.<Region>]`, the Colors tab)
+
+One set for both styles, since it's the same donkey. The investigation and how it works are in
+[`docs/mounts-colors.md`](../../docs/mounts-colors.md). Nothing is touched while a region is at its defaults.
+
+| Key | Default | Meaning |
+|---|---|---|
+| `Enabled` | true | Master switch for everything below. |
+| `SpriteMethod` | Palette | The donkey's sprites: `Palette`, the game's exact colour swap (every region alone), or `Lut`, the game's 32-step colour cube (a fallback). The cart is always done with the cube. |
+| `GlowColor` | empty | Colour of the lamp's glow, hex `RRGGBB`. Empty = the game's. |
+| `LitGlassTint` | empty | Tint of the lit lantern glass, hex. Empty = the game's. |
+| `CharacterLightColor` | empty | The character light's colour, hex. Empty = the same as `Cart.LanternLightColor`. |
+
+**Regions:**
+- **Donkey:** `Coat`, `Dark` (outline, mane, hooves), `Muzzle` (muzzle and belly), `Eye`, `Harness`.
+- **Cart:** `CartBody`, `Shafts`, `Straps`, `Hooks`, `Wheels`, `Hubs`.
+- **Lantern:** `Pole`, `Lamp`, `Glass`.
+
+Each region has its own section, `[Colors.Coat]` and so on, with 10 keys named region + setting (`CoatHue`,
+`HarnessSwaps`, ...):
+
+| Setting | Default | Meaning |
+|---|---|---|
+| `Hue` | 0 | Hue shift, degrees (−180..180). |
+| `Saturation`, `Brightness`, `Contrast` | 1 | Multipliers, 0..3. |
+| `Colorize` / `ColorizeAmount` | empty / 1 | This colour's hue and saturation at each pixel's own brightness (the shading stays). |
+| `Tint` | empty | A colour multiplied in. |
+| `Overlay` / `OverlayAmount` | empty / 0.5 | A flat colour mixed over the result. |
+| `Swaps` | empty | Exact replacements, `SRC=DST;...` (hex). A swapped colour ignores the other settings. |
+
+**On the Colors tab:**
+- region buttons, where `*` marks a changed region;
+- swatches: the game's colour on top, the result below; click one to swap it;
+- the sliders;
+- **Test**: obvious colours everywhere for this session;
+- **a colour report** written to the log.
+
 ### `[Debug]` and `[Safety]`
 
 | Key | Default | Meaning |
@@ -209,7 +246,7 @@ nothing, is flagged on the tab and logged once), and each has a play button on t
 
 ## In-game test list (with the showcase installed)
 
-1. **Log:** `GK2 Mounts 0.1.0 loaded (API 0.4.0); nothing happens until a mod uses it.`, then the showcase's line,
+1. **Log:** `GK2 Mounts 0.1.0 loaded (API 0.5.0); nothing happens until a mod uses it.`, then the showcase's line,
    with no errors.
 2. **H:** the donkey appears under you and you sit on it. Walk in all four directions: it faces left or right with
    you, the walk animation runs, and you're clearly faster. **H** again gets you off, at normal speed and height.
@@ -230,6 +267,8 @@ nothing, is flagged on the tab and logged once), and each has a play button on t
    - in the cart: the wheel rumble, a thump on loading, and the bell when setting off with cargo;
    - the game's SFX slider at 0 silences all of them.
 10. **Without the showcase:** H and G do nothing.
+11. **Colours:** the test list in [`docs/mounts-colors.md`](../../docs/mounts-colors.md). The one that matters
+    most: after recolouring, the game's own delivery donkey still looks normal.
 
 Still untested: carrying zombies (not unlocked in the test save); doors that load another scene; a save while mounted
 (the bed is indoors, so normal play always dismounts first).

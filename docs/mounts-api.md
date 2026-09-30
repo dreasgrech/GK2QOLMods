@@ -5,7 +5,7 @@ donkey: ridden on its back (**Ride**), or pulling its cart (**Cart**), with carg
 does nothing: **your mod decides when the keeper may mount, what the ride can do and how it looks.** The showcase mod
 (`src/GK2Showcase`) is the playable version for players and uses nothing but this API.
 
-API version **0.4.0** (`Mounts.ApiVersion`). Everything public is in the namespace `GK2Mounts.Api`. The exact
+API version **0.5.0** (`Mounts.ApiVersion`). Everything public is in the namespace `GK2Mounts.Api`. The exact
 surface is `tests/ApiSurface/GK2Mounts.Api.txt`.
 
 ## Setup
@@ -148,6 +148,50 @@ While mounted the keeper always faces only left or right, like the donkey. That 
 | Lantern light | `LanternLightOn`, `LanternLightShadows`, `LanternSelfLightOn`, `LanternGlowOn`, `LanternGlassOn` (bool); `LanternLightIntensity`, `LanternLightRange`, `LanternLightDayDim`, `LanternSelfLightIntensity`, `LanternSelfLightRange`, `LanternGlowAlpha`, `LanternGlowScale` (float); `LanternLightColor` (string, hex `RRGGBB`) |
 | Sounds | `SoundsOn`, `HoofOn`, `HoofSurfaceAware`, `GrazeOn`, `BrayWhileWalking`, `BrayInSfxChannel`, `CargoThumpOn`, `WheelOn`, `WheelPitchFollowsSpeed`, `BellOnSetOff`, `BellOnlyWithCargo` (bool); `SoundVolume` and every `…Volume`, `…Pitch`, `HoofPitchVariation`, `HoofPhase`, `WheelPhase`, `BrayOnMountChance`, `BrayIdleEverySeconds`, `BellSetOffIdleSeconds` (float); `HoofStepsPerCycle`, `WheelEveryCycles` (int); `HoofSoundId`, `GrazeSoundId`, `BraySoundId`, `CargoThumpSoundId`, `WheelSoundId`, `BellSoundId` (string, the game's LazyAudio ids) |
 
+## Colours
+
+`Mounts.Colors` recolours the donkey, the cart and the lantern: one set for both styles, overridable per session like
+tuning (same `MountTuning`, same rules: session only, cyan in the panel, `ClearTuning` clears it). How it works in
+the game is in `docs/mounts-colors.md`.
+
+```csharp
+MountTuning colors = Mounts.Colors;
+colors.Set("you.gk2.mymod", "CoatColorize", "3050C0");            // a blue donkey, its shading kept
+colors.Set("you.gk2.mymod", "HarnessSwaps", "885923=C02020;D68E38=FF6060"); // two exact colours of the harness
+colors.Set("you.gk2.mymod", "CartBodyHue", 40f);
+foreach (MountColorRegion r in Mounts.ColorRegions)
+{
+    Logger.LogInfo($"{r.Key} ({r.Area}): {r.Name}, {r.SourceColors.Count} colours, e.g. key {r.KeyOf("Hue")}");
+}
+```
+
+**Regions** (`Mounts.ColorRegions`, `Key` / `Name` / `Area` / `SourceColors`, the art's exact colours as hex):
+- Donkey: `Coat`, `Dark` (outline, mane, hooves), `Muzzle` (muzzle and belly), `Eye`, `Harness`.
+- Cart: `CartBody`, `Shafts`, `Straps`, `Hooks`, `Wheels` (3D rims and the wheel sprites), `Hubs`.
+- Lantern: `Pole`, `Lamp`, `Glass` (the lamp's painted glass).
+
+**Per region**, key = region key + setting (`MountColorRegion.SettingNames`, `KeyOf`):
+
+| Setting | Type | Meaning |
+|---|---|---|
+| `Hue` | float −180..180 | hue shift, degrees |
+| `Saturation`, `Brightness`, `Contrast` | float 0..3 | multipliers (1 = unchanged) |
+| `Colorize` | string hex `RRGGBB`, `""` = off | this colour's hue and saturation, each pixel's own brightness |
+| `ColorizeAmount` | float 0..1 | how much of `Colorize` |
+| `Tint` | string hex, `""` = off | multiplied in |
+| `Overlay` | string hex, `""` = off | a flat colour mixed over the result |
+| `OverlayAmount` | float 0..1 | how much of `Overlay` |
+| `Swaps` | string `SRC=DST;SRC=DST` | exact replacements of source colours; a swapped colour ignores the rest |
+
+Order: a swap wins; else hue, saturation, brightness, contrast, colorize, tint, overlay.
+
+**Globals:** `Enabled` (bool), `SpriteMethod` (`SpriteColorMethod.Palette` exact, or `Lut`, a fallback),
+`GlowColor`, `LitGlassTint`, `CharacterLightColor` (hex, `""` = the game's). The lamp's main light colour is the
+Cart tuning key `LanternLightColor`.
+
+Changes show within a frame while mounted. A colour that isn't one of a region's `SourceColors` as a swap source
+does nothing.
+
 ## Gating on the game's progress
 
 All of this is the game's own state, reached through `MainGame.Instance.GameSave` (reference `Assembly-CSharp.dll`).
@@ -195,3 +239,4 @@ History:
 - 0.2.0: features and cargo events.
 - 0.3.0: tuning.
 - 0.4.0: behaviour, and the core without keys.
+- 0.5.0: colours (`Mounts.Colors`, `Mounts.ColorRegions`, `MountColorRegion`, `SpriteColorMethod`).

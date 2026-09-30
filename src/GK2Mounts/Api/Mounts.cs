@@ -50,7 +50,7 @@ namespace GK2Mounts.Api
     public static class Mounts
     {
         // The API's own version, separate from the mod version: minor for additions, major for breaking changes.
-        public static readonly Version ApiVersion = new Version(0, 4, 0);
+        public static readonly Version ApiVersion = new Version(0, 5, 0);
 
         // False when the core is switched off (General.Enabled) or disabled itself after a game update.
         public static bool IsAvailable => Plugin.Patched && Plugin.Enabled != null && Plugin.Enabled.Value;
@@ -209,12 +209,33 @@ namespace GK2Mounts.Api
             }
         }
 
-        // Removes every tuning and behaviour override this owner set.
+        // The colours of the donkey, the cart and the lantern, for both styles, overridable like tuning. Keys: the
+        // globals Enabled (bool), SpriteMethod (SpriteColorMethod), GlowColor, LitGlassTint, CharacterLightColor (hex
+        // RRGGBB, "" = the game's), then for every region of ColorRegions its KeyOf(setting) keys ("CoatHue",
+        // "HarnessSwaps", ...; MountColorRegion.SettingNames says what each does). Changes show within a frame.
+        public static MountTuning Colors
+        {
+            get
+            {
+                if (GK2Mounts.Colors.Enabled == null)
+                {
+                    throw new InvalidOperationException("GK2 Mounts has not loaded its settings yet.");
+                }
+                return GK2Mounts.Colors.Tuning;
+            }
+        }
+
+        // The colour regions, in panel order: Coat, Dark, Muzzle, Eye, Harness (the donkey), CartBody, Shafts, Straps,
+        // Hooks, Wheels, Hubs (the cart), Pole, Lamp, Glass (the lantern).
+        public static IReadOnlyList<MountColorRegion> ColorRegions => GK2Mounts.Colors.ApiRegions ?? Array.Empty<MountColorRegion>();
+
+        // Removes every tuning, behaviour and colour override this owner set.
         public static void ClearTuning(string ownerId)
         {
             Tuning(MountStyle.Ride).ClearOwner(ownerId);
             Tuning(MountStyle.Cart).ClearOwner(ownerId);
             Behaviour.ClearOwner(ownerId);
+            Colors.ClearOwner(ownerId);
         }
 
         private static MountTuning rideTuning, cartTuning, behaviour;

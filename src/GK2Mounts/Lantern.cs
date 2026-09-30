@@ -164,6 +164,7 @@ namespace GK2Mounts
                 if (selfLight != null && selfLight) { selfLight.enabled = true; selfLight.intensity = selfIntensity; selfLight.range = selfRange; selfLight.color = selfColor; }
                 if (glow != null && glow) { glow.enabled = true; glow.color = glowColor; glow.transform.localScale = glowScaleRest; }
                 if (glass != null && glass) { glass.enabled = true; }
+                Colors.RestoreGlass();
             }
             catch
             {
@@ -215,12 +216,12 @@ namespace GK2Mounts
                 selfLight.enabled = lit && s.LanternSelfLightOn.Value;
                 selfLight.intensity = selfIntensity * s.LanternSelfLightIntensity.Value * day;
                 selfLight.range = selfRange * s.LanternSelfLightRange.Value;
-                selfLight.color = string.IsNullOrEmpty(s.LanternLightColor.Value) ? selfColor : color;
+                selfLight.color = Colors.CharacterLight(string.IsNullOrEmpty(s.LanternLightColor.Value) ? selfColor : color);
             }
             if (glow != null && glow)
             {
                 glow.enabled = lit && s.LanternGlowOn.Value;
-                Color c = glowColor;
+                Color c = Colors.GlowRgb(glowColor); // Colors tab: its own colour, the game's alpha
                 c.a = Mathf.Clamp01(glowColor.a * s.LanternGlowAlpha.Value * day);
                 glow.color = c;
                 glow.transform.localScale = glowScaleRest * s.LanternGlowScale.Value;
@@ -228,6 +229,7 @@ namespace GK2Mounts
             if (glass != null && glass)
             {
                 glass.enabled = lit && s.LanternGlassOn.Value;
+                Colors.ApplyGlass(glass);
             }
         }
 

@@ -52,6 +52,14 @@ namespace GK2Mounts
             Require(AccessTools.Method(typeof(LazyBearTechnology.LazyAudio), nameof(LazyBearTechnology.LazyAudio.PlayAtGameObject)), "LazyAudio.PlayAtGameObject");
             Require(AccessTools.Method(typeof(LazyBearTechnology.SoundHandler), nameof(LazyBearTechnology.SoundHandler.SetFadeInFadeOut)), "SoundHandler.SetFadeInFadeOut");
             Require(AccessTools.Method(typeof(SurfaceStepSoundSettings), nameof(SurfaceStepSoundSettings.GetStepSoundIdForSurfaceType)), "SurfaceStepSoundSettings.GetStepSoundIdForSurfaceType");
+            // Colours (Colors.cs)
+            Require(AccessTools.Method(typeof(Wgo), "OnDestroy"), "Wgo.OnDestroy");
+            Require(AccessTools.Method(typeof(Object3DMesh), nameof(Object3DMesh.SetLutTexture)), "Object3DMesh.SetLutTexture");
+            Require(AccessTools.Method(typeof(Object3DMesh), nameof(Object3DMesh.GetSubMesh)), "Object3DMesh.GetSubMesh");
+            Require(AccessTools.PropertyGetter(typeof(Object3DMesh), nameof(Object3DMesh.SubMeshCount)), "Object3DMesh.SubMeshCount getter");
+            Require(AccessTools.PropertyGetter(typeof(Object3DMesh), nameof(Object3DMesh.ObjRenderer)), "Object3DMesh.ObjRenderer getter");
+            Require(AccessTools.PropertyGetter(typeof(Object3DSubMesh), nameof(Object3DSubMesh.LutTexture)), "Object3DSubMesh.LutTexture getter");
+            Require(AccessTools.PropertyGetter(typeof(Object3DSubMesh), nameof(Object3DSubMesh.MainTextureName)), "Object3DSubMesh.MainTextureName getter");
         }
 
         private static void Require(object member, string name)
@@ -161,6 +169,25 @@ namespace GK2Mounts
             catch (Exception e)
             {
                 Plugin.Log.LogWarning("Mount: preparing the donkey on load failed; it is prepared a frame later: " + e.Message);
+            }
+        }
+    }
+
+    // Our donkey's view destroyed by the game rather than by the mod (its scene unloaded behind a door): the colours
+    // come off first, while the parts still exist, so they go back to the game's pool with the game's own look.
+    // (The mod's own dismount restores them before it destroys the view; this is only the other way out.)
+    [HarmonyPatch(typeof(Wgo), "OnDestroy")]
+    internal static class Wgo_OnDestroy_Patch
+    {
+        private static void Prefix(Wgo __instance)
+        {
+            try
+            {
+                Colors.OnWgoDestroyed(__instance);
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning("Colors: restoring the colours of a destroyed donkey failed: " + e.Message);
             }
         }
     }

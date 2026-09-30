@@ -1432,3 +1432,25 @@ summon (one game frame each, two video frames) still showed the donkey, the two 
 **Fourth measurement (video 03-51-40), passed:** the keeper stands normally, then the complete donkey and cart
 appear in one frame. There's no lone lamp, and no riding pose in the air. The log has one "Lantern: attached" per
 mount, no warnings, and no interaction with the donkey. The `dist/` DLLs were rebuilt with these fixes.
+
+## Round 16 (2026-09-30): colours (investigation, then built)
+
+The full write-up is [`docs/mounts-colors.md`](../../docs/mounts-colors.md). The facts the code rests on:
+
+- **Donkey sprites:** `Custom/3D Sprite` with `USE_PALETTE_COLOR_REPLACE`.
+  - It loops over the whole `_Palette` width (no cap). Row v=1 is the source and v=0 the replacement.
+  - A match is a distance under 0.004 against texture × vertex colour.
+  - That's the keeper's outfit swap, and it's exact.
+- **Cart meshes:** `Custom/3D Object` with `USE_LUT_COLOR_REPLACE`, the game's 32-cube as 1024×32:
+  `u = r·31/1024 + 0.5/1024 + floor(b·31)/32`, `v = g·31/32 + 0.5/32`. It's a single sample; the filter is the
+  texture's own.
+  - The game's path: `Object3DMesh.SetLutTexture`. It's state the game keeps and re-applies; `null` goes back to
+    `matObject3D`.
+- **Unused by the donkey's shader:** `_HueShift`, `_Sat`, `_Val`, `_Brightness` and `_Contrast` (UI shader
+  properties). The donkey's skin `0301_donkey` has no palette.
+- **Colour space:** Gamma.
+- **Art:** the donkey's art is 42 final colours (not index colours); the cart textures have 5 to 19 each. Regions and
+  lists are in `Colors.cs`.
+- **Pooled parts:** the donkey's parts are pooled, so every material and LUT is put back before the view is destroyed.
+
+Unconfirmed in game.

@@ -34,7 +34,7 @@ namespace GK2Mounts
         private static string cargoItemId = "wood";
         private static string spawnItemId = "wood";
         private static bool pairOffsetsOpen;
-        private static readonly string[] TabNames = { "General", "Riding", "Lantern", "Sounds", "Debug", "Defaults" };
+        private static readonly string[] TabNames = { "General", "Riding", "Lantern", "Sounds", "Colors", "Debug", "Defaults" };
 
         public static void Draw()
         {
@@ -69,7 +69,7 @@ namespace GK2Mounts
         private static float maxContentHeight = 800f;
         private static float chromeHeight = 130f;   // measured; 130 is the first-frame guess
         private static float lastScrollHeight;
-        private static readonly float[] contentHeight = new float[6]; // measured per tab, last repaint
+        private static readonly float[] contentHeight = new float[7]; // measured per tab, last repaint
 
         // Panel width in panel units (before the overall scale) and the widths derived from it, so rows shrink and
         // grow with the panel instead of overflowing it.
@@ -138,16 +138,18 @@ namespace GK2Mounts
 
         private static string DiffByGroup()
         {
-            int g = 0, r = 0, c = 0;
+            int g = 0, r = 0, c = 0, k = 0;
             foreach (var d in diffSnapshot)
             {
                 if (d.Group == "Ride") r++;
                 else if (d.Group == "Cart") c++;
+                else if (d.Group.StartsWith(Colors.Section, StringComparison.Ordinal)) k++;
                 else g++;
             }
             var parts = new List<string>();
             if (r > 0) parts.Add("Ride " + r);
             if (c > 0) parts.Add("Cart " + c);
+            if (k > 0) parts.Add("Colors " + k);
             if (g > 0) parts.Add("General " + g);
             return string.Join(", ", parts);
         }
@@ -182,7 +184,8 @@ namespace GK2Mounts
                 case 1: DrawRiding(); break;
                 case 2: DrawLantern(); break;
                 case 3: DrawSounds(); break;
-                case 4: DrawDebug(); break;
+                case 4: DrawColors(); break;
+                case 5: DrawDebug(); break;
                 default: DrawDefaults(); break;
             }
             GUILayout.EndVertical();
@@ -560,6 +563,273 @@ namespace GK2Mounts
             GUILayout.EndHorizontal();
             return Mathf.Abs(r - v) > 0.002f ? r : v;
         }
+
+        // ------------------------------------------------------------------ Colors tab
+
+        private static string colorRegion = "Coat";
+        private static string swapSource;
+        private static float confirmColorResetUntil = -1f;
+
+        // Every colour region of the donkey, the cart and the lantern (Colors.cs), then the lamp's lights. The rows
+        // edit the [Colors] sections of the cfg; the donkey looks the same in both styles, so there is one set.
+        private static void DrawColors()
+        {
+            Header("Colours");
+            GUILayout.Label("Recolours the donkey, the cart and the lantern through the game's own colour paths: an exact colour swap for the donkey's sprites, the game's colour cube for the 3D cart. Each region below is a set of the art's own colours; the same settings apply in both styles. Nothing is touched while a region is at its defaults.", small);
+            Toggle("Colours on", Colors.Enabled, Colors.MarkDirty);
+            EnumCycler("Donkey sprites recoloured with", Colors.SpriteMethod, Colors.MarkDirty);
+            GUILayout.Label(Colors.SpriteMethod.Value == SpriteColorMethod.Palette
+                ? "Palette: every colour swapped exactly, as the game does for the keeper's outfit. If the donkey does not change at all, try Lut."
+                : "Lut: the game's 32-step colour cube, as for zombies. A few near-identical colours of neighbouring regions change together.", small);
+            GUILayout.BeginHorizontal();
+            if (Colors.TestActive)
+            {
+                if (GUILayout.Button("Clear the test colours")) Colors.ClearTest();
+            }
+            else if (GUILayout.Button("Test: obvious colours everywhere"))
+            {
+                Colors.ApplyTest();
+            }
+            if (GUILayout.Button("Write a colour report to the log"))
+            {
+                Plugin.Log.LogInfo(Colors.Diagnose());
+            }
+            GUILayout.EndHorizontal();
+            GUILayout.Label("The test is a session override (cyan, locked rows): purple coat, red harness, green eye, turquoise cart body, cyan wheels, yellow hubs, green shafts, pink pole, red lamp glass, blue glow and glass. Your own values are unchanged underneath. " + Colors.Note, small);
+
+            Header("Region");
+            foreach (string area in new[] { "Donkey", "Cart", "Lantern" })
+            {
+                var keys = new List<string>();
+                var names = new List<string>();
+                foreach (MountColorRegion reg in Colors.RegionList)
+                {
+                    if (reg.Area != area) continue;
+                    keys.Add(reg.Key);
+                    names.Add((Colors.RegionChanged(reg.Key) ? "* " : "") + ShortName(reg));
+                }
+                GUILayout.Label(area, label);
+                int at = keys.IndexOf(colorRegion);
+                int picked = GUILayout.SelectionGrid(at, names.ToArray(), 3);
+                if (picked != at && picked >= 0)
+                {
+                    colorRegion = keys[picked];
+                    swapSource = null;
+                }
+            }
+            GUILayout.Label("* = changed. Right-click a row to put it back to its default.", small);
+
+            MountColorRegion region = null;
+            foreach (MountColorRegion reg in Colors.RegionList)
+            {
+                if (reg.Key == colorRegion) region = reg;
+            }
+            Colors.RegionSettings rs = Colors.SettingsOf(colorRegion);
+            if (region != null && rs != null)
+            {
+                DrawColorRegion(region, rs);
+            }
+
+            Header("Lamp light and glow (cart style)");
+            ColorRow("Colour of both lights (hex; the game's is FF9600)", Plugin.Cart.LanternLightColor, Lantern.Refresh);
+            OptionalColorRow("Character light colour (off = as the main light)", Colors.CharacterLightColor, "FFD080", null);
+            OptionalColorRow("Glow colour (off = the game's)", Colors.GlowColor, "FFB040", null);
+            OptionalColorRow("Lit glass tint (off = the game's)", Colors.LitGlassTint, "FFFFFF", null);
+            GUILayout.Label("The lights' brightness and reach and the glow's opacity are on the Lantern tab.", small);
+
+            Header("Reset");
+            bool confirming = Time.unscaledTime < confirmColorResetUntil;
+            if (GUILayout.Button(confirming ? "Click again: every colour back to its default" : "Reset all colours to the mod defaults"))
+            {
+                if (!confirming)
+                {
+                    confirmColorResetUntil = Time.unscaledTime + 4f;
+                }
+                else
+                {
+                    confirmColorResetUntil = -1f;
+                    Colors.ResetAll();
+                    swapSource = null;
+                }
+            }
+        }
+
+        private static string ShortName(MountColorRegion reg)
+        {
+            string n = reg.Name;
+            if (n.StartsWith("Donkey ", StringComparison.Ordinal)) n = n.Substring(7);
+            if (n.Length > 18) n = n.Substring(0, 17) + ".";
+            return char.ToUpperInvariant(n[0]) + n.Substring(1);
+        }
+
+        private static void DrawColorRegion(MountColorRegion region, Colors.RegionSettings s)
+        {
+            Header(region.Name + "  [" + Colors.Section + "." + region.Key + "]");
+            GUILayout.Label("The region's own colours: on top the game's, below what they become. Click one to swap it for an exact colour of your own.", small);
+            Locked(s.Swaps.Entry, out string swapText);
+            Dictionary<string, string> swaps = Colors.ParseSwaps(swapText);
+            const float size = 22f;
+            int perRow = Mathf.Max(4, Mathf.FloorToInt(ContentW / (size + 6f)));
+            for (int i = 0; i < region.SourceColors.Count; i += perRow)
+            {
+                GUILayout.BeginHorizontal();
+                for (int j = i; j < Mathf.Min(region.SourceColors.Count, i + perRow); j++)
+                {
+                    string hex = region.SourceColors[j];
+                    Colors.TryHex(hex, out Color32 src);
+                    Color32 dst = Colors.Preview(region.Key, src);
+                    GUILayout.BeginVertical(GUILayout.Width(size));
+                    Rect top = Swatch(src, size);
+                    Rect bottom = Swatch(dst, size);
+                    GUILayout.EndVertical();
+                    Rect both = new Rect(top.x, top.y, size, bottom.yMax - top.y);
+                    if (GUI.Button(both, GUIContent.none, GUIStyle.none))
+                    {
+                        swapSource = swapSource == hex ? null : hex;
+                    }
+                    if (Event.current.type == EventType.Repaint && (swapSource == hex || swaps.ContainsKey(hex)))
+                    {
+                        // a line above and below: white for the selected colour, grey for a swapped one
+                        Color frame = swapSource == hex ? Color.white : new Color(0.6f, 0.6f, 0.6f);
+                        GUI.DrawTexture(new Rect(both.x - 1f, both.y - 3f, size + 2f, 2f), Texture2D.whiteTexture, ScaleMode.StretchToFill, false, 0f, frame, 0f, 0f);
+                        GUI.DrawTexture(new Rect(both.x - 1f, both.yMax + 1f, size + 2f, 2f), Texture2D.whiteTexture, ScaleMode.StretchToFill, false, 0f, frame, 0f, 0f);
+                    }
+                }
+                GUILayout.EndHorizontal();
+            }
+
+            if (swapSource != null && ContainsHex(region.SourceColors, swapSource))
+            {
+                DrawSwapEditor(swapSource, s, swaps);
+            }
+            GUILayout.Label(swaps.Count == 0 ? "No swaps." : $"{swaps.Count} swap{(swaps.Count == 1 ? "" : "s")}: {Colors.FormatSwaps(swaps)}", small);
+
+            FloatSlider("Hue shift, degrees", s.Hue, -180f, 180f, 0, Colors.MarkDirty);
+            FloatSlider("Saturation (x; 0 = grey)", s.Saturation, 0f, 3f, 2, Colors.MarkDirty);
+            FloatSlider("Brightness (x)", s.Brightness, 0f, 3f, 2, Colors.MarkDirty);
+            FloatSlider("Contrast (x)", s.Contrast, 0f, 3f, 2, Colors.MarkDirty);
+            OptionalColorRow("Colorize: this hue, the art's shading", s.Colorize, "4A7BD0", Colors.MarkDirty);
+            if (Colors.TryHex(s.Colorize.Value, out _))
+            {
+                FloatSlider("    Colorize amount", s.ColorizeAmount, 0f, 1f, 2, Colors.MarkDirty);
+            }
+            OptionalColorRow("Tint: multiplied in", s.Tint, "FFFFFF", Colors.MarkDirty);
+            OptionalColorRow("Overlay: a flat colour mixed over it", s.Overlay, "C03030", Colors.MarkDirty);
+            if (Colors.TryHex(s.Overlay.Value, out _))
+            {
+                FloatSlider("    Overlay amount", s.OverlayAmount, 0f, 1f, 2, Colors.MarkDirty);
+            }
+            GUILayout.Label("Order: a swap wins; else hue, saturation, brightness, contrast, colorize, tint, overlay.", small);
+            if (GUILayout.Button("Reset this region"))
+            {
+                Colors.ResetRegion(region.Key);
+                swapSource = null;
+            }
+        }
+
+        private static bool ContainsHex(IReadOnlyList<string> list, string hex)
+        {
+            foreach (string h in list)
+            {
+                if (string.Equals(h, hex, StringComparison.OrdinalIgnoreCase)) return true;
+            }
+            return false;
+        }
+
+        // The replacement for one source colour: RGB sliders writing its SRC=DST pair into the region's Swaps.
+        private static void DrawSwapEditor(string src, Colors.RegionSettings s, Dictionary<string, string> swaps)
+        {
+            bool locked = Locked(s.Swaps.Entry, out _);
+            Colors.TryHex(src, out Color32 from);
+            bool has = swaps.TryGetValue(src, out string dstHex);
+            Color32 to = has && Colors.TryHex(dstHex, out Color32 d) ? d : Colors.Preview(colorRegion, from);
+            GUILayout.BeginHorizontal();
+            GUILayout.Label($"Swap #{src} for #{Colors.Hex(to)}", LabelFor(s.Swaps.Entry), GUILayout.Width(LabelW));
+            Swatch(to, 22f);
+            GUILayout.EndHorizontal();
+            GUI.enabled = !locked;
+            Color c = to;
+            Color n = c;
+            n.r = Channel("Red", c.r);
+            n.g = Channel("Green", c.g);
+            n.b = Channel("Blue", c.b);
+            GUILayout.BeginHorizontal();
+            bool remove = GUILayout.Button(has ? "Remove this swap" : "(no swap yet)") && has;
+            bool clear = GUILayout.Button("Remove every swap of this region") && swaps.Count > 0;
+            GUILayout.EndHorizontal();
+            GUI.enabled = true;
+            if (locked)
+            {
+                return;
+            }
+            if (clear)
+            {
+                s.Swaps.Value = "";
+            }
+            else if (remove)
+            {
+                swaps.Remove(src);
+                s.Swaps.Value = Colors.FormatSwaps(swaps);
+            }
+            else if (n != c)
+            {
+                swaps[src] = Colors.Hex(n);
+                s.Swaps.Value = Colors.FormatSwaps(swaps);
+            }
+        }
+
+        // A colour square; returns its rectangle.
+        private static Rect Swatch(Color32 c, float size)
+        {
+            Rect r = GUILayoutUtility.GetRect(size, size, GUILayout.Width(size), GUILayout.Height(size));
+            if (Event.current.type == EventType.Repaint)
+            {
+                GUI.DrawTexture(r, Texture2D.whiteTexture, ScaleMode.StretchToFill, false, 0f, c, 0f, 0f);
+            }
+            return r;
+        }
+
+        // A hex colour that can be off (empty): an On/Off button, a swatch, and RGB sliders while on.
+        private static void OptionalColorRow(string name, ConfigEntry<string> entry, string whenOn, Action onChange)
+        {
+            bool locked = Locked(entry, out string shown);
+            bool on = Colors.TryHex(shown, out Color32 c32);
+            GUILayout.BeginHorizontal();
+            GUILayout.Label(name, LabelFor(entry), GUILayout.Width(LabelW));
+            if (on)
+            {
+                Swatch(c32, 18f);
+                GUILayout.Label(Colors.Hex(c32), label, GUILayout.Width(62f));
+            }
+            GUI.enabled = !locked;
+            bool clicked = GUILayout.Button(on ? "On" : "Off", GUILayout.Width(44f)) && !locked;
+            GUI.enabled = true;
+            GUILayout.EndHorizontal();
+            if (!locked && ResetOnRightClick(entry, onChange)) { return; }
+            if (clicked)
+            {
+                entry.Value = on ? "" : whenOn;
+                onChange?.Invoke();
+                return;
+            }
+            if (!on)
+            {
+                return;
+            }
+            GUI.enabled = !locked;
+            Color c = c32;
+            Color n = c;
+            n.r = Channel("Red", c.r);
+            n.g = Channel("Green", c.g);
+            n.b = Channel("Blue", c.b);
+            GUI.enabled = true;
+            if (!locked && n != c)
+            {
+                entry.Value = Colors.Hex(n);
+                onChange?.Invoke();
+            }
+        }
+
 
         private static void DrawDebug()
         {

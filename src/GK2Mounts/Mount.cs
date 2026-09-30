@@ -350,6 +350,10 @@ namespace GK2Mounts
             {
                 Lantern.Tick();
             }
+            if (partsReady)
+            {
+                Colors.Tick(); // after the lantern: the hanging lamp has copied the pole's look (its LUT too)
+            }
             if (seatPending && partsReady)
             {
                 seatPending = false;
@@ -484,6 +488,10 @@ namespace GK2Mounts
         // style null: a General (behaviour) value, which applies to either style.
         internal static void OnTuningChanged(MountStyle? style)
         {
+            if (!style.HasValue)
+            {
+                Colors.MarkDirty(); // a Colors (or behaviour) override: rebuilt at the next frame
+            }
             if (!mounted || (style.HasValue && activeStyle != style.Value))
             {
                 return;
@@ -881,6 +889,7 @@ namespace GK2Mounts
                         }
                     }
                 }
+                Colors.Attach(donkey); // the Colors tab: nothing is touched while every colour is at its default
                 HideDonkeyForAFrame(); // the facing is applied by Follow this frame; the animator shows it next frame
             }
             catch (Exception e)
@@ -1710,6 +1719,8 @@ namespace GK2Mounts
                 }
             }
             hiddenRenderers.Clear();
+            // The same for the colours: materials, keywords and LUTs back to the game's before the parts are pooled.
+            Colors.Detach();
             if (donkey != null)
             {
                 try

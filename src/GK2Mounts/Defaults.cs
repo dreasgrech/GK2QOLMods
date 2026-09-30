@@ -238,6 +238,12 @@ namespace GK2Mounts
                             tracked.Add((s.Section, e));
                         }
                     }
+                    // The colours: the group is the entry's own section ([Colors], [Colors.Coat], ...), which the
+                    // defaults file is written with.
+                    foreach (ConfigEntryBase e in Colors.AllEntries())
+                    {
+                        tracked.Add((e.Definition.Section, e));
+                    }
                     trackedSet = new HashSet<ConfigEntryBase>();
                     foreach (var t in tracked)
                     {

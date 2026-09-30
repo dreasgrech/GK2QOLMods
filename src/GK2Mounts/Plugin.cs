@@ -363,6 +363,8 @@ namespace GK2Mounts
                 speed: 1.5f, depth: 0f, center: 0f, riderPx: 0, torsoPx: 0,
                 autoSeat: false, seatAdjustPx: 0, seatOffset: 0f, bob: false, pose: RiderPose.Walk, freeze: false,
                 legs: false, legSource: LegSource.Body, legHeight: 10, legX: 0, legY: 0);
+            // [Colors] and [Colors.<region>]: the same donkey in both styles, so one set (Colors.cs).
+            Colors.Bind(Config);
 
             TuningWindowEnabled = Config.Bind("Debug", "TuningWindow", false,
                 "Dev tool for mod authors: a tuning panel for every mount value in the top-right corner while mounted, plus the investigation tools on its Debug tab (and F5). Values apply live and are saved to this file as you change them.");

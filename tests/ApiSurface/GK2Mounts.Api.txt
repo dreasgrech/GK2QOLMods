@@ -5,6 +5,14 @@ enum GK2Mounts.Api.CartSlopeStyle
 enum GK2Mounts.Api.LegSource
   Body = 0
   Drawn = 1
+class GK2Mounts.Api.MountColorRegion
+  field static readonly System.Collections.Generic.IReadOnlyList<string> SettingNames
+  property string Area { get; }
+  property string Key { get; }
+  property string Name { get; }
+  property System.Collections.Generic.IReadOnlyList<string> SourceColors { get; }
+  method string KeyOf(string setting)
+  method string ToString()
 enum GK2Mounts.Api.MountFeature
   Cargo = 0
   Lantern = 1
@@ -21,6 +29,8 @@ struct GK2Mounts.Api.MountResult
 static class GK2Mounts.Api.Mounts
   field static readonly System.Version ApiVersion
   property static GK2Mounts.Api.MountTuning Behaviour { get; }
+  property static System.Collections.Generic.IReadOnlyList<GK2Mounts.Api.MountColorRegion> ColorRegions { get; }
+  property static GK2Mounts.Api.MountTuning Colors { get; }
   property static bool IsAvailable { get; }
   property static bool IsMounted { get; }
   property static string Owner { get; }
@@ -62,3 +72,6 @@ enum GK2Mounts.Api.RiderPose
   Idle = 0
   FishingIdle = 203
   FocusedWalk = 41
+enum GK2Mounts.Api.SpriteColorMethod
+  Palette = 0
+  Lut = 1
