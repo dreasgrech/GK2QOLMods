@@ -222,7 +222,7 @@ namespace GK2Mounts
 
         private static void Hoof(AnimationComponentBase ac, Transform at)
         {
-            string id = S.HoofSoundId.Value;
+            string id = S.HoofSoundId.Value?.Trim();
             if (string.IsNullOrEmpty(id))
             {
                 SurfaceType surface = SurfaceType.Dirt;
@@ -380,6 +380,7 @@ namespace GK2Mounts
         // An id the game does not have is refused (the game would play its placeholder clip instead) and logged once.
         private static SoundHandler Play(string id, Transform at, float volume, float pitch)
         {
+            id = id?.Trim(); // a hand-edited or pasted id may carry spaces
             if (string.IsNullOrEmpty(id) || at == null || !LazyAudio.IsInitialized)
             {
                 return null;
@@ -427,6 +428,7 @@ namespace GK2Mounts
             try
             {
                 AudioConfig cfg = LazySingletonSO<AudioConfig>.Instance;
+                id = id?.Trim();
                 return !string.IsNullOrEmpty(id) && cfg != null && cfg.Get(id) != null;
             }
             catch

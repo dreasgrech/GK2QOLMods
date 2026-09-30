@@ -94,6 +94,9 @@ namespace GK2Mounts
         // The mounted donkey, for the Debug tab's cargo investigation (null while on foot).
         internal static Wgo Donkey => mounted ? donkey : null;
 
+        // General.MountWgoId without the spaces a hand edit or a paste may leave around it.
+        private static string WgoId => (Plugin.MountWgoId.Value ?? "").Trim();
+
         // Cargo was added or removed: the prefab's own drawer may have swapped the empty and the loaded cart body, so
         // the list of lifted parts is rebuilt from the parts active now. Every part goes back to its prefab position
         // first, so the current lift is not baked into the new base positions.
@@ -592,15 +595,15 @@ namespace GK2Mounts
             {
                 return "Not while building.";
             }
-            WGODef def = GameBalance.Me?.GetData<WGODef>(Plugin.MountWgoId.Value);
+            WGODef def = GameBalance.Me?.GetData<WGODef>(WgoId);
             if (def == null)
             {
-                return "There is no such animal (" + Plugin.MountWgoId.Value + ").";
+                return "There is no such animal (" + WgoId + ").";
             }
             string sideEffect = WhyDefinitionTouchesTheSave(def);
             if (sideEffect != null)
             {
-                return "Can't ride a " + Plugin.MountWgoId.Value + ": " + sideEffect;
+                return "Can't ride a " + WgoId + ": " + sideEffect;
             }
             return null;
         }
@@ -764,7 +767,7 @@ namespace GK2Mounts
         {
             try
             {
-                string id = Plugin.MountWgoId.Value;
+                string id = WgoId;
                 WgoData data;
                 SuppressScripts = true;
                 try
@@ -786,7 +789,7 @@ namespace GK2Mounts
             }
             catch (Exception e)
             {
-                Plugin.Log.LogError($"Mount: spawning [{Plugin.MountWgoId.Value}] failed: {e}");
+                Plugin.Log.LogError($"Mount: spawning [{WgoId}] failed: {e}");
                 DestroyDonkey();
                 return false;
             }

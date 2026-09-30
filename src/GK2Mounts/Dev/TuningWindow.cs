@@ -277,7 +277,7 @@ namespace GK2Mounts
             Header("Setup");
             GUILayout.BeginHorizontal();
             GUILayout.Label("Mount: world-object id to summon (General.MountWgoId)", label, GUILayout.Width(LabelW));
-            string wgo = GUILayout.TextField(Plugin.MountWgoId.Value ?? "", GUILayout.Width(150f));
+            string wgo = GUILayout.TextField(Plugin.MountWgoId.Value ?? "", GUILayout.Width(150f)).Trim(); // ids have no spaces
             GUILayout.EndHorizontal();
             if (ResetOnRightClick(Plugin.MountWgoId, null)) { }
             else if (wgo != Plugin.MountWgoId.Value)
@@ -570,15 +570,15 @@ namespace GK2Mounts
             GUI.enabled = !locked;
             string v = GUILayout.TextField(shown ?? "", GUILayout.Width(LabelW));
             GUI.enabled = true;
-            string id = (v ?? "").Trim();
+            string id = (v ?? "").Trim(); // stored trimmed: a space around a pasted id would not be found
             bool ok = (allowEmpty && id.Length == 0) || MountSounds.KnownId(id);
             GUILayout.Label(ok ? "" : "unknown id", small);
             GUILayout.EndHorizontal();
             if (locked) { return; }
             if (ResetOnRightClick(entry, null)) { return; }
-            if (v != entry.Value)
+            if (id != entry.Value)
             {
-                entry.Value = v;
+                entry.Value = id;
             }
         }
 
@@ -937,7 +937,7 @@ namespace GK2Mounts
             donkeyEvent = GUILayout.TextField(donkeyEvent, GUILayout.Width(110f));
             if (GUILayout.Button("Send", GUILayout.Width(50f)))
             {
-                Plugin.Log.LogInfo("[script] " + ScriptDump.FireEventOnWgo("npc_donkey", donkeyEvent));
+                Plugin.Log.LogInfo("[script] " + ScriptDump.FireEventOnWgo("npc_donkey", donkeyEvent.Trim()));
             }
             GUILayout.EndHorizontal();
             GUILayout.Label("Other events from the dumped graph: move_to_morgue, full_cycle_back, move_from_morgue, stay_morgue, Disable, SetInteractive, SetNonInteractive.", small);
@@ -958,7 +958,7 @@ namespace GK2Mounts
             cargoItemId = GUILayout.TextField(cargoItemId, GUILayout.Width(110f));
             if (GUILayout.Button("Put in cart inventory", GUILayout.Width(170f)))
             {
-                Plugin.Log.LogInfo("[cargo] " + CarryProbe.TestLoad(cargoItemId));
+                Plugin.Log.LogInfo("[cargo] " + CarryProbe.TestLoad(cargoItemId.Trim()));
             }
             if (GUILayout.Button("Take first out", GUILayout.Width(120f)))
             {
@@ -984,7 +984,7 @@ namespace GK2Mounts
             Header("Spawn a carryable item in front of the keeper (test)");
             GUILayout.BeginHorizontal();
             System.Collections.Generic.List<string> big = CarryProbe.BigItemIds();
-            int at = big.IndexOf(spawnItemId);
+            int at = big.IndexOf(spawnItemId.Trim());
             if (GUILayout.Button("<", GUILayout.Width(28f)) && big.Count > 0)
             {
                 spawnItemId = big[(at <= 0 ? big.Count : at) - 1];
@@ -996,7 +996,7 @@ namespace GK2Mounts
             }
             if (GUILayout.Button("Drop it here", GUILayout.Width(120f)))
             {
-                Plugin.Log.LogInfo("[cargo] " + CarryProbe.SpawnDrop(spawnItemId));
+                Plugin.Log.LogInfo("[cargo] " + CarryProbe.SpawnDrop(spawnItemId.Trim()));
             }
             GUILayout.EndHorizontal();
             GUILayout.Label($"Uses the game's own drop routine at the keeper's drop position, so the item is a normal world drop (it is saved like any other; pick it up with the interaction key). < and > cycle through the {big.Count} big items the game defines (zombies excluded, they are linked world objects). A corpse is generated from the delivery script's body definition.", small);
@@ -1181,11 +1181,18 @@ namespace GK2Mounts
                 GUILayout.Label(pair.Tuned
                     ? "  Tuned: exactly this layout from now on; each item moves on its own, also when stacked. A button above forgets the tuning and lays the pair out again that way (auto: the packer decides)."
                     : "  Automatic: pick the arrangement (auto: across the bed when both widths fit, else end to end, else stacked; side = across, along = end to end, stack = on top). Then move an item: that tunes the pair, starting from this layout.", small);
-                for (int k = 0; k < 2; k++)
+                // Listed as they stand: the higher item first, so a stack reads top to bottom as on screen (in packing
+                // order the bottom item came first and the top item's sliders were the lower block). k stays the packing
+                // index, which is what maps a block to PosA or PosB.
+                bool topFirst = p1.Pos.y > p0.Pos.y + 0.01f;
+                for (int n = 0; n < 2; n++)
                 {
+                    int k = topFirst ? 1 - n : n;
                     Cargo.PlacedItem p = k == 0 ? p0 : p1;
+                    Cargo.PlacedItem other = k == 0 ? p1 : p0;
                     Vector3 v = p.Pos;
-                    GUILayout.Label($"  {p.Id}{(p.OnTop ? " (on top)" : "")}: place in this pair (height above the cargo floor)", label);
+                    string where = Mathf.Abs(p.Pos.y - other.Pos.y) <= 0.01f ? "" : p.Pos.y > other.Pos.y ? " (on top)" : " (bottom)";
+                    GUILayout.Label($"  {p.Id}{where}: place in this pair (height above the cargo floor)", label);
                     bool moved = false;
                     moved |= RawSlider("    along (tail - / head +)", ref v.x, -0.6f, 0.6f, canReset: false);
                     moved |= RawSlider("    up", ref v.y, -0.3f, 1.0f, canReset: false);
