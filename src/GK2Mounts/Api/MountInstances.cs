@@ -86,7 +86,56 @@ namespace GK2Mounts.Api
             return MountResult.Success;
         }
 
-        // Gone for good, with anything on its cart. A ridden one is dismounted first.
+        // Its view is spawned and prepared in the keeper's scene: Ride, and the keeper's controls, work from now on.
+        // After a spawn or ComeToKeeper this takes a frame or a few (the game loads the view's parts).
+        public bool IsReady
+        {
+            get
+            {
+                PlayerData pd = MainGame.Instance != null ? MainGame.PlayerData : null;
+                return Exists && I.Ready && pd != null && I.SceneId == pd.currentGameSceneId;
+            }
+        }
+
+        // It comes to the keeper: into his scene, to where a ride would put it, facing his way (default: as he faces),
+        // so that Ride right after moves no one. A cart comes with its donkey. Refused while ridden or outside a game.
+        public MountResult ComeToKeeper(bool? facingRight = null)
+        {
+            if (!Exists)
+            {
+                return MountResult.Refused("It is gone.");
+            }
+            if (I.IsRidden)
+            {
+                return MountResult.Refused("Not while it is ridden.");
+            }
+            if (!Mount.Instance.IsInGame(out PlayerController pc, out GameScene scene))
+            {
+                return MountResult.Refused("Not in a game.");
+            }
+            bool right = facingRight ?? pc.PlayerData.Direction.x >= 0f;
+            using (Mount.Bind(I))
+            {
+                I.ComeTo(pc, scene, right ? 1f : -1f);
+            }
+            return MountResult.Success;
+        }
+
+        // Everything on its cart onto the ground at the cart, for good; returns how many. Call it before Remove to keep
+        // the cargo in the world. Nothing while ridden (the ride sets items down with the interact key).
+        public int SetDownCargo()
+        {
+            if (!Exists)
+            {
+                return 0;
+            }
+            using (Mount.Bind(I))
+            {
+                return I.SetDownCargo();
+            }
+        }
+
+        // Gone for good, with anything on its cart (SetDownCargo first to keep it). A ridden one is dismounted first.
         public void Remove()
         {
             Mount.Remove(I, "removed");

@@ -233,6 +233,9 @@ MountHandle left = Mounts.Unhitch(donkey);                        // the cart st
 | `Tuning` | Its own settings (`InstanceTuning`: `Get`, `Set`, `Clear`, `Reset`, `IsSet`, `SetBy`, `Keys`). Keys are those of `Mounts.Tuning(style)`, `Mounts.Behaviour` and `Mounts.Colors`; a style key applies in whichever style it is in. This donkey's value wins over everyone's (cfg and session overrides). |
 | `Ride(showMessage)` | The keeper gets on and is put on the seat. The same checks and rules as `TryMount`. |
 | `MoveTo(position, facingRight)` | Moves a standing one. |
+| `IsReady` | Its view is loaded in the keeper's scene: `Ride` works. It takes a few frames after a spawn, `ComeToKeeper`, a hitch or an unhitch. |
+| `ComeToKeeper(facingRight)` | It comes to the keeper, into his scene, to where a ride would put it, so `Ride` right after moves no one. The showcase calls its donkey this way. |
+| `SetDownCargo()` | Everything on its cart is set down on the ground at the cart. Call it before `Remove` to keep the cargo. |
 | `Remove()` | Gone, with anything on its cart; a ridden one is dismounted first. |
 
 **Events:** `InstanceSpawned`, `InstanceRemoved`, `Hitched(donkey, oldCart)`, `Unhitched(donkey, newCart)`. The

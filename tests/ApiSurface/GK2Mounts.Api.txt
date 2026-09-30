@@ -35,14 +35,17 @@ class GK2Mounts.Api.MountHandle
   property bool HasCart { get; }
   property bool HasDonkey { get; }
   property int Id { get; }
+  property bool IsReady { get; }
   property bool IsRidden { get; }
   property string Owner { get; }
   property UnityEngine.Vector3 Position { get; }
   property string SceneId { get; }
   property GK2Mounts.Api.InstanceTuning Tuning { get; }
+  method GK2Mounts.Api.MountResult ComeToKeeper(System.Nullable<bool> facingRight = null)
   method GK2Mounts.Api.MountResult MoveTo(UnityEngine.Vector3 position, System.Nullable<bool> facingRight = null)
   method void Remove()
   method GK2Mounts.Api.MountResult Ride(bool showMessage = True)
+  method int SetDownCargo()
   method string ToString()
 struct GK2Mounts.Api.MountResult
   property bool Ok { get; }

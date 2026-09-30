@@ -366,7 +366,15 @@ namespace GK2Mounts
                     return reason;
                 }
                 MountRules.Poll(force: true);
-                pc.SetPosition(KeeperSpotFor(donkey.transform.position, riderFacingX));
+                // Called to the keeper and not moved since (ComeToKeeper, the showcase's keys): he stays where he is,
+                // which is where its place was worked out from. Otherwise the spot on its seat, from its place (not its
+                // view's transform: the view follows a move only in the next StandTick, and riding in the same frame put
+                // the keeper at the old spot, found 2026-09-30).
+                if (!(cameFor.HasValue && (Position - cameFor.Value.Place).sqrMagnitude < 0.0001f))
+                {
+                    pc.SetPosition(KeeperSpotFor(Position, riderFacingX));
+                }
+                cameFor = null;
                 mounted = true;
                 Ridden = this;
                 riderAttached = true;
@@ -455,6 +463,85 @@ namespace GK2Mounts
                     ApplyPoseNow();
                     Mounts.RaiseMounted(activeStyle); // as after Mounts.SwitchStyle: the ride goes on in this style
                 }
+            }
+
+            // The instance comes to the keeper (MountHandle.ComeToKeeper): into his scene, to the place a ride would put
+            // it (Follow's placement for the keeper where he stands), facing his way, so that riding it moves no one.
+            // Set by ComeTo: the place it came to and where the keeper stood then (RideFromWorld leaves him there).
+            private (Vector3 Place, Vector3 Keeper)? cameFor;
+
+            internal void ComeTo(PlayerController pc, GameScene scene, float facingX)
+            {
+                float shownFacing = riderFacingX; // the facing the view is drawn in now
+                riderFacingX = facingX >= 0f ? 1f : -1f;
+                PlayerData pd = pc.PlayerData;
+                Rigidbody rb = pc.PhysicalBody.Rb;
+                Vector3 basePos = rb != null ? rb.transform.position : pd.position.Value;
+                Vector3 away = AwayFromCamera();
+                Vector3 right = Vector3.Cross(Vector3.up, away).normalized;
+                float lateral = 0f;
+                if (Mathf.Abs(S.CenterOffset.Value) > 0.0001f)
+                {
+                    if (bodySprite != null && bodySprite && donkey != null && donkey)
+                    {
+                        // Measured in the facing the view shows; the other facing mirrors it.
+                        lateral = Vector3.Dot(bodySprite.position - donkey.transform.position, right);
+                        if (shownFacing * riderFacingX < 0f)
+                        {
+                            lateral = -lateral;
+                        }
+                    }
+                    else
+                    {
+                        lateral = S.CenterOffset.Value * riderFacingX; // Follow's own fallback without a measured body
+                    }
+                }
+                float sign = Mathf.Abs(lateral) > 0.001f ? Mathf.Sign(lateral) : riderFacingX;
+                float fore = S.RiderOffsetPx.Value * 0.02f * sign;
+                Vector3 target = SnapToGround(basePos + away * S.Depth.Value - right * (lateral + fore));
+                if (SceneId != scene.Id)
+                {
+                    DestroyDonkey(); // spawned again in the keeper's scene by StandTick
+                    SceneId = scene.Id;
+                    nextSpawnTry = 0f;
+                    spawnFailures = 0;
+                }
+                Position = target;
+                cameFor = (target, basePos);
+                shaftDropDeg = float.NaN;
+                if (donkey != null && donkey && partsReady)
+                {
+                    Stand(); // the view there now, not next frame
+                }
+            }
+
+            // Sets everything on this cart down on the ground at it, for good (a mod removing its cart keeps the cargo in
+            // the world this way). Not while ridden: the ride has its own set-down. Returns how many were set down.
+            internal int SetDownCargo()
+            {
+                if (mounted)
+                {
+                    return 0;
+                }
+                int n = 0;
+                Vector3 at = CartPoint();
+                foreach (Item it in CargoRig.ItemsNow())
+                {
+                    if (MainGame.Instance.dropSystem.DropItem(it, SceneId, at))
+                    {
+                        CargoRig.Forget(it);
+                        n++;
+                    }
+                    else
+                    {
+                        Plugin.Log.LogWarning($"Cargo: the game refused to set {it.id} of {Describe()} down; it stays on the cart.");
+                    }
+                }
+                if (n > 0)
+                {
+                    Plugin.Log.LogInfo($"Cargo: {Describe()}: {n} item(s) set down at the cart.");
+                }
+                return n;
             }
 
             // Moves a standing instance (MountHandle.MoveTo). Ground height from the ground under the point.

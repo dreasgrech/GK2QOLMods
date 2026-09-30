@@ -7,11 +7,17 @@ using UnityEngine;
 
 namespace GK2Showcase
 {
-    // The playable mount, built only on the public GK2 Mounts API (docs/mounts-api-design.md): the example of how
-    // another mod uses it. GK2 Mounts itself does nothing on its own; this mod gives the player the keys and the ride
+    // The playable mount, built only on the public GK2 Mounts API (docs/mounts-api.md): the example of how another mod
+    // uses it. GK2 Mounts itself does nothing on its own; this mod gives the player a donkey, the keys and the ride
     // behaviour switches. Placeholder name until the user picks one.
-    //   RideKey (H)  summon the donkey to ride on; again: dismount; while in the cart: switch to riding
-    //   CartKey (G)  summon the donkey with its cart; again: dismount; while riding: switch to the cart
+    //
+    // The keeper's donkey is an instance in the world (Mounts.SpawnDonkey), spawned the first time it is called and
+    // kept from then on: a dismount leaves it standing where the keeper got off, with its cart and cargo, and the
+    // interact key next to it rides it again (the core's own control). Its cart is this mod's too: left standing when
+    // the keeper rides without it (Mounts.Unhitch), brought back and hitched when he wants it (ComeToKeeper, Hitch).
+    //   RideKey (H)  on foot: the donkey comes and he rides on its back; riding: get off; in the cart: leave the cart
+    //   CartKey (G)  on foot: the donkey comes with its cart and he drives; driving: get off; riding: take the cart
+    //   SendAwayKey  the donkey and its cart go (their cargo is set down first); none by default
     //   BellKey      ring the donkey's bell while mounted (none by default)
     // The behaviour switches are handed to the core as session overrides (Mounts.Behaviour), so the core's dev panel
     // shows them locked and set by this mod.
@@ -24,12 +30,12 @@ namespace GK2Showcase
         public const string Guid = "dreas.gk2.showcase";
         public const string Version = "0.1.0";
 
-        // The API this mod is written against: 0.4 added Mounts.Behaviour.
-        private static readonly Version NeedsApi = new Version(0, 4, 0);
+        // The API this mod is written against: 0.6 added donkeys and carts in the world (MountHandle).
+        private static readonly Version NeedsApi = new Version(0, 6, 0);
 
         internal static ManualLogSource Log;
 
-        internal ConfigEntry<KeyboardShortcut> rideKey, cartKey, bellKey;
+        internal ConfigEntry<KeyboardShortcut> rideKey, cartKey, bellKey, sendAwayKey;
         internal ConfigEntry<bool> stayThroughDoors, dismountIndoors, showMessages;
         private bool ready;
 
@@ -47,6 +53,8 @@ namespace GK2Showcase
                 "Summon the donkey with its cart and ride it while it pulls; press again to dismount. While riding: switch to the cart.");
             bellKey = Config.Bind("Keys", "BellKey", KeyboardShortcut.Empty,
                 "While mounted: ring the donkey's bell. None = no key.");
+            sendAwayKey = Config.Bind("Keys", "SendAwayKey", KeyboardShortcut.Empty,
+                "Send your donkey and its cart away (what is on the cart is set down where it stands). The next ride or cart key brings a new one. None = no key.");
             stayThroughDoors = Config.Bind("Behaviour", "StayMountedThroughDoors", false,
                 "Keep riding through doors that load another area (the donkey is summoned again there). Off: the ride ends at such a door.");
             dismountIndoors = Config.Bind("Behaviour", "DismountIndoors", true,
@@ -61,6 +69,9 @@ namespace GK2Showcase
                 FrameworkLink.TryRegister(Config);
                 return;
             }
+            Mounts.InstanceRemoved += OnInstanceRemoved;
+            Mounts.Hitched += OnHitched;
+            Mounts.Unhitched += OnUnhitched;
             foreach (ConfigEntry<bool> e in new[] { stayThroughDoors, dismountIndoors, showMessages })
             {
                 ConfigEntry<bool> entry = e;
@@ -102,9 +113,17 @@ namespace GK2Showcase
                 {
                     Use(MountStyle.Cart);
                 }
+                else if (Pressed(sendAwayKey))
+                {
+                    SendAway();
+                }
                 if (Pressed(bellKey) && Mounts.IsMounted)
                 {
                     Mounts.RingBell();
+                }
+                if (pending.HasValue)
+                {
+                    ContinuePending();
                 }
             }
             catch (Exception e)
@@ -133,27 +152,181 @@ namespace GK2Showcase
             return true;
         }
 
-        // On foot: mount in that style. Mounted in that style: dismount. Mounted in the other style: switch.
-        private static void Use(MountStyle style)
+        // ------------------------------------------------------------------ the keeper's donkey (all through the API)
+
+        private MountHandle donkey; // this mod's donkey in the world (spawned the first time it is called)
+        private MountHandle cart;   // this mod's cart while it stands on its own (left by an unhitch, or not yet hitched)
+
+        // A ride asked for on foot, finished over the next frames: the donkey's view has to load first (IsReady), and
+        // hitching or unhitching it builds a new view again.
+        private MountStyle? pending;
+        private float pendingUntil;
+
+        private const float PendingSeconds = 5f;
+
+        private void Use(MountStyle style)
         {
-            if (!Mounts.IsMounted)
+            if (Mounts.IsMounted)
             {
-                Mounts.TryMount(Guid, style);
+                UseWhileMounted(style);
+                return;
             }
-            else if (Mounts.Style == style)
+            // On foot: the donkey (spawned the first time) comes to the keeper, then the ride starts once it is ready.
+            if (donkey == null || !donkey.Exists)
+            {
+                donkey = Mounts.SpawnDonkey(Guid, Vector3.zero, withCart: false); // placed by ComeToKeeper right below
+                if (donkey == null)
+                {
+                    Log.LogWarning("Could not spawn the donkey (see the GK2 Mounts log).");
+                    return;
+                }
+                Log.LogInfo($"Spawned the keeper's donkey #{donkey.Id}.");
+            }
+            MountResult come = donkey.ComeToKeeper();
+            if (!come.Ok)
+            {
+                Log.LogInfo("The donkey cannot come: " + come.Reason);
+                return;
+            }
+            pending = style;
+            pendingUntil = Time.unscaledTime + PendingSeconds;
+            ContinuePending();
+        }
+
+        // Mounted in that style: get off (the donkey stays). Mounted in the other style: the cart is left standing
+        // (to Ride) or brought and hitched (to Cart).
+        private void UseWhileMounted(MountStyle style)
+        {
+            if (Mounts.Style == style)
             {
                 Mounts.Dismount("dismounted");
+                return;
             }
-            else
+            MountHandle riding = Mounts.Riding;
+            if (riding == null)
             {
-                Mounts.SwitchStyle(style);
+                Mounts.SwitchStyle(style); // the summon of another mod (Mounts.TryMount): its own way
+                return;
             }
+            if (style == MountStyle.Ride)
+            {
+                MountHandle left = Mounts.UnhitchRidden();
+                if (left != null && riding == donkey)
+                {
+                    cart = left;
+                }
+                return;
+            }
+            string why = BringCart(riding);
+            if (why != null)
+            {
+                Log.LogInfo("No cart: " + why);
+            }
+        }
+
+        // This mod's cart (spawned the first time) comes to where the donkey stands (or is ridden) and is hitched.
+        private string BringCart(MountHandle to)
+        {
+            if (cart == null || !cart.Exists)
+            {
+                cart = Mounts.SpawnCart(Guid, Vector3.zero);
+                if (cart == null)
+                {
+                    return "could not spawn a cart";
+                }
+            }
+            MountResult come = cart.ComeToKeeper(to.FacingRight);
+            if (!come.Ok)
+            {
+                return come.Reason;
+            }
+            MountResult hitched = Mounts.Hitch(to, cart);
+            return hitched.Ok ? null : hitched.Reason;
+        }
+
+        private void ContinuePending()
+        {
+            if (Time.unscaledTime > pendingUntil || donkey == null || !donkey.Exists)
+            {
+                if (donkey != null && donkey.Exists)
+                {
+                    Log.LogInfo("The donkey did not become ready in time; press the key again.");
+                }
+                pending = null;
+                return;
+            }
+            if (!donkey.IsReady)
+            {
+                return; // its view is loading (after a spawn, a move into this scene, a hitch or an unhitch)
+            }
+            MountStyle style = pending.Value;
+            if (style == MountStyle.Cart && !donkey.HasCart)
+            {
+                string why = BringCart(donkey);
+                if (why != null)
+                {
+                    Log.LogInfo("No cart: " + why);
+                    pending = null;
+                }
+                return; // hitched: a new view, ready in a frame or two
+            }
+            if (style == MountStyle.Ride && donkey.HasCart)
+            {
+                cart = Mounts.Unhitch(donkey);
+                if (cart == null)
+                {
+                    pending = null;
+                }
+                return;
+            }
+            pending = null;
+            donkey.Ride();
+        }
+
+        // The donkey and its cart go for good; whatever is on a cart is set down where it stands first.
+        private void SendAway()
+        {
+            pending = null;
+            if (donkey != null && donkey.IsRidden)
+            {
+                Mounts.Dismount("sent away");
+            }
+            foreach (MountHandle h in new[] { donkey, cart })
+            {
+                if (h != null && h.Exists)
+                {
+                    h.SetDownCargo();
+                    h.Remove();
+                }
+            }
+            donkey = null;
+            cart = null;
+            Log.LogInfo("Sent the donkey away.");
+        }
+
+        private void OnInstanceRemoved(MountHandle h)
+        {
+            if (h == donkey) donkey = null;
+            if (h == cart) cart = null;
+        }
+
+        private void OnHitched(MountHandle d, MountHandle c)
+        {
+            if (c == cart) cart = null; // it is part of the donkey now
+        }
+
+        private void OnUnhitched(MountHandle d, MountHandle c)
+        {
+            if (d == donkey) cart = c;
         }
 
         private void OnDestroy()
         {
             try
             {
+                Mounts.InstanceRemoved -= OnInstanceRemoved;
+                Mounts.Hitched -= OnHitched;
+                Mounts.Unhitched -= OnUnhitched;
                 Mounts.ClearTuning(Guid);
             }
             catch

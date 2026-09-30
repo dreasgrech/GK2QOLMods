@@ -74,6 +74,7 @@ namespace GK2Showcase
                 Key(s, p.rideKey, "Ride the donkey", 0);
                 Key(s, p.cartKey, "Drive the cart", 1);
                 Key(s, p.bellKey, "Ring the bell", 2);
+                Key(s, p.sendAwayKey, "Send the donkey away", 3);
                 Toggle(s, p.dismountIndoors, "Dismount indoors", 0);
                 Toggle(s, p.stayThroughDoors, "Stay mounted through doors to other areas", 1);
                 Toggle(s, p.showMessages, "Say why mounting is refused", 2);
