@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using BepInEx;
+using LazyBearTechnology;
 using UnityEngine;
 
 namespace GK2Mounts
@@ -9,8 +11,8 @@ namespace GK2Mounts
     // - riding a donkey without its cart, the interact key next to a free cart, or General.HitchKey, hitches it;
     // - riding a donkey with its cart, General.HitchKey leaves the cart standing.
     // The interact key only counts when the game has nothing of its own to do with it (no item or object in front of
-    // the keeper): PlayerInputHandler_UpdateInput_Patch asks TryInteract first. A label over the donkey or cart in reach
-    // says what the key does (the game's own hints need an interactable world object, which ours are not).
+    // the keeper): PlayerInputHandler_UpdateInput_Patch asks TryInteract first. The game's own interaction hint over the
+    // donkey or cart in reach says what the key does (Hint, below).
     internal static class InstanceControls
     {
         private const float RideReach = 1.3f;   // keeper to the donkey's body
@@ -25,9 +27,22 @@ namespace GK2Mounts
         {
             target = null;
             label = null;
+            UpdateHint();
         }
 
         internal static void Tick(PlayerController pc)
+        {
+            try
+            {
+                Find(pc);
+            }
+            finally
+            {
+                UpdateHint();
+            }
+        }
+
+        private static void Find(PlayerController pc)
         {
             target = null;
             label = null;
@@ -44,7 +59,7 @@ namespace GK2Mounts
                         target = Nearest(pc, pc.PlayerData.position.Value, RideReach, i => i.HasDonkey);
                         if (target != null)
                         {
-                            label = Key(GameKeyName()) + (target.HasCart ? " Drive" : " Ride");
+                            label = HintText(target.HasCart ? "Drive" : "Ride");
                         }
                     }
                     return;
@@ -55,7 +70,7 @@ namespace GK2Mounts
                     target = Nearest(pc, r.BodyPoint(), HitchReach, i => !i.HasDonkey);
                     if (target != null)
                     {
-                        label = Key(GameKeyName()) + " Hitch the cart";
+                        label = HintText("Hitch the cart");
                     }
                 }
                 KeyCode k = Plugin.HitchKey.Value;
@@ -172,48 +187,99 @@ namespace GK2Mounts
             return best;
         }
 
-        // The game's interact key; its binding has no name to read here (LazyInput offers none), so the default.
-        private static string GameKeyName() => "E";
-
-        private static string Key(string k) => "[" + k + "]";
-
-        // ------------------------------------------------------------------ the label
-
-        private static GUIStyle style, shadow;
-
-        internal static void OnGUI()
+        // As the game's handlers build it (WGOInteractionHandlerBase.LocalizeHintWithActionIcon): the key's icon (the
+        // keyboard key or the gamepad button in use, with a space) and the text.
+        private static string HintText(string text)
         {
-            if (label == null || target == null || Event.current.type != EventType.Repaint || !Mount.IsRegistered(target))
+            try
             {
-                return;
+                return ControllerIconLibrary.GetIconId(GameKey.Interaction) + text;
             }
-            Camera cam = CameraSystem.Instance != null ? CameraSystem.Instance.WorldCamera : Camera.main;
-            if (cam == null)
+            catch
             {
-                return;
+                return "[E] " + text;
             }
-            Vector3 sp = cam.WorldToScreenPoint(target.BodyPoint() + Vector3.up * 1.7f);
-            if (sp.z <= 0f)
+        }
+
+        // ------------------------------------------------------------------ the hint
+
+        // The game's own interaction hint ("[E] Craft"), drawn by its bubble manager: the same widget, font, outline and
+        // gamepad icon as every hint in the game. Wgo.GetWidgetData builds it as UIInteractionHintWidgetData from
+        // InteractionInfo rows whose text is ControllerIconLibrary.GetIconId(key) + the hint; any IBubbleDrawable can
+        // be shown (UIObjectBubbleManager only treats Unity objects specially), so the mod shows its own.
+        private sealed class Hint : IBubbleDrawable
+        {
+            private readonly SGuid id = new SGuid(Guid.NewGuid());
+            internal Mount.Instance Over;
+            internal string Text;
+
+            public SGuid BubbleDrawableUniqueId => id;
+
+            public List<LazyWidgetDataBase> BubbleDrawableWidgets => new List<LazyWidgetDataBase>
             {
-                return;
-            }
-            if (style == null)
+                new UIInteractionHintWidgetData(new UIInteractionHintRowWidgetData(new InteractionInfo(Text))),
+            };
+
+            public Vector3 BubbleDrawablePosition => Over != null ? Over.HintPoint() : Vector3.zero;
+        }
+
+        private static Hint hint;
+        private static bool shown;
+
+        // Shown, moved to another instance, re-texted or hidden to match what is in reach this frame.
+        private static void UpdateHint()
+        {
+            try
             {
-                style = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Bold, fontSize = Mathf.RoundToInt(Screen.height / 45f) };
-                style.normal.textColor = new Color(1f, 0.92f, 0.45f);
-                shadow = new GUIStyle(style);
-                shadow.normal.textColor = new Color(0f, 0f, 0f, 0.85f);
-            }
-            float y = Screen.height - sp.y;
-            var r = new Rect(sp.x - 200f, y - 20f, 400f, 40f);
-            for (int dx = -2; dx <= 2; dx += 2)
-            {
-                for (int dy = -2; dy <= 2; dy += 2)
+                UIObjectBubbleManager m = UIObjectBubbleManager.Instance;
+                if (m == null)
                 {
-                    if (dx != 0 || dy != 0) GUI.Label(new Rect(r.x + dx, r.y + dy, r.width, r.height), label, shadow);
+                    return;
+                }
+                bool want = target != null && label != null && Mount.IsRegistered(target);
+                if (!want)
+                {
+                    if (shown && hint != null)
+                    {
+                        m.Hide(hint);
+                    }
+                    shown = false;
+                    return;
+                }
+                if (hint != null && hint.Over != target)
+                {
+                    // Another donkey or cart: the old bubble fades out where it was, a new one (its own id) comes up
+                    // here, as the game's hints do when the keeper turns to another object.
+                    if (shown)
+                    {
+                        m.Hide(hint);
+                    }
+                    hint = null;
+                    shown = false;
+                }
+                if (hint == null)
+                {
+                    hint = new Hint { Over = target };
+                }
+                // Asked again until the manager shows it (a request waits for its next LateUpdate), and after the game
+                // cleared its bubbles (a scene load): then it is simply not displayed any more.
+                if (!shown || hint.Text != label || !m.TryGetDisplayedBubble(hint.BubbleDrawableUniqueId, out _))
+                {
+                    hint.Text = label;
+                    m.RequestDisplay(hint);
+                    shown = true;
                 }
             }
-            GUI.Label(r, label, style);
+            catch (Exception e)
+            {
+                if (!warnedHint)
+                {
+                    warnedHint = true;
+                    Plugin.Log.LogWarning("Mount: the interaction hint could not be shown: " + e.Message);
+                }
+            }
         }
+
+        private static bool warnedHint;
     }
 }

@@ -471,14 +471,6 @@ namespace GK2Mounts
             }
             try
             {
-                try
-                {
-                    GK2Mounts.InstanceControls.OnGUI();
-                }
-                catch (Exception e)
-                {
-                    Log.LogWarning("Instance label failed: " + e.Message);
-                }
                 TuningWindow.Draw();
             }
             catch (Exception e)

@@ -591,6 +591,34 @@ namespace GK2Mounts
                 return Position;
             }
 
+            // Where the interaction hint stands: the prefab's own BubblePoint (the point the game puts its donkey's
+            // bubbles at); a free cart's is over its cart body, since its donkey is not there.
+            internal Vector3 HintPoint()
+            {
+                if (HasDonkey && donkey != null && donkey)
+                {
+                    if (bubblePoint == null || !bubblePoint)
+                    {
+                        bubblePoint = null;
+                        foreach (Transform t in donkey.GetComponentsInChildren<Transform>(includeInactive: true))
+                        {
+                            if (t.name == "BubblePoint")
+                            {
+                                bubblePoint = t;
+                                break;
+                            }
+                        }
+                    }
+                    if (bubblePoint != null)
+                    {
+                        return bubblePoint.position;
+                    }
+                }
+                return CartPoint() + Vector3.up * 1.3f;
+            }
+
+            private Transform bubblePoint;
+
             // Where the keeper's reach is measured to: the donkey's body (a free cart: where its donkey's body would be).
             internal Vector3 BodyPoint()
             {
