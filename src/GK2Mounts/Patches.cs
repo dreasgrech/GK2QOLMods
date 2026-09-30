@@ -60,6 +60,8 @@ namespace GK2Mounts
             Require(AccessTools.PropertyGetter(typeof(Object3DMesh), nameof(Object3DMesh.ObjRenderer)), "Object3DMesh.ObjRenderer getter");
             Require(AccessTools.PropertyGetter(typeof(Object3DSubMesh), nameof(Object3DSubMesh.LutTexture)), "Object3DSubMesh.LutTexture getter");
             Require(AccessTools.PropertyGetter(typeof(Object3DSubMesh), nameof(Object3DSubMesh.MainTextureName)), "Object3DSubMesh.MainTextureName getter");
+            Require(AccessTools.Field(typeof(Object3DSubMesh), "cachedSharedMaterials"), "Object3DSubMesh.cachedSharedMaterials");
+            Require(AccessTools.Field(typeof(GlobalResources), nameof(GlobalResources.matObject3DLUT)), "GlobalResources.matObject3DLUT");
         }
 
         private static void Require(object member, string name)

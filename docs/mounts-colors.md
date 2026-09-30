@@ -160,6 +160,23 @@ embedded in `Colors.cs`), the mod computes what it becomes, then builds per grou
 - the lamp's light, glow and glass colours;
 - reset all.
 
+## Fix after the first test (2026-09-30): only half of each cart part recoloured
+
+**Seen:** the user's screenshot. The cart body's four corner posts turned turquoise; the planks stayed as they were.
+
+**Cause:**
+- Every cart mesh has two submeshes, one per texture page (prefab dump: body, shafts, wheels and lantern each have 2).
+  The planks are `prt1` (submesh 0) and the posts `prt2` (submesh 1).
+- `Object3DSubMesh.ApplyAppropriateMaterial` writes its slot into its **own cached copy** of the renderer's material
+  list (`cachedSharedMaterials`) and assigns that whole copy.
+- On a mesh that is already initialised, submesh 1's older copy (slot 0 still the game's material) overwrites
+  submesh 0's LUT material, so only the last submesh changes.
+- The game itself only sets LUTs before a part initialises, when every cache is empty.
+
+**Fix:** `Colors.SetLut` empties every submesh's cache first, which gives the game's own working order. It also:
+- checks that every material slot is the LUT material, warning and setting it again otherwise;
+- after removing the LUT, puts the renderer's exact original materials back.
+
 ## Test list (game closed until then; the DLL is deployed)
 
 With `Debug.TuningWindow = true` in `dreas.gk2.mounts.cfg`, mount (the showcase: H or G) and open the **Colors** tab.

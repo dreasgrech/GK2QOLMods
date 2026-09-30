@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 using BepInEx.Configuration;
+using HarmonyLib;
 using UnityEngine;
 
 using GK2Mounts.Api;
@@ -414,6 +415,8 @@ namespace GK2Mounts
             public bool Applied;
             public Texture2D OrigLut;
             public string OrigMaterials;
+            public Material[] OrigMats;
+            public bool Warned;
         }
 
         private static readonly List<SpriteTarget> sprites = new List<SpriteTarget>();
@@ -565,9 +568,14 @@ namespace GK2Mounts
                     {
                         if (!t.Applied || t.M == null || !t.M) continue;
                         Object3DSubMesh sm = t.M.GetSubMesh(0);
-                        if (sm != null && sm.LutTexture != luts[(int)t.G])
+                        if ((sm != null && sm.LutTexture != luts[(int)t.G]) || !AllSlotsLut(t.M))
                         {
-                            t.M.SetLutTexture(luts[(int)t.G]);
+                            if (!t.Warned)
+                            {
+                                t.Warned = true;
+                                Plugin.Log.LogInfo($"Colors: '{t.M.name}' lost its colours ({MaterialNames(t.M.ObjRenderer)}); set again.");
+                            }
+                            SetLut(t.M, luts[(int)t.G]);
                         }
                     }
                 }
@@ -752,10 +760,48 @@ namespace GK2Mounts
                 {
                     t.OrigLut = t.M.GetSubMesh(0)?.LutTexture;
                     t.OrigMaterials = MaterialNames(t.M.ObjRenderer);
+                    t.OrigMats = t.M.ObjRenderer != null ? t.M.ObjRenderer.sharedMaterials : null;
                     t.Applied = true;
                 }
-                t.M.SetLutTexture(luts[(int)t.G]);
+                SetLut(t.M, luts[(int)t.G]);
+                if (!AllSlotsLut(t.M))
+                {
+                    Plugin.Log.LogWarning($"Colors: '{t.M.name}' has {MaterialNames(t.M.ObjRenderer)} after the LUT was set; some of it keeps the game's colours.");
+                }
             }
+        }
+
+        // Object3DSubMesh keeps its own copy of the renderer's material list (cachedSharedMaterials) and, on a LUT
+        // change, writes its slot into that copy and assigns the whole copy to the renderer. On a mesh already
+        // initialised, submesh 1's older copy then overwrites submesh 0's new material: only the last submesh changed
+        // (found in game 2026-09-30: the cart body's corner posts, submesh 1, recoloured and the planks, submesh 0,
+        // did not). The game only sets LUTs before a part initialises, while every cache is still empty, so each
+        // submesh reads the renderer's current list in turn. Emptying the caches first gives that same order.
+        private static readonly AccessTools.FieldRef<Object3DSubMesh, Material[]> SubMeshMaterialCache =
+            AccessTools.FieldRefAccess<Object3DSubMesh, Material[]>("cachedSharedMaterials");
+
+        private static void SetLut(Object3DMesh m, Texture2D lut)
+        {
+            for (int i = 0; i < m.SubMeshCount; i++)
+            {
+                Object3DSubMesh sm = m.GetSubMesh(i);
+                if (sm != null) SubMeshMaterialCache(sm) = null;
+            }
+            m.SetLutTexture(lut);
+        }
+
+        // True when every material slot of the mesh has the game's LUT material (the check behind SetLut).
+        private static bool AllSlotsLut(Object3DMesh m)
+        {
+            Renderer r = m.ObjRenderer;
+            Material lutMat = LazyBearTechnology.LazySingletonSO<GlobalResources>.Instance?.matObject3DLUT;
+            if (r == null || lutMat == null) return true; // nothing to compare against
+            Material[] mats = r.sharedMaterials;
+            for (int i = 0; i < mats.Length && i < m.SubMeshCount; i++)
+            {
+                if (mats[i] != lutMat) return false;
+            }
+            return true;
         }
 
         private static void SetSpriteKeywords(SpriteTarget t)
@@ -803,11 +849,19 @@ namespace GK2Mounts
             {
                 if (t.M != null && t.M)
                 {
-                    t.M.SetLutTexture(t.OrigLut); // null: the game's own material again (matObject3D)
-                    string now = MaterialNames(t.M.ObjRenderer);
-                    if (now != t.OrigMaterials)
+                    SetLut(t.M, t.OrigLut); // null: the game's own material again (matObject3D)
+                    Renderer r = t.M.ObjRenderer;
+                    string now = MaterialNames(r);
+                    if (now != t.OrigMaterials && r != null && t.OrigMats != null)
                     {
-                        Plugin.Log.LogInfo($"Colors: '{t.M.name}' went back to {now} (had {t.OrigMaterials} before the colours).");
+                        // exactly what the part had, for the pool; the submeshes then re-read it
+                        r.sharedMaterials = t.OrigMats;
+                        for (int i = 0; i < t.M.SubMeshCount; i++)
+                        {
+                            Object3DSubMesh sm = t.M.GetSubMesh(i);
+                            if (sm != null) SubMeshMaterialCache(sm) = null;
+                        }
+                        Plugin.Log.LogInfo($"Colors: '{t.M.name}' had {now} after the LUT was removed; put back to {t.OrigMaterials}.");
                     }
                 }
             }
