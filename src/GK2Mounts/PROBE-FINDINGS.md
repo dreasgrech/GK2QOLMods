@@ -1377,3 +1377,58 @@ onto the cart but a corpse couldn't.
   refused too.
 - Fix: `HeadReroute.RefuseGroundItem` judges the **item** with the cart's own test (`Cargo.Allowed`, which refuses
   item group "zombie"). It's used by both the `HasInteraction` and `CanInteractWithDrop` postfixes.
+
+## Round 15 (2026-09-30): two one-frame glitches at summon
+
+**Symptoms (the user):**
+- facing left, the cart showed for a frame on the wrong side;
+- for a frame the donkey had the NPC's yellow "[E] Speak" label.
+
+**Cause:**
+- `Wgo.Spawn` only requests the view. `Wgo.CompleteVisualPartsLoad` delivers it and switches it on in the prefab's
+  default state: facing left, cart shown, colliders live. With a pooled part, that happens **inside the summon**
+  (`TrySpawn` → `UpdateChunkVisibility`); otherwise it happens frames later.
+- The mod prepared the view only at its next LateUpdate. Until then, the game could render the raw prefab. Its
+  interaction scan also found the NPC: the log showed `Interaction enter with [npc_donkey]` between the spawn and
+  the preparation.
+
+**First fix, wrong:** running `PrepareParts` from a postfix on `CompleteVisualPartsLoad`.
+- The screenshot showed the cart falling apart: flat wheels, a floating lamp, no body.
+- My first explanation ("measured before the animator's first pose") was disproved by the log: the numbers were
+  identical.
+- The log then showed **two** preparations per summon, the first before "Mounted". The postfix prepared inside
+  `TrySpawn`, which then reset `partsReady`, so LateUpdate prepared again on parts the mod had already moved.
+
+**Fix:**
+- The postfix now only **hides** the view's renderers, and `PrepareParts` stays in LateUpdate and runs once. Its
+  `HideDonkeyForAFrame` adds to the hidden list and schedules the reveal one frame later.
+- The temporary `WgoData` is created with `IsInteractable = false`, which the interaction scan
+  (`PlayerInteractionComponent`) checks. So "Speak" can't appear even for a frame.
+- Not yet tested in game.
+
+**Second measurement (the user's 120 fps video, 2026-09-30):** after the hide-on-load fix, frames 3 and 4 of a
+summon (one game frame each, two video frames) still showed the donkey, the two wheel sprites and the lamp glow.
+- In frame 3 they faced the wrong way, and in frame 4 the right way. The 3D cart body and bars stayed hidden until
+  frame 5.
+- So `Renderer.enabled = false` held for meshes but not for sprites. The donkey's clips key the sprite renderers'
+  enabled flag, and the animator switches them back on.
+- Fix: the hide uses `Renderer.forceRenderingOff` (not animatable), on every renderer of the view, including the
+  ones that are off at that moment. The game hides ground items in hidden chunks the same way
+  (`DropView.ApplyRendererVisibility`).
+- `DestroyDonkey` restores the flag **before** `Object.Destroy`, because the parts go back to the game's pool and
+  would otherwise make the next donkey from it invisible.
+- Not yet tested in game.
+
+**Third measurement (video 03-47-42, four Cart summons facing left):**
+- The wrong-side cart is gone: the donkey and cart appear whole and correct in one frame.
+- **Leftover, fixed:** for one to two game frames before that, the mod's own hanging lamp (`gk2_hanging_lamp`)
+  showed alone and unlit at the top right. `LampHang.Attach` creates it in `Lantern.Tick`, after the hide list was
+  taken, and its look isn't copied until then.
+  - Now `Mount.HideWithDonkeyWhilePending` hides it and adds it to the same reveal.
+  - Not yet re-tested.
+- **Noted, not changed:** in that same frame, the keeper already sits in the riding pose with no donkey under him,
+  for one game frame. The pose applies at mount, and the donkey waits one frame for its facing.
+
+**Fourth measurement (video 03-51-40), passed:** the keeper stands normally, then the complete donkey and cart
+appear in one frame. There's no lone lamp, and no riding pose in the air. The log has one "Lantern: attached" per
+mount, no warnings, and no interaction with the donkey. The `dist/` DLLs were rebuilt with these fixes.

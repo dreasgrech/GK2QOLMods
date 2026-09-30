@@ -146,6 +146,25 @@ namespace GK2Mounts
         }
     }
 
+    // The donkey's view is created by the part loader: inside the summon when the part comes from the pool, or frames
+    // later. It is hidden in that very call and revealed after PrepareParts (see Mount.OnVisualPartsLoaded). Other
+    // objects are untouched.
+    [HarmonyPatch(typeof(Wgo), nameof(Wgo.CompleteVisualPartsLoad))]
+    internal static class Wgo_CompleteVisualPartsLoad_Patch
+    {
+        private static void Postfix(Wgo __instance)
+        {
+            try
+            {
+                Mount.OnVisualPartsLoaded(__instance);
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning("Mount: preparing the donkey on load failed; it is prepared a frame later: " + e.Message);
+            }
+        }
+    }
+
     // Cargo on the cart lives in the temporary donkey's inventory, which no save contains. Right before the game
     // serializes a save (every save path ends in this static method, after which PrepareToSave runs) the cargo is
     // handed back to the keeper (hands, then dropped at his feet), so the drops are part of the save being written.

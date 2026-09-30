@@ -139,6 +139,9 @@ namespace GK2Mounts
                 lampMr.sortingOrder = mr.sortingOrder;
                 lampMr.allowOcclusionWhenDynamic = mr.allowOcclusionWhenDynamic;
                 lampMr.motionVectorGenerationMode = mr.motionVectorGenerationMode;
+                // Created a moment after the view was hidden for its first frames (Mount, forceRenderingOff): hidden with
+                // it and revealed with it, or it floats alone and unlit for a frame (seen in the user's video 2026-09-30).
+                Mount.HideWithDonkeyWhilePending(lampMr);
                 CopyLook();
                 Note = $"lamp hangs from its hook at {hookLocal:F2} (mesh space); {lampPieces} lamp pieces split from {polePieces} pole pieces";
                 Plugin.Log.LogInfo("LampHang: " + Note + ".");

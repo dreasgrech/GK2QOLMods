@@ -33,25 +33,46 @@ namespace GK2Mounts
 
         private static int gearHideUntilFrame = -1; // frames after a dismount during which the rod stays hidden
 
-        // The donkey's renderers are kept off for the first frame after its parts appear: the facing is written to
-        // the animator that frame, but the animator mirrors the sprites one evaluation later, so the prefab's default
-        // facing (left) would show for one frame when the keeper faces right. Only renderers that were on are
-        // restored, so nothing the game keeps off is switched on.
+        // The donkey is kept from rendering from the moment its view exists until one frame after PrepareParts: the
+        // facing is written to the animator that frame, but the animator mirrors the sprites one evaluation later, so
+        // the prefab's default facing would show for a frame.
+        // Renderer.forceRenderingOff, not Renderer.enabled: the donkey's clips key the sprite renderers' enabled flag,
+        // so the animator switched them straight back on (measured 2026-09-30 in the user's 120 fps video: with
+        // enabled=false the 3D cart body stayed hidden but the donkey, wheel and lamp sprites showed for a game frame
+        // on the wrong side). forceRenderingOff is not animatable and leaves enabled alone; the game hides ground
+        // items in hidden chunks the same way (DropView.ApplyRendererVisibility).
         private static readonly List<Renderer> hiddenRenderers = new List<Renderer>();
         private static int revealFrame = -1;
 
+        // Adds to what OnVisualPartsLoaded already hid (those stay hidden until this reveal), so every renderer that
+        // was on comes back once, one frame after the parts are prepared.
         private static void HideDonkeyForAFrame()
         {
-            hiddenRenderers.Clear();
+            HideRenderersNow();
+            revealFrame = UnityEngine.Time.frameCount + 1;
+        }
+
+        private static void HideRenderersNow()
+        {
             foreach (Renderer r in donkey.GetComponentsInChildren<Renderer>(includeInactive: true))
             {
-                if (r.enabled)
+                if (!r.forceRenderingOff)
                 {
-                    r.enabled = false;
+                    r.forceRenderingOff = true;
                     hiddenRenderers.Add(r);
                 }
             }
-            revealFrame = UnityEngine.Time.frameCount + 1;
+        }
+
+        // A renderer added to the donkey after the hide (the mod's hanging lamp): kept from rendering until the same
+        // reveal. Nothing to do once the donkey is revealed.
+        internal static void HideWithDonkeyWhilePending(Renderer r)
+        {
+            if (r != null && hiddenRenderers.Count > 0 && !r.forceRenderingOff)
+            {
+                r.forceRenderingOff = true;
+                hiddenRenderers.Add(r);
+            }
         }
 
         private static void RevealDonkeyIfDue()
@@ -64,7 +85,7 @@ namespace GK2Mounts
             {
                 if (r != null && r)
                 {
-                    r.enabled = true;
+                    r.forceRenderingOff = false;
                 }
             }
             hiddenRenderers.Clear();
@@ -740,7 +761,9 @@ namespace GK2Mounts
                 SuppressScripts = true;
                 try
                 {
-                    data = new WgoData(id, pc.PlayerData.position.Value, scene.Id) { isTempObject = true };
+                    // Not interactable: the game's interaction scan (PlayerInteractionComponent) skips such objects, so the
+                    // donkey never offers the NPC's "[E] Speak", not even for the frame before PrepareParts.
+                    data = new WgoData(id, pc.PlayerData.position.Value, scene.Id) { isTempObject = true, IsInteractable = false };
                 }
                 finally
                 {
@@ -759,6 +782,25 @@ namespace GK2Mounts
                 DestroyDonkey();
                 return false;
             }
+        }
+
+        // Wgo.CompleteVisualPartsLoad just created our donkey's view. The part loader delivers the prefab some frames
+        // after Wgo.Spawn and switches it on in its default state (facing left, cart shown), and a frame of that could
+        // render before PrepareParts (found in game 2026-09-30: the cart on the wrong side for a frame). So it is hidden
+        // here, in the same call, and stays hidden until PrepareParts (next LateUpdate) has set it up and the facing is
+        // applied; HideDonkeyForAFrame then schedules the reveal. PrepareParts itself must stay in LateUpdate: it
+        // runs once per summon (preparing here as well, tried the same day, prepared twice: with a pooled part this
+        // call comes inside TrySpawn, which then resets partsReady, so LateUpdate prepared again on already moved
+        // parts - scattered wheels, a second lantern attach; the log showed both sets, the first before "Mounted").
+        internal static void OnVisualPartsLoaded(Wgo wgo)
+        {
+            if (donkey == null || !ReferenceEquals(wgo, donkey) || partsReady)
+            {
+                return;
+            }
+            hiddenRenderers.Clear();
+            HideRenderersNow();
+            revealFrame = int.MaxValue; // until PrepareParts
         }
 
         // Once the prefab is loaded: no blocking, no interaction target, no navmesh cut; cart per style.
@@ -1657,6 +1699,17 @@ namespace GK2Mounts
 
         private static void DestroyDonkey()
         {
+            // The game pools the donkey's parts (Wgo.OnDestroy hands them back): anything still kept from rendering must
+            // render again first, or the next donkey built from the pool, ours or the game's delivery donkey, would be
+            // invisible.
+            foreach (Renderer r in hiddenRenderers)
+            {
+                if (r != null && r)
+                {
+                    r.forceRenderingOff = false;
+                }
+            }
+            hiddenRenderers.Clear();
             if (donkey != null)
             {
                 try
