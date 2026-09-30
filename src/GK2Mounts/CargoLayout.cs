@@ -19,7 +19,16 @@ namespace GK2Mounts
     //                 added 2026-09-30, because a correction tuned for two logs side by side also moved one log).
     //                 top_along/top_up/top_across: offsets when it is stacked on top of another item.
     //   [pair <a>+<b>] applies to that pair of size classes in either order: mode = auto|side|along|stack, and
-    //                 along/up/across shift the second-placed item relative to where the packer put it.
+    //                 along/up/across shift the second-placed item relative to where the packer put it (legacy).
+    //                 a_along/a_up/a_across, b_along/b_up/b_across: a TUNED pair (added 2026-09-30). The exact
+    //                 place of item a and of item b (footprint centre along and across, bottom height above the cart
+    //                 floor), written by the panel the first time either item of the pair is moved. A tuned pair is
+    //                 frozen: class entries, alone offsets, gap, overhang, nestle, the mode and the load order no
+    //                 longer change it; only the floor (CargoBedDepth) moves it, with everything else. Positions
+    //                 belong to a and b by id, not to "first" and "second", so which item was picked up first does
+    //                 not matter.
+    //   Lookup is deterministic: an exact id (or id pair) wins over a size-class match; among class matches the
+    //   first in the file wins, and a second one is reported once in the log (it would never apply).
     //
     // The file ships embedded in the DLL (the repo copy). On the machine with the sources (Defaults.RepoFile) the mod
     // reads the repo file itself and the panel's corrections are written back to it as you edit, so there is one copy
@@ -85,8 +94,10 @@ namespace GK2Mounts
         {
             public string A, B;
             public string Mode = "auto"; // auto | side (across) | along (end to end) | stack
-            public Vector3 Second;       // offset of the second-placed item
-            public bool IsEmpty => Mode == "auto" && Second == Vector3.zero;
+            public Vector3 Second;       // offset of the second-placed item (legacy, untuned pairs only)
+            public bool Tuned;           // PosA / PosB are the pair's exact layout
+            public Vector3 PosA, PosB;   // along, height above the floor, across
+            public bool IsEmpty => Mode == "auto" && Second == Vector3.zero && !Tuned;
         }
 
         public static readonly Dictionary<string, ItemEntry> Items = new Dictionary<string, ItemEntry>(StringComparer.Ordinal);
@@ -99,6 +110,7 @@ namespace GK2Mounts
         public static void Load()
         {
             Items.Clear();
+            itemOrder.Clear();
             Pairs.Clear();
             dirty = false;
             string repo = Defaults.RepoFile(RepoFileName);
@@ -155,6 +167,7 @@ namespace GK2Mounts
                     if (head.StartsWith("item ", StringComparison.OrdinalIgnoreCase))
                     {
                         item = new ItemEntry { Id = head.Substring(5).Trim() };
+                        if (!Items.ContainsKey(item.Id)) itemOrder.Add(item.Id);
                         Items[item.Id] = item;
                     }
                     else if (head.StartsWith("pair ", StringComparison.OrdinalIgnoreCase))
@@ -199,6 +212,12 @@ namespace GK2Mounts
                         case "along": pair.Second.x = f; break;
                         case "up": pair.Second.y = f; break;
                         case "across": pair.Second.z = f; break;
+                        case "a_along": pair.PosA.x = f; pair.Tuned = true; break;
+                        case "a_up": pair.PosA.y = f; pair.Tuned = true; break;
+                        case "a_across": pair.PosA.z = f; pair.Tuned = true; break;
+                        case "b_along": pair.PosB.x = f; pair.Tuned = true; break;
+                        case "b_up": pair.PosB.y = f; pair.Tuned = true; break;
+                        case "b_across": pair.PosB.z = f; pair.Tuned = true; break;
                     }
                 }
             }
@@ -214,14 +233,14 @@ namespace GK2Mounts
             sb.AppendLine("#   along / up / across: at the bottom or beside another item (and alone, without alone_*); top_along / top_up / top_across: stacked on top.");
             sb.AppendLine("#   alone_along / alone_up / alone_across: the only item on the cart (all three written when set, zeros included).");
             sb.AppendLine("# [pair <a>+<b>] applies to that pair of size classes in either order: mode = auto | side (across the bed) | along (end to end) | stack; along / up / across move the second item.");
+            sb.AppendLine("#   a_* / b_*: a tuned pair, the exact place of item a and item b (along, height above the floor, across); frozen against everything but the floor.");
+            sb.AppendLine("# Exact ids win over size-class matches; among class matches the first in this file wins.");
             sb.AppendLine("#");
             sb.AppendLine("# Size classes at the time of writing (27 items): log (wood); flour sack (box_flour); tall crate (box_beer,");
             sb.AppendLine("# box_clothes_1/2, box_fabric, box_vine); body (body_corpse, body_wild_zombie); low crate (15 box_* incl. preserves);");
             sb.AppendLine("# slab (stone, iron_ore_2h); no mesh (marble -> shown with the slab mesh, box_engineering_mechanism -> generic crate).");
             sb.AppendLine("version = 1");
-            var ids = new List<string>(Items.Keys);
-            ids.Sort(string.CompareOrdinal);
-            foreach (string id in ids)
+            foreach (string id in itemOrder)
             {
                 ItemEntry e = Items[id];
                 if (e.IsEmpty)
@@ -248,6 +267,14 @@ namespace GK2Mounts
                 sb.AppendLine().AppendLine("[pair " + p.A + "+" + p.B + "]");
                 sb.AppendLine("mode = " + p.Mode);
                 Line(sb, "along", p.Second.x); Line(sb, "up", p.Second.y); Line(sb, "across", p.Second.z);
+                if (p.Tuned)
+                {
+                    // all six, zeros too: their presence is what makes the pair tuned
+                    foreach (var kv in new (string, float)[] { ("a_along", p.PosA.x), ("a_up", p.PosA.y), ("a_across", p.PosA.z), ("b_along", p.PosB.x), ("b_up", p.PosB.y), ("b_across", p.PosB.z) })
+                    {
+                        sb.AppendLine(kv.Item1 + " = " + kv.Item2.ToString("0.###", CultureInfo.InvariantCulture));
+                    }
+                }
             }
             File.WriteAllText(path, sb.ToString());
             Source = path;
@@ -303,26 +330,85 @@ namespace GK2Mounts
             {
                 return exact;
             }
-            foreach (ItemEntry e in Items.Values)
+            ItemEntry found = null;
+            foreach (ItemEntry e in ItemOrder)
             {
-                if (SameClass(e.Id, itemId))
+                if (!SameClass(e.Id, itemId))
                 {
-                    return e;
+                    continue;
+                }
+                if (found == null)
+                {
+                    found = e;
+                }
+                else if (!e.IsEmpty)
+                {
+                    WarnOnce($"item {itemId}: both [item {found.Id}] and [item {e.Id}] cover its size class; [item {found.Id}] applies (first in the file).");
                 }
             }
-            return null;
+            return found;
+        }
+
+        // Items in file order (Dictionary order is not guaranteed): new entries go to the end.
+        private static IEnumerable<ItemEntry> ItemOrder
+        {
+            get
+            {
+                foreach (string id in itemOrder)
+                {
+                    if (Items.TryGetValue(id, out ItemEntry e)) yield return e;
+                }
+            }
+        }
+
+        private static readonly List<string> itemOrder = new List<string>();
+        private static readonly HashSet<string> warned = new HashSet<string>();
+
+        private static void WarnOnce(string text)
+        {
+            if (warned.Add(text))
+            {
+                Plugin.Log.LogWarning("Cargo layout: " + text);
+            }
+        }
+
+        // For a pair that matches (a, b): whether item a is the entry's A (else its B). Both ways possible (a pair
+        // of one size class, e.g. two logs): the first-placed item is A.
+        public static bool FirstIsA(PairEntry p, string first, string second)
+        {
+            if (p.A == first && p.B == second) return true;
+            if (p.A == second && p.B == first) return false;
+            bool straight = SameClass(p.A, first) && SameClass(p.B, second);
+            bool crossed = SameClass(p.A, second) && SameClass(p.B, first);
+            return straight || !crossed;
         }
 
         public static PairEntry ForPair(string a, string b)
         {
             foreach (PairEntry p in Pairs)
             {
-                if ((SameClass(p.A, a) && SameClass(p.B, b)) || (SameClass(p.A, b) && SameClass(p.B, a)))
+                if ((p.A == a && p.B == b) || (p.A == b && p.B == a))
                 {
-                    return p;
+                    return p; // exact ids win
                 }
             }
-            return null;
+            PairEntry found = null;
+            foreach (PairEntry p in Pairs)
+            {
+                if (!((SameClass(p.A, a) && SameClass(p.B, b)) || (SameClass(p.A, b) && SameClass(p.B, a))))
+                {
+                    continue;
+                }
+                if (found == null)
+                {
+                    found = p;
+                }
+                else if (!p.IsEmpty)
+                {
+                    WarnOnce($"pair {a}+{b}: both [pair {found.A}+{found.B}] and [pair {p.A}+{p.B}] cover these size classes; [pair {found.A}+{found.B}] applies (first in the file).");
+                }
+            }
+            return found;
         }
 
         // Entry to edit for this item: the existing class entry, or a new one keyed by this item's id.
@@ -333,6 +419,7 @@ namespace GK2Mounts
             {
                 e = new ItemEntry { Id = itemId };
                 Items[itemId] = e;
+                itemOrder.Add(itemId);
             }
             return e;
         }

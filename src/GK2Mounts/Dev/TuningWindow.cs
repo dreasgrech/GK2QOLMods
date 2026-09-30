@@ -33,7 +33,6 @@ namespace GK2Mounts
         private static string donkeyEvent = "";
         private static string cargoItemId = "wood";
         private static string spawnItemId = "wood";
-        private static bool pairOffsetsOpen;
         private static readonly string[] TabNames = { "General", "Riding", "Lantern", "Sounds", "Colors", "Debug", "Defaults" };
 
         public static void Draw()
@@ -1107,86 +1106,99 @@ namespace GK2Mounts
             }
         }
 
-        // Layout-file corrections for what is on the cart right now: one group per item (its size class, in the role
-        // it currently has: base, or top when stacked) and one for the pair. The packer re-runs on every change, and
-        // the layout file is saved shortly after (CargoLayout.MarkChanged / SaveIfDue).
+        // Layout-file corrections for what is on the cart right now. One item: its 'alone' correction (never used in a
+        // pair). Two items: the pair's own tuning, which freezes the pair (CargoLayout: a tuned pair ignores the class
+        // entries, alone offsets, gap, overhang, nestle, mode and load order; only the floor moves it). The class
+        // entries' bottom/beside and on-top values stay in the file as the starting point of untuned pairs and are no
+        // longer edited here, so tuning one pair can never move another. The packer re-runs on every change, and the
+        // layout file is saved shortly after (CargoLayout.MarkChanged / SaveIfDue).
         private static void DrawCargoCorrections()
         {
             Header("Cart cargo: corrections (cargo-layout.cfg)");
-            GUILayout.Label("Each item has one correction per role, shared by every item of its size: 'alone' when it is the only item on the cart, 'bottom / beside' when it stands on the bed next to or under another item, 'on top' when it is stacked. Each role moves the item only in that situation. A stacked item rides on the one below, so moving the lower item moves both; side by side, each moves alone. " + CargoLayout.Summary(), small);
+            GUILayout.Label("One item on the cart: its 'alone' place, used only when it is alone. Two items: that pair's own layout. Moving either item tunes the pair: both items' places are stored for this pair of item sizes and nothing else changes them any more (the class values, the alone places, the four packer values above, the mode, which item came first). Only the cargo floor still moves them, with everything. " + CargoLayout.Summary(), small);
             if (Cargo.Placed.Count == 0)
             {
-                GUILayout.Label("Load items onto the cart to edit the corrections for their size classes.", small);
+                GUILayout.Label("Load items onto the cart to edit their corrections.", small);
             }
             // Work on a snapshot: a slider change re-runs the packer, which rebuilds Cargo.Placed; re-pack once after.
             var placed = new System.Collections.Generic.List<Cargo.PlacedItem>(Cargo.Placed);
             bool refresh = false;
-            var seen = new System.Collections.Generic.HashSet<string>();
-            foreach (Cargo.PlacedItem p in placed)
+            if (placed.Count == 1)
             {
+                Cargo.PlacedItem p = placed[0];
                 CargoLayout.ItemEntry e = CargoLayout.EditItem(p.Id);
-                string role = p.OnTop ? "on top" : p.Alone ? "alone" : "bottom / beside";
-                if (!seen.Add(e.Id + role))
-                {
-                    continue;
-                }
                 GUILayout.BeginVertical(GUI.skin.box);
-                GUILayout.Label($"{p.Id} ({role}; class entry '{e.Id}', box {p.Box.x:0.00} × {p.Box.y:0.00} × {p.Box.z:0.00})", label);
-                if (p.Alone)
+                GUILayout.Label($"{p.Id} alone (class entry '{e.Id}', box {p.Box.x:0.00} × {p.Box.y:0.00} × {p.Box.z:0.00})", label);
+                // An entry without its own alone place starts from its bottom/beside values, where it sits now.
+                if (!e.HasAlone)
                 {
-                    // Alone always has its own correction here: moving a single item never moves it in pairs or
-                    // stacks. An entry without one starts from its bottom/beside values, where it sits now.
-                    if (!e.HasAlone)
-                    {
-                        e.HasAlone = true;
-                        e.Alone = e.Base;
-                    }
-                    refresh |= RawSlider("  along (tail - / head +)", ref e.Alone.x, -0.5f, 0.5f);
-                    refresh |= RawSlider("  up", ref e.Alone.y, -0.4f, 0.4f);
-                    refresh |= RawSlider("  across (camera - / away +)", ref e.Alone.z, -0.5f, 0.5f);
+                    e.HasAlone = true;
+                    e.Alone = e.Base;
                 }
-                else if (p.OnTop)
-                {
-                    refresh |= RawSlider("  along (tail - / head +)", ref e.Top.x, -0.5f, 0.5f);
-                    refresh |= RawSlider("  up", ref e.Top.y, -0.4f, 0.4f);
-                    refresh |= RawSlider("  across (camera - / away +)", ref e.Top.z, -0.5f, 0.5f);
-                }
-                else
-                {
-                    refresh |= RawSlider("  along (tail - / head +)", ref e.Base.x, -0.5f, 0.5f);
-                    refresh |= RawSlider("  up", ref e.Base.y, -0.4f, 0.4f);
-                    refresh |= RawSlider("  across (camera - / away +)", ref e.Base.z, -0.5f, 0.5f);
-                }
+                refresh |= RawSlider("  along (tail - / head +)", ref e.Alone.x, -0.5f, 0.5f);
+                refresh |= RawSlider("  up", ref e.Alone.y, -0.4f, 0.4f);
+                refresh |= RawSlider("  across (camera - / away +)", ref e.Alone.z, -0.5f, 0.5f);
                 GUILayout.EndVertical();
             }
-            if (placed.Count >= 2)
+            else if (placed.Count >= 2)
             {
-                string a = placed[0].Id, b = placed[1].Id;
-                CargoLayout.PairEntry pair = CargoLayout.EditPair(a, b);
+                Cargo.PlacedItem p0 = placed[0], p1 = placed[1];
+                CargoLayout.PairEntry pair = CargoLayout.EditPair(p0.Id, p1.Id);
+                bool firstIsA = CargoLayout.FirstIsA(pair, p0.Id, p1.Id);
                 GUILayout.BeginVertical(GUI.skin.box);
-                GUILayout.Label($"Pair {pair.A} + {pair.B} (either order): how the two are arranged", label);
+                GUILayout.Label($"Pair {pair.A} + {pair.B} (these item sizes, either order): {(pair.Tuned ? "tuned" : "automatic")}, {Cargo.LastPairMode}", label);
+                // The arrangement row is always there. Automatic pair: it picks how the packer lays the two out. Tuned
+                // pair: a click starts the pair over in that arrangement (the tuning is forgotten, the packer lays it
+                // out, and the next move tunes it again from there); the highlighted button is the tuned layout's.
                 GUILayout.BeginHorizontal();
-                GUILayout.Label("  mode", label, GUILayout.Width(120f));
+                GUILayout.Label(pair.Tuned ? "  start over as" : "  arrangement", label, GUILayout.Width(120f));
                 foreach (string mode in new[] { "auto", "side", "along", "stack" })
                 {
                     bool on = pair.Mode == mode;
-                    if (GUILayout.Toggle(on, mode, GUI.skin.button, GUILayout.Width(70f)) && !on)
+                    // A click is a change of the toggle's state (a toggle that is on returns true on every event;
+                    // taking that as a click started a tuned pair over every frame, found 2026-09-30). Automatic: only
+                    // switching a button on counts. Tuned: a click on any button, the highlighted one too.
+                    bool now = GUILayout.Toggle(on, mode, GUI.skin.button, GUILayout.Width(70f));
+                    bool clicked = now != on && (pair.Tuned || now);
+                    if (clicked)
                     {
+                        if (pair.Tuned)
+                        {
+                            pair.Tuned = false;
+                            pair.PosA = pair.PosB = Vector3.zero;
+                            Plugin.Log.LogInfo($"Cargo layout: pair {pair.A}+{pair.B} back to automatic ({mode}).");
+                        }
                         pair.Mode = mode;
                         refresh = true;
                     }
                 }
                 GUILayout.EndHorizontal();
-                GUILayout.Label("  auto: across the bed when both widths fit, else end to end when both lengths fit, else stacked. side = across, along = end to end, stack = on top, whatever the sizes.", small);
-                bool hasPairOffsets = pair.Second != Vector3.zero;
-                bool wantPairOffsets = GUILayout.Toggle(hasPairOffsets || pairOffsetsOpen, "  This pair needs its own correction (an exception: extra offsets for the second item, only with this partner)", wrapToggle, GUILayout.Width(ContentW - 16f));
-                pairOffsetsOpen = wantPairOffsets;
-                if (wantPairOffsets)
+                GUILayout.Label(pair.Tuned
+                    ? "  Tuned: exactly this layout from now on; each item moves on its own, also when stacked. A button above forgets the tuning and lays the pair out again that way (auto: the packer decides)."
+                    : "  Automatic: pick the arrangement (auto: across the bed when both widths fit, else end to end, else stacked; side = across, along = end to end, stack = on top). Then move an item: that tunes the pair, starting from this layout.", small);
+                for (int k = 0; k < 2; k++)
                 {
-                    GUILayout.Label($"  Normally the class sliders above are enough: '{placed[1].Id} on top' applies on every partner. Use these only when it is right elsewhere and wrong on {placed[0].Id}.", small);
-                    refresh |= RawSlider("  extra along (tail - / head +)", ref pair.Second.x, -0.5f, 0.5f);
-                    refresh |= RawSlider("  extra up", ref pair.Second.y, -0.4f, 0.4f);
-                    refresh |= RawSlider("  extra across (camera - / away +)", ref pair.Second.z, -0.5f, 0.5f);
+                    Cargo.PlacedItem p = k == 0 ? p0 : p1;
+                    Vector3 v = p.Pos;
+                    GUILayout.Label($"  {p.Id}{(p.OnTop ? " (on top)" : "")}: place in this pair (height above the cargo floor)", label);
+                    bool moved = false;
+                    moved |= RawSlider("    along (tail - / head +)", ref v.x, -0.6f, 0.6f, canReset: false);
+                    moved |= RawSlider("    up", ref v.y, -0.3f, 1.0f, canReset: false);
+                    moved |= RawSlider("    across (camera - / away +)", ref v.z, -0.5f, 0.5f, canReset: false);
+                    if (moved)
+                    {
+                        if (!pair.Tuned)
+                        {
+                            // freeze where both are now, then apply this move
+                            pair.Tuned = true;
+                            pair.Mode = string.IsNullOrEmpty(Cargo.LastPairMode) ? pair.Mode : Cargo.LastPairMode;
+                            pair.PosA = firstIsA ? p0.Pos : p1.Pos;
+                            pair.PosB = firstIsA ? p1.Pos : p0.Pos;
+                            Plugin.Log.LogInfo($"Cargo layout: pair {pair.A}+{pair.B} tuned ({pair.Mode}).");
+                        }
+                        if ((k == 0) == firstIsA) pair.PosA = v; else pair.PosB = v;
+                        refresh = true;
+                    }
                 }
                 GUILayout.EndVertical();
             }
@@ -1195,7 +1207,7 @@ namespace GK2Mounts
                 Cargo.RefreshViews();
                 CargoLayout.MarkChanged();
             }
-            GUILayout.Label("Right-click a slider to zero it. " + (CargoLayout.SavesToRepo ? "Saved to the repo's cargo-layout.cfg as you edit." : "Not saved on this machine (no source folder)."), small);
+            GUILayout.Label((placed.Count == 1 ? "Right-click an alone slider to zero it. " : "") + (CargoLayout.SavesToRepo ? "Saved to the repo's cargo-layout.cfg as you edit." : "Not saved on this machine (no source folder)."), small);
         }
 
         // A - value + row for a float setting, stepping by 'step' within [min, max]; right-click the value resets it.
@@ -1225,20 +1237,30 @@ namespace GK2Mounts
         }
 
         // A slider on a plain float (layout-file values). Right-click resets to 0. Returns true when it moved.
-        private static bool RawSlider(string name, ref float value, float min, float max)
+        private static bool RawSlider(string name, ref float value, float min, float max, bool canReset = true)
         {
             GUILayout.BeginHorizontal();
             // Inside a box (its padding) with a slider and a value: the label gets the rest of the content width.
             GUILayout.Label(name, label, GUILayout.Width(Mathf.Max(80f, ContentW - SliderW - 50f - GUI.skin.box.padding.horizontal - 12f)));
             float v = GUILayout.HorizontalSlider(value, min, max, GUILayout.Width(SliderW));
+            // Only a drag (or the right-click reset) is a change. The slider hands back the value it was given when it
+            // is not touched (clamped to its range); rounding that for display must not count as a move, or a value
+            // with more decimals (a pair's measured places) "changed" on every event: the pair re-tuned itself right
+            // after "Back to automatic" (found 2026-09-30, four "tuned" lines in the log).
+            bool touched = v != Mathf.Clamp(value, min, max);
             Rect r = GUILayoutUtility.GetLastRect();
-            if (Event.current.type == EventType.MouseDown && Event.current.button == 1 && r.Contains(Event.current.mousePosition))
+            if (canReset && Event.current.type == EventType.MouseDown && Event.current.button == 1 && r.Contains(Event.current.mousePosition))
             {
                 v = 0f;
+                touched = true;
                 Event.current.Use();
             }
-            GUILayout.Label(v.ToString("0.00"), label, GUILayout.Width(50f));
+            GUILayout.Label((touched ? v : value).ToString("0.00"), label, GUILayout.Width(50f));
             GUILayout.EndHorizontal();
+            if (!touched)
+            {
+                return false;
+            }
             v = (float)Math.Round(v, 2);
             if (Mathf.Abs(v - value) > 0.0001f)
             {

@@ -119,22 +119,12 @@ namespace GK2Mounts
             return elementsByIcon;
         }
 
-        private const float SizeTolerance = 0.05f; // boxes within this in every dimension count as one size
-
-        // The item's measured box (long, high, across); zero when it has no element.
-        private static Vector3 ItemBox(ItemDef def, Dictionary<string, Transform> elementsByIcon)
-        {
-            if (def != null && elementsByIcon.TryGetValue(def.iconId, out Transform el) && Cargo.MeasureMeshes(el, el, out Bounds b, includeInactive: true))
-            {
-                return b.size;
-            }
-            return Vector3.zero;
-        }
 
         private static string ShapeKey(ItemDef def, Dictionary<string, Transform> elementsByIcon, out string sizeText)
         {
             sizeText = "no mesh";
-            if (def == null || !elementsByIcon.TryGetValue(def.iconId, out Transform el))
+            Transform el = def != null ? Cargo.FindOverheadElement(def) : null; // the element the cart draws (stand-ins too)
+            if (el == null)
             {
                 return "placeholder";
             }
@@ -168,9 +158,12 @@ namespace GK2Mounts
                 saved = new List<Item>(inv.Data.Inventory);
                 Dictionary<string, Transform> elements = OverheadElements();
                 List<string> ids = CarryProbe.BigItemIds();
-                // Size buckets: items whose boxes agree within SizeTolerance in every dimension are one bucket (the
-                // first item seen is the bucket's reference). Each bucket lists the meshes it contains, so "same size,
-                // different model" (stone vs ore) is visible as one bucket with two mesh names.
+                // Size buckets, exactly as the layout sees them: the item's box from CargoLayout.BoxOf (the mesh the cart
+                // really draws, stand-ins included: marble as the slab, the engineering crate by its truncated element
+                // name) and CargoLayout.SameClass against the bucket's first item. An own copy of that logic here used
+                // the raw icon id and showed marble and the engineering crate as a separate empty bucket (found
+                // 2026-09-30). Each bucket lists the meshes it contains and the layout entry that applies to it.
+                var bucketRefs = new List<string>();
                 var bucketSizes = new List<Vector3>();
                 var bucketRows = new List<List<string>>();
                 var bucketMeshes = new List<HashSet<string>>();
@@ -191,12 +184,11 @@ namespace GK2Mounts
                         log.AppendLine(file + ": " + err);
                     }
                     string meshKey = ShapeKey(def, elements, out string size);
-                    Vector3 box = ItemBox(def, elements);
+                    Vector3 box = CargoLayout.BoxOf(id);
                     int bi = -1;
-                    for (int k = 0; k < bucketSizes.Count; k++)
+                    for (int k = 0; k < bucketRefs.Count; k++)
                     {
-                        Vector3 d = bucketSizes[k] - box;
-                        if (Mathf.Abs(d.x) <= SizeTolerance && Mathf.Abs(d.y) <= SizeTolerance && Mathf.Abs(d.z) <= SizeTolerance)
+                        if (CargoLayout.SameClass(bucketRefs[k], id))
                         {
                             bi = k;
                             break;
@@ -204,6 +196,7 @@ namespace GK2Mounts
                     }
                     if (bi < 0)
                     {
+                        bucketRefs.Add(id);
                         bucketSizes.Add(box);
                         bucketRows.Add(new List<string>());
                         bucketMeshes.Add(new HashSet<string>());
@@ -227,12 +220,14 @@ namespace GK2Mounts
                     Vector3 sz = bucketSizes[k];
                     var meshes = new List<string>(bucketMeshes[k]);
                     meshes.Sort(string.CompareOrdinal);
-                    buckets.Add(new KeyValuePair<string, List<string>>($"{sz.x:0.00} long × {sz.y:0.00} high × {sz.z:0.00} across (±{SizeTolerance:0.00}); {meshes.Count} mesh(es): {string.Join(", ", meshes)}", bucketRows[k]));
+                    CargoLayout.ItemEntry entry = CargoLayout.ForItem(bucketRefs[k]);
+                    string entryText = entry != null && !entry.IsEmpty ? $"layout entry [item {entry.Id}]" : "no layout entry yet (the first tuning creates one)";
+                    buckets.Add(new KeyValuePair<string, List<string>>($"{sz.x:0.00} long × {sz.y:0.00} high × {sz.z:0.00} across (±{CargoLayout.SizeTolerance:0.00}); {meshes.Count} mesh(es): {string.Join(", ", meshes)}; {entryText}", bucketRows[k]));
                 }
                 var sb = new StringBuilder();
                 sb.AppendLine("<!doctype html><html><head><meta charset=\"utf-8\"><title>GK2 Mounts cargo shapes</title>");
                 sb.AppendLine("<style>:root{--w:220px}body{font-family:sans-serif;background:#222;color:#ddd;margin:16px}table{border-collapse:collapse;margin-bottom:24px}td{border:1px solid #444;padding:4px;text-align:center;vertical-align:top;font-size:12px}img{display:block;width:var(--w);height:auto;cursor:zoom-in;margin:auto}.cap{color:#bbb;font-size:11px;max-width:var(--w);white-space:normal}h2{margin:18px 0 6px;font-size:15px}h2 span{color:#888;font-weight:normal;font-size:12px}#bar{position:sticky;top:0;background:#222;padding:6px 0;z-index:2;display:flex;gap:8px;align-items:center}#bar button{background:#444;color:#ddd;border:1px solid #666;padding:3px 10px;cursor:pointer}#bar input{width:220px}#big{position:fixed;inset:0;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;flex-direction:column;cursor:zoom-out;z-index:9}#big img{width:auto;max-width:95vw;max-height:88vh;image-rendering:pixelated}#big div{color:#ddd;margin-top:8px}</style></head><body>");
-                sb.AppendLine($"<h1>GK2 Mounts cargo shapes</h1><p>{DateTime.Now:yyyy-MM-dd HH:mm}. Every carryable item alone on the cart, grouped into size buckets: items whose measured boxes agree within {SizeTolerance:0.00} in length, height and width are one bucket, whatever their model. A bucket may hold several meshes (stone and ore are the same box). Items in one bucket are placed identically by the layout, so tuning one tunes all; if two pictures in one bucket sit differently on the cart, the bucket rule needs a tighter tolerance or a per-mesh correction. {ids.Count} items, {buckets.Count} buckets, largest first. Click a picture for full size.</p>");
+                sb.AppendLine($"<h1>GK2 Mounts cargo shapes</h1><p>{DateTime.Now:yyyy-MM-dd HH:mm}. Every carryable item alone on the cart, grouped into size buckets exactly as the cargo layout groups them: items whose measured boxes (of the mesh the cart draws) agree within {CargoLayout.SizeTolerance:0.00} in length, height and width are one bucket, whatever their model. A bucket may hold several meshes (stone and ore are the same box). Items in one bucket are placed identically by the layout, so tuning one tunes all; if two pictures in one bucket sit differently on the cart, the bucket rule needs a tighter tolerance or a per-mesh correction. {ids.Count} items, {buckets.Count} buckets, largest first. Click a picture for full size.</p>");
                 sb.AppendLine("<div id=\"bar\"><button onclick=\"zoom(-30)\">&minus;</button><input type=\"range\" id=\"z\" min=\"60\" max=\"600\" value=\"220\" oninput=\"setW(+this.value)\"><button onclick=\"zoom(30)\">+</button><button onclick=\"setW(220)\">Reset</button><span id=\"zl\">220 px</span></div>");
                 sb.AppendLine("<script>function setW(w){w=Math.max(40,Math.min(1200,Math.round(w)));document.documentElement.style.setProperty('--w',w+'px');document.getElementById('z').value=w;document.getElementById('zl').textContent=w+' px';}function zoom(d){setW(+document.getElementById('z').value+d);}function show(src,cap){var b=document.getElementById('big');b.querySelector('img').src=src;b.querySelector('div').textContent=cap;b.style.display='flex';}</script>");
                 sb.AppendLine("<div id=\"big\" onclick=\"this.style.display='none'\"><img alt=\"\"><div></div></div>");
@@ -277,58 +272,48 @@ namespace GK2Mounts
             }
         }
 
-        // One representative item per distinct mesh, by the names of the meshes the overhead element is made of.
+        // One representative item per size bucket, the unit the layout tunes (CargoLayout.SameClass on the box of the mesh
+        // the cart draws). Before 2026-09-30 this took one item per distinct mesh by raw icon id: 13 representatives, so
+        // cells such as wood+box_beer and wood+box_vine looked separate but were one layout entry (tuning one changed
+        // the other), and marble showed as a placeholder instead of the slab it is drawn as.
         private static List<string> Representatives()
         {
             var result = new List<string>();
-            var seenShapes = new HashSet<string>();
-            var elementsByIcon = new Dictionary<string, Transform>();
-            PlayerController pc = MainGame.PlayerController;
-            if (pc != null)
-            {
-                foreach (DropViewAtomMesh atom in pc.GetComponentsInChildren<DropViewAtomMesh>(includeInactive: true))
-                {
-                    if (atom.transform.parent == null || atom.transform.parent.name != "overhead")
-                    {
-                        continue;
-                    }
-                    foreach (Transform t in atom.GetComponentsInChildren<Transform>(includeInactive: true))
-                    {
-                        if (t.GetComponent<DropViewAtomMeshElement>() != null && !elementsByIcon.ContainsKey(t.name))
-                        {
-                            elementsByIcon[t.name] = t;
-                        }
-                    }
-                    break;
-                }
-            }
             foreach (string id in CarryProbe.BigItemIds())
             {
-                ItemDef def = GameBalance.Me.GetDataOrNull<ItemDef>(id);
-                if (def == null)
+                if (GameBalance.Me.GetDataOrNull<ItemDef>(id) == null)
                 {
                     continue;
                 }
-                string shape = "placeholder";
-                if (elementsByIcon.TryGetValue(def.iconId, out Transform el))
+                bool known = false;
+                foreach (string r in result)
                 {
-                    var names = new List<string>();
-                    foreach (MeshFilter mf in el.GetComponentsInChildren<MeshFilter>(includeInactive: true))
+                    if (CargoLayout.SameClass(r, id))
                     {
-                        if (!Cargo.IsShadowMesh(mf.gameObject.name) && !mf.gameObject.name.EndsWith("-blackout"))
-                        {
-                            names.Add(mf.gameObject.name);
-                        }
+                        known = true;
+                        break;
                     }
-                    names.Sort(string.CompareOrdinal);
-                    shape = string.Join("|", names);
                 }
-                if (seenShapes.Add(shape))
+                if (!known)
                 {
                     result.Add(id);
                 }
             }
             return result;
+        }
+
+        // The items a representative stands for (its size bucket).
+        private static List<string> Members(string rep)
+        {
+            var m = new List<string>();
+            foreach (string id in CarryProbe.BigItemIds())
+            {
+                if (CargoLayout.SameClass(rep, id))
+                {
+                    m.Add(id);
+                }
+            }
+            return m;
         }
 
         private static IEnumerator Run()
@@ -345,7 +330,7 @@ namespace GK2Mounts
                 saved = new List<Item>(inv.Data.Inventory);
                 List<string> reps = Representatives();
                 Status = $"0 / {reps.Count * (reps.Count + 1)}";
-                Plugin.Log.LogInfo($"[sheet] {reps.Count} distinct shapes: {string.Join(" ", reps)}");
+                Plugin.Log.LogInfo($"[sheet] {reps.Count} size buckets: {string.Join(" ", reps)}");
 
                 var cells = new Dictionary<string, string>(); // "a|b" -> file name
                 int done = 0, total = reps.Count * (reps.Count + 1);
@@ -474,11 +459,23 @@ namespace GK2Mounts
             var sb = new StringBuilder();
             sb.AppendLine("<!doctype html><html><head><meta charset=\"utf-8\"><title>GK2 Mounts cargo sheet</title>");
             sb.AppendLine("<style>:root{--w:260px}body{font-family:sans-serif;background:#222;color:#ddd;margin:16px}table{border-collapse:collapse}td,th{border:1px solid #444;padding:2px;text-align:center;vertical-align:top;font-size:12px}th{background:#333;position:sticky;top:34px;z-index:1}th.row{position:sticky;left:0;background:#333}img{display:block;width:var(--w);height:auto;cursor:zoom-in}.cap{color:#999;font-size:11px;max-width:var(--w);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}pre{background:#111;padding:8px}#bar{position:sticky;top:0;background:#222;padding:6px 0;z-index:2;display:flex;gap:8px;align-items:center}#bar button{background:#444;color:#ddd;border:1px solid #666;padding:3px 10px;cursor:pointer}#bar input{width:220px}.small .cap{display:none}#big{position:fixed;inset:0;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;flex-direction:column;cursor:zoom-out;z-index:9}#big img{width:auto;max-width:95vw;max-height:88vh;image-rendering:pixelated}#big div{color:#ddd;margin-top:8px}</style></head><body>");
-            sb.AppendLine($"<h1>GK2 Mounts cargo sheet</h1><p>{DateTime.Now:yyyy-MM-dd HH:mm}. Rows: first item (slot 1). Columns: second item (slot 2); first column: the item alone. {reps.Count} distinct shapes, {cells.Count} pictures. Click a picture to see it full size.</p>");
+            sb.AppendLine($"<h1>GK2 Mounts cargo sheet</h1><p>{DateTime.Now:yyyy-MM-dd HH:mm}. Rows: first item (slot 1). Columns: second item (slot 2); first column: the item alone. {reps.Count} size buckets, {cells.Count} pictures. Click a picture to see it full size.</p>");
             sb.AppendLine("<div id=\"bar\"><button onclick=\"zoom(-30)\">&minus;</button><input type=\"range\" id=\"z\" min=\"40\" max=\"600\" value=\"260\" oninput=\"setW(+this.value)\"><button onclick=\"zoom(30)\">+</button><button onclick=\"fitAll()\">Fit everything on one page</button><button onclick=\"fitWidth()\">Fit width</button><button onclick=\"setW(260)\">Reset</button><span id=\"zl\">260 px</span></div>");
             sb.AppendLine($"<script>var COLS={reps.Count + 1},ROWS={reps.Count};function setW(w){{w=Math.max(30,Math.min(1200,Math.round(w)));document.documentElement.style.setProperty('--w',w+'px');document.getElementById('z').value=w;document.getElementById('zl').textContent=w+' px';document.body.classList.toggle('small',w<110);}}function zoom(d){{setW(+document.getElementById('z').value+d);}}function fitWidth(){{var lab=document.querySelector('th.row').offsetWidth;setW((window.innerWidth-lab-40-COLS*6)/COLS);}}function fitAll(){{var lab=document.querySelector('th.row').offsetWidth;var img=document.querySelector('td img');var ratio=img?img.naturalHeight/img.naturalWidth:1.1;var top=document.querySelector('table').getBoundingClientRect().top+window.scrollY+30;var byW=(window.innerWidth-lab-40-COLS*6)/COLS;var byH=(window.innerHeight-top-ROWS*6)/ROWS/ratio;setW(Math.min(byW,byH));}}function show(src,cap){{var b=document.getElementById('big');b.querySelector('img').src=src;b.querySelector('div').textContent=cap;b.style.display='flex';}}</script>");
             sb.AppendLine("<div id=\"big\" onclick=\"this.style.display='none'\"><img alt=\"\"><div></div></div>");
             sb.AppendLine(FilterHtml);
+            sb.AppendLine("<p>Each row and column is one size bucket, the unit the layout tunes: a picture stands for every pair of those sizes, and a+b is the same layout as b+a. Buckets:</p><ul>");
+            foreach (string r in reps)
+            {
+                sb.AppendLine($"<li><b>{r}</b>: {string.Join(", ", Members(r))}</li>");
+            }
+            sb.AppendLine("</ul>");
+            var tunedPairs = new List<string>();
+            foreach (CargoLayout.PairEntry pe in CargoLayout.Pairs)
+            {
+                if (pe.Tuned) tunedPairs.Add(pe.A + "+" + pe.B);
+            }
+            sb.AppendLine($"<p>Tuned pairs (frozen): {(tunedPairs.Count == 0 ? "none yet" : string.Join(", ", tunedPairs))}.</p>");
             sb.AppendLine($"<p>Settings [{s.Section}]: CargoDrawCorpse={s.CargoDrawCorpse.Value} BedDepth={s.CargoBedDepth.Value} SideGap={s.CargoSideGap.Value} Overhang={s.CargoOverhang.Value} Nestle={s.CargoNestle.Value}; layout file: {CargoLayout.Summary()}</p>");
             sb.Append("<table><tr><th></th><th>alone</th>");
             foreach (string b in reps)

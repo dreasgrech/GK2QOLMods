@@ -47,7 +47,14 @@ namespace GK2Mounts
             public bool OnTop;
             public bool Alone; // the only item on the cart
             public Vector3 Box;
+            public Vector3 Pos;      // where the packer put it: footprint centre along/across, bottom height above the floor
         }
+
+        // The last pack: the floor height, how the pair was arranged ("side", "along", "stack"), and whether that came
+        // from a tuned pair entry (for the panel).
+        public static float LastFloor { get; private set; }
+        public static string LastPairMode { get; private set; } = "";
+        public static bool LastPairTuned { get; private set; }
 
         public static readonly List<PlacedItem> Placed = new List<PlacedItem>();
         public static string LastLayoutNote { get; private set; } = "";
@@ -584,6 +591,7 @@ namespace GK2Mounts
             {
                 float areaA = a.Box.size.x * a.Box.size.z, areaB = b.Box.size.x * b.Box.size.z;
                 int c = areaB.CompareTo(areaA);
+                if (c == 0) c = string.CompareOrdinal(a.Item.id, b.Item.id); // equal footprints: by id, not by who came first
                 return c != 0 ? c : a.LoadOrder.CompareTo(b.LoadOrder);
             });
             float floor = s.CargoBedDepth.Value + floorExtra;
@@ -592,6 +600,9 @@ namespace GK2Mounts
             // Footprint centres (x, z) and bottoms (y) each item is placed at, before pivot correction.
             var target = new Vector3[drawn.Count];
             var onTop = new bool[drawn.Count];
+            LastFloor = floor;
+            LastPairMode = "";
+            LastPairTuned = false;
             Drawn first = drawn[0];
             CargoLayout.ItemEntry e0 = CargoLayout.ForItem(first.Item.id);
             // Alone on the cart: the item's own alone offsets when it has them, else the bottom/beside ones.
@@ -613,6 +624,10 @@ namespace GK2Mounts
                 // two crates); otherwise stacked. A pair entry can force any of the three.
                 bool side = i == 1 && (mode == "side" || (mode == "auto" && w0 + gap + w1 <= bedWidth + over));
                 bool along = i == 1 && !side && (mode == "along" || (mode == "auto" && l0 + gap + l1 <= bedLength + over));
+                if (i == 1)
+                {
+                    LastPairMode = side ? "side" : along ? "along" : "stack";
+                }
                 if (side)
                 {
                     float total = w0 + gap + w1;
@@ -634,9 +649,24 @@ namespace GK2Mounts
                     onTop[i] = true;
                     note.Append($"{cur.Item.id} on top of {prev.Item.id}{(mode != "auto" ? " (" + mode + ")" : "")}");
                 }
-                if (pair != null)
+                if (pair != null && !pair.Tuned)
                 {
                     target[i] += pair.Second;
+                }
+            }
+            // A tuned pair: exactly where the panel put the two items (by id), above today's floor. Nothing above is used.
+            if (drawn.Count == 2)
+            {
+                CargoLayout.PairEntry tuned = CargoLayout.ForPair(first.Item.id, drawn[1].Item.id);
+                if (tuned != null && tuned.Tuned)
+                {
+                    bool firstIsA = CargoLayout.FirstIsA(tuned, first.Item.id, drawn[1].Item.id);
+                    target[0] = (firstIsA ? tuned.PosA : tuned.PosB) + new Vector3(0f, floor, 0f);
+                    target[1] = (firstIsA ? tuned.PosB : tuned.PosA) + new Vector3(0f, floor, 0f);
+                    onTop[1] = tuned.Mode == "stack";
+                    LastPairMode = tuned.Mode;
+                    LastPairTuned = true;
+                    note.Append(" (tuned pair)");
                 }
             }
             if (drawn.Count == 1)
@@ -648,7 +678,7 @@ namespace GK2Mounts
             {
                 Bounds b = drawn[i].Box;
                 drawn[i].View.transform.localPosition = new Vector3(target[i].x - b.center.x, target[i].y - b.min.y, target[i].z - b.center.z);
-                Placed.Add(new PlacedItem { Id = drawn[i].Item.id, OnTop = onTop[i], Alone = drawn.Count == 1, Box = b.size });
+                Placed.Add(new PlacedItem { Id = drawn[i].Item.id, OnTop = onTop[i], Alone = drawn.Count == 1, Box = b.size, Pos = target[i] - new Vector3(0f, floor, 0f) });
             }
             LastLayoutNote = note.ToString();
         }
