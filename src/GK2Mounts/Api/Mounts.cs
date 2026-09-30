@@ -50,10 +50,7 @@ namespace GK2Mounts.Api
     public static class Mounts
     {
         // The API's own version, separate from the mod version: minor for additions, major for breaking changes.
-        public static readonly Version ApiVersion = new Version(0, 2, 0);
-
-        // Owner id the core uses for its built-in mount key (until the showcase mod takes over the keys).
-        public const string BuiltInKeyOwner = "dreas.gk2.mounts.key";
+        public static readonly Version ApiVersion = new Version(0, 4, 0);
 
         // False when the core is switched off (General.Enabled) or disabled itself after a game update.
         public static bool IsAvailable => Plugin.Patched && Plugin.Enabled != null && Plugin.Enabled.Value;
@@ -124,7 +121,7 @@ namespace GK2Mounts.Api
             }
             string keepOwner = owner;
             Mount.DismountFromApi("style change");
-            MountResult result = TryMount(keepOwner ?? BuiltInKeyOwner, style, showMessage);
+            MountResult result = TryMount(keepOwner ?? Plugin.Guid, style, showMessage);
             return result;
         }
 
@@ -178,6 +175,50 @@ namespace GK2Mounts.Api
         {
             MountRules.Poll(force: true);
         }
+
+        // The tuning values of a style, to read and to override for this session (see MountTuning).
+        public static MountTuning Tuning(MountStyle style)
+        {
+            if (!Plugin.Patched && Plugin.Ride == null)
+            {
+                throw new InvalidOperationException("GK2 Mounts has not loaded its settings yet.");
+            }
+            if (style == MountStyle.Cart)
+            {
+                return cartTuning ?? (cartTuning = new MountTuning(MountStyle.Cart, Plugin.Cart));
+            }
+            return rideTuning ?? (rideTuning = new MountTuning(MountStyle.Ride, Plugin.Ride));
+        }
+
+        // The ride behaviour switches, for both styles, overridable like tuning (keys = their [General] cfg names):
+        //   StayMountedThroughDoors  keep riding through doors that load another scene
+        //   DismountIndoors          dismount entering a building, church or dungeon, and refuse to mount inside
+        //   ShowMessages             the keeper's thought bubble for refusals
+        //   SideViewOnly             the keeper faces only left/right while riding
+        public static MountTuning Behaviour
+        {
+            get
+            {
+                if (Plugin.ShowMessages == null)
+                {
+                    throw new InvalidOperationException("GK2 Mounts has not loaded its settings yet.");
+                }
+                return behaviour ?? (behaviour = new MountTuning("General", new ITuned[]
+                {
+                    Plugin.StayMountedThroughDoors, Plugin.DismountIndoors, Plugin.ShowMessages, Plugin.SideViewOnly,
+                }));
+            }
+        }
+
+        // Removes every tuning and behaviour override this owner set.
+        public static void ClearTuning(string ownerId)
+        {
+            Tuning(MountStyle.Ride).ClearOwner(ownerId);
+            Tuning(MountStyle.Cart).ClearOwner(ownerId);
+            Behaviour.ClearOwner(ownerId);
+        }
+
+        private static MountTuning rideTuning, cartTuning, behaviour;
 
         // Removes every rule this owner added.
         public static void RemoveRules(string ownerId)

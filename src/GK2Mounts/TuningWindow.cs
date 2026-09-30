@@ -16,11 +16,16 @@ namespace GK2Mounts
     {
         private const int WindowId = 0x6d6e7431; // 'mnt1'
         private static Rect rect = new Rect(0f, 0f, 470f, 10f);
-        private static GUIStyle label, header, small, changed, wrapToggle;
+        private static GUIStyle label, header, small, changed, overridden, wrapToggle;
 
-        // Yellow when the setting differs from its mod default.
+        // Cyan while another mod overrides the value this session (the row edits the player's cfg value underneath,
+        // which shows again once the override ends); else yellow when it differs from its mod default.
         private static GUIStyle LabelFor(ConfigEntryBase e)
         {
+            if (Tuned.OverriddenBy(e) != null)
+            {
+                return overridden;
+            }
             return e != null && Defaults.IsTracked(e) && Defaults.Differs(e) ? changed : label;
         }
         private static bool stylesReady;
@@ -103,6 +108,8 @@ namespace GK2Mounts
             wrapToggle = new GUIStyle(GUI.skin.toggle) { wordWrap = true, fontSize = Mathf.RoundToInt(13f * fontScale) };
             changed = new GUIStyle(label);
             changed.normal.textColor = new Color(1f, 0.85f, 0.3f);
+            overridden = new GUIStyle(label);
+            overridden.normal.textColor = new Color(0.35f, 0.85f, 1f);
             var tex = new Texture2D(1, 1);
             tex.SetPixel(0, 0, new Color(1f, 1f, 1f, 0.35f));
             tex.Apply();
@@ -127,6 +134,8 @@ namespace GK2Mounts
         // so a value changed by this event (a slider moved off its default) shows up from the next event on.
         private static List<(string Group, ConfigEntryBase Entry)> diffSnapshot = new List<(string, ConfigEntryBase)>();
 
+        private static int overrideSnapshot; // taken with diffSnapshot, for the same reason
+
         private static string DiffByGroup()
         {
             int g = 0, r = 0, c = 0;
@@ -148,6 +157,7 @@ namespace GK2Mounts
             if (Event.current.type == EventType.Layout)
             {
                 diffSnapshot = Defaults.Differing();
+                overrideSnapshot = Tuned.OverrideCount();
             }
             int newTab = GUILayout.Toolbar(tab, TabNames);
             if (newTab != tab)
@@ -191,6 +201,10 @@ namespace GK2Mounts
             GUILayout.Label(differing == 0
                 ? "Your changes are saved as you make them. All settings match the mod defaults."
                 : $"Your changes are saved as you make them. {differing} setting{(differing == 1 ? "" : "s")} differ from the mod defaults ({DiffByGroup()}; yellow, listed on the Defaults tab).", small);
+            if (overrideSnapshot > 0)
+            {
+                GUILayout.Label($"{overrideSnapshot} value{(overrideSnapshot == 1 ? " is" : "s are")} set by another mod for this session (cyan): those rows are locked and show the value in effect. Your saved value is unchanged and comes back when the mod clears it or the game restarts.", small);
+            }
             DrawDefaultsButtons(differing);
             GUILayout.Label("Right-click a row to put it back to its mod default.", small);
             GUI.DragWindow(new Rect(0f, 0f, 10000f, 20f));
@@ -201,10 +215,7 @@ namespace GK2Mounts
         private static void DrawGeneral()
         {
             Header("Controls");
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("Mount / dismount key (change General.MountKey in the cfg)", label, GUILayout.Width(LabelW));
-            GUILayout.Label(Plugin.MountKey.Value.ToString(), label);
-            GUILayout.EndHorizontal();
+            GUILayout.Label($"GK2 Mounts has no keys of its own: the mod that uses it mounts and dismounts (this ride: {Mounts.Owner ?? "-"}). Keys, and the behaviour switches below, are that mod's settings; rows it sets are cyan and locked.", small);
 
             Header("Behaviour");
             Toggle("Stay mounted when going through doors (scene changes)", Plugin.StayMountedThroughDoors, null);
@@ -242,8 +253,7 @@ namespace GK2Mounts
             GUILayout.Label("Switch style (the donkey is summoned again)", label, GUILayout.Width(LabelW));
             if (GUILayout.Button(ride ? "Go to cart" : "Go to riding", GUILayout.Width(SliderW)))
             {
-                Plugin.Style.Value = ride ? MountStyle.Cart : MountStyle.Ride;
-                Mount.Remount();
+                Mounts.SwitchStyle(ride ? MountStyle.Cart : MountStyle.Ride);
             }
             GUILayout.EndHorizontal();
             GUILayout.Label("Each style keeps its own values below; they are saved under [" + s.Section + "] in the cfg.", small);
@@ -316,7 +326,11 @@ namespace GK2Mounts
                     FloatSlider("Cart: largest height shift allowed", s.CartGroundMaxShift, 0f, 1.5f, 2, null);
                     EnumCycler("How the cart meets a slope", s.CartSlope, null);
                     CartSlopeStyle next = (CartSlopeStyle)(((int)s.CartSlope.Value + 1) % Enum.GetValues(typeof(CartSlopeStyle)).Length);
-                    if (GUILayout.Button("Compare: switch to " + next + " (live)"))
+                    bool slopeLocked = Tuned.OverriddenBy(s.CartSlope.Entry) != null;
+                    GUI.enabled = !slopeLocked;
+                    bool compare = GUILayout.Button("Compare: switch to " + next + " (live)") && !slopeLocked;
+                    GUI.enabled = true;
+                    if (compare)
                     {
                         s.CartSlope.Value = next;
                         Plugin.Log.LogInfo("Mount: cart slope style " + next + ".");
@@ -413,7 +427,6 @@ namespace GK2Mounts
             }
         }
 
-        private static bool waitingForBellKey;
 
         private static void DrawSounds()
         {
@@ -482,7 +495,6 @@ namespace GK2Mounts
             FloatSlider("... after standing at least (seconds)", s.BellSetOffIdleSeconds, 0f, 60f, 0, null);
             FloatSlider("Volume", s.BellVolume, 0f, 3f, 2, null);
             FloatSlider("Pitch", s.BellPitch, 0.3f, 2f, 2, null);
-            BellKeyRow();
 
             Header("Status");
             GUILayout.Label("Last sound: " + (string.IsNullOrEmpty(MountSounds.LastEvent) ? "none yet" : MountSounds.LastEvent), small);
@@ -503,11 +515,15 @@ namespace GK2Mounts
             }
             GUILayout.EndHorizontal();
             GUILayout.BeginHorizontal();
-            string v = GUILayout.TextField(entry.Value ?? "", GUILayout.Width(LabelW));
+            bool locked = Locked(entry, out string shown);
+            GUI.enabled = !locked;
+            string v = GUILayout.TextField(shown ?? "", GUILayout.Width(LabelW));
+            GUI.enabled = true;
             string id = (v ?? "").Trim();
             bool ok = (allowEmpty && id.Length == 0) || MountSounds.KnownId(id);
             GUILayout.Label(ok ? "" : "unknown id", small);
             GUILayout.EndHorizontal();
+            if (locked) { return; }
             if (ResetOnRightClick(entry, null)) { return; }
             if (v != entry.Value)
             {
@@ -515,40 +531,23 @@ namespace GK2Mounts
             }
         }
 
-        // General.BellKey: click, then press a key (Escape clears it).
-        private static void BellKeyRow()
-        {
-            if (waitingForBellKey && Event.current.type == EventType.KeyDown && Event.current.keyCode != KeyCode.None)
-            {
-                Plugin.BellKey.Value = Event.current.keyCode == KeyCode.Escape ? KeyCode.None : Event.current.keyCode;
-                waitingForBellKey = false;
-                Event.current.Use();
-            }
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("Bell key (General.BellKey, both styles)", label, GUILayout.Width(LabelW));
-            string shown = waitingForBellKey ? "press a key" : (Plugin.BellKey.Value == KeyCode.None ? "none" : Plugin.BellKey.Value.ToString());
-            if (GUILayout.Button(shown, GUILayout.Width(100f)))
-            {
-                waitingForBellKey = !waitingForBellKey;
-            }
-            GUILayout.EndHorizontal();
-            if (ResetOnRightClick(Plugin.BellKey, null)) { waitingForBellKey = false; }
-            GUILayout.Label("Click, then press the key; Escape clears it. Pick a key the game does not use.", small);
-        }
-
         // A hex colour as three 0-1 sliders; the entry keeps RRGGBB so the config stays hand-editable.
         private static void ColorRow(string name, ConfigEntry<string> entry, Action onChange)
         {
-            Color c = Lantern.ParseColor(entry.Value, new Color(1f, 0.59f, 0f));
+            bool locked = Locked(entry, out string shown);
+            Color c = Lantern.ParseColor(shown, new Color(1f, 0.59f, 0f));
             GUILayout.BeginHorizontal();
             GUILayout.Label(name, LabelFor(entry), GUILayout.Width(LabelW));
-            GUILayout.Label(entry.Value, label, GUILayout.Width(70f));
+            GUILayout.Label(shown, label, GUILayout.Width(70f));
             GUILayout.EndHorizontal();
-            if (ResetOnRightClick(entry, onChange)) { return; }
+            if (!locked && ResetOnRightClick(entry, onChange)) { return; }
+            GUI.enabled = !locked;
             Color n = c;
             n.r = Channel("Red", c.r);
             n.g = Channel("Green", c.g);
             n.b = Channel("Blue", c.b);
+            GUI.enabled = true;
+            if (locked) { return; }
             if (n != c)
             {
                 entry.Value = Lantern.ToHex(n);
@@ -783,8 +782,10 @@ namespace GK2Mounts
         // the donkey where the game draws it. Shown as a toggle; the stored value stays a float for the cfg.
         private static void CenteringToggle(ConfigEntry<float> entry)
         {
-            bool on = entry.Value > 0.0001f;
-            bool clicked = OnOffRow("Keep the donkey centred under the rider", on, LabelFor(entry));
+            bool locked = Locked(entry, out float shown);
+            bool on = shown > 0.0001f;
+            bool clicked = OnOffRow("Keep the donkey centred under the rider", on, LabelFor(entry), enabled: !locked);
+            if (locked) { return; }
             if (ResetOnRightClick(entry, null)) { return; }
             if (clicked)
             {
@@ -875,21 +876,24 @@ namespace GK2Mounts
         {
             GUILayout.BeginHorizontal();
             GUILayout.Label(name, LabelFor(entry), GUILayout.Width(LabelW));
-            if (GUILayout.Button("-", GUILayout.Width(30f)))
+            bool locked = Locked(entry, out float shown);
+            GUI.enabled = !locked;
+            if (GUILayout.Button("-", GUILayout.Width(30f)) && !locked)
             {
                 entry.Value = Mathf.Max(min, (float)Math.Round(entry.Value - step, 2));
             }
-            GUILayout.Label(entry.Value.ToString(format), label, GUILayout.Width(50f));
+            GUILayout.Label(shown.ToString(format), label, GUILayout.Width(50f));
             Rect r = GUILayoutUtility.GetLastRect();
-            if (Event.current.type == EventType.MouseDown && Event.current.button == 1 && r.Contains(Event.current.mousePosition))
+            if (!locked && Event.current.type == EventType.MouseDown && Event.current.button == 1 && r.Contains(Event.current.mousePosition))
             {
                 Defaults.ResetToDefault(entry);
                 Event.current.Use();
             }
-            if (GUILayout.Button("+", GUILayout.Width(30f)))
+            if (GUILayout.Button("+", GUILayout.Width(30f)) && !locked)
             {
                 entry.Value = Mathf.Min(max, (float)Math.Round(entry.Value + step, 2));
             }
+            GUI.enabled = true;
             GUILayout.EndHorizontal();
         }
 
@@ -921,10 +925,14 @@ namespace GK2Mounts
         {
             GUILayout.BeginHorizontal();
             GUILayout.Label(name, LabelFor(entry), GUILayout.Width(LabelW));
-            float v = GUILayout.HorizontalSlider(entry.Value, min, max, GUILayout.Width(90f));
+            bool locked = Locked(entry, out float shown);
+            GUI.enabled = !locked;
+            float v = GUILayout.HorizontalSlider(shown, min, max, GUILayout.Width(90f));
+            GUI.enabled = true;
             v = (float)Math.Round(v, decimals);
             GUILayout.Label(v.ToString("F" + decimals), label, GUILayout.Width(45f));
             GUILayout.EndHorizontal();
+            if (locked) { return; }
             if (ResetOnRightClick(entry, onChange)) { return; }
             if (Mathf.Abs(v - entry.Value) > 0.00001f)
             {
@@ -940,11 +948,15 @@ namespace GK2Mounts
             // The slider is laid out between the buttons and reads the value before "+" runs; a button press must
             // therefore win over the slider's (stale) value in the same pass.
             bool pressed = false;
-            if (GUILayout.Button("-", GUILayout.Width(22f)) && entry.Value > min) { entry.Value--; pressed = true; onChange?.Invoke(); }
-            int v = Mathf.RoundToInt(GUILayout.HorizontalSlider(entry.Value, min, max, GUILayout.Width(50f)));
-            if (GUILayout.Button("+", GUILayout.Width(22f)) && entry.Value < max) { entry.Value++; pressed = true; onChange?.Invoke(); }
-            GUILayout.Label(entry.Value.ToString(), label, GUILayout.Width(30f));
+            bool locked = Locked(entry, out int shown);
+            GUI.enabled = !locked;
+            if (GUILayout.Button("-", GUILayout.Width(22f)) && !locked && entry.Value > min) { entry.Value--; pressed = true; onChange?.Invoke(); }
+            int v = Mathf.RoundToInt(GUILayout.HorizontalSlider(locked ? shown : entry.Value, min, max, GUILayout.Width(50f)));
+            if (GUILayout.Button("+", GUILayout.Width(22f)) && !locked && entry.Value < max) { entry.Value++; pressed = true; onChange?.Invoke(); }
+            GUI.enabled = true;
+            GUILayout.Label((locked ? shown : entry.Value).ToString(), label, GUILayout.Width(30f));
             GUILayout.EndHorizontal();
+            if (locked) { return; }
             if (ResetOnRightClick(entry, onChange)) { return; }
             if (!pressed && v != entry.Value)
             {
@@ -954,18 +966,22 @@ namespace GK2Mounts
         }
 
         // Booleans as a labelled On/Off button in the value column (a label-styled GUILayout.Toggle draws no box).
-        private static bool OnOffRow(string name, bool value, GUIStyle style = null)
+        private static bool OnOffRow(string name, bool value, GUIStyle style = null, bool enabled = true)
         {
             GUILayout.BeginHorizontal();
             GUILayout.Label(name, style ?? label, GUILayout.Width(LabelW));
-            bool clicked = GUILayout.Button(value ? "On" : "Off", GUILayout.Width(70f));
+            GUI.enabled = enabled;
+            bool clicked = GUILayout.Button(value ? "On" : "Off", GUILayout.Width(70f)) && enabled;
+            GUI.enabled = true;
             GUILayout.EndHorizontal();
             return clicked;
         }
 
         private static void Toggle(string name, ConfigEntry<bool> entry, Action onChange)
         {
-            bool clicked = OnOffRow(name, entry.Value, LabelFor(entry));
+            bool locked = Locked(entry, out bool shown);
+            bool clicked = OnOffRow(name, shown, LabelFor(entry), enabled: !locked);
+            if (locked) { return; }
             if (ResetOnRightClick(entry, onChange)) { return; }
             if (clicked)
             {
@@ -974,23 +990,47 @@ namespace GK2Mounts
             }
         }
 
+        // Type inference does not look through Tuned<T>'s implicit conversion, hence this overload.
+        private static void EnumCycler<T>(string name, Tuned<T> tuned, Action onChange) where T : struct, Enum
+        {
+            EnumCycler<T>(name, tuned.Entry, onChange);
+        }
+
         private static void EnumCycler<T>(string name, ConfigEntry<T> entry, Action onChange) where T : struct, Enum
         {
             T[] values = (T[])Enum.GetValues(typeof(T));
             int idx = Array.IndexOf(values, entry.Value);
+            bool locked = Locked(entry, out T shown);
             GUILayout.BeginHorizontal();
             GUILayout.Label(name, LabelFor(entry), GUILayout.Width(LabelW));
             bool changed = false;
-            if (GUILayout.Button("<", GUILayout.Width(22f))) { idx = (idx - 1 + values.Length) % values.Length; changed = true; }
-            GUILayout.Label(entry.Value.ToString(), label, GUILayout.Width(90f));
-            if (GUILayout.Button(">", GUILayout.Width(22f))) { idx = (idx + 1) % values.Length; changed = true; }
+            GUI.enabled = !locked;
+            if (GUILayout.Button("<", GUILayout.Width(22f)) && !locked) { idx = (idx - 1 + values.Length) % values.Length; changed = true; }
+            GUILayout.Label(shown.ToString(), label, GUILayout.Width(90f));
+            if (GUILayout.Button(">", GUILayout.Width(22f)) && !locked) { idx = (idx + 1) % values.Length; changed = true; }
+            GUI.enabled = true;
             GUILayout.EndHorizontal();
+            if (locked) { return; }
             if (ResetOnRightClick(entry, onChange)) { return; }
             if (changed)
             {
                 entry.Value = values[idx];
                 onChange?.Invoke();
             }
+        }
+
+        // A value another mod overrides this session (Tuned) is shown as the value in effect and locked: the controls
+        // are greyed out and neither they nor right-click write anything, so the row cannot look like it changes
+        // something that the override then ignores. Once the override ends the row shows and edits the cfg again.
+        private static bool Locked<T>(ConfigEntry<T> entry, out T shown)
+        {
+            if (Tuned.OverriddenBy(entry) != null && Tuned.ByEntry.TryGetValue(entry, out ITuned t) && t.Current is T v)
+            {
+                shown = v;
+                return true;
+            }
+            shown = entry.Value;
+            return false;
         }
 
         // Right-clicking a control row puts that setting back to its default. Called right after the row is laid out,

@@ -183,7 +183,7 @@ namespace GK2Mounts
         public static bool IsMounted => mounted;
 
         // Settings of the style being ridden (or, when not mounted, of the style that would be).
-        internal static StyleSettings S => Plugin.For(mounted ? activeStyle : Plugin.Style.Value);
+        internal static StyleSettings S => Plugin.For(mounted ? activeStyle : MountStyle.Ride);
 
         // Side view is on when the setting says so, or when the selected pose only exists as left/right art
         // (FishingIdle): with the keeper facing up or down the animator has no frame and the body renders nothing.
@@ -224,18 +224,6 @@ namespace GK2Mounts
                 return;
             }
 
-            // The built-in key uses the public API like any other mod (until the showcase mod takes the keys over).
-            if (UnityInput.Current.GetKeyDown(Plugin.MountKey.Value))
-            {
-                if (mounted)
-                {
-                    Mounts.Dismount("dismounted");
-                }
-                else
-                {
-                    Mounts.TryMount(Mounts.BuiltInKeyOwner, Plugin.Style.Value);
-                }
-            }
             if (!mounted)
             {
                 // A pose's animator state switches its gear on every frame and needs a frame or two to be left after
@@ -348,7 +336,16 @@ namespace GK2Mounts
                     // Such a state ends by forcing Idle, which the SetState prefix would turn back into the pose:
                     // an enter/exit loop every frame (visible as flicker). Fall back to Idle for good.
                     Plugin.Log.LogWarning($"Mount: pose {S.Pose.Value} makes the game take control of the keeper; falling back to Idle.");
-                    S.Pose.Value = RiderPose.Idle;
+                    if (S.Pose.HasOverride)
+                    {
+                        // Another mod set it (MountTuning): drop that override; writing the cfg would change nothing.
+                        Plugin.Log.LogWarning($"Mount: that pose was set by {S.Pose.OverrideOwner}; its override is removed.");
+                        S.Pose.ClearOverride();
+                    }
+                    else
+                    {
+                        S.Pose.Value = RiderPose.Idle;
+                    }
                     ApplyPoseNow();
                 }
             }
@@ -445,6 +442,33 @@ namespace GK2Mounts
             if (feature == MountFeature.Lantern || feature == MountFeature.LanternLight)
             {
                 Lantern.Refresh();
+            }
+        }
+
+        // A tuning override changed (MountTuning). Values read every frame need nothing; these apply what the panel's
+        // own rows apply after a change: speed, seat, legs, pose, lantern pose. Geometry measured at summon waits for
+        // the next mount.
+        // style null: a General (behaviour) value, which applies to either style.
+        internal static void OnTuningChanged(MountStyle? style)
+        {
+            if (!mounted || (style.HasValue && activeStyle != style.Value))
+            {
+                return;
+            }
+            try
+            {
+                RefreshSpeed();
+                RefreshSeat();
+                RefreshLeg();
+                ApplyPoseNow();
+                if (activeStyle == MountStyle.Cart)
+                {
+                    Lantern.Refresh();
+                }
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning("API: applying a tuning change failed: " + e.Message);
             }
         }
 
@@ -1335,15 +1359,7 @@ namespace GK2Mounts
 
         public static MountStyle CurrentStyle => activeStyle;
 
-        // Style switch from the panel: the cart parts and offsets are decided at spawn, so mount again in place
-        // (through the API, so the ride keeps its owner and the rules for the new style are asked).
-        public static void Remount()
-        {
-            if (mounted)
-            {
-                Mounts.SwitchStyle(Plugin.Style.Value);
-            }
-        }
+
 
         public static void RefreshSpeed()
         {

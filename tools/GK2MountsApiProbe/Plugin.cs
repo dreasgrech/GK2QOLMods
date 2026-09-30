@@ -11,6 +11,8 @@ namespace GK2MountsApiProbe
     //   F9  toggle a "blocked" rule: refuses mounting, and dismounts a ride within half a second
     //   F10 step through the features: each press switches exactly the next one off (Cargo, Lantern, LanternLight,
     //       Sounds, Bell, StayThroughDoors), then one more press has all on again
+    //   F8  tuning: first press overrides speed x3.5, pose Walk and lantern scale 1.6 on the style being ridden (and
+    //       logs a clamp test: speed 99 -> the allowed maximum); second press clears every override of this mod
     // Every event and result is written to the log with the prefix [api probe].
     [BepInPlugin(Guid, "GK2 Mounts API probe", "0.1.0")]
     [BepInDependency("dreas.gk2.mounts")]
@@ -22,6 +24,7 @@ namespace GK2MountsApiProbe
 
         private bool blocked;
         private int featureOff = -1; // index into Features of the one switched off, -1 = all on
+        private bool tuned;
 
         private void Awake()
         {
@@ -66,6 +69,27 @@ namespace GK2MountsApiProbe
                 {
                     blocked = !blocked;
                     Logger.LogInfo($"[api probe] F9: blocked = {blocked}.");
+                }
+                if (UnityInput.Current.GetKeyDown(KeyCode.F8))
+                {
+                    MountStyle style = Mounts.IsMounted ? Mounts.Style : MountStyle.Cart;
+                    MountTuning t = Mounts.Tuning(style);
+                    if (!tuned)
+                    {
+                        float before = t.Get<float>("SpeedMultiplier");
+                        float clamped = t.Set(Guid, "SpeedMultiplier", 99f);
+                        t.Set(Guid, "SpeedMultiplier", 3.5f);
+                        t.Set(Guid, "Pose", RiderPose.Walk);
+                        t.Set(Guid, "LanternScale", 1.6f);
+                        tuned = true;
+                        Logger.LogInfo($"[api probe] F8: {style}: {t.Keys.Count} keys; speed {before} -> 99 applied as {clamped}; now speed {t.Get<float>("SpeedMultiplier")}, pose {t.Get<RiderPose>("Pose")}, lantern scale {t.Get<float>("LanternScale")}; overridden by {t.OverriddenBy("SpeedMultiplier")}.");
+                    }
+                    else
+                    {
+                        Mounts.ClearTuning(Guid);
+                        tuned = false;
+                        Logger.LogInfo($"[api probe] F8: overrides cleared; {style} speed {t.Get<float>("SpeedMultiplier")}, pose {t.Get<RiderPose>("Pose")}, lantern scale {t.Get<float>("LanternScale")}, overridden {t.IsOverridden("SpeedMultiplier")}.");
+                    }
                 }
                 if (UnityInput.Current.GetKeyDown(KeyCode.F10))
                 {

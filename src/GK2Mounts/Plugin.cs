@@ -8,79 +8,53 @@ using UnityEngine;
 
 namespace GK2Mounts
 {
-    // How the cart meets a slope (CartFollowsGround): the whole cart lifted level with the shafts at half the lift,
-    // the shafts tilted about their harness end, or the cart pitched about its axle like a real cart.
-    public enum CartSlopeStyle
-    {
-        HalfLift,
-        ShaftsTilt,
-        WholeCartPitch,
-    }
-
-    public enum LegSource
-    {
-        Body,
-        Drawn,
-    }
-
-    // Animator states the keeper can be held in while riding (values = the game's AnimationState enum).
-    // Only states that loop on their own and carry no control-taking behaviour. Tool, work, planting, cast and pull
-    // states either end by forcing Idle (which would re-trigger the pose every frame) or take player control.
-    public enum RiderPose
-    {
-        Walk = 1,
-        Idle = 0,
-        FishingIdle = 203,
-        FocusedWalk = 41,
-    }
-
     // Everything that positions and animates rider and donkey, one complete set per style ([Ride] and [Cart]
     // sections in the cfg). The two looks differ in almost every value, so they are tuned independently; the
     // tuning panel always shows the set of the style currently mounted.
     internal sealed class StyleSettings
     {
         public readonly string Section;
-        public readonly ConfigEntry<float> SpeedMultiplier;
-        public readonly ConfigEntry<float> Depth;
-        public readonly ConfigEntry<float> CenterOffset;
-        public readonly ConfigEntry<int> RiderOffsetPx;
-        public readonly ConfigEntry<int> TorsoOffsetPx;
-        public readonly ConfigEntry<bool> AutoSeat;
-        public readonly ConfigEntry<int> SeatAdjustPx;
-        public readonly ConfigEntry<float> SeatOffset;
-        public readonly ConfigEntry<bool> Bob;
-        public readonly ConfigEntry<RiderPose> Pose;
-        public readonly ConfigEntry<bool> FreezePoseWhenIdle;
-        public readonly ConfigEntry<float> PoseSpeed;
-        public readonly ConfigEntry<bool> PoseSpeedFollowsDonkey;
-        public readonly ConfigEntry<bool> NearLeg;
-        public readonly ConfigEntry<LegSource> LegSource;
-        public readonly ConfigEntry<int> LegHeightPx;
-        public readonly ConfigEntry<int> LegAdjustXPx;
-        public readonly ConfigEntry<int> LegAdjustYPx;
-        public readonly ConfigEntry<bool> SnapToGround;
-        public readonly ConfigEntry<bool> CartFollowsGround;
-        public readonly ConfigEntry<float> CartGroundMaxShift;
-        public readonly ConfigEntry<CartSlopeStyle> CartSlope;
-        public readonly ConfigEntry<float> CartPitchMaxDegrees;
-        public readonly ConfigEntry<bool> CargoDrawCorpse, CargoSwaysWithCart;
-        public readonly ConfigEntry<float> CargoBedDepth, CargoSideGap, CargoOverhang, CargoNestle;
-        public readonly ConfigEntry<float> LanternAlong, LanternUp, LanternAcross, LanternTilt, LanternLean;
-        public readonly ConfigEntry<bool> LanternFlip;
-        public readonly ConfigEntry<bool> LanternHangs;
-        public readonly ConfigEntry<float> LanternSwayDegrees, LanternSwaySeconds;
-        public readonly ConfigEntry<bool> LanternShow, LanternLightOn, LanternLightShadows, LanternSelfLightOn, LanternGlowOn, LanternGlassOn;
-        public readonly ConfigEntry<float> LanternScale, LanternLightIntensity, LanternLightRange, LanternLightDayDim, LanternSelfLightIntensity, LanternSelfLightRange, LanternGlowAlpha, LanternGlowScale;
-        public readonly ConfigEntry<string> LanternLightColor;
-        public readonly ConfigEntry<float> IdleFidgetEverySeconds, IdleFidgetSpeed, IdleCrawlSpeed;
+        public readonly Tuned<float> SpeedMultiplier;
+        public readonly Tuned<float> Depth;
+        public readonly Tuned<float> CenterOffset;
+        public readonly Tuned<int> RiderOffsetPx;
+        public readonly Tuned<int> TorsoOffsetPx;
+        public readonly Tuned<bool> AutoSeat;
+        public readonly Tuned<int> SeatAdjustPx;
+        public readonly Tuned<float> SeatOffset;
+        public readonly Tuned<bool> Bob;
+        public readonly Tuned<RiderPose> Pose;
+        public readonly Tuned<bool> FreezePoseWhenIdle;
+        public readonly Tuned<float> PoseSpeed;
+        public readonly Tuned<bool> PoseSpeedFollowsDonkey;
+        public readonly Tuned<bool> NearLeg;
+        public readonly Tuned<LegSource> LegSource;
+        public readonly Tuned<int> LegHeightPx;
+        public readonly Tuned<int> LegAdjustXPx;
+        public readonly Tuned<int> LegAdjustYPx;
+        public readonly Tuned<bool> SnapToGround;
+        public readonly Tuned<bool> CartFollowsGround;
+        public readonly Tuned<float> CartGroundMaxShift;
+        public readonly Tuned<CartSlopeStyle> CartSlope;
+        public readonly Tuned<float> CartPitchMaxDegrees;
+        public readonly Tuned<bool> CargoDrawCorpse, CargoSwaysWithCart;
+        public readonly Tuned<float> CargoBedDepth, CargoSideGap, CargoOverhang, CargoNestle;
+        public readonly Tuned<float> LanternAlong, LanternUp, LanternAcross, LanternTilt, LanternLean;
+        public readonly Tuned<bool> LanternFlip;
+        public readonly Tuned<bool> LanternHangs;
+        public readonly Tuned<float> LanternSwayDegrees, LanternSwaySeconds;
+        public readonly Tuned<bool> LanternShow, LanternLightOn, LanternLightShadows, LanternSelfLightOn, LanternGlowOn, LanternGlassOn;
+        public readonly Tuned<float> LanternScale, LanternLightIntensity, LanternLightRange, LanternLightDayDim, LanternSelfLightIntensity, LanternSelfLightRange, LanternGlowAlpha, LanternGlowScale;
+        public readonly Tuned<string> LanternLightColor;
+        public readonly Tuned<float> IdleFidgetEverySeconds, IdleFidgetSpeed, IdleCrawlSpeed;
         // Sounds tab (MountSounds.cs). Volumes multiply the game's own volume for that sound (1 = as the game plays it).
-        public readonly ConfigEntry<bool> SoundsOn, HoofOn, HoofSurfaceAware, GrazeOn, BrayWhileWalking, BrayInSfxChannel,
+        public readonly Tuned<bool> SoundsOn, HoofOn, HoofSurfaceAware, GrazeOn, BrayWhileWalking, BrayInSfxChannel,
             CargoThumpOn, WheelOn, WheelPitchFollowsSpeed, BellOnSetOff, BellOnlyWithCargo;
-        public readonly ConfigEntry<float> SoundVolume, HoofVolume, HoofPitch, HoofPitchVariation, HoofPhase, GrazeVolume, LipsVolume,
+        public readonly Tuned<float> SoundVolume, HoofVolume, HoofPitch, HoofPitchVariation, HoofPhase, GrazeVolume, LipsVolume,
             BrayOnMountChance, BrayIdleEverySeconds, BrayVolume, BrayPitch, CargoThumpVolume, CargoThumpPitch,
             WheelVolume, WheelPitch, WheelPhase, BellVolume, BellPitch, BellSetOffIdleSeconds;
-        public readonly ConfigEntry<int> HoofStepsPerCycle, WheelEveryCycles;
-        public readonly ConfigEntry<string> HoofSoundId, GrazeSoundId, BraySoundId, CargoThumpSoundId, WheelSoundId, BellSoundId;
+        public readonly Tuned<int> HoofStepsPerCycle, WheelEveryCycles;
+        public readonly Tuned<string> HoofSoundId, GrazeSoundId, BraySoundId, CargoThumpSoundId, WheelSoundId, BellSoundId;
 
         public StyleSettings(ConfigFile cfg, string section, float speed, float depth, float center, int riderPx, int torsoPx,
             bool autoSeat, int seatAdjustPx, float seatOffset, bool bob, RiderPose pose, bool freeze,
@@ -334,14 +308,13 @@ namespace GK2Mounts
 
         // [General]: behaviour
         internal static ConfigEntry<bool> Enabled;
-        internal static ConfigEntry<KeyCode> MountKey;
-        internal static ConfigEntry<MountStyle> Style;
         internal static ConfigEntry<string> MountWgoId;
-        internal static ConfigEntry<bool> StayMountedThroughDoors;
-        internal static ConfigEntry<bool> DismountIndoors;
-        internal static ConfigEntry<bool> ShowMessages;
-        internal static ConfigEntry<bool> SideViewOnly;
-        internal static ConfigEntry<KeyCode> BellKey;
+        // Ride behaviour: the core's defaults, overridable per session through Mounts.Behaviour (the showcase mod sets
+        // them from its own settings). No keys here: the core mounts only when a mod asks (Mounts.TryMount).
+        internal static Tuned<bool> StayMountedThroughDoors;
+        internal static Tuned<bool> DismountIndoors;
+        internal static Tuned<bool> ShowMessages;
+        internal static Tuned<bool> SideViewOnly;
 
         // [Ride] / [Cart]: position, pose, animation, legs, speed
         internal static StyleSettings Ride;
@@ -372,11 +345,7 @@ namespace GK2Mounts
             Instance = this;
             Application.quitting += () => Quitting = true;
             Enabled = Config.Bind("General", "Enabled", true,
-                "Master switch. Press the mount key to summon a donkey under the keeper and ride it; press again to dismount.");
-            MountKey = Config.Bind("General", "MountKey", KeyCode.H,
-                "Key that mounts/dismounts. Pick one the game does not use.");
-            Style = Config.Bind("General", "Style", MountStyle.Ride,
-                "Ride: sit on the donkey's back. Cart: ride the donkey while it pulls its cart. Each style has its own [Ride] / [Cart] settings section.");
+                "Master switch for the mount. GK2 Mounts does nothing on its own: a mod built on it (such as the showcase mod) summons and dismounts the donkey. Off: no mod can mount (the kill switch if one misbehaves).");
             MountWgoId = Config.Bind("General", "MountWgoId", "npc_donkey",
                 "World object id used for the mount's looks. Only npc_donkey has been tested.");
             StayMountedThroughDoors = Config.Bind("General", "StayMountedThroughDoors", Defaults.Get("General", "StayMountedThroughDoors", true),
@@ -388,8 +357,6 @@ namespace GK2Mounts
             SideViewOnly = Config.Bind("General", "SideViewOnly", Defaults.Get("General", "SideViewOnly", false),
                 "The donkey only has left/right art. On: while mounted the keeper also only faces left or right (walking up/down keeps the last horizontal facing). Off: the keeper turns as usual and the donkey shows its side. Forced on for poses that only have left/right frames.");
 
-            BellKey = Config.Bind("General", "BellKey", KeyCode.None,
-                "While mounted: ring the donkey's bell. None = no key (the Sounds tab has a button). Pick one the game does not use.");
 
             Ride = new StyleSettings(Config, "Ride",
                 speed: 1.75f, depth: 0.32f, center: 0.48f, riderPx: -4, torsoPx: -3,
@@ -445,7 +412,7 @@ namespace GK2Mounts
                 return;
             }
             Patched = true;
-            Log.LogInfo($"GK2 Mounts {Version} loaded. Mount key: {MountKey.Value}, style {Style.Value}, speed x{For(Style.Value).SpeedMultiplier.Value}.");
+            Log.LogInfo($"GK2 Mounts {Version} loaded (API {Mounts.ApiVersion}); nothing happens until a mod uses it.");
         }
 
         // LateUpdate: runs after the game moved the player for this frame, so the donkey follows without lag.

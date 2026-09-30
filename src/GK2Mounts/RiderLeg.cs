@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
+using GK2Mounts.Api;
+
 namespace GK2Mounts
 {
     // The rider's legs, drawn in front of the donkey while the keeper's own (baked-in) legs are hidden inside it.

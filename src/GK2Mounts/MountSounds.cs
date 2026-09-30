@@ -89,11 +89,7 @@ namespace GK2Mounts
             }
             Transform at = donkey.transform;
 
-            bool bell = MountRules.Allowed(MountFeature.Bell);
-            if (bell && Plugin.BellKey.Value != KeyCode.None && UnityInput.Current.GetKeyDown(Plugin.BellKey.Value))
-            {
-                RingBell();
-            }
+            bool bell = MountRules.Allowed(MountFeature.Bell); // a bell key is the using mod's (Mounts.RingBell)
             if (bell && setOff && S.BellOnSetOff.Value && stoodFor >= S.BellSetOffIdleSeconds.Value
                 && (!S.BellOnlyWithCargo.Value || Cargo.Count > 0) && !CargoSheet.Running)
             {

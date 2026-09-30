@@ -188,6 +188,8 @@ alter the save, which is the reason Built Count never evaluates one.
 
 - Only `GK2Mounts.Api` is public. `ApiVersion` follows semver: new members bump the minor version, and a change to
   existing members bumps the major version.
+  - **Before 1.0**, as semver allows for 0.x, a breaking change bumps the minor. It's also listed in the design doc.
+  - 0.4.0 made one: `BuiltInKeyOwner` was removed, and `MountTuning.Style` became `MountStyle?`.
 - Authors declare `[BepInDependency("dreas.gk2.mounts", "1.0.0")]`, or a soft dependency plus `Mounts.IsAvailable`
   if the mount is optional for them.
 - A new test (`tests/ApiSurface`) writes the public API with Mono.Cecil and compares it with a committed snapshot.
@@ -264,10 +266,57 @@ alter the save, which is the reason Built Count never evaluates one.
      - a door re-summon keeps the same GUIDs, so it reports nothing;
      - around a save, announcing is held (`SuppressAnnounce`), and a Harmony finalizer on `SaveSystem.Save`
        reports whatever didn't come back.
-4. **Tuning through `MountTuning`:** typed values that read the session override first, then the `StyleSettings`
-   entry. Setting one from the API writes only the override. The panel edits the entries, as today.
-5. **The showcase project:** keys, player settings and the framework link move there. The core loses its keys.
-   In-game test with the two keys.
+4. **Tuning through `MountTuning`:** built 2026-09-30 (API 0.3.0).
+   - **Tested in game** with the probe's F8:
+     - speed 99 was clamped to 4;
+     - speed 3.5, pose Walk and lantern scale 1.6 took effect, and the rows turned cyan;
+     - clearing restored 1.68 / FishingIdle / 1;
+     - the cfg was byte-identical afterwards.
+   - **User request:** a locked row mustn't look editable. Overridden rows now show the value in effect, greyed out,
+     and neither their controls nor right-click write anything. That covers every row type, and the slope "Compare"
+     button too.
+     - The pose safety fallback clears an override instead of writing the cfg.
+     - Tested in game: with the probe's overrides, Speed 3.50, Pose Walk and Lantern Scale 1.60 were cyan, greyed out
+       and didn't move. After clearing, the rows were editable again.
+   - `Mounts.Tuning(style)` returns a `MountTuning` addressed by the cfg keys ("SpeedMultiplier", "Pose",
+     "LanternLightIntensity", …). There are 94 per style (the sound settings included): `Keys`, `Has`, `TypeOf`, `Get<T>`, `Set<T>(owner, key,
+     value)`, `IsOverridden`, `OverriddenBy`, `Clear`, `Reset`, plus `Mounts.ClearTuning(owner)`.
+     - Keys were chosen over typed properties because they're a small, stable surface that covers new settings
+       automatically.
+     - `Set` is type-checked and clamped to the panel's range.
+   - **How it's built:** each `StyleSettings` field is now a `Tuned<T>`. It wraps the `ConfigEntry<T>` plus an
+     override, and converts implicitly both ways.
+     - `Value` answers the override first. All 135 `S.X.Value` reads are unchanged and see overrides.
+     - Setting `Value`, or editing through the panel's `ConfigEntry<T>` helpers, still writes the cfg. Overrides
+       are never written.
+     - No gameplay code takes a `ConfigEntry<T>` parameter, so nothing bypasses the wrapper.
+   - **After a Set:** the panel's refreshes run (speed, seat, legs, pose, lantern). Geometry measured at summon waits
+     for the next mount.
+   - **The panel:**
+     - an overridden row turns cyan;
+     - a footer line says how many values another mod is setting, and that the saved value comes back afterwards.
+   - `RiderPose`, `LegSource` and `CartSlopeStyle` moved to `GK2Mounts.Api`, because tuning values use them.
+5. **The showcase project:** built 2026-09-30 (API 0.4.0).
+   - **Tested in game:**
+     - both load lines appeared;
+     - H rode, G gave the cart, and H and G switched style both ways and dismounted. Every ride was owned by
+       `dreas.gk2.showcase`, and the owner was kept across the switches;
+     - the building door still dismounted ("indoors"), and the General-tab rows were locked;
+     - with the showcase and probe removed, only the core's load line appeared, and H, G, F6 and F11 did nothing.
+   - `src/GK2Showcase` is a placeholder name, with GUID `dreas.gk2.showcase`. It has a hard dependency on
+     `dreas.gk2.mounts`, checks that `Mounts.ApiVersion >= 0.4` at runtime, and uses only the public API.
+   - Its cfg:
+     - `[Keys]` RideKey H, CartKey G, BellKey None. On foot a key mounts in its style; the same key dismounts; the
+       other key switches style.
+     - `[Behaviour]` StayMountedThroughDoors (off), DismountIndoors (on), ShowMessages (on), SideViewOnly (off). They
+       reach the core as `Mounts.Behaviour` session overrides at startup and on every change.
+   - The core:
+     - `MountKey`, `Style` and `BellKey` are gone, and the core does nothing until a mod calls `TryMount`.
+     - The four behaviour switches are `Tuned<bool>`, exposed as `Mounts.Behaviour` (a `MountTuning` with Section
+       "General" and Style null).
+     - On the panel's General tab those rows are locked and cyan while the showcase is installed. The bell-key row
+       is gone.
+     - The style button calls `Mounts.SwitchStyle`.
 6. **API docs** (`docs/mounts-api.md`, with a small example plugin: "cart only after tech X") and the `ApiSurface`
    test.
 7. **Release both:** core and showcase in `dist/`, and a root README section for players (install both) and for
