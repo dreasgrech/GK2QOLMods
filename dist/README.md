@@ -9,7 +9,7 @@ The DLLs as installed and tested, one per mod. Copy them into `Graveyard Keeper 
 | `GK2MoveBuilding.dll` | 1.1.5 | 25601286 |
 | `GK2OwnedCount.dll` | 1.0.3 | 25601286 |
 | `GK2Showcase.dll` (placeholder name) | 0.1.0 | 25601286 |
-| `GK2Mounts.dll` | 0.1.0 (API 0.4.0) | 25601286 |
+| `GK2Mounts.dll` | 0.1.0 (API 0.5.0) | 25601286 |
 
 - **Install the showcase together with `GK2Mounts.dll`.** It needs it; BepInEx logs "missing dependencies"
   otherwise.
