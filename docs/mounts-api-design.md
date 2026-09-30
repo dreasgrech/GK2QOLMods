@@ -226,7 +226,19 @@ alter the save, which is the reason Built Count never evaluates one.
 3. **Feature rules wired in:** built 2026-09-30 (API 0.2.0).
    - **Tested in game:** Cargo (switch-off hands the cargo back onto the ground; the pickup refusal) and the cargo
      events.
-   - **Toggled but not yet looked at:** Lantern, LanternLight, Sounds, Bell and StayThroughDoors.
+   - **Lantern, LanternLight, Sounds, Bell passed in game (2026-09-30):**
+     - the reference ride with everything on: bell on setting off, hoofs, wheels, the lamp lit;
+     - Lantern off: no pole and lamp;
+     - LanternLight off: a dark lamp;
+     - Sounds off: silent;
+     - Bell off: sounds, but no bell on setting off.
+   - **StayThroughDoors can't be tested yet:**
+     - A house door isn't a scene change. It's a teleport inside the same loaded scene (`RuinedTemple`), and the
+       donkey stays, so only the indoors rule (`DismountIndoors`) acts there.
+     - The feature only matters for doors that load another scene, and only while `StayMountedThroughDoors` is on.
+       That setting is off, both as the mod default and in the user's cfg.
+     - The user can't reach another scene yet. The code is one extra condition in the scene-change branch of
+       `Mount.Tick`.
    - **Found on the way:** an item held while riding is invisible (the riding pose has no Overhead-layer clip).
      The user's rule followed: the keeper's hands stay empty while mounted. See `PROBE-FINDINGS.md` Round 14.
    - `MountFeature` has six members: `Cargo`, `Lantern`, `LanternLight`, `Sounds`, `Bell`, `StayThroughDoors`.
