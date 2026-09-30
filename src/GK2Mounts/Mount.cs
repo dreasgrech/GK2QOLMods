@@ -1033,6 +1033,77 @@ namespace GK2Mounts
             return Mathf.Asin(sin) * Mathf.Rad2Deg;
         }
 
+        // The back end of the cart on the ground and the way out behind it, for setting cargo down there
+        // (CargoSetDownBehindCart). Measured from what is drawn this frame: "behind" is from the donkey's body to the
+        // cart body, the back end is the farthest point of the cart body that way (renderer bounds), at the keeper's
+        // height. Not the farthest of every cart part: the lantern hangs out past the tailboard (first version,
+        // 2026-09-30: items landed well behind the cart). detail names the farthest part of all, for the log.
+        // False when not riding the cart or the cart is not drawn.
+        internal static bool TryCartRear(out Vector3 rear, out Vector3 back, out string detail)
+        {
+            rear = back = Vector3.zero;
+            detail = "";
+            if (!mounted || activeStyle != MountStyle.Cart || donkey == null || cartBodyPart == null || cartBodyPart.T == null)
+            {
+                return false;
+            }
+            Vector3 front = bodySprite != null && bodySprite ? bodySprite.position : donkey.transform.position;
+            front.y = 0f;
+            bool any = false;
+            Bounds body = default;
+            foreach (Renderer r in cartBodyPart.T.GetComponentsInChildren<Renderer>())
+            {
+                if (!r.enabled) continue;
+                if (!any) { body = r.bounds; any = true; } else body.Encapsulate(r.bounds);
+            }
+            if (!any)
+            {
+                return false;
+            }
+            back = body.center;
+            back.y = 0f;
+            back -= front;
+            if (back.sqrMagnitude < 0.01f)
+            {
+                return false;
+            }
+            back.Normalize();
+            float reach = Reach(body, front, back);
+            float farthest = reach;
+            string farthestName = cartBodyPart.T.name;
+            foreach (CartPart p in cartParts)
+            {
+                if (p.T == null) continue;
+                foreach (Renderer r in p.T.GetComponentsInChildren<Renderer>())
+                {
+                    if (!r.enabled) continue;
+                    float d = Reach(r.bounds, front, back);
+                    if (d > farthest)
+                    {
+                        farthest = d;
+                        farthestName = r.name;
+                    }
+                }
+            }
+            detail = $"cart body ends {reach:0.00} behind the donkey's body; farthest drawn part {farthestName} at {farthest:0.00}";
+            float y = MainGame.PlayerData != null ? MainGame.PlayerData.position.Value.y : donkey.transform.position.y;
+            rear = front + back * reach;
+            rear.y = y;
+            return true;
+        }
+
+        // How far a box reaches from 'from' along 'dir' (horizontal).
+        private static float Reach(Bounds b, Vector3 from, Vector3 dir)
+        {
+            float reach = float.NegativeInfinity;
+            for (int i = 0; i < 4; i++)
+            {
+                Vector3 c = new Vector3((i & 1) == 0 ? b.min.x : b.max.x, 0f, (i & 2) == 0 ? b.min.z : b.max.z);
+                reach = Mathf.Max(reach, Vector3.Dot(c - from, dir));
+            }
+            return reach;
+        }
+
         public static string CartSlopeStatus()
         {
             if (!mounted || activeStyle != MountStyle.Cart || cartParts.Count == 0)

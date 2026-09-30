@@ -396,7 +396,12 @@ namespace GK2Mounts
                 FloatSlider("Nestle: how far a stacked item sinks into the one below", s.CargoNestle, 0f, 0.3f, 2, Cargo.RefreshViews);
                 Toggle("Mod draws corpses too (off = the game's own shroud for the first corpse)", s.CargoDrawCorpse, Cargo.RefreshViews);
                 Toggle("Cargo rocks with the cart while it rolls (as the game's loaded corpse does)", s.CargoSwaysWithCart, null);
-                GUILayout.Label($"While riding, anything you pick up goes straight onto the cart and piles, tables and graves take from it. The interact key with nothing in front of you sets the top item down. {Cargo.Summary()}", small);
+                Toggle("Set items down behind the cart (off = in front of the keeper, where the next press picks them up again)", s.CargoSetDownBehindCart, null);
+                if (s.CargoSetDownBehindCart.Value)
+                {
+                    FloatSlider("   gap between the cart and the item (its own length is added)", s.CargoSetDownGap, 0f, 1.5f, 2, null);
+                }
+                GUILayout.Label($"While riding, anything you pick up goes straight onto the cart and piles, tables and graves take from it. The interact key with nothing in front of you sets the top item down, behind the cart or in front of you (the switch above). {Cargo.Summary()}", small);
                 DrawCargoCorrections();
                 GUILayout.Label("The lantern pole and its lamp have their own tab.", small);
             }

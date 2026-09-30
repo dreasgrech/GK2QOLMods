@@ -107,7 +107,7 @@ A handler that throws is logged and skipped.
 
 ## Tuning and behaviour
 
-`Mounts.Tuning(MountStyle.Ride / Cart)` holds a style's 94 look and sound values. `Mounts.Behaviour` holds the four
+`Mounts.Tuning(MountStyle.Ride / Cart)` holds a style's 96 look and sound values. `Mounts.Behaviour` holds the four
 behaviour switches, which apply to both styles. Both are `MountTuning`, addressed by the value's cfg key.
 
 ```csharp
@@ -143,7 +143,7 @@ While mounted the keeper always faces only left or right, like the donkey. That 
 | Pose | `Pose` (`RiderPose`: Walk, Idle, FishingIdle, FocusedWalk); `FreezePoseWhenIdle`, `PoseSpeedFollowsDonkey` (bool); `PoseSpeed`, `IdleFidgetEverySeconds`, `IdleFidgetSpeed`, `IdleCrawlSpeed` (float) |
 | Legs | `NearLeg` (bool), `LegSource` (`LegSource`: Body, Drawn), `LegHeightPx`, `LegAdjustXPx`, `LegAdjustYPx` (int) |
 | Cart on slopes | `CartFollowsGround` (bool), `CartGroundMaxShift`, `CartPitchMaxDegrees` (float), `CartSlope` (`CartSlopeStyle`: HalfLift, ShaftsTilt, WholeCartPitch) |
-| Cargo | `CargoDrawCorpse`, `CargoSwaysWithCart` (bool); `CargoBedDepth`, `CargoSideGap`, `CargoOverhang`, `CargoNestle` (float) |
+| Cargo | `CargoDrawCorpse`, `CargoSwaysWithCart`, `CargoSetDownBehindCart` (bool); `CargoBedDepth`, `CargoSideGap`, `CargoOverhang`, `CargoNestle`, `CargoSetDownGap` (float) |
 | Lantern pole | `LanternAlong`, `LanternUp`, `LanternAcross`, `LanternTilt`, `LanternLean`, `LanternSwayDegrees`, `LanternSwaySeconds`, `LanternScale` (float); `LanternShow`, `LanternFlip`, `LanternHangs` (bool) |
 | Lantern light | `LanternLightOn`, `LanternLightShadows`, `LanternSelfLightOn`, `LanternGlowOn`, `LanternGlassOn` (bool); `LanternLightIntensity`, `LanternLightRange`, `LanternLightDayDim`, `LanternSelfLightIntensity`, `LanternSelfLightRange`, `LanternGlowAlpha`, `LanternGlowScale` (float); `LanternLightColor` (string, hex `RRGGBB`) |
 | Sounds | `SoundsOn`, `HoofOn`, `HoofSurfaceAware`, `GrazeOn`, `BrayWhileWalking`, `BrayInSfxChannel`, `CargoThumpOn`, `WheelOn`, `WheelPitchFollowsSpeed`, `BellOnSetOff`, `BellOnlyWithCargo` (bool); `SoundVolume` and every `…Volume`, `…Pitch`, `HoofPitchVariation`, `HoofPhase`, `WheelPhase`, `BrayOnMountChance`, `BrayIdleEverySeconds`, `BellSetOffIdleSeconds` (float); `HoofStepsPerCycle`, `WheelEveryCycles` (int); `HoofSoundId`, `GrazeSoundId`, `BraySoundId`, `CargoThumpSoundId`, `WheelSoundId`, `BellSoundId` (string, the game's LazyAudio ids) |
@@ -239,4 +239,4 @@ History:
 - 0.2.0: features and cargo events.
 - 0.3.0: tuning.
 - 0.4.0: behaviour, and the core without keys.
-- 0.5.0: colours (`Mounts.Colors`, `Mounts.ColorRegions`, `MountColorRegion`, `SpriteColorMethod`).
+- 0.5.0: colours (`Mounts.Colors`, `Mounts.ColorRegions`, `MountColorRegion`, `SpriteColorMethod`); the style keys `CargoSetDownBehindCart`, `CargoSetDownGap`.

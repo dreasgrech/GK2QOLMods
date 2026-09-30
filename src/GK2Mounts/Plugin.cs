@@ -37,8 +37,8 @@ namespace GK2Mounts
         public readonly Tuned<float> CartGroundMaxShift;
         public readonly Tuned<CartSlopeStyle> CartSlope;
         public readonly Tuned<float> CartPitchMaxDegrees;
-        public readonly Tuned<bool> CargoDrawCorpse, CargoSwaysWithCart;
-        public readonly Tuned<float> CargoBedDepth, CargoSideGap, CargoOverhang, CargoNestle;
+        public readonly Tuned<bool> CargoDrawCorpse, CargoSwaysWithCart, CargoSetDownBehindCart;
+        public readonly Tuned<float> CargoBedDepth, CargoSideGap, CargoOverhang, CargoNestle, CargoSetDownGap;
         public readonly Tuned<float> LanternAlong, LanternUp, LanternAcross, LanternTilt, LanternLean;
         public readonly Tuned<bool> LanternFlip;
         public readonly Tuned<bool> LanternHangs;
@@ -112,6 +112,10 @@ namespace GK2Mounts
                 "Cart style only: the mod draws every corpse on the cart itself (same packer and corrections as any other item) and keeps the game's loaded-cart body off. Off: the first corpse is shown by the game's own loaded cart body with the shroud, which the packer cannot move; other items then ride on top of it.");
             CargoSwaysWithCart = cfg.Bind(section, "CargoSwaysWithCart", Defaults.Get(section, "CargoSwaysWithCart", true),
                 "Cart style only: the cargo rocks with the cart while it rolls, as the game's own loaded corpse does (the walk animation rotates the cart body about the axle by up to 3 degrees; the cargo holder copies that rotation every frame). Off: the cargo stays level.");
+            CargoSetDownBehindCart = cfg.Bind(section, "CargoSetDownBehindCart", Defaults.Get(section, "CargoSetDownBehindCart", true),
+                "Cart style only: the interact key sets the top cart item down behind the cart (the game's own drop-spot search, run from the cart's back end outwards), out of the keeper's reach, so pressing twice sets both items down. Off: in front of the keeper, as the game drops a held item, where the next press picks it up again. When there is no free spot behind the cart the item goes in front.");
+            CargoSetDownGap = cfg.Bind(section, "CargoSetDownGap", Defaults.Get(section, "CargoSetDownGap", 0.1f),
+                new ConfigDescription("Cart style, with CargoSetDownBehindCart: the gap between the back end of the cart body and the near end of an item set down behind it, world units. The item's own measured length decides where its centre goes, so every size keeps this gap. A taken spot moves the next item 0.1 further out.", new AcceptableValueRange<float>(0f, 1.5f)));
             CargoBedDepth = cfg.Bind(section, "CargoBedDepth", Defaults.Get(section, "CargoBedDepth", -0.26f),
                 "Cart style only: the cargo floor relative to the measured top of the empty cart body, world units (negative = items sink below the rails onto the bed floor). Every item's measured bottom is put on this floor.");
             CargoSideGap = cfg.Bind(section, "CargoSideGap", Defaults.Get(section, "CargoSideGap", 0.02f),
@@ -265,7 +269,7 @@ namespace GK2Mounts
                     SpeedMultiplier, Depth, CenterOffset, RiderOffsetPx, TorsoOffsetPx,
                     AutoSeat, SeatAdjustPx, SeatOffset, Bob, Pose, FreezePoseWhenIdle, PoseSpeed, PoseSpeedFollowsDonkey,
                     NearLeg, LegSource, LegHeightPx, LegAdjustXPx, LegAdjustYPx, SnapToGround, CartFollowsGround, CartGroundMaxShift, CartSlope, CartPitchMaxDegrees,
-                    CargoDrawCorpse, CargoSwaysWithCart, CargoBedDepth, CargoSideGap, CargoOverhang, CargoNestle,
+                    CargoDrawCorpse, CargoSwaysWithCart, CargoSetDownBehindCart, CargoSetDownGap, CargoBedDepth, CargoSideGap, CargoOverhang, CargoNestle,
                     LanternAlong, LanternUp, LanternAcross, LanternTilt, LanternLean, LanternFlip, LanternHangs,
                     LanternSwayDegrees, LanternSwaySeconds, IdleFidgetEverySeconds, IdleFidgetSpeed, IdleCrawlSpeed,
                     LanternShow, LanternScale, LanternLightOn, LanternLightIntensity, LanternLightRange, LanternLightColor, LanternLightShadows, LanternLightDayDim,

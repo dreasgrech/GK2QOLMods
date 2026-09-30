@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -237,10 +238,11 @@ namespace GK2Mounts
             }
         }
 
-        // Sets the top cart item down on the ground in front of the keeper: what the game's interact press does with
-        // a held item when there is nothing to interact with (PlayerInputHandler.UpdateInput), one item per press.
-        // Called from that press while riding the cart (PlayerInputHandler_UpdateInput_Patch). Silent when the cart
-        // is empty, as the game is with empty hands.
+        // Sets the top cart item down on the ground: what the game's interact press does with a held item when there
+        // is nothing to interact with (PlayerInputHandler.UpdateInput), one item per press. Called from that press
+        // while riding the cart (PlayerInputHandler_UpdateInput_Patch). Silent when the cart is empty, as the game is
+        // with empty hands. With CargoSetDownBehindCart the item goes behind the cart (DropBehindCart), else in front
+        // of the keeper, where the keeper's interaction box then finds it and the next press picks it up again.
         public static void SetDownLast(PlayerData pd)
         {
             if (inv == null || donkey == null || pd == null)
@@ -259,6 +261,11 @@ namespace GK2Mounts
                 {
                     Plugin.Log.LogWarning("Cargo: could not take the item off the cart.");
                     Resync("take failed");
+                    return;
+                }
+                if (Mount.S.CargoSetDownBehindCart.Value && DropBehindCart(pd, last))
+                {
+                    Plugin.Log.LogInfo($"Cargo: set {last.id} down behind the cart; cart {list.Count}/{inv.Data.InventorySize}.");
                     return;
                 }
                 DropAtKeeper(pd, last);
@@ -430,6 +437,97 @@ namespace GK2Mounts
                 }
             }
             return false;
+        }
+
+        // Sets an item down behind the cart: the game's own drop-spot search (SpecialPhysicsCastUtils.
+        // GetPlayerDropPosition: rings 0.75 to 1.95 out, fanning 15 degrees either way from the given direction, each
+        // spot free of walls, water and other drops and in sight of the anchor) run backwards instead of from the
+        // keeper forwards. The spot is the item's centre, so it is put half the item's length (its measured box,
+        // CargoLayout.BoxOf, along the way out) plus CargoSetDownGap behind the cart's back end: the gap is between the
+        // tailboard and the item's near end whatever its size (a fixed centre distance, the second version, put a log
+        // into the cart and a sack well clear of it). The search's nearest ring is 0.75 out, so its anchor is put that
+        // much short of the spot (inside the cart for a small item; the cart has no collider to block the sight
+        // test); a taken spot moves the item 0.1 further out. MeasureSetDown logs where it really came to rest. The keeper's interaction box sits in front of him, so the
+        // item is out of its reach and a second press sets the next item down instead of picking this one up.
+        // False (nothing dropped) when there is no cart, no free spot behind it or the game refused the drop; the
+        // caller then sets it down in front of the keeper as before.
+        private static bool DropBehindCart(PlayerData pd, Item item)
+        {
+            if (!Mount.TryCartRear(out Vector3 rear, out Vector3 back, out string detail))
+            {
+                return false;
+            }
+            const float NearestRing = 0.75f; // GetPlayerDropPosition's first distance
+            Vector3 box = CargoLayout.BoxOf(item.id); // long, high, across of the mesh; a dropped view is not rotated
+            float half = box == Vector3.zero ? 0.4f : 0.5f * (Mathf.Abs(back.x) * box.x + Mathf.Abs(back.z) * box.z);
+            float want = half + Mount.S.CargoSetDownGap.Value;
+            Vector3 anchor = rear + back * (want - NearestRing);
+            if (!SpecialPhysicsCastUtils.GetPlayerDropPosition(anchor, new Vector2(back.x, back.z), out Vector3 pos))
+            {
+                Plugin.Log.LogInfo($"Cargo: no free spot behind the cart for {item.id} ({detail}); setting it down in front of the keeper.");
+                return false;
+            }
+            Vector3 off = pos - rear;
+            Plugin.Log.LogInfo($"Cargo: set-down spot for {item.id} {Vector3.Dot(off, back):0.00} behind the cart's back end, {Vector3.Cross(back, off).y:0.00} to the side, wanted {want:0.00} (half length {half:0.00} + gap {Mount.S.CargoSetDownGap.Value:0.00}; {detail}).");
+            // The cart has no collider and can reach through a fence or wall, and the search only checks the sight
+            // line from its anchor. So the spot must also be in sight of the keeper, with the search's own test
+            // (0.6 up, walls and buildings mask 3328), or the item could land where he cannot get to it.
+            Vector3 eye = pd.position.Value + Vector3.up * 0.6f;
+            Vector3 to = pos + Vector3.up * 0.6f - eye;
+            if (Physics.Raycast(eye, to.normalized, to.magnitude, 3328, QueryTriggerInteraction.Ignore))
+            {
+                Plugin.Log.LogInfo($"Cargo: the spot behind the cart is out of the keeper's sight (behind a wall); setting {item.id} down in front of him.");
+                return false;
+            }
+            if (!MainGame.Instance.dropSystem.DropItem(item, pd.currentGameSceneId, pos))
+            {
+                return false;
+            }
+            Plugin.Instance.StartCoroutine(MeasureSetDown(item, rear, back, half));
+            return true;
+        }
+
+        // A second after the drop (its bounce is over), where the item's drawn meshes really lie relative to the
+        // cart's back end, against the half length the spot was worked out with. Log only.
+        private static IEnumerator MeasureSetDown(Item item, Vector3 rear, Vector3 back, float half)
+        {
+            yield return new WaitForSeconds(1f);
+            DropView view = null;
+            try
+            {
+                foreach (GameScene scene in LazyBearTechnology.LazySingleton<GameSceneManager>.Instance.LoadedGameScenes)
+                {
+                    if (scene.TryGetDropView(item, out view))
+                    {
+                        break;
+                    }
+                }
+                if (view == null)
+                {
+                    yield break;
+                }
+                float near = float.PositiveInfinity, far = float.NegativeInfinity;
+                foreach (Renderer r in view.GetComponentsInChildren<Renderer>())
+                {
+                    if (!r.enabled) continue;
+                    Bounds b = r.bounds;
+                    for (int i = 0; i < 4; i++)
+                    {
+                        Vector3 c = new Vector3((i & 1) == 0 ? b.min.x : b.max.x, rear.y, (i & 2) == 0 ? b.min.z : b.max.z);
+                        float d = Vector3.Dot(c - rear, back);
+                        near = Mathf.Min(near, d);
+                        far = Mathf.Max(far, d);
+                    }
+                }
+                if (far >= near)
+                {
+                    Plugin.Log.LogInfo($"Cargo: {item.id} came to rest {near:0.00} to {far:0.00} behind the cart's back end (drawn length {far - near:0.00}; the spot used half length {half:0.00}, i.e. {2f * half:0.00}).");
+                }
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogInfo("Cargo: could not measure the set-down item: " + e.Message);
+            }
         }
 
         // Sets an item down in front of the keeper with the game's drop routine. False when the game refused the
