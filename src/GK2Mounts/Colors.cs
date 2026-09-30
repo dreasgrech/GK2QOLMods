@@ -540,8 +540,16 @@ namespace GK2Mounts
                 if (dirty)
                 {
                     dirty = false;
-                    Rebuild();
+                    var watch = System.Diagnostics.Stopwatch.StartNew();
+                    int uploaded = Rebuild();
                     ApplyAll();
+                    double ms = watch.Elapsed.TotalMilliseconds;
+                    // A slider drag rebuilds every frame: say so when that is not cheap (at most every 2 s).
+                    if (ms > 4.0 && Time.unscaledTime >= nextSlowLog)
+                    {
+                        nextSlowLog = Time.unscaledTime + 2f;
+                        Plugin.Log.LogInfo($"Colors: an update took {ms:F1} ms ({uploaded} texture(s) uploaded).");
+                    }
                     return;
                 }
                 // The game may re-skin the donkey (SkinChangerGK2 takes sprite.material and clears the replace
@@ -568,7 +576,10 @@ namespace GK2Mounts
                     {
                         if (!t.Applied || t.M == null || !t.M) continue;
                         Object3DSubMesh sm = t.M.GetSubMesh(0);
-                        if ((sm != null && sm.LutTexture != luts[(int)t.G]) || !AllSlotsLut(t.M))
+                        // An inactive part (Ride style's cart, the loaded-cart body) was never initialised by the game:
+                        // its LUT is stored and applies when it starts; its materials say nothing yet.
+                        bool slotsOk = !t.M.gameObject.activeInHierarchy || AllSlotsLut(t.M);
+                        if ((sm != null && sm.LutTexture != luts[(int)t.G]) || !slotsOk)
                         {
                             if (!t.Warned)
                             {
@@ -615,8 +626,14 @@ namespace GK2Mounts
             Note = "not attached";
         }
 
-        private static void Rebuild()
+        private static float nextSlowLog;
+        private static readonly Color32[][] lastDst = new Color32[GroupCount][];
+        private static readonly bool[] builtFor = new bool[GroupCount]; // textures hold this group's current mapping
+
+        // Returns how many textures were uploaded: only the groups whose mapping changed.
+        private static int Rebuild()
         {
+            int uploads = 0;
             bool on = Enabled.Value;
             var maps = new Dictionary<RegionDef, RegionMap>();
             foreach (RegionDef d in Regions)
@@ -657,12 +674,33 @@ namespace GK2Mounts
                 {
                     continue;
                 }
+                if (builtFor[gi] && SameDst(lastDst[gi], pairs))
+                {
+                    continue; // this change was in another group
+                }
                 if (IsSpriteGroup(g))
                 {
                     palettes[gi] = BuildPalette(palettes[gi], pairs, "gk2mounts palette " + g);
+                    uploads++;
                 }
                 luts[gi] = BuildLut(luts[gi], pairs, "gk2mounts lut " + g);
+                uploads++;
+                var mapped = new Color32[pairs.Count];
+                for (int i = 0; i < mapped.Length; i++) mapped[i] = pairs[i].Dst;
+                lastDst[gi] = mapped;
+                builtFor[gi] = true;
             }
+            return uploads;
+        }
+
+        private static bool SameDst(Color32[] last, List<(Color32 Src, Color32 Dst)> pairs)
+        {
+            if (last == null || last.Length != pairs.Count) return false;
+            for (int i = 0; i < last.Length; i++)
+            {
+                if (!Same(last[i], pairs[i].Dst)) return false;
+            }
+            return true;
         }
 
         private static bool Same(Color32 a, Color32 b) => a.r == b.r && a.g == b.g && a.b == b.b;
@@ -697,20 +735,7 @@ namespace GK2Mounts
             {
                 tex = new Texture2D(1024, 32, TextureFormat.RGBA32, mipChain: false) { name = name, filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
             }
-            var px = new Color32[1024 * 32];
-            for (int g = 0; g < 32; g++)
-            {
-                byte gv = (byte)Mathf.RoundToInt(g * 255f / 31f);
-                for (int b = 0; b < 32; b++)
-                {
-                    // a blue cell k holds b in [k/31, (k+1)/31): its middle, the last cell 255
-                    byte bv = (byte)Mathf.Min(255, Mathf.RoundToInt((b + (b == 31 ? 0f : 0.5f)) * 255f / 31f));
-                    for (int r = 0; r < 32; r++)
-                    {
-                        px[g * 1024 + b * 32 + r] = new Color32((byte)Mathf.RoundToInt(r * 255f / 31f), gv, bv, 255);
-                    }
-                }
-            }
+            var px = (Color32[])IdentityLut.Clone();
             foreach (var p in pairs)
             {
                 px[LutIndex(p.Src)] = p.Dst;
@@ -718,6 +743,32 @@ namespace GK2Mounts
             tex.SetPixels32(px);
             tex.Apply(updateMipmaps: false);
             return tex;
+        }
+
+        private static Color32[] identityLut;
+
+        private static Color32[] IdentityLut
+        {
+            get
+            {
+                if (identityLut != null) return identityLut;
+                var px = new Color32[1024 * 32];
+                for (int g = 0; g < 32; g++)
+                {
+                    byte gv = (byte)Mathf.RoundToInt(g * 255f / 31f);
+                    for (int b = 0; b < 32; b++)
+                    {
+                        // a blue cell k holds b in [k/31, (k+1)/31): its middle, the last cell 255
+                        byte bv = (byte)Mathf.Min(255, Mathf.RoundToInt((b + (b == 31 ? 0f : 0.5f)) * 255f / 31f));
+                        for (int r = 0; r < 32; r++)
+                        {
+                            px[g * 1024 + b * 32 + r] = new Color32((byte)Mathf.RoundToInt(r * 255f / 31f), gv, bv, 255);
+                        }
+                    }
+                }
+                identityLut = px;
+                return px;
+            }
         }
 
         internal static int LutIndex(Color32 c)
@@ -745,8 +796,12 @@ namespace GK2Mounts
                     if (t.Orig == null) continue;
                     t.Mine = new Material(t.Orig) { name = t.Orig.name + " (GK2 Mounts colours)" };
                     t.R.sharedMaterial = t.Mine;
+                    SetSpriteKeywords(t);
                 }
-                SetSpriteKeywords(t);
+                else if (!SpriteUpToDate(t))
+                {
+                    SetSpriteKeywords(t); // the method changed (the textures themselves are updated in place)
+                }
             }
             foreach (MeshTarget t in meshes)
             {
@@ -763,8 +818,12 @@ namespace GK2Mounts
                     t.OrigMats = t.M.ObjRenderer != null ? t.M.ObjRenderer.sharedMaterials : null;
                     t.Applied = true;
                 }
+                if (t.M.GetSubMesh(0)?.LutTexture == luts[(int)t.G])
+                {
+                    continue; // already ours: the texture was updated in place
+                }
                 SetLut(t.M, luts[(int)t.G]);
-                if (!AllSlotsLut(t.M))
+                if (t.M.gameObject.activeInHierarchy && !AllSlotsLut(t.M))
                 {
                     Plugin.Log.LogWarning($"Colors: '{t.M.name}' has {MaterialNames(t.M.ObjRenderer)} after the LUT was set; some of it keeps the game's colours.");
                 }
@@ -802,6 +861,15 @@ namespace GK2Mounts
                 if (mats[i] != lutMat) return false;
             }
             return true;
+        }
+
+        private static bool SpriteUpToDate(SpriteTarget t)
+        {
+            Material m = t.Mine;
+            int gi = (int)t.G;
+            return appliedMethod == SpriteColorMethod.Palette
+                ? m.IsKeywordEnabled(KwPalette) && !m.IsKeywordEnabled(KwLut) && m.GetTexture(IdPalette) == palettes[gi]
+                : m.IsKeywordEnabled(KwLut) && !m.IsKeywordEnabled(KwPalette) && m.GetTexture(IdLut) == luts[gi];
         }
 
         private static void SetSpriteKeywords(SpriteTarget t)

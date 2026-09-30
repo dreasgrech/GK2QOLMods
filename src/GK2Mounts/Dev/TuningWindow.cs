@@ -54,10 +54,29 @@ namespace GK2Mounts
             rect.x = vw - W - 16f;
             rect.y = 16f;
             rect.width = W;
-            rect.height = 0f; // a layout window grows to its content but never shrinks unless the height is reset
-            rect = GUILayout.Window(WindowId, rect, DrawContents,
+            // A layout window grows to its content but never shrinks unless the height is reset. Reset only in the
+            // Layout event, and never keep a zero-height result: the window hands back height 0 for events it has
+            // not laid out yet, and keeping that drew the next repaint as an empty window for a frame (found
+            // 2026-09-30 from the [panel] log lines below: height 0 on repaint on every tab, most often while
+            // dragging a slider, which sends extra events every frame).
+            EventType drawType = Event.current.type;
+            Rect want = rect;
+            if (drawType == EventType.Layout)
+            {
+                want.height = 0f;
+            }
+            Rect got = GUILayout.Window(WindowId, want, DrawContents,
                 Plugin.TuningWindowKey.Value == KeyCode.None ? "GK2 Mounts tuning" : $"GK2 Mounts tuning ({Plugin.TuningWindowKey.Value} hides)",
                 GUILayout.Width(W));
+            if (got.height >= 1f)
+            {
+                rect = got;
+            }
+            if (drawType == EventType.Repaint && got.height < 60f && Time.unscaledTime >= nextFlickerLog)
+            {
+                nextFlickerLog = Time.unscaledTime + 1f;
+                Plugin.Log.LogInfo($"[panel] empty window repainted: frame {Time.frameCount}, height {got.height:F0}, layout ran this frame {layoutRunFrame == Time.frameCount}, repaint ran {repaintRunFrame == Time.frameCount}, tab {tab}, scroll height {lastScrollHeight:F0}, chrome {chromeHeight:F0}, max content {maxContentHeight:F0}, content {contentHeight[tab]:F0}, last abort: {lastAbort}");
+            }
             if (lastScrollHeight > 0f && rect.height > lastScrollHeight)
             {
                 chromeHeight = Mathf.Clamp(rect.height - lastScrollHeight, 60f, 600f);
@@ -154,7 +173,36 @@ namespace GK2Mounts
             return string.Join(", ", parts);
         }
 
+        // Flicker investigation (2026-09-30, the user's video 13-29-01): while a colour slider was dragged, the
+        // window was drawn for a frame at its minimum size with no contents, and nothing was in either log. This
+        // wrapper records which events reached the window function each frame and logs anything that aborts it
+        // (ExitGUIException included, which IMGUI swallows silently); Draw logs a repaint of an empty window.
+        private static int layoutRunFrame = -1, repaintRunFrame = -1;
+        private static string lastAbort = "";
+        private static float nextFlickerLog;
+
         private static void DrawContents(int id)
+        {
+            EventType type = Event.current.type;
+            if (type == EventType.Layout) layoutRunFrame = Time.frameCount;
+            if (type == EventType.Repaint) repaintRunFrame = Time.frameCount;
+            try
+            {
+                DrawContentsInner(id);
+            }
+            catch (Exception e)
+            {
+                lastAbort = $"{e.GetType().Name} in {type} (tab {tab}, frame {Time.frameCount}): {e.Message}";
+                if (Time.unscaledTime >= nextFlickerLog)
+                {
+                    nextFlickerLog = Time.unscaledTime + 1f;
+                    Plugin.Log.LogInfo("[panel] the window function was aborted: " + lastAbort + "\n" + e.StackTrace);
+                }
+                throw;
+            }
+        }
+
+        private static void DrawContentsInner(int id)
         {
             if (Event.current.type == EventType.Layout)
             {

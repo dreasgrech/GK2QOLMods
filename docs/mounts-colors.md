@@ -177,6 +177,22 @@ embedded in `Colors.cs`), the mod computes what it becomes, then builds per grou
 - checks that every material slot is the LUT material, warning and setting it again otherwise;
 - after removing the LUT, puts the renderer's exact original materials back.
 
+## Fix: the panel flickered while dragging a slider (2026-09-30)
+
+**Seen:** the user's 120 fps video. For a frame or two, about 50 times in 2 s, the whole panel was drawn at its
+minimum size with no contents. Neither the BepInEx log nor Player.log had an error. The colour updates were cheap
+(under 8 ms, only on changes).
+
+**Measured:** the `[panel]` log lines showed `GUILayout.Window` handing back height 0 on some repaints, on every tab,
+not only Colors.
+
+**Cause:** `Draw` set the height to 0 before every call so the window could shrink, and kept whatever came back.
+Events the window hadn't laid out yet returned 0, and the next repaint drew that. Dragging a slider sends extra
+events every frame.
+
+**Fix:** reset the height in the Layout event only, and never keep a result under 1 px. Confirmed by the user, with
+no `[panel]` lines in the log afterwards. The `[panel]` logging stays, at most once a second, only when it happens.
+
 ## Test list (game closed until then; the DLL is deployed)
 
 With `Debug.TuningWindow = true` in `dreas.gk2.mounts.cfg`, mount (the showcase: H or G) and open the **Colors** tab.
