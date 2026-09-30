@@ -137,7 +137,7 @@ namespace GK2Mounts
             // climbed onto one and could never step down again, and ordinary slopes the keeper rides were refused too
             // (found 2026-09-30). Cliffs are far higher, and walls have keeper-blocking colliders.
             private const float MaxRisePerSample = 0.45f;
-            private const float MaxRise = 0.6f;
+            private const float MaxRise = 0.6f;           // stepping out of an obstacle: the free spot's height against its own
             private const float InstanceGap = 1.1f;       // no step ends this close to another donkey or cart
 
             // A frame of a standing instance, before Stand(): the shuffle moves Position; Stand() draws it.
@@ -441,7 +441,10 @@ namespace GK2Mounts
                     {
                         start = g;
                     }
-                    else if (Mathf.Abs(g - prev) > MaxRisePerSample || Mathf.Abs(g - start) > MaxRise)
+                    // Only the change between neighbouring samples (a ledge, a wall): a limit on the whole line's change
+                    // refused every longer slope (a trotting foal checks up to 1.8 ahead, and down a ramp that dropped
+                    // more than 0.6 in small steps, found 2026-09-30).
+                    else if (Mathf.Abs(g - prev) > MaxRisePerSample)
                     {
                         NoteGroundFail($"{what} sample {i} at {p:F2}: ground {g:F2} ({src}) against {prev:F2} before, {start:F2} at the start");
                         return false;

@@ -53,7 +53,7 @@ namespace GK2Mounts
                 }
                 int best = NoSlot;
                 float bestD = float.MaxValue;
-                for (int k = 0; k < Slots.Length; k++)
+                for (int k = 0; k < SlotCount; k++)
                 {
                     if (k == own) continue;
                     Vector3 s = SlotNearParent(k);
@@ -138,13 +138,18 @@ namespace GK2Mounts
 
             // Where this foal belongs next to its parent: behind it (behind its cart when it has one), each sibling in its
             // own slot so they do not stack. Body points.
-            // (extra distance to the side of the parent beyond ShuffleFollowGap, towards or away from the camera). Each
-            // sibling has its own.
-            private static readonly Vector2[] Slots =
+            // Slot k: (extra distance to the side of the parent beyond ShuffleFollowGap, towards or away from the camera).
+            // Two per row, rows 0.6 further out each, the pairs in front of and behind each other on screen, so any number
+            // of siblings has its own place (no cap on children).
+            private static Vector2 SlotOffset(int k)
             {
-                new Vector2(0f, 0.35f), new Vector2(0f, -0.35f), new Vector2(0.6f, 0f),
-                new Vector2(0.6f, 0.5f), new Vector2(1.1f, -0.3f), new Vector2(1.1f, 0.3f),
-            };
+                int row = k / 2;
+                float depth = (k % 2 == 0 ? 1f : -1f) * (row % 2 == 0 ? 0.35f : 0.2f);
+                return new Vector2(row * 0.6f, depth);
+            }
+
+            // How many slots a search looks at: its siblings' and a row more.
+            private int SlotCount => Mathf.Max(6, (Parent != null ? Parent.Children().Count : 0) + 2);
 
             // With a cart, the cart side's slots are alongside the cart, level with the donkey (towards or away from the
             // camera), not behind it: behind the cart they stood about 2.6 from the donkey (the user, 2026-09-30).
@@ -182,7 +187,7 @@ namespace GK2Mounts
                 Vector3 right = Vector3.Cross(Vector3.up, away).normalized;
                 float worldToRight = Vector3.Dot(Vector3.right, right) >= 0f ? 1f : -1f;
                 float side = foalSide != 0f ? foalSide : -p.riderFacingX * worldToRight;
-                Vector2 s = Slots[index % Slots.Length];
+                Vector2 s = SlotOffset(index);
                 bool cartSide = p.HasCart && side == -p.riderFacingX * worldToRight; // the cart is behind the donkey
                 float gap = IdleShuffleGap(p);
                 Vector3 at;
@@ -430,7 +435,7 @@ namespace GK2Mounts
                     // Its own slot, else any free one with a clear line from the parent, else next to the parent.
                     Vector3 pb = p.BodyPoint();
                     bool found = LineWalkable(pb, slot, "catch-up");
-                    for (int k = 0; !found && k < Slots.Length; k++)
+                    for (int k = 0; !found && k < SlotCount; k++)
                     {
                         Vector3 s = SlotNearParent(k);
                         if (LineWalkable(pb, s, "catch-up"))

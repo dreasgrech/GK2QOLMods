@@ -145,8 +145,9 @@ never needs route finding.
   work; a coat override costs about 4 ms per change (the log's "an update took 4.4 ms") and nothing per frame.
 - **The shuffle's ground checks run only when a step is picked:** every 5–15 s, a few dozen raycasts and capsule
   checks.
-- **A sensible limit:** `Mounts.Spawn` could refuse more than, say, 4 children per parent. A mod that wants more
-  can ask for a higher limit.
+- **No cap on children** (removed 2026-09-30: the user asked, and the only reason was the six fixed slots). The
+  slots are made per index, two per row with each row 0.6 further out. The cost grows per foal: one view each, and
+  ground checks when it picks a step or a target.
 
 ## Measure first (before building)
 
@@ -163,7 +164,6 @@ never needs route finding.
   - a scale outside 0.2–2;
   - a scale other than 1 on a donkey that can be ridden, has a cart, or is a free cart;
   - a parent that is gone, is a cart or the summon, or has a parent itself;
-  - more than 6 children;
   - a cart with a parent.
 - **A child** is spawned into its parent's scene.
 - **Foals can't be ridden or hitched:**
@@ -252,7 +252,7 @@ never needs route finding.
 7. **Cart:** hitch a cart to the parent. The foals follow behind the cart.
 8. **Door:** ride the parent through a door to another area and stop there. After 1.5 s the foals appear next to it.
 9. **Remove:** removing the parent removes the foals.
-10. **Add a foal** to any donkey: up to 6.
+10. **Add a foal** to any donkey, any number. The spots form rows further out, two per row.
 11. **Another mod's global switch:** with the showcase's IdleShuffle off, the foals still shuffle (they have their own
     switch), and the showcase's donkey stands still.
 

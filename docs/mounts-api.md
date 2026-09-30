@@ -308,7 +308,7 @@ MountHandle big = Mounts.Spawn("you.gk2.mymod", new MountSpawn { Position = at2,
   - While the way is clear it trots after the parent (`ShuffleFollowSpeed`), within `ShuffleFollowMaxDistance`.
   - Otherwise it waits, shuffling where it is, and catches up out of sight once the parent stands again (into the
     parent's scene too).
-  - No chains: a child can't be a parent. Up to 6 children per parent.
+  - No chains: a child can't be a parent. Any number of children: their spots form rows further out.
   - The child's shuffle must be on for it: `SpawnFoal` switches it on for the foal only.
 - **`SpawnFoal`** also gives the foal its own shuffle settings (smaller, quicker steps, a wider area around the
   parent), owned by you and changeable through `MountHandle.Tuning`.

@@ -200,7 +200,7 @@ namespace GK2Mounts
                 pending = SpawnFamily;
             }
             GUILayout.EndHorizontal();
-            familyFoals = SessionIntRow("Foals in a family", familyFoals, 1, Mount.MaxChildren);
+            familyFoals = SessionIntRow("Foals in a family", familyFoals, 1, 20);
             foalScale = SessionFloatRow("Foal size (1 = a full-size donkey)", foalScale, 0.3f, 0.9f);
             GUILayout.Label(spawnNote, small);
 
@@ -280,7 +280,6 @@ namespace GK2Mounts
                 GUILayout.EndHorizontal();
                 if (i.HasDonkey && i.Parent == null && i.Rideable)
                 {
-                    GUI.enabled = i.Children().Count < Mount.MaxChildren;
                     if (GUILayout.Button($"Add a foal (size {foalScale:F2})"))
                     {
                         pending = () =>
@@ -289,7 +288,6 @@ namespace GK2Mounts
                             spawnNote = f != null ? $"{f.I.Describe()} is a foal of {i.Describe()}." : "Could not add a foal (see the log).";
                         };
                     }
-                    GUI.enabled = true;
                 }
                 if (i.HasDonkey)
                 {

@@ -457,11 +457,6 @@ namespace GK2Mounts
                     why = "A cart can't have a parent.";
                     return null;
                 }
-                if (parent.Children().Count >= MaxChildren)
-                {
-                    why = $"The parent already has {MaxChildren} children.";
-                    return null;
-                }
             }
             if (!Instance.IsInGame(out PlayerController pc, out GameScene scene))
             {
@@ -500,7 +495,6 @@ namespace GK2Mounts
             return i;
         }
 
-        internal const int MaxChildren = 6;
 
         internal static void Remove(Instance i, string why)
         {

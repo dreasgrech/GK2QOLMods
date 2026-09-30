@@ -194,7 +194,7 @@ namespace GK2Mounts.Api
 
         // A donkey in the world it stays with: its idle-shuffle home is the parent (switch the shuffle on for it, as
         // Mounts.SpawnFoal does), it trots after the parent when the parent moves, and catches up out of sight when it
-        // can't. No chains (a child can't be a parent); up to 6 children per parent.
+        // can't. No chains (a child can't be a parent); any number of children.
         public MountHandle Parent;
 
         // With a Parent: removed when the parent is (default), else it stays as an orphan and shuffles where it is.
