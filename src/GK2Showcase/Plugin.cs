@@ -32,7 +32,7 @@ namespace GK2Showcase
         public const string Version = "0.1.0";
 
         // The API this mod is written against: 0.10 has per-mod ids, keys, GameReady and Find.
-        private static readonly Version NeedsApi = new Version(0, 10, 0);
+        private static readonly Version NeedsApi = new Version(0, 11, 0);
 
         // Its two instances, found again after a load by these keys.
         private const string DonkeyKey = "donkey", CartKey = "cart";

@@ -50,7 +50,7 @@ class GK2Mounts.Api.MountHandle
   property float Scale { get; }
   property string SceneId { get; }
   property GK2Mounts.Api.InstanceTuning Tuning { get; }
-  method GK2Mounts.Api.MountResult ComeToKeeper(System.Nullable<bool> facingRight = null)
+  method GK2Mounts.Api.MountResult ComeToKeeper(System.Nullable<bool> facingRight = null, bool forRide = True, bool showMessage = True)
   method System.Collections.Generic.IReadOnlyList<string> DataKeys(string ownerId)
   method string GetData(string ownerId, string key)
   method GK2Mounts.Api.MountResult MoveTo(UnityEngine.Vector3 position, System.Nullable<bool> facingRight = null)

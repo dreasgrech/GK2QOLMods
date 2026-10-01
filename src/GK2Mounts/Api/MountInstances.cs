@@ -240,7 +240,10 @@ namespace GK2Mounts.Api
 
         // It comes to the keeper: into his scene, to where a ride would put it, facing his way (default: as he faces),
         // so that Ride right after moves no one. A cart comes with its donkey. Refused while ridden or outside a game.
-        public MountResult ComeToKeeper(bool? facingRight = null)
+        // A donkey called while the keeper is on foot is called for a ride: when a ride would be refused here (indoors,
+        // busy, building, co-op, a mod's rule, too small), it stays where it is and the refusal is shown like a ride's
+        // (showMessage). forRide false brings it anyway; a cart, or anything called while the keeper rides, always comes.
+        public MountResult ComeToKeeper(bool? facingRight = null, bool forRide = true, bool showMessage = true)
         {
             if (!Exists)
             {
@@ -257,6 +260,14 @@ namespace GK2Mounts.Api
             bool right = facingRight ?? pc.PlayerData.Direction.x >= 0f;
             using (Mount.Bind(I))
             {
+                if (forRide && I.HasDonkey && !Mounts.IsMounted)
+                {
+                    string why = I.WhyCannotRideHere(pc, showMessage);
+                    if (why != null)
+                    {
+                        return MountResult.Refused(why);
+                    }
+                }
                 I.ComeTo(pc, scene, right ? 1f : -1f);
             }
             return MountResult.Success;

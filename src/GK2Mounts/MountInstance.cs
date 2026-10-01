@@ -417,6 +417,36 @@ namespace GK2Mounts
 
             // The keeper gets onto this standing donkey (the interact key next to it, or MountHandle.Ride): the view is
             // taken over as it is (cargo, lantern, colours stay), and the keeper is put on its seat so it does not jump.
+            // What a ride would refuse whatever the place it stands: asked before it is brought to the keeper for a ride
+            // (MountHandle.ComeToKeeper), so a refused ride doesn't leave it standing next to him indoors (found
+            // 2026-10-01: the showcase's H in a building said "Not indoors." and the donkey came in anyway). Logged and
+            // said the way a refused ride is.
+            internal string WhyCannotRideHere(PlayerController pc, bool showMessage)
+            {
+                if (!HasDonkey)
+                {
+                    return "That is a cart without a donkey.";
+                }
+                if (!Rideable)
+                {
+                    return "This one is too small to ride.";
+                }
+                if (Ridden != null)
+                {
+                    return "Already mounted.";
+                }
+                string reason = WhyCannotMount(pc) ?? MountRules.WhyCannotMount(activeStyle);
+                if (reason != null)
+                {
+                    Plugin.Log.LogInfo($"Mount refused ({Describe()}, not brought to the keeper): " + reason);
+                    if (showMessage)
+                    {
+                        Say(reason);
+                    }
+                }
+                return reason;
+            }
+
             internal string RideFromWorld(PlayerController pc, bool showMessage)
             {
                 if (!HasDonkey)
@@ -456,6 +486,7 @@ namespace GK2Mounts
                 }
                 cameFor = null;
                 mounted = true;
+                lastGoodGroundDelta = 0f; // a new ride: no ride sample yet (Ride style ground, Mount.cs)
                 Ridden = this;
                 riderAttached = true;
                 MountSounds.OnMounted();

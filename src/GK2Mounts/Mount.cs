@@ -142,6 +142,23 @@ namespace GK2Mounts
             private SpriteRenderer keeperBodyRenderer;
             private bool seatPending;
             private float groundDelta; // donkey ground height minus the keeper's, world units (slopes)
+            private float lastGoodGroundDelta;
+            private const float RideGroundStepLimit = 0.5f; // world units between the donkey's and the keeper's sample
+            private float nextGroundLog;
+            private int groundRejected;
+
+            // A rejected ride sample, logged at most twice a second with how many since the last line.
+            private void NoteRejectedGround(float gd, string donkeySrc, float gk, string keeperSrc, Vector3 at)
+            {
+                groundRejected++;
+                if (Time.unscaledTime < nextGroundLog)
+                {
+                    return;
+                }
+                nextGroundLog = Time.unscaledTime + 0.5f;
+                Plugin.Log.LogInfo($"[ground] ride sample rejected ({groundRejected} since the last line): under the donkey {gd:F3} ({donkeySrc}), under the keeper {gk:F3} ({keeperSrc}), keeper at {at:F2}; kept {lastGoodGroundDelta:F3}.");
+                groundRejected = 0;
+            }
             private string lastDonkeyGroundSource = "-", lastKeeperGroundSource = "-";
             private string lastCartGroundSource = "-";
             private float lastCartGround;
@@ -573,6 +590,7 @@ namespace GK2Mounts
                     return reason;
                 }
                 mounted = true;
+                lastGoodGroundDelta = 0f; // a new ride: no ride sample yet (Ride style ground, Mount.cs)
                 Ridden = this;
                 MountSounds.OnMounted();
                 riderFacingX = pc.PlayerData.Direction.x < -0.05f ? -1f : 1f;
@@ -1796,7 +1814,21 @@ namespace GK2Mounts
                     float gk = GroundHeight(basePos, out lastKeeperGroundSource);
                     if (!float.IsNaN(gd) && !float.IsNaN(gk))
                     {
-                        groundDelta = gd - gk;
+                        float d = gd - gk;
+                        if (Mathf.Abs(d) > RideGroundStepLimit)
+                        {
+                            // Steeper than any walkable slope over the half unit between the two samples: a wrong level,
+                            // not the ground (a narrow bridge: the donkey's feet off the deck's navmesh, the raycast then
+                            // finding the bank under it; the mount dropped for single frames, the user's video
+                            // 2026-10-01). The last good difference is kept.
+                            d = lastGoodGroundDelta;
+                            NoteRejectedGround(gd, lastDonkeyGroundSource, gk, lastKeeperGroundSource, basePos);
+                        }
+                        else
+                        {
+                            lastGoodGroundDelta = d;
+                        }
+                        groundDelta = d;
                         target.y = basePos.y + groundDelta;
                     }
                     lastGroundSample = new Vector4(gd, gk, basePos.y, groundDelta);
