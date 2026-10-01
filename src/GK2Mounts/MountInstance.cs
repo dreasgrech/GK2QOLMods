@@ -25,7 +25,13 @@ namespace GK2Mounts
             internal bool HasDonkey;            // false: a free cart (the donkey's own renderers are kept off)
             internal bool HasCart => activeStyle == MountStyle.Cart;
             internal bool IsRidden => mounted;
-            internal bool Ready => donkey != null && donkey && partsReady;
+            // Its view exists and is prepared (switched off while idle or not): enough to follow it as a parent.
+            internal bool HasView => donkey != null && donkey && partsReady;
+
+            // Its view is there, prepared and switched on: ridden, hitched, prompted, IsReady. A view switched off while
+            // idle (Tiers.cs) wakes the frame after it is brought near; riding it before that would measure the seat
+            // from an inactive view, whose renderers have no size.
+            internal bool Ready => HasView && !switchedOff;
 
             // Where it stands: the donkey root's place (WgoData.Position; the donkey's body is drawn half a unit to its
             // facing side of it, a free cart's shafts point that way). Kept up to date while ridden (Follow).
@@ -365,6 +371,7 @@ namespace GK2Mounts
             {
                 Plugin.Log.LogInfo($"Mount: {Describe()}: the game removed its view (scene {SceneId} unloading); restored for the pool, it comes back with the scene.");
                 ReleaseView();
+                switchedOff = false; // destroyed while switched off (idle, Tiers.cs): nothing of it is left to switch on
                 if (mounted)
                 {
                     RiderLeg.Detach();

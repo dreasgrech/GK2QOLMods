@@ -24,9 +24,17 @@ namespace GK2Mounts
         internal static float ScreenMargin = 0.3f;   // a fraction of the screen beyond each edge that still counts as on screen
         internal static int SpawnsPerFrame = 1;    // one view costs 1 to 4 ms to make; 3 a frame made 12 ms frames
 
+        // Idle donkeys without a cart: their view switched off (SetActive(false), the game's own way of hiding a Wgo),
+        // which also stops the game's own per-frame work on it. Off: frozen instead (animators and renderers off, the
+        // view active). Carts are always frozen: switching a cart's view on again re-initialises its conditional drawer
+        // (which cart meshes show), which the cargo display relies on.
+        internal static bool IdleSwitchesOff = true;
+
         // For the [perf] line: how many are in each level, and views made / released in the last second.
         internal static int ActiveCount, IdleCount, AsleepCount;
         internal static int Spawned, Released, Parked, Reused;
+        internal static int MaxSpawnsInAFrame;
+        internal static int ReusedTotal, ParkedTotal, SpawnedTotal, ReleasedTotal; // never reset (the per-second ones are)
     }
 
     // Released views kept for the next donkey that needs one (docs/mounts-performance.md, "View reuse"): building a view
@@ -124,6 +132,7 @@ namespace GK2Mounts
             }
             spawnQueue.Sort((a, b) => a.D.CompareTo(b.D));
             int n = Mathf.Max(1, Lod.SpawnsPerFrame);
+            int made = 0;
             for (int k = 0; k < spawnQueue.Count && n > 0; k++)
             {
                 Instance i = spawnQueue[k].I;
@@ -136,10 +145,12 @@ namespace GK2Mounts
                     if (i.SpawnQueued(pc))
                     {
                         n--;
+                        made++;
                     }
                 }
             }
             spawnQueue.Clear();
+            Lod.MaxSpawnsInAFrame = Mathf.Max(Lod.MaxSpawnsInAFrame, made); // the self-tests' spawn cap check
         }
 
         internal sealed partial class Instance
@@ -198,7 +209,7 @@ namespace GK2Mounts
             internal void WakeForRide()
             {
                 CheckWake();
-                if (tier == Tier.Active && quietAnimators.Count == 0 && quietRenderers.Count == 0)
+                if (tier == Tier.Active && quietAnimators.Count == 0 && quietRenderers.Count == 0 && !switchedOff)
                 {
                     return;
                 }
@@ -217,6 +228,14 @@ namespace GK2Mounts
                 if (SceneId != keeperScene)
                 {
                     return Tier.Active; // another scene: no view anyway; the scene's own loading decides
+                }
+                // A foal is never below its parent: while the parent is active (ridden, near the keeper, on screen) the
+                // foal trots after it as before, also off screen. Frozen or asleep by its own distance it stopped
+                // following, and woke only next to the keeper or by a jump to its parent (the user, 2026-10-01).
+                Instance p = Parent;
+                if (p != null && p.tier == Tier.Active && p.SceneId == SceneId && IsRegistered(p))
+                {
+                    return Tier.Active;
                 }
                 Vector3 k = pc.PlayerData.position.Value;
                 float dx = Position.x - k.x, dz = Position.z - k.z;
@@ -277,6 +296,7 @@ namespace GK2Mounts
                         ParkOrDestroyView(); // cargo, colours, settings stay with the instance; the view is kept if it can be
                     }
                     Lod.Released++;
+                    Lod.ReleasedTotal++;
                 }
                 else if (want == Tier.Idle)
                 {
@@ -296,8 +316,54 @@ namespace GK2Mounts
             // Idle: the view's animators stop and its renderers are left out of drawing (it stands still where nobody sees
             // it; the game then skips it when culling too); both back when it is active again. Only what was on is
             // switched off, so the reveal after a spawn and a free cart's hidden donkey keep their own renderers.
+            // Idle with the view switched off (Lod.IdleSwitchesOff): the game's own per-frame work on it stops too.
+            private bool switchedOff;
+
             private void QuietAnimators(bool quiet)
             {
+                if (!quiet && switchedOff)
+                {
+                    switchedOff = false;
+                    if (donkey != null && donkey)
+                    {
+                        donkey.gameObject.SetActive(true);
+                        // Switched on, the game's WgoPart.OnEnable runs its ConditionalDrawer again, whose rule for an empty
+                        // inventory switches the empty cart body (donkey_cart_empty_sway) on: hidden again, as PrepareParts
+                        // does for a donkey without a cart (only those are ever switched off). Found reading the drawer
+                        // rules (GK2-carry-facts.txt) before testing, 2026-10-01.
+                        foreach (Transform t in donkey.GetComponentsInChildren<Transform>(includeInactive: true))
+                        {
+                            if (System.Array.IndexOf(CartPartNames, t.name) >= 0 && t.gameObject.activeSelf)
+                            {
+                                t.gameObject.SetActive(false);
+                            }
+                        }
+                        // The game's AnimationComponent.OnEnable puts its own skin layers back: the colours are checked on this
+                        // frame's Colors tick, so a donkey with its own colours doesn't enter the screen in the game's for 0.2 s.
+                        ColorsRig.CheckNow();
+                        // Switched off, its animator lost its state and parameters (and the game's OnDisable set Idle):
+                        // the stand pose (with its walk rate) and the facing are sent again.
+                        lastMirrored = (AnimationState)(-1);
+                        try
+                        {
+                            donkey.MainWgoPart?.AnimationComponent?.SetDirection(new Vector2(riderFacingX, 0f));
+                        }
+                        catch
+                        {
+                        }
+                        wakeCheckFrame = Time.frameCount + 2;
+                    }
+                    return;
+                }
+                if (quiet && Lod.IdleSwitchesOff && !HasCart && HasDonkey && !mounted && donkey != null && donkey)
+                {
+                    if (!switchedOff && quietAnimators.Count == 0 && quietRenderers.Count == 0)
+                    {
+                        switchedOff = true;
+                        donkey.gameObject.SetActive(false);
+                    }
+                    return;
+                }
                 if (!quiet)
                 {
                     bool any = quietAnimators.Count > 0;
@@ -372,7 +438,7 @@ namespace GK2Mounts
                 }
                 nextAsleepTick = Time.unscaledTime + 1f;
                 Instance p = Parent;
-                if (p == null || !IsRegistered(p) || p.SceneId != SceneId || p.IsRidden || !p.Ready)
+                if (p == null || !IsRegistered(p) || p.SceneId != SceneId || p.IsRidden || !p.HasView)
                 {
                     return;
                 }
@@ -408,6 +474,7 @@ namespace GK2Mounts
                     v.gameObject.SetActive(false);
                     ViewPool.Park(key, v);
                     Lod.Parked++;
+                    Lod.ParkedTotal++;
                 }
                 catch
                 {
@@ -455,6 +522,7 @@ namespace GK2Mounts
                 revealFrame = int.MaxValue;
                 v.gameObject.SetActive(true);
                 Lod.Reused++;
+                Lod.ReusedTotal++;
                 return true;
             }
 
@@ -478,6 +546,7 @@ namespace GK2Mounts
                 {
                     spawnFailures = 0;
                     Lod.Spawned++;
+                    Lod.SpawnedTotal++;
                     // (A new view: TrySpawn forgot the old view's quieted parts; an idle one is quieted once its parts
                     // are ready, StandTick.)
                 }

@@ -916,6 +916,26 @@ namespace GK2Mounts
             Perf.ExpNoShuffle = GUILayout.Toggle(Perf.ExpNoShuffle, " Experiment: standing donkeys don't shuffle or follow (the mod's movement work off)");
             Perf.ExpHideViews = GUILayout.Toggle(Perf.ExpHideViews, " Experiment: hide standing donkeys (no drawing, no animation: the game's cost of showing them)");
 
+            Header("Self-tests");
+            GUILayout.Label("Scripted checks of the per-mod API, the side file, hitching, shared colours, the levels, view reuse, foals following, the spawn cap and leaks, about 4 minutes (docs/mounts-self-tests.md). They spawn their own test donkeys (never kept), move the keeper and put him back, and save nothing. Don't touch the keys while they run; results in the log as [test] lines.", small);
+            GUILayout.BeginHorizontal();
+            if (!SelfTest.Running && GUILayout.Button("Run self-tests"))
+            {
+                SelfTest.RequestStart(); // started on the next frame (Mount.Tick), not inside this GUI event
+            }
+            if (SelfTest.Running && GUILayout.Button("Abort the self-tests"))
+            {
+                SelfTest.Abort();
+            }
+            GUILayout.EndHorizontal();
+            GUILayout.Label(SelfTest.Status, label);
+            int shown = 0;
+            for (int k = SelfTest.Lines.Count - 1; k >= 0 && shown < 12; k--, shown++)
+            {
+                string l = SelfTest.Lines[k];
+                if (l.Contains(" FAIL ") || l.Contains(" WARN ")) GUILayout.Label(l, small);
+            }
+
             Header("Levels: far and off-screen donkeys do less (this session)");
             GUILayout.Label("Active: ridden, edited here, near the keeper or on screen: everything. Idle: off screen up to the sleep distance: the view stays but stands frozen. Asleep: beyond it: no view (it comes back inside the wake distance). New views: a few per frame, nearest first.", small);
             Lod.On = GUILayout.Toggle(Lod.On, " Levels on (off: every donkey is always active, as before)");
@@ -924,6 +944,7 @@ namespace GK2Mounts
             Lod.WakeRadius = Mathf.Min(SessionFloatRow("Awake again within", Lod.WakeRadius, 5f, 200f), Lod.SleepRadius - 2f);
             Lod.ScreenMargin = SessionFloatRow("On screen margin (fraction of the screen)", Lod.ScreenMargin, 0f, 1f);
             Lod.SpawnsPerFrame = SessionIntRow("New views per frame", Lod.SpawnsPerFrame, 1, 20);
+            Lod.IdleSwitchesOff = GUILayout.Toggle(Lod.IdleSwitchesOff, " Idle donkeys without a cart: view switched off (off: frozen, view kept on)");
 
             Header("This panel");
             // Stepped, not sliders: dragging a slider that rescales the panel moves the slider under the mouse.

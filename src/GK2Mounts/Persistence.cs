@@ -74,7 +74,7 @@ namespace GK2Mounts
 
         // The core and its panel: always there, and allowed to change any instance (the panel is the player's tool).
         // Exactly these two: the example mods' GUIDs also start with dreas.gk2.mounts.
-        internal static bool IsCoreOwner(string owner) => owner == Plugin.Guid || owner == TuningWindow.PanelOwner;
+        internal static bool IsCoreOwner(string owner) => owner == Plugin.Guid || owner == TuningWindow.PanelOwner || owner == SelfTest.Owner;
 
         // Any owner but the core's is a BepInEx plugin GUID.
         internal static bool OwnerPresent(string owner)
@@ -181,27 +181,22 @@ namespace GK2Mounts
 
         // ------------------------------------------------------------------ writing (after a successful save)
 
-        internal static void WriteSideFile(SaveSlotData slot)
+        // The instances kept with a save (or those 'include' picks, for the self-tests), parents first (only for reading
+        // the file by eye: links are by identity). A child whose parent isn't kept goes only when it would outlive the
+        // parent anyway (RemoveWithParent false), as an orphan.
+        internal static List<Instance> KeptInstances(Func<Instance, bool> include, bool log)
         {
-            if (slot == null || string.IsNullOrEmpty(slot.slotName))
-            {
-                return;
-            }
-            string path = SideFile(slot.slotName);
-
-            // Parents first (only for reading the file by eye: links are by identity); a child whose parent isn't kept
-            // goes only when it would outlive the parent anyway (RemoveWithParent false), as an orphan.
             var kept = new List<Instance>();
             foreach (Instance i in instances)
             {
-                if (i.Persist && !i.Ephemeral && i.Parent == null)
+                if (i.Persist && !i.Ephemeral && i.Parent == null && include(i))
                 {
                     kept.Add(i);
                 }
             }
             foreach (Instance i in instances)
             {
-                if (!i.Persist || i.Ephemeral || i.Parent == null)
+                if (!i.Persist || i.Ephemeral || i.Parent == null || !include(i))
                 {
                     continue;
                 }
@@ -209,35 +204,30 @@ namespace GK2Mounts
                 {
                     kept.Add(i);
                 }
-                else
+                else if (log)
                 {
                     Plugin.Log.LogInfo($"Persistence: {i.Describe()} is kept, but its parent {i.Parent.FullId} isn't; it goes with its parent at a reload.");
                 }
             }
 
-            if (kept.Count == 0 && dormant.Count == 0)
-            {
-                if (File.Exists(path))
-                {
-                    File.Delete(path);
-                    Plugin.Log.LogInfo($"Persistence: nothing to keep with {slot.slotName}; its side file was removed.");
-                }
-                PersistenceNote = $"Last save ({slot.slotName}): nothing kept.";
-                return;
-            }
+            return kept;
+        }
 
+        // The side file's text: the header, every kept instance's record, and (withDormant) the dormant records as read.
+        internal static string BuildSideText(string slotName, string saved, int day, List<Instance> kept, bool withDormant, out int items)
+        {
             var sb = new StringBuilder();
             sb.Append("# GK2 Mounts: the donkeys and carts kept with this save, written after each save (docs/mounts-persistence.md).\n");
             sb.Append("# The game's own save does not need this file; without it the donkeys simply don't come back.\n");
             Line(sb, "format", SideFileFormat.ToString(CultureInfo.InvariantCulture));
-            Line(sb, "slot", slot.slotName);
-            Line(sb, "saved", slot.saveDateTime ?? "");
-            Line(sb, "day", slot.day.ToString(CultureInfo.InvariantCulture));
+            Line(sb, "slot", slotName);
+            Line(sb, "saved", saved ?? "");
+            Line(sb, "day", day.ToString(CultureInfo.InvariantCulture));
             foreach (var kv in nextIds)
             {
                 Line(sb, "next", kv.Key, kv.Value.ToString(CultureInfo.InvariantCulture));
             }
-            int items = 0;
+            items = 0;
             foreach (Instance i in kept)
             {
                 sb.Append("instance\n");
@@ -288,7 +278,7 @@ namespace GK2Mounts
                 }
                 sb.Append("end\n");
             }
-            foreach (DormantRecord d in dormant)
+            foreach (DormantRecord d in withDormant ? dormant : new List<DormantRecord>())
             {
                 foreach (string l in d.Lines)
                 {
@@ -296,8 +286,34 @@ namespace GK2Mounts
                 }
             }
 
+            return sb.ToString();
+        }
+
+        internal static void WriteSideFile(SaveSlotData slot)
+        {
+            if (slot == null || string.IsNullOrEmpty(slot.slotName))
+            {
+                return;
+            }
+            string path = SideFile(slot.slotName);
+
+            List<Instance> kept = KeptInstances(i => true, log: true);
+
+            if (kept.Count == 0 && dormant.Count == 0)
+            {
+                if (File.Exists(path))
+                {
+                    File.Delete(path);
+                    Plugin.Log.LogInfo($"Persistence: nothing to keep with {slot.slotName}; its side file was removed.");
+                }
+                PersistenceNote = $"Last save ({slot.slotName}): nothing kept.";
+                return;
+            }
+
+            string text = BuildSideText(slot.slotName, slot.saveDateTime, slot.day, kept, withDormant: true, out int items);
+
             string tmp = path + ".tmp";
-            File.WriteAllText(tmp, sb.ToString(), new UTF8Encoding(false));
+            File.WriteAllText(tmp, text, new UTF8Encoding(false));
             if (File.Exists(path))
             {
                 File.Replace(tmp, path, null);
@@ -327,7 +343,7 @@ namespace GK2Mounts
 
         // ------------------------------------------------------------------ restoring (a save was loaded)
 
-        private sealed class Record
+        internal sealed class Record
         {
             internal string Owner, Key, Scene, ParentOwner;
             internal int Id, ParentId;
@@ -344,29 +360,11 @@ namespace GK2Mounts
             internal string Kind => !Donkey ? "free cart" : Cart ? "donkey with cart" : !Rideable && Scale < 1f ? "foal" : "donkey";
         }
 
-        // Called once per loaded game (BecomeReady), before Mounts.GameReady: the kept ones back, the dormant ones held.
-        // Returns the handles that came back.
-        internal static List<MountHandle> RestoreFromSideFile()
+        // The side file's text read back: the header's fields, the owners' counters ('next'), and every record.
+        internal static void ParseSideText(IEnumerable<string> lines, Dictionary<string, string> header, List<string[]> nexts, List<Record> records)
         {
-            var restored = new List<MountHandle>();
-            SaveSlotData slot = MainGame.Instance != null ? MainGame.Instance.SaveSlotData : null;
-            if (slot == null || string.IsNullOrEmpty(slot.slotName))
-            {
-                PersistenceNote = "A new game: nothing to restore.";
-                return restored;
-            }
-            string path = SideFile(slot.slotName);
-            if (!File.Exists(path))
-            {
-                PersistenceNote = $"Loaded {slot.slotName}: no side file, nothing to restore.";
-                return restored;
-            }
-
-            var header = new Dictionary<string, string>();
-            var nexts = new List<string[]>();
-            var records = new List<Record>();
             Record cur = null;
-            foreach (string raw in File.ReadAllLines(path, Encoding.UTF8))
+            foreach (string raw in lines)
             {
                 if (raw.Length == 0 || raw[0] == '#')
                 {
@@ -444,6 +442,31 @@ namespace GK2Mounts
                         break;
                 }
             }
+
+        }
+
+        // Called once per loaded game (BecomeReady), before Mounts.GameReady: the kept ones back, the dormant ones held.
+        // Returns the handles that came back.
+        internal static List<MountHandle> RestoreFromSideFile()
+        {
+            var restored = new List<MountHandle>();
+            SaveSlotData slot = MainGame.Instance != null ? MainGame.Instance.SaveSlotData : null;
+            if (slot == null || string.IsNullOrEmpty(slot.slotName))
+            {
+                PersistenceNote = "A new game: nothing to restore.";
+                return restored;
+            }
+            string path = SideFile(slot.slotName);
+            if (!File.Exists(path))
+            {
+                PersistenceNote = $"Loaded {slot.slotName}: no side file, nothing to restore.";
+                return restored;
+            }
+
+            var header = new Dictionary<string, string>();
+            var nexts = new List<string[]>();
+            var records = new List<Record>();
+            ParseSideText(File.ReadAllLines(path, Encoding.UTF8), header, nexts, records);
 
             header.TryGetValue("format", out string format);
             header.TryGetValue("saved", out string saved);

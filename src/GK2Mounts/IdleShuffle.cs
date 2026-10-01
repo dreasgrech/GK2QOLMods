@@ -176,7 +176,7 @@ namespace GK2Mounts
                     StepOutIfInside();
                 }
                 // A foal's home is its parent's body (while it can follow; Foals.cs).
-                bool parentHome = Parent != null && !followLost && IsRegistered(Parent) && Parent.SceneId == SceneId && Parent.Ready;
+                bool parentHome = Parent != null && !followLost && IsRegistered(Parent) && Parent.SceneId == SceneId && Parent.HasView;
                 if (!shuffleHomeSet || (Position - shuffleWrote).sqrMagnitude > 0.000001f)
                 {
                     // First frame, or moved by something else (MoveTo, ComeToKeeper, a dismount, a hitch): home is here.

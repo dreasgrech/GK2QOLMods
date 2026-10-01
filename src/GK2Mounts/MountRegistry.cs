@@ -333,6 +333,7 @@ namespace GK2Mounts
 
         public static void Tick()
         {
+            SelfTest.PollStart();
             Perf.BeginFrame();
             using (Perf.MeasureAlloc())
             using (Perf.Measure(Perf.S.Tick))

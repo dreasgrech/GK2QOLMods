@@ -843,6 +843,7 @@ namespace GK2Mounts
                     string id = WgoId;
                     if (TakeParkedView(scene, id)) // a released view of the same kind (Tiers.cs, ViewPool): no Wgo.Spawn
                     {
+                        switchedOff = false;
                         quietAnimators.Clear();
                         quietKeepState.Clear();
                         quietRenderers.Clear();
@@ -871,6 +872,7 @@ namespace GK2Mounts
                     donkey.UpdateChunkVisibility(isVisible: true);
                     quietAnimators.Clear(); // the old view's (Tiers.cs): a view the game destroyed while idle left them
                     quietKeepState.Clear();
+                    switchedOff = false;
                     quietRenderers.Clear();
                     SceneId = scene.Id;
                     partsReady = false;

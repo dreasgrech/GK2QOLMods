@@ -497,6 +497,13 @@ namespace GK2Mounts
             private bool dirty = true;
             private float nextVerify;
             private float nextSpriteCheck = UnityEngine.Random.value * 0.2f; // spread over the donkeys' frames
+
+            // On this frame's Tick, not within 0.2 s: a view switched on again (Tiers.cs) can carry the game's own skin.
+            internal void CheckNow()
+            {
+                nextSpriteCheck = 0f;
+                nextVerify = 0f;
+            }
             private SpriteColorMethod appliedMethod;
             public string Note { get; private set; } = "not attached";
 

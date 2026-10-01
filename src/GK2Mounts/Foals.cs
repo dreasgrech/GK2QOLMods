@@ -277,11 +277,11 @@ namespace GK2Mounts
                     return false;
                 }
                 float still = ParentStillFor();
-                if (p.SceneId != SceneId || !p.Ready)
+                if (p.SceneId != SceneId || !p.HasView)
                 {
                     StopFollowing();
                     shuffleHold = "waiting for its parent (somewhere else)";
-                    if (!p.IsRidden && p.Ready && still >= 1.5f)
+                    if (!p.IsRidden && p.HasView && still >= 1.5f)
                     {
                         CatchUp("its parent is in another place");
                     }
@@ -648,11 +648,12 @@ namespace GK2Mounts
 
             private void CatchUp(string why)
             {
+                CatchUpCount++;
                 Instance p = Parent;
                 Vector3 away = AwayFromCamera();
                 Vector3 right = Vector3.Cross(Vector3.up, away).normalized;
                 Vector3 slot = SlotNearParent(SiblingIndex());
-                if (p.Ready)
+                if (p.HasView)
                 {
                     // Its own slot, else any free one with a clear line from the parent, else next to the parent.
                     Vector3 pb = p.BodyPoint();
@@ -697,7 +698,7 @@ namespace GK2Mounts
             private void FollowWithoutView()
             {
                 Instance p = Parent;
-                if (p == null || !IsRegistered(p) || p.SceneId == SceneId || p.IsRidden || !p.Ready)
+                if (p == null || !IsRegistered(p) || p.SceneId == SceneId || p.IsRidden || !p.HasView)
                 {
                     return;
                 }

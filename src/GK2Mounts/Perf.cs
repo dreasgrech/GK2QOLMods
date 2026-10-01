@@ -285,7 +285,7 @@ namespace GK2Mounts
             foreach (Mount.Instance i in Mount.All)
             {
                 n++;
-                if (i.Ready) v++;
+                if (i.HasView) v++;
                 if (i.Parent != null) f++;
                 if (i.tier == Mount.Tier.Idle) idle++;
                 else if (i.tier == Mount.Tier.Asleep) asleep++;
