@@ -129,7 +129,8 @@ namespace GK2Mounts
             private string groundFail;                       // the first ground check that failed since the last log line
             private string lastPickFail;                     // the last "found no step" summary, for the panel
             private float shuffleFailLogAt;
-            private int failBox, failGround, failNear, failTurnRoom, failNoOffset;
+            private int failBox, failGround, failNear, failTurnRoom, failNoOffset;   // since the last log line (once a minute)
+            private int pickWorld, pickCrowd;   // this pick only: rejected by the world (ground, room to turn) / by the area or others
 
             // Walking a step right now (MountHandle.IsStepping).
             internal bool IsStepping => shufflePhase == ShufflePhase.Stepping || shufflePhase == ShufflePhase.Turning || shufflePhase == ShufflePhase.Following;
@@ -191,14 +192,19 @@ namespace GK2Mounts
                     if (!shuffleAnnounced && shuffleLateralKnown)
                     {
                         shuffleAnnounced = true;
-                        Plugin.Log.LogInfo($"[shuffle] {Describe()} shuffles around {shuffleHome:F2} in {SceneId} (body offset {shuffleLateral:F2}, navmesh {(MainGame.PlayerController?.SceneRecastGraph != null ? "yes" : "no")}, first step in {shuffleAt - Time.time:F1} s).");
+                        DiagLog($"[shuffle] {Describe()} shuffles around {shuffleHome:F2} in {SceneId} (body offset {shuffleLateral:F2}, navmesh {(MainGame.PlayerController?.SceneRecastGraph != null ? "yes" : "no")}, first step in {shuffleAt - Time.time:F1} s).");
                     }
                 }
                 if (parentHome && !followLost)
                 {
                     shuffleHome = SlotNearParent(SiblingIndex()); // its own spot next to the parent (Foals.cs)
                 }
-                if (FollowParentTick(pc))
+                bool following;
+                using (Perf.Measure(Perf.S.Follow))
+                {
+                    following = FollowParentTick(pc);
+                }
+                if (following)
                 {
                     LogTurn();
                     return;
@@ -221,7 +227,7 @@ namespace GK2Mounts
                     case ShufflePhase.Waiting:
                         if (Time.time >= shuffleAt && !TryStartStep(pc))
                         {
-                            NotePickFailed();
+                            NotePickFailed(pickWorld > pickCrowd);
                             LogFailedPick();
                             shuffleAt = Time.time + UnityEngine.Random.Range(IdleShuffle.PauseMin.Value, Mathf.Max(IdleShuffle.PauseMin.Value, IdleShuffle.PauseMax.Value)) * 0.5f;
                         }
@@ -304,6 +310,7 @@ namespace GK2Mounts
             // after turning around); false when none of the tries fits.
             private bool TryStartStep(PlayerController pc)
             {
+                pickWorld = pickCrowd = 0;
                 if (!shuffleLateralKnown)
                 {
                     failNoOffset++;
@@ -314,6 +321,15 @@ namespace GK2Mounts
                 float worldToRight = Vector3.Dot(Vector3.right, right) >= 0f ? 1f : -1f; // facing is the sign of world x
                 float f = riderFacingX;
                 Vector3 body = BodyAt(Position, f);
+                // How far outside its area it is now (0 inside), in area units: a step that brings it closer is allowed
+                // even if it doesn't end inside. A foal half a unit out (its spot moved) had no step at all.
+                float OutBy(Vector3 p, Vector3 rgt, Vector3 awy, float aw, float ad)
+                {
+                    Vector3 rel0 = p - shuffleHome;
+                    float ox = Mathf.Max(0f, Mathf.Abs(Vector3.Dot(rel0, rgt)) - aw) / Mathf.Max(aw, 0.05f);
+                    float oz = Mathf.Max(0f, Mathf.Abs(Vector3.Dot(rel0, awy)) - ad) / Mathf.Max(ad, 0.05f);
+                    return Mathf.Max(ox, oz);
+                }
                 bool turnFirst = UnityEngine.Random.value < IdleShuffle.TurnChance.Value;
                 float lenMin = Mathf.Min(IdleShuffle.StepMin.Value, IdleShuffle.StepMax.Value);
                 float lenMax = Mathf.Max(IdleShuffle.StepMin.Value, IdleShuffle.StepMax.Value);
@@ -328,6 +344,7 @@ namespace GK2Mounts
                     if (turn && !LineWalkable(Position, root, "turn"))
                     {
                         failTurnRoom++;
+                        pickWorld++;
                         continue;
                     }
                     for (int t = 0; t < PickTries; t++)
@@ -336,21 +353,24 @@ namespace GK2Mounts
                         float a = UnityEngine.Random.Range(-maxAngle, maxAngle);
                         Vector3 dir = right * (nf * worldToRight * Mathf.Cos(a)) + away * Mathf.Sin(a);
                         Vector3 bodyTo = body + dir * len;
-                        Vector3 rel = bodyTo - shuffleHome;
-                        if (Mathf.Abs(Vector3.Dot(rel, right)) > w || Mathf.Abs(Vector3.Dot(rel, away)) > d)
+                        float outTo = OutBy(bodyTo, right, away, w, d);
+                        if (outTo > 0f && outTo >= OutBy(body, right, away, w, d) - 0.01f)
                         {
                             failBox++;
+                            pickCrowd++;
                             continue;
                         }
                         Vector3 rootTo = root + dir * len;
                         if (NearOther(bodyTo) || KeeperClose(pc, bodyTo))
                         {
                             failNear++;
+                            pickCrowd++;
                             continue;
                         }
                         if (!LineWalkable(root, rootTo, "root") || !LineWalkable(body, bodyTo, "body"))
                         {
                             failGround++;
+                            pickWorld++;
                             continue;
                         }
                         stepTo = rootTo;
@@ -369,7 +389,7 @@ namespace GK2Mounts
                             if (Plugin.TuningWindowEnabled.Value)
                             {
                                 turnLogFrames = 3;
-                                Plugin.Log.LogInfo($"[shuffle] {Describe()} turns to face {(nf > 0f ? "right" : "left")}: body {BodyNowForLog()}, root {Position:F3} -> {root:F3}.");
+                                DiagLog($"[shuffle] {Describe()} turns to face {(nf > 0f ? "right" : "left")}: body {BodyNowForLog()}, root {Position:F3} -> {root:F3}.");
                             }
                         }
                         else
@@ -428,6 +448,7 @@ namespace GK2Mounts
 
             private bool LineWalkable(Vector3 a, Vector3 b, string what)
             {
+                using var perf = Perf.Measure(Perf.S.Line);
                 keeperBody = MainGame.PlayerController?.PhysicalBody?.Rb;
                 float prev = float.NaN;
                 float start = float.NaN;
@@ -512,7 +533,7 @@ namespace GK2Mounts
                         }
                         followLost = wedged = false;
                         pickFailsInRow = 0;
-                        Plugin.Log.LogInfo($"[shuffle] {Describe()} stood inside {inside?.name} ({(inside != null ? LayerMask.LayerToName(inside.gameObject.layer) : "?")}); moved {r:F1} out to {p:F2}.");
+                        DiagLog($"[shuffle] {Describe()} stood inside {inside?.name} ({(inside != null ? LayerMask.LayerToName(inside.gameObject.layer) : "?")}); moved {r:F1} out to {p:F2}.");
                         return;
                     }
                 }
@@ -521,6 +542,7 @@ namespace GK2Mounts
             // Nothing keeper-blocking at a ground point (the capsule LineWalkable uses).
             private bool FreeAt(Vector3 foot, out Collider hit)
             {
+                using var perf = Perf.Measure(Perf.S.Free);
                 hit = null;
                 keeperBody = MainGame.PlayerController?.PhysicalBody?.Rb;
                 int n = Physics.OverlapCapsuleNonAlloc(foot + Vector3.up * (BodyRadius + 0.1f), foot + Vector3.up * 0.9f, BodyRadius,
@@ -592,7 +614,7 @@ namespace GK2Mounts
                 }
                 shuffleFailLogAt = Time.time + 60f;
                 lastPickFail = $"outside the area {failBox}, near the keeper or another donkey {failNear}, ground {failGround}, no room to turn {failTurnRoom}, body offset not measured {failNoOffset}";
-                Plugin.Log.LogInfo($"[shuffle] {Describe()} found no step at {BodyAt(Position, riderFacingX):F2} (home {shuffleHome:F2}): rejected {lastPickFail}.{(groundFail != null ? " First ground failure: " + groundFail + "." : "")}");
+                DiagLog($"[shuffle] {Describe()} found no step at {BodyAt(Position, riderFacingX):F2} (home {shuffleHome:F2}): rejected {lastPickFail}.{(groundFail != null ? " First ground failure: " + groundFail + "." : "")}");
                 failBox = failGround = failNear = failTurnRoom = failNoOffset = 0;
                 groundFail = null;
             }
@@ -606,7 +628,7 @@ namespace GK2Mounts
                     return;
                 }
                 turnLogFrames--;
-                Plugin.Log.LogInfo($"[shuffle] {Describe()} frame +{Time.frameCount - shuffleTurnFrame}: body {BodyNowForLog()}, root {Position:F3}, {shufflePhase}.");
+                DiagLog($"[shuffle] {Describe()} frame +{Time.frameCount - shuffleTurnFrame}: body {BodyNowForLog()}, root {Position:F3}, {shufflePhase}.");
             }
 
             private float lastPickFailAt = -1000f;

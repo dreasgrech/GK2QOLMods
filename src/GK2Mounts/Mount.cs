@@ -184,6 +184,7 @@ namespace GK2Mounts
             // (walkable layers 11/12) only as a fallback. NaN when neither knows.
             internal static float GroundHeight(Vector3 p, out string source)
             {
+                using var perf = Perf.Measure(Perf.S.Ground);
                 try
                 {
                     Pathfinding.RecastGraph graph = MainGame.PlayerController?.SceneRecastGraph;

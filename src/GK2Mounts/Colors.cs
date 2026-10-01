@@ -449,6 +449,7 @@ namespace GK2Mounts
             private Wgo attachedTo;
             private bool dirty = true;
             private float nextVerify;
+            private float nextSpriteCheck = UnityEngine.Random.value * 0.2f; // spread over the donkeys' frames
             private SpriteColorMethod appliedMethod;
             public string Note { get; private set; } = "not attached";
 
@@ -575,7 +576,13 @@ namespace GK2Mounts
                         return;
                     }
                     // The game may re-skin the donkey (SkinChangerGK2 takes sprite.material and clears the replace
-                    // keywords): put ours back.
+                    // keywords): put ours back. Five times a second, not every frame: with 63 donkeys the check of every
+                    // sprite every frame was a large part of Colors (measured 2026-10-01); a re-skin shows for 0.2 s at most.
+                    if (Time.unscaledTime < nextSpriteCheck)
+                    {
+                        return;
+                    }
+                    nextSpriteCheck = Time.unscaledTime + 0.2f;
                     foreach (SpriteTarget t in sprites)
                     {
                         if (t.Mine == null || t.R == null || !t.R) continue;

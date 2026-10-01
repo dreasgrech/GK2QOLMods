@@ -16,6 +16,33 @@ namespace GK2Mounts
     // Mounts.SpawnFoal is the convenience over the three (scale 0.6, not rideable, its own shuffle switched on).
     internal static partial class Mount
     {
+        // The foal and shuffle diagnostics share a budget: at most 4 lines a second, the rest counted and named on the
+        // next line that is written (63 donkeys wrote 10 to 19 lines a second, measured 2026-10-01).
+        private static float diagWindow;
+        private static int diagInWindow, diagSkipped;
+
+        internal static void DiagLog(string line)
+        {
+            float now = Time.unscaledTime;
+            if (now - diagWindow >= 1f)
+            {
+                diagWindow = now;
+                diagInWindow = 0;
+            }
+            if (diagInWindow >= 4)
+            {
+                diagSkipped++;
+                return;
+            }
+            diagInWindow++;
+            if (diagSkipped > 0)
+            {
+                line += $" ({diagSkipped} more foal/shuffle line(s) skipped before this)";
+                diagSkipped = 0;
+            }
+            Plugin.Log.LogInfo(line);
+        }
+
         internal sealed partial class Instance
         {
             internal float ViewScale = 1f;
@@ -301,7 +328,7 @@ namespace GK2Mounts
                             shufflePhase = ShufflePhase.Following;
                             nextAheadCheck = 0f;
                             rejoinedAt = Time.time;
-                            Plugin.Log.LogInfo($"[foal] {Describe()} follows its parent {p.FullId} again ({dHome:F1} away, to {(k == NearSide ? "its near side" : "slot " + k)}).");
+                            DiagLog($"[foal] {Describe()} follows its parent {p.FullId} again ({dHome:F1} away, to {(k == NearSide ? "its near side" : "slot " + k)}).");
                             return true;
                         }
                         // No straight way to any place next to it: a route around, when the parent is within the route's
@@ -320,7 +347,9 @@ namespace GK2Mounts
                         }
                         return false;
                     }
-                    else if (!p.IsRidden && still >= 1.5f && (OffScreen(body) || still >= 6f))
+                    // Out of sight only: a foal vanishing in view and appearing next to its parent looked broken (the
+                    // user, 2026-10-01). In view only when it is truly wedged against the world, after 6 s.
+                    else if (!p.IsRidden && still >= 1.5f && (OffScreen(body) || (wedged && still >= 6f)))
                     {
                         CatchUp("its parent stands again");
                         return true;
@@ -345,7 +374,7 @@ namespace GK2Mounts
                     if (followsLogged < 5)
                     {
                         followsLogged++;
-                        Plugin.Log.LogInfo($"[foal] {Describe()} follows its parent {p.FullId} ({dHome:F1} away).");
+                        DiagLog($"[foal] {Describe()} follows its parent {p.FullId} ({dHome:F1} away).");
                     }
                     return true;
                 }
@@ -361,7 +390,11 @@ namespace GK2Mounts
                 float dt = Mathf.Min(Time.deltaTime, 0.1f);
                 if (routeSearch != null)
                 {
-                    FoalRouteSearch.State st = routeSearch.Step();
+                    FoalRouteSearch.State st;
+                    using (Perf.Measure(Perf.S.Route))
+                    {
+                        st = routeSearch.Step();
+                    }
                     if (st == FoalRouteSearch.State.Running)
                     {
                         return; // standing while it works the way out (a frame or a few)
@@ -461,7 +494,7 @@ namespace GK2Mounts
                     pt => GroundHeight(pt, out _), foot => FreeAt(foot, out _));
                 if (routesLogged < 30)
                 {
-                    Plugin.Log.LogInfo($"[foal] {Describe()} works out a way round ({why}), {FlatDistance(body, slot):F1} to go.");
+                    DiagLog($"[foal] {Describe()} works out a way round ({why}), {FlatDistance(body, slot):F1} to go.");
                 }
             }
 
@@ -475,7 +508,7 @@ namespace GK2Mounts
                 string what = s.Result == FoalRouteSearch.State.Found
                     ? $"found, {s.Corners.Count} corner(s)"
                     : $"none ({s.Why})";
-                Plugin.Log.LogInfo($"[foal] {Describe()} route to its parent {p.FullId}: {what}; {s.Tests} cell tests in {s.Frames} frame(s), {s.TestMs:F1} ms ({us:F0} µs per test).");
+                DiagLog($"[foal] {Describe()} route to its parent {p.FullId}: {what}; {s.Tests} cell tests in {s.Frames} frame(s), {s.TestMs:F1} ms ({us:F0} µs per test).");
             }
 
             // One frame of trotting towards the slot: the body moves in a straight line, the root stays half a (scaled)
@@ -518,7 +551,13 @@ namespace GK2Mounts
                 // Full speed until the last half unit, then slowing down to arrive.
                 // Full speed until the last half unit, then slowing down to arrive; far behind (from 2 units out, fully at 8)
                 // up to 1.75 times as fast, so a foal can make up ground on a parent that has stopped or slowed.
-                followSpeedNow = IdleShuffle.FollowSpeed.Value * Mathf.Lerp(0.35f, 1f, Mathf.Clamp01(dFinal / 0.6f))
+                // Close by it walks: within a unit of its spot about 1 unit/s, the full trot only from 4 units out. Its
+                // spot moves a unit or so whenever the parent turns or a sibling moves, and trotting that at 4 u/s looked
+                // like sprinting among the slow shuffling (the user, 2026-10-01).
+                float trot = IdleShuffle.FollowSpeed.Value;
+                float walk = Mathf.Min(trot, 1f);
+                followSpeedNow = Mathf.Lerp(walk, trot, Mathf.Clamp01((dFinal - 1f) / 3f))
+                    * Mathf.Lerp(0.35f, 1f, Mathf.Clamp01(dFinal / 0.6f))
                     * Mathf.Lerp(1f, 1.75f, Mathf.Clamp01((dFinal - 2f) / 6f));
                 float move = Mathf.Min(followSpeedNow * dt, dist);
                 Vector3 bodyNew = body + dir * move;
@@ -550,7 +589,7 @@ namespace GK2Mounts
                 {
                     followLost = true;
                     shuffleHome = body;
-                    Plugin.Log.LogInfo($"[foal] {Describe()} can't follow its parent {Parent.FullId} ({why}{(groundFail != null ? ": " + groundFail : "")}); it waits, follows again when the parent comes back in reach, or catches up out of sight once it stands.");
+                    DiagLog($"[foal] {Describe()} can't follow its parent {Parent.FullId} ({why}{(groundFail != null ? ": " + groundFail : "")}); it waits, follows again when the parent comes back in reach, or catches up out of sight once it stands.");
                     groundFail = null;
                 }
             }
@@ -566,10 +605,18 @@ namespace GK2Mounts
                 }
             }
 
-            // A pick that found no step (IdleShuffle.cs). Three in a row with a parent: it is wedged where it stands (a
-            // fence, a wall, a slope), and the catch-up moves it to a free slot.
-            private void NotePickFailed()
+            // A pick that found no step (IdleShuffle.cs). Three in a row with a parent, blocked by the world: it is wedged
+            // where it stands (a fence, a wall, a slope), and the catch-up moves it to a free slot. A pick that failed for
+            // crowding (its siblings, the keeper) or for its own small area doesn't count: crowded families counted those,
+            // and 40 foals teleported back to their parents over and over, in view (found 2026-10-01; every failed pick
+            // there was "outside the area" or "near another donkey", never ground).
+            private void NotePickFailed(bool blockedByWorld)
             {
+                if (!blockedByWorld)
+                {
+                    pickFailsInRow = 0;
+                    return;
+                }
                 pickFailsInRow++;
                 if (Parent != null && pickFailsInRow >= 3 && !followLost)
                 {
@@ -624,7 +671,7 @@ namespace GK2Mounts
                 pickFailsInRow = 0;
                 shufflePhase = ShufflePhase.Waiting;
                 EndStep(firstPause: true);
-                Plugin.Log.LogInfo($"[foal] {Describe()} caught up with its parent {p.FullId} ({why}) at {root:F2} in {SceneId}.");
+                DiagLog($"[foal] {Describe()} caught up with its parent {p.FullId} ({why}) at {root:F2} in {SceneId}.");
             }
 
             // StandTick without a view (its scene is not loaded): a foal whose parent stands in another, loaded scene

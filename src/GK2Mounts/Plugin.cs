@@ -347,6 +347,7 @@ namespace GK2Mounts
         private void Awake()
         {
             Log = Logger;
+            Log.LogEvent += (_, __) => Perf.NoteLogLine(); // the panel's log lines per second
             Instance = this;
             Application.quitting += () => Quitting = true;
             Enabled = Config.Bind("General", "Enabled", true,
@@ -474,7 +475,10 @@ namespace GK2Mounts
             }
             try
             {
-                TuningWindow.Draw();
+                using (Perf.Measure(Perf.S.Panel))
+                {
+                    TuningWindow.Draw();
+                }
             }
             catch (Exception e)
             {

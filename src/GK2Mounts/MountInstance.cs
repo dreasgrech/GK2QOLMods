@@ -90,7 +90,12 @@ namespace GK2Mounts
                     {
                         return;
                     }
-                    if (TrySpawn(pc, scene))
+                    bool spawned;
+                    using (Perf.Measure(Perf.S.Spawn))
+                    {
+                        spawned = TrySpawn(pc, scene);
+                    }
+                    if (spawned)
                     {
                         spawnFailures = 0;
                     }
@@ -107,24 +112,46 @@ namespace GK2Mounts
                     {
                         return;
                     }
-                    PrepareParts(pc);
+                    using (Perf.Measure(Perf.S.Spawn))
+                    {
+                        PrepareParts(pc);
+                    }
                     if (!partsReady)
                     {
                         return;
                     }
                 }
-                ShuffleTick(pc);
-                Stand();
-                RevealDonkeyIfDue();
+                if (!Perf.ExpNoShuffle)
+                {
+                    using (Perf.Measure(Perf.S.Shuffle))
+                    {
+                        ShuffleTick(pc);
+                    }
+                }
+                ApplyPerfExperiment();
+                using (Perf.Measure(Perf.S.Pose))
+                {
+                    Stand();
+                    RevealDonkeyIfDue();
+                }
                 if (HasCart)
                 {
-                    LanternRig.Tick();
+                    using (Perf.Measure(Perf.S.Lantern))
+                    {
+                        LanternRig.Tick();
+                    }
                 }
-                ColorsRig.Tick();
+                using (Perf.Measure(Perf.S.Colors))
+                {
+                    ColorsRig.Tick();
+                }
             }
 
             private void Stand()
             {
+                // Written every frame, also when unchanged. Writing only on a change (tried 2026-10-01 to save 0.02 ms of
+                // Pose) broke the one-frame turn (the body jumped 0.57 out and back on the frame after a turn: foals
+                // seemed to dart) and foals vanished from view; the write itself is what keeps the view placed.
                 donkey.Data.MovableDirection = new Vector2(riderFacingX, 0f);
                 donkey.Data.Position = VisualConsts.GetRoundedPosXYZ(Position, PixelSize());
                 ApplyStandState(); // Idle, or Walk during an idle-shuffle step (IdleShuffle.cs)

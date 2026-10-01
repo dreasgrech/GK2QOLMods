@@ -89,7 +89,10 @@ namespace GK2Mounts
             {
                 chromeHeight = Mathf.Clamp(rect.height - lastScrollHeight, 60f, 600f);
             }
-            DrawWorldMarkers(scale);
+            using (Perf.Measure(Perf.S.Markers))
+            {
+                DrawWorldMarkers(scale);
+            }
             GUI.matrix = Matrix4x4.identity;
         }
 
@@ -202,6 +205,7 @@ namespace GK2Mounts
                 // The edited instance bound (IMGUI calls this at the end of OnGUI, so the binding is made here): rows
                 // that read a setting directly show its value, like Val does.
                 using (Mount.Bind(editing))
+                using (Perf.Measure(Perf.S.Window))
                 {
                     DrawContentsInner(id);
                 }
@@ -904,6 +908,13 @@ namespace GK2Mounts
 
         private static void DrawDebug()
         {
+            Header("Performance (the last second)");
+            GUILayout.Label(Perf.SummaryText, small);
+            GUILayout.Label("Each part includes the parts inside it (Line and Ground inside Follow, inside Shuffle, inside Stand, inside Tick). Panel is this window itself: close it (its key) to see the frame without it, and read the numbers from the log line instead.", small);
+            Perf.LogEvery10s = GUILayout.Toggle(Perf.LogEvery10s, " Write this to the log every 10 s ([perf] lines; keeps going with the panel closed)");
+            Perf.ExpNoShuffle = GUILayout.Toggle(Perf.ExpNoShuffle, " Experiment: standing donkeys don't shuffle or follow (the mod's movement work off)");
+            Perf.ExpHideViews = GUILayout.Toggle(Perf.ExpHideViews, " Experiment: hide standing donkeys (no drawing, no animation: the game's cost of showing them)");
+
             Header("This panel");
             // Stepped, not sliders: dragging a slider that rescales the panel moves the slider under the mouse.
             Stepper("Panel size, everything (Debug.TuningWindowScale)", Plugin.TuningWindowScale, 0.1f, 0.75f, 3f, "0.00");

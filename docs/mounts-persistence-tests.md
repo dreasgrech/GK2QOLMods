@@ -419,7 +419,10 @@ The herd checks this by itself on every load, on the first instance of another m
 | T26 | passed | 2026-10-01 | save time off by 1 s: ignored, nothing restored |
 | T16 | passed | 2026-10-01 | slept without the mods (save 3:55:06 PM), then loaded with them: the side file of 3:19:18 PM ignored, nothing restored; the save restored from a copy afterwards |
 | T12–T14 | open | | need a second save slot (a new game) |
-| T3, T10, T11, T15, T17, T18, T28, T29 | open | | T27 covered by J5 |
+| T3 | passed | 2026-10-01 | two sleeps in a row: 63 kept each time, no .tmp left |
+| T10 | passed | 2026-10-01 | panel#1 (cart with 2 wood, parent of the herd foal Fig) not kept: both gone after the reload; the save logs "kept, but its parent isn't" |
+| T28 | passed (load), slow (play) | 2026-10-01 | 63 restored, ready in 28 frames / 3.5 s as with 12; but with ~65 roaming the game is very choppy: optimisation pass needed (foal churn: 372 of 410 foal log lines are can't-follow / caught-up cycles) |
+| T11, T15, T17, T18, T29 | open | | T27 covered by J5 |
 | J1 | passed | 2026-10-01 | Early spawn refused twice (main menu and load); "the game started", 28 frames / 3.2 s |
 | J2 | passed | 2026-10-01 | panel #1–#5 and herd #1–#5 side by side |
 | J3 | passed | 2026-10-01 | 13 of 13 back with own numbers and keys, 2 cargo on the cart, herd 5 of 5 with names, #1 clash refused; own colour kept |

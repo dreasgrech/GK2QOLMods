@@ -297,6 +297,15 @@ namespace GK2Mounts
 
         public static void Tick()
         {
+            Perf.BeginFrame();
+            using (Perf.Measure(Perf.S.Tick))
+            {
+                TickInner();
+            }
+        }
+
+        private static void TickInner()
+        {
             if (!Instance.IsInGame(out PlayerController pc, out GameScene scene))
             {
                 bool gone;
@@ -363,7 +372,10 @@ namespace GK2Mounts
                 {
                     try
                     {
-                        r.Tick(pc, scene);
+                        using (Perf.Measure(Perf.S.Ride))
+                        {
+                            r.Tick(pc, scene);
+                        }
                     }
                     catch (Exception e)
                     {
@@ -384,7 +396,10 @@ namespace GK2Mounts
                 {
                     try
                     {
-                        i.StandTick(pc);
+                        using (Perf.Measure(Perf.S.Stand))
+                        {
+                            i.StandTick(pc);
+                        }
                     }
                     catch (Exception e)
                     {
@@ -392,7 +407,10 @@ namespace GK2Mounts
                     }
                 }
             }
-            InstanceControls.Tick(pc);
+            using (Perf.Measure(Perf.S.Controls))
+            {
+                InstanceControls.Tick(pc);
+            }
         }
 
         // The ride ends the forced way (error, no scene): the ridden instance's view goes; a registered one stays
