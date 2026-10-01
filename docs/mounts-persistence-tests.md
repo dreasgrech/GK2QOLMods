@@ -12,9 +12,10 @@ These are the step-by-step tests for donkeys and carts kept with a save (API 0.1
 **After updating to 0.10.0:** the side file moved to format 2. The first load logs `has format 1, this version reads
 2; nothing restored`, so spawn your test donkeys once more, then sleep. From then on the file is format 2.
 
-**Installed for these tests:** `GK2Mounts.dll`, `GK2Showcase.dll` and the test mod `GK2MountsHerd.dll`, all
-deployed by the build into `BepInEx\plugins`. The herd mod is only for testing; remove it afterwards if you like (that
-is test J5).
+**Installed for these tests:** `GK2Mounts.dll`, `GK2Showcase.dll` and the test mod `GK2MountsHerd.dll` in
+`BepInEx\plugins`. The first two are deployed by every build. The herd mod is only for testing and isn't deployed by
+default (since 2026-10-01, so normal play doesn't get its keys): build it with `dotnet build -c Release -p:Deploy=true`
+in `examples/GK2MountsHerd` while the game is closed. Remove it afterwards (that is test J5).
 
 ## Before you start
 

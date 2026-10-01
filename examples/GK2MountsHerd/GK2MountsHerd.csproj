@@ -21,7 +21,11 @@
     <Reference Include="BepInEx"><HintPath>$(BepInExCore)\BepInEx.dll</HintPath><Private>false</Private></Reference>
   </ItemGroup>
 
-  <!-- Deploys into the game after every build, only while it is closed (-p:Deploy=false skips it). -->
+  <!-- A test mod: not deployed by default, so normal play doesn't get its keys (L scatters 50 donkeys). Build with
+       -p:Deploy=true to put it into the game (only while the game is closed). -->
+  <PropertyGroup>
+    <Deploy Condition="'$(Deploy)' == ''">false</Deploy>
+  </PropertyGroup>
   <Import Project="$(MSBuildThisFileDirectory)..\..\DeployToGame.targets" />
 
 </Project>
