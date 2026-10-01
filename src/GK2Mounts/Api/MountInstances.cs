@@ -62,6 +62,38 @@ namespace GK2Mounts.Api
         // The donkey it stays with (MountSpawn.Parent, Mounts.SpawnFoal), or null.
         public MountHandle Parent => I.Parent?.Handle;
 
+        // With a Parent: whether it is removed with the parent (MountSpawn.RemoveWithParent).
+        public bool RemoveWithParent => I.RemoveWithParent;
+
+        // Kept with the save (MountSpawn.Persist): after each save it is written to the slot's side file
+        // (<slot>.gk2mounts.dat next to the saves, synced by Steam Cloud with them), and loading
+        // that save spawns it again where it stood, with its cargo and its own settings (docs/mounts-persistence.md).
+        // Setting it on a parent sets it on its children too. Never the summon of TryMount.
+        public bool Persist
+        {
+            get => I.Persist;
+            set
+            {
+                if (I.Ephemeral)
+                {
+                    return;
+                }
+                I.Persist = value;
+                foreach (Mount.Instance c in I.Children())
+                {
+                    c.Persist = value;
+                }
+            }
+        }
+
+        // The owner's own name for it (MountSpawn.Key), kept with the save: after a load the owner finds its
+        // instances by key (Mounts.InstancesRestored), as the ids are new. Tabs and line breaks become spaces.
+        public string Key
+        {
+            get => I.Key;
+            set => I.Key = value;
+        }
+
         // The instances whose parent it is, in spawn order.
         public IReadOnlyList<MountHandle> Children
         {
@@ -177,6 +209,16 @@ namespace GK2Mounts.Api
     {
         // Where its root stands (ground height found under it), in the keeper's scene (a child: its parent's scene).
         public Vector3 Position;
+
+        // Another scene to stand in (a scene id as MountHandle.SceneId gives); null: the keeper's. In another scene the
+        // height is used as given (its ground can't be tested while it isn't loaded).
+        public string SceneId;
+
+        // Kept with the save (MountHandle.Persist); a foal of Mounts.SpawnFoal takes its parent's.
+        public bool Persist;
+
+        // The owner's own name for it, kept with the save (MountHandle.Key).
+        public string Key;
 
         public bool FacingRight = true;
 
@@ -306,7 +348,7 @@ namespace GK2Mounts.Api
         }
 
         // Style keys from the instance's own style first, then the other style, behaviour and colours.
-        private ITuned Find(string key)
+        internal ITuned Find(string key)
         {
             MountStyle other = i.CurrentStyle == MountStyle.Cart ? MountStyle.Ride : MountStyle.Cart;
             if (Mounts.Tuning(i.CurrentStyle).TryFind(key, out ITuned t) || Mounts.Tuning(other).TryFind(key, out t)

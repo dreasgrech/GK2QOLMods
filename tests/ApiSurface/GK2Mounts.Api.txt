@@ -40,9 +40,12 @@ class GK2Mounts.Api.MountHandle
   property bool IsRidden { get; }
   property bool IsRideable { get; }
   property bool IsStepping { get; }
+  property string Key { get; set; }
   property string Owner { get; }
   property GK2Mounts.Api.MountHandle Parent { get; }
+  property bool Persist { get; set; }
   property UnityEngine.Vector3 Position { get; }
+  property bool RemoveWithParent { get; }
   property float Scale { get; }
   property string SceneId { get; }
   property GK2Mounts.Api.InstanceTuning Tuning { get; }
@@ -76,6 +79,7 @@ static class GK2Mounts.Api.Mounts
   event static System.Action<GK2Mounts.Api.MountHandle, GK2Mounts.Api.MountHandle> Hitched
   event static System.Action<GK2Mounts.Api.MountHandle> InstanceRemoved
   event static System.Action<GK2Mounts.Api.MountHandle> InstanceSpawned
+  event static System.Action<System.Collections.Generic.IReadOnlyList<GK2Mounts.Api.MountHandle>> InstancesRestored
   event static System.Action<GK2Mounts.Api.MountStyle> Mounted
   event static System.Action<GK2Mounts.Api.MountHandle, GK2Mounts.Api.MountHandle> Unhitched
   method static System.IDisposable AddFeatureRule(string ownerId, GK2Mounts.Api.MountFeature feature, System.Func<bool> allowed)
@@ -101,11 +105,14 @@ static class GK2Mounts.Api.Mounts
 class GK2Mounts.Api.MountSpawn
   field bool Donkey
   field bool FacingRight
+  field string Key
   field GK2Mounts.Api.MountHandle Parent
+  field bool Persist
   field UnityEngine.Vector3 Position
   field bool RemoveWithParent
   field bool Rideable
   field float Scale
+  field string SceneId
   field bool WithCart
   method void .ctor()
 enum GK2Mounts.Api.MountStyle

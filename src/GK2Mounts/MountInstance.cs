@@ -549,9 +549,9 @@ namespace GK2Mounts
             }
 
             // Moves a standing instance (MountHandle.MoveTo). Ground height from the ground under the point.
-            internal void MoveTo(Vector3 position, float? facingX)
+            internal void MoveTo(Vector3 position, float? facingX, bool snap = true)
             {
-                Position = SnapToGround(position);
+                Position = snap ? SnapToGround(position) : position;
                 if (facingX.HasValue)
                 {
                     riderFacingX = facingX.Value >= 0f ? 1f : -1f;
@@ -639,6 +639,8 @@ namespace GK2Mounts
                     Position = donkey.Data.Position,
                     SceneId = SceneId,
                     riderFacingX = riderFacingX,
+                    // Kept with the save as its donkey is; a cart left by the summon is the keeper's, kept too.
+                    Persist = Persist || Ephemeral,
                 };
                 MoveCartSettings(this, cart);
                 cart.CargoRig.SetCarried(CargoRig.TakeAllForTransfer());

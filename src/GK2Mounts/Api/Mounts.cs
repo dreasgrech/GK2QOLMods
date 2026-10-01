@@ -51,7 +51,7 @@ namespace GK2Mounts.Api
     public static class Mounts
     {
         // The API's own version, separate from the mod version: minor for additions, major for breaking changes.
-        public static readonly Version ApiVersion = new Version(0, 8, 0);
+        public static readonly Version ApiVersion = new Version(0, 9, 0);
 
         // False when the core is switched off (General.Enabled) or disabled itself after a game update.
         public static bool IsAvailable => Plugin.Patched && Plugin.Enabled != null && Plugin.Enabled.Value;
@@ -326,7 +326,7 @@ namespace GK2Mounts.Api
                 return null;
             }
             Mount.Instance i = Mount.Spawn(ownerId, spec.Position, spec.Donkey, spec.WithCart, spec.FacingRight, spec.Scale,
-                spec.Rideable, spec.Parent?.I, spec.RemoveWithParent, out string why);
+                spec.Rideable, spec.Parent?.I, spec.RemoveWithParent, spec.SceneId, true, spec.Persist, spec.Key, out string why);
             if (i == null)
             {
                 Plugin.Log.LogInfo($"API: {ownerId} could not spawn: {why}");
@@ -357,6 +357,7 @@ namespace GK2Mounts.Api
                 Scale = scale,
                 Rideable = false,
                 Parent = parent,
+                Persist = p.Persist,
             });
             if (foal == null)
             {
@@ -480,6 +481,29 @@ namespace GK2Mounts.Api
         public static event Action<MountHandle, MountHandle> Hitched;
 
         public static event Action<MountHandle, MountHandle> Unhitched;
+
+        // A save was loaded and the instances kept with it are back (MountSpawn.Persist), each also announced by
+        // InstanceSpawned. Their ids are new: find yours by Owner and Key.
+        public static event Action<IReadOnlyList<MountHandle>> InstancesRestored;
+
+        internal static void RaiseInstancesRestored(IReadOnlyList<MountHandle> handles)
+        {
+            if (InstancesRestored == null)
+            {
+                return;
+            }
+            foreach (Delegate d in InstancesRestored.GetInvocationList())
+            {
+                try
+                {
+                    ((Action<IReadOnlyList<MountHandle>>)d)(handles);
+                }
+                catch (Exception e)
+                {
+                    Plugin.Log.LogError($"API: an InstancesRestored handler failed: {e}");
+                }
+            }
+        }
 
         internal static void RaiseInstanceSpawned(MountHandle h) => Raise(InstanceSpawned, h, "InstanceSpawned");
 

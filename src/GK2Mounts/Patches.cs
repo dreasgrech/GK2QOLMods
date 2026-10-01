@@ -28,6 +28,8 @@ namespace GK2Mounts
             Require(AccessTools.Method(typeof(GK2.FlowCanvasNodes.Flow_Body), "DoAction", new[] { typeof(FlowCanvas.Flow) }), "Flow_Body.DoAction(Flow)");
             Require(AccessTools.Field(typeof(GK2.FlowCanvasNodes.Flow_Body), "success"), "Flow_Body.success");
             Require(AccessTools.Method(typeof(SaveSystem), nameof(SaveSystem.Save)), "SaveSystem.Save");
+            Require(AccessTools.Method(typeof(SaveSystem), nameof(SaveSystem.Remove)), "SaveSystem.Remove");
+            Require(AccessTools.PropertyGetter(typeof(MainGame), nameof(MainGame.SaveSlotData)), "MainGame.SaveSlotData");
             Require(AccessTools.Method(typeof(PlayerData), nameof(PlayerData.TryAddOverheadItemNoReplace)), "PlayerData.TryAddOverheadItemNoReplace");
             Require(AccessTools.Method(typeof(PlayerData), nameof(PlayerData.InsertOverheadItemTo), new[] { typeof(WgoData), typeof(Item) }), "PlayerData.InsertOverheadItemTo(WgoData, Item)");
             Require(AccessTools.Method(typeof(Inventory), nameof(Inventory.RemoveItemFromInventoryByUID)), "Inventory.RemoveItemFromInventoryByUID");
@@ -239,8 +241,23 @@ namespace GK2Mounts
     [HarmonyPatch(typeof(SaveSystem), nameof(SaveSystem.Save))]
     internal static class SaveSystem_Save_Patch
     {
-        private static void Prefix()
+        private static void Prefix(SaveSlotData slotData, ref Action callbackSuccessful)
         {
+            // The donkeys and carts kept with the save go to its side file once the game says the save is written
+            // (its own success callback; a failed write leaves the old side file as it was). Persistence.cs.
+            Action original = callbackSuccessful;
+            callbackSuccessful = () =>
+            {
+                try
+                {
+                    Mount.WriteSideFile(slotData);
+                }
+                catch (Exception e)
+                {
+                    Plugin.Log.LogWarning("Persistence: writing the side file failed; the donkeys won't come back with this save: " + e.Message);
+                }
+                original?.Invoke();
+            };
             try
             {
                 if (Mount.IsMounted && Mount.Ridden.Ephemeral && Cargo.Count > 0)
@@ -298,6 +315,27 @@ namespace GK2Mounts
                 }
             }
             return __exception;
+        }
+    }
+
+    // A save slot deleted in the game's menu: its side file goes too (Persistence.cs).
+    [HarmonyPatch(typeof(SaveSystem), nameof(SaveSystem.Remove))]
+    internal static class SaveSystem_Remove_Patch
+    {
+        private static void Postfix(SaveSlotData slotData, bool __result)
+        {
+            if (!__result)
+            {
+                return;
+            }
+            try
+            {
+                Mount.DeleteSideFile(slotData);
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning("Persistence: deleting the side file failed: " + e.Message);
+            }
         }
     }
 }

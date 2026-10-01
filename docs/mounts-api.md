@@ -251,9 +251,9 @@ ride's own `Mounted` and `Dismounted` come for instances too.
 - **Carts:** the cargo goes onto the ridden cart only; a standing or free cart takes no pickups.
 - **Keys that travel with the cart:** `Cart*`, `Cargo*`, `Lantern*`, the Cart and Lantern colour regions, and
   `GlowColor`, `LitGlassTint`, `CharacterLightColor`.
-- **Saves:** instances aren't saved. At each save their cargo is set down at their cart (in the save) and taken
-  back right after, so a reload finds the items where the cart stood. After a game restart or load, the mod that
-  spawned them spawns them again; `Instances` gives everything a mod needs to keep its own record.
+- **Saves:** at each save their cargo is set down at their cart (in the save) and taken back right after, so a
+  reload finds the items where the cart stood. Instances spawned with `Persist` (0.9.0, below) come back when that
+  save is loaded, with the cargo back on the cart; the others don't.
 - **In-game controls:** `General.InstanceControls` (on) makes the interact key ride a standing donkey and hitch a
   free cart. `General.HitchKey` (J) unhitches, and hitches too.
 
@@ -317,6 +317,39 @@ MountHandle big = Mounts.Spawn("you.gk2.mymod", new MountSpawn { Position = at2,
 - **On `MountHandle`:** `Scale`, `IsRideable`, `Parent`, `Children`. `IsStepping` is also true while trotting after
   the parent.
 
+## Kept with the save (0.9.0)
+
+```csharp
+MountHandle h = Mounts.Spawn("you.gk2.mymod", new MountSpawn { Position = at, Persist = true, Key = "stable-donkey" });
+
+Mounts.InstancesRestored += handles =>
+{
+    foreach (MountHandle r in handles)
+        if (r.Owner == "you.gk2.mymod" && r.Key == "stable-donkey") myDonkey = r;   // ids are new after a load
+};
+```
+
+- **`Persist`** (`MountSpawn.Persist`, or `MountHandle.Persist` at any time): after each save the instance is
+  written to a side file of that slot, and loading that save spawns it again where it stood, in its own scene, with
+  its cargo back on its cart and its own settings (`MountHandle.Tuning`). The game's save itself is never changed.
+  - **Off by default.** A mod that already spawns its donkeys again each session must not also set it, or there are
+    two of each.
+  - Setting it on a parent sets it on its children; `SpawnFoal` gives the foal its parent's.
+  - A cart left by unhitching takes its donkey's; a cart left by the summon of `TryMount` is kept.
+  - Hitching a kept free cart to a donkey that isn't kept: the pair isn't kept (its cargo lies on the ground after
+    a reload).
+- **`Key`**: your own name for it, kept with it. After a load, find yours by `Owner` and `Key`.
+- **`InstancesRestored`**: once per load, with every instance that came back, after each one's `InstanceSpawned`.
+  It comes on the first frame of the loaded game, before the keeper can move.
+- **`MountSpawn.SceneId`**: spawn in another scene than the keeper's (an id as `MountHandle.SceneId` gives). The
+  height is used as given there.
+- **`MountHandle.RemoveWithParent`**: what was set at spawn.
+- **Where:** `<the game's save folder>/<slot>.gk2mounts.dat`, a text file, synced by Steam Cloud with the saves, written only after the game
+  reports the save written. Deleting the slot in the game deletes it.
+- **A stale file is ignored:** it records the slot's save time and day, and a loaded slot with others (saved
+  without the mod, a backup, a cloud copy) restores nothing; the cargo then lies on the ground where the carts
+  stood. Details: [`mounts-persistence.md`](mounts-persistence.md).
+
 ## Gating on the game's progress
 
 All of this is the game's own state, reached through `MainGame.Instance.GameSave` (reference `Assembly-CSharp.dll`).
@@ -369,3 +402,4 @@ History:
 - 0.7.0: the idle shuffle (`Mounts.Behaviour` key `IdleShuffle`, `Mounts.Shuffle`, `MountHandle.IsStepping`).
 - 0.8.0: `Mounts.Spawn(ownerId, MountSpawn)`, `Mounts.SpawnFoal`, `MountSpawn`, `MountHandle.Scale`, `IsRideable`,
   `Parent`, `Children`; the `Mounts.Shuffle` keys `ShuffleFollowSpeed`, `ShuffleFollowMaxDistance`, `ShuffleFollowGap` (how close to the parent it settles, 0.9), `ShuffleFollowAlways` (bool: follow however far, stopping only when blocked), `ShuffleFollowRoutes` (bool, on: a way round obstacles), `ShuffleRouteRange` (8).
+- 0.9.0: kept with the save: `MountSpawn.Persist`, `Key`, `SceneId`; `MountHandle.Persist`, `Key`, `RemoveWithParent`; the event `Mounts.InstancesRestored`.

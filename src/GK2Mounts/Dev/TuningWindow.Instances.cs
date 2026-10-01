@@ -156,7 +156,8 @@ namespace GK2Mounts
         private static void DrawInstances()
         {
             Header("Donkeys and carts standing in the world");
-            GUILayout.Label("Each is its own donkey (with or without its cart) or a cart on its own, with its own settings on top of everyone's. Walk up to a donkey with empty hands and press E to ride it; a dismount leaves it where it is, with its cart and cargo. Riding a donkey without its cart, ride up to a free cart's shafts and press E (or the hitch key) to take it; with the cart, the hitch key leaves it standing. Mods do the same through the API (Mounts.SpawnDonkey, SpawnCart, Hitch, Unhitch, MountHandle.Tuning). They are not saved: a cart's cargo is set down at it for each save, so nothing is lost on a reload.", small);
+            GUILayout.Label("Each is its own donkey (with or without its cart) or a cart on its own, with its own settings on top of everyone's. Walk up to a donkey with empty hands and press E to ride it; a dismount leaves it where it is, with its cart and cargo. Riding a donkey without its cart, ride up to a free cart's shafts and press E (or the hitch key) to take it; with the cart, the hitch key leaves it standing. Mods do the same through the API (Mounts.SpawnDonkey, SpawnCart, Hitch, Unhitch, MountHandle.Tuning). The ones marked kept with saves (the panel's spawns are) come back when that save is loaded, with their cargo and own settings; the game's save itself is never changed (a side file next to it). The others are gone after a reload, with their cargo on the ground where they stood.", small);
+            GUILayout.Label("Saves: " + Mount.PersistenceNote, small);
             Toggle("Controls in the game (the interact key rides and hitches, the label shows)", Plugin.InstanceControls, null);
             HitchKeyRow();
 
@@ -239,7 +240,7 @@ namespace GK2Mounts
                 List<string> cargo = i.CargoRig.Ids();
                 string family = i.Parent != null ? $" foal of #{i.Parent.Id}, size {i.ViewScale:F2};"
                     : i.Children().Count > 0 ? $" parent of {string.Join(", ", i.Children().ConvertAll(c => "#" + c.Id))};" : "";
-                GUILayout.Label($"{i.Describe()}:{family} {where}, facing {(i.FacingRight ? "right" : "left")}{(i.HasCart ? $", cargo [{string.Join(", ", cargo)}]" : "")}; {i.Overrides.Count} own setting(s); by {i.OwnerId}", editing == i ? instanceSet : label);
+                GUILayout.Label($"{i.Describe()}:{family} {where}, facing {(i.FacingRight ? "right" : "left")}{(i.HasCart ? $", cargo [{string.Join(", ", cargo)}]" : "")}; {i.Overrides.Count} own setting(s); by {i.OwnerId}{(i.Key != null ? $" as '{i.Key}'" : "")}; {(i.Persist ? "kept with saves" : "not kept with saves")}", editing == i ? instanceSet : label);
                 GUILayout.BeginHorizontal();
                 if (GUILayout.Button(editing == i ? "Stop editing" : "Edit its settings", GUILayout.Width(120f)))
                 {
@@ -271,6 +272,10 @@ namespace GK2Mounts
                     };
                 }
                 GUI.enabled = true;
+                if (GUILayout.Button(i.Persist ? "Don't keep" : "Keep with saves", GUILayout.Width(110f)))
+                {
+                    pending = () => i.Handle.Persist = !i.Persist;
+                }
                 if (GUILayout.Button("Remove", GUILayout.Width(80f)))
                 {
                     pending = () =>
@@ -338,7 +343,7 @@ namespace GK2Mounts
             }
             Vector3 at = InFront(pd, cart ? 2.2f : 1.6f);
             bool right = pd.Direction.x >= 0f;
-            MountHandle h = donkey ? Mounts.SpawnDonkey(PanelOwner, at, cart, right) : Mounts.SpawnCart(PanelOwner, at, right);
+            MountHandle h = Mounts.Spawn(PanelOwner, new MountSpawn { Position = at, FacingRight = right, Donkey = donkey, WithCart = cart, Persist = true });
             spawnNote = h != null ? $"Spawned {h.I.Describe()} at {h.Position:F1}." : "Could not spawn (see the log).";
         }
 
@@ -356,7 +361,7 @@ namespace GK2Mounts
                 spawnNote = "Not in a game.";
                 return;
             }
-            MountHandle parent = Mounts.SpawnDonkey(PanelOwner, InFront(pd, 2.6f), false, pd.Direction.x >= 0f);
+            MountHandle parent = Mounts.Spawn(PanelOwner, new MountSpawn { Position = InFront(pd, 2.6f), FacingRight = pd.Direction.x >= 0f, Persist = true });
             if (parent == null)
             {
                 spawnNote = "Could not spawn the donkey (see the log).";

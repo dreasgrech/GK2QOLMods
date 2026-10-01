@@ -42,6 +42,19 @@ Method("PlayerData", "TryAddOverheadItemNoReplace", 1);
 Method("ConditionalDrawer", "UpdateVisualsByConditions", 0);
 // Cargo proof of concept (Cargo.cs, SaveSystem_Save_Patch)
 Method("SaveSystem", "Save", 6);
+// Persistence (Persistence.cs, SaveSystem_Remove_Patch): side file per slot, cargo back by item GUID
+Method("SaveSystem", "Remove", 2);
+Method("SaveSystem", "get_SaveFolder", 0);
+Method("MainGame", "get_SaveSlotData", 0);
+Field("SaveSlotData", "slotName", "System.String");
+Field("SaveSlotData", "saveDateTime", "System.String");
+Field("SaveSlotData", "day", "System.Int32");
+Method("Item", "get_UniqueId", 0);
+Method("SGuid", "get_Id", 0);
+Field("GameSceneData", "droppedItems", "System.Collections.Generic.List`1<DropData>");
+Field("GameSceneData", "queuedDrops", "System.Collections.Generic.List`1<DropData>");
+Method("DropSystem", "RemoveDrop", 2);
+Method("WorldData", "GetGameSceneDataById", 1);
 Method("Inventory", "RemoveItemFromInventoryByUID", 2);
 Method("SpecialPhysicsCastUtils", "GetPlayerDropPosition", 3);
 Method("DropSystem", "DropItem", 4);

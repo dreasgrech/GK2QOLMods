@@ -20,8 +20,8 @@ Each one says why.
     `gfx (90 rotated)/-bdy`, `Cylinder Shadowcaster` (the donkey's shadow) and `DeformTextureSprite` (the grass it
     bends). The cart meshes, wheel sprites and lamp rig stay.
   - The shafts are lowered until their harness end touches the ground.
-- **No saving.** Every donkey the mod shows is a temp `WgoData` (`isTempObject`), and none of them is ever saved.
-  That hasn't changed.
+- **Nothing in the game's save.** Every donkey the mod shows is a temp `WgoData` (`isTempObject`), and none of them
+  is ever in the game's save. Instances with `Persist` are kept in a side file instead (docs/mounts-persistence.md).
 - **No walking on its own.** A standing donkey is posed by the mod (`Data.Position`, `MovableDirection`,
   `SetStateToAnimator(Idle)`); it never goes through the game's movement system. "A donkey approaches the cart"
   therefore means the player rides it there. No path-finding was built. (Since 0.7.0 a donkey without a cart can take
@@ -87,8 +87,9 @@ Each one says why.
   - **Scene not loaded:** an instance whose scene isn't loaded lends its cargo to that scene's drop queue, and it
     is taken back from there the same way.
   - **The ephemeral ride:** as before (hands, then the ground).
-- **Game restart or load:** the instances themselves aren't saved. The mod that spawned them spawns them again
-  (the API lists every instance with its position, scene, flags and overrides, so a mod can keep its own record).
+- **Game restart or load:** the instances themselves aren't saved. Instances spawned with `Persist`
+  (API 0.9.0; the panel's spawns are) come back when that save is loaded, with their cargo and own settings, from a
+  side file next to the game's saves. See docs/mounts-persistence.md.
 
 ## API (0.6.0)
 
@@ -151,7 +152,8 @@ It costs nothing and holds if the game ever pools temp objects.
 9. **The game's delivery donkey** (Debug tab, start a real delivery) after all of this: its cart, lantern, colours
    and collisions are the game's own.
 10. **Save with cargo on a standing cart** (sleep): after waking the cargo is still on the cart. Load that save: the
-    items lie on the ground where the cart stood, and the instances are gone (not saved).
+    items lie on the ground where the cart stood, and the instances are gone. (With `Persist`, the panel's spawns:
+    see the test list in docs/mounts-persistence.md.)
 11. **Quit to the menu / load another save:** the instances are gone, with no errors in the log.
 12. **A door that loads another scene** (with two instances standing outside): walk through and back. The log
     should not say "left the game". If it does, the game has no current scene while one loads, and the wipe needs
@@ -166,4 +168,4 @@ It costs nothing and holds if the game ever pools temp objects.
 
 - Standing donkeys make no sounds (no idle brays or grazing). Sounds play for the ridden one only.
 - A free cart can't be loaded by hand. Only the ridden cart takes pickups.
-- No persistence across game restarts (see above).
+- Persistence only for instances with `Persist` (docs/mounts-persistence.md).

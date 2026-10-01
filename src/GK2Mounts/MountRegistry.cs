@@ -199,13 +199,26 @@ namespace GK2Mounts
                 }
                 return;
             }
-            // Another save loaded without passing the main menu: the instances belong to the old game.
+            // A game was loaded (from the menu, or another save without passing it): the old game's instances go, and
+            // the ones kept with this save come back (Persistence.cs), on this first frame, before the keeper can move.
             object save = MainGame.Instance.GameSave;
-            if (lastGameSave != null && !ReferenceEquals(save, lastGameSave) && instances.Count > 0)
+            if (!ReferenceEquals(save, lastGameSave))
             {
-                ForceCleanup("another game was loaded");
+                if (lastGameSave != null && instances.Count > 0)
+                {
+                    // Their cargo belongs to the old game: setting it down here would put it into the new one.
+                    ForceCleanup("another game was loaded", setDownCargo: false);
+                }
+                lastGameSave = save;
+                try
+                {
+                    RestoreFromSideFile();
+                }
+                catch (Exception e)
+                {
+                    Plugin.Log.LogWarning("Persistence: restoring the kept donkeys and carts failed: " + e);
+                }
             }
-            lastGameSave = save;
 
             if (Ridden == null && Time.frameCount <= Instance.gearHideUntilFrame)
             {
@@ -329,7 +342,7 @@ namespace GK2Mounts
         }
 
         // Leaving the game, the mod switched off, an error: every instance goes (the ride ends first).
-        public static void ForceCleanup(string reason)
+        public static void ForceCleanup(string reason, bool setDownCargo = true)
         {
             Instance r = Ridden;
             if (r != null)
@@ -355,7 +368,7 @@ namespace GK2Mounts
                 {
                     try
                     {
-                        if (inGame && !i.Ephemeral && i.CargoRig.Count > 0 && !Plugin.Quitting)
+                        if (setDownCargo && inGame && !i.Ephemeral && i.CargoRig.Count > 0 && !Plugin.Quitting)
                         {
                             Vector3 at = i.CartPoint();
                             foreach (Item it in i.CargoRig.ItemsNow())
@@ -434,13 +447,17 @@ namespace GK2Mounts
         // game (why says so).
         internal static Instance Spawn(string ownerId, Vector3 position, bool hasDonkey, bool hasCart, bool facingRight, out string why)
         {
-            return Spawn(ownerId, position, hasDonkey, hasCart, facingRight, 1f, true, null, true, out why);
+            return Spawn(ownerId, position, hasDonkey, hasCart, facingRight, 1f, true, null, true, null, true, false, null, out why);
         }
 
         // Also the foal properties (Foals.cs): the view's scale, whether it can be ridden, the parent it stays with and
-        // whether it goes when the parent does. The combinations the ride code can't take are refused here.
+        // whether it goes when the parent does. The combinations the ride code can't take are refused here. sceneId:
+        // another scene than the keeper's (null: his; a child: always its parent's). snap: the height from the ground
+        // under the point, only possible in the keeper's scene (a restore keeps the saved height). persist and key:
+        // kept with the save (Persistence.cs). register false: the caller registers it once it is complete.
         internal static Instance Spawn(string ownerId, Vector3 position, bool hasDonkey, bool hasCart, bool facingRight,
-            float scale, bool rideable, Instance parent, bool removeWithParent, out string why)
+            float scale, bool rideable, Instance parent, bool removeWithParent, string sceneId, bool snap, bool persist,
+            string key, out string why, bool register = true)
         {
             why = null;
             if (float.IsNaN(scale) || scale < 0.2f || scale > 2f)
@@ -490,21 +507,44 @@ namespace GK2Mounts
                 why = "Can't use a " + wgoId + ": " + why;
                 return null;
             }
+            string inScene = parent != null ? parent.SceneId : string.IsNullOrEmpty(sceneId) ? scene.Id : sceneId;
+            if (inScene != scene.Id)
+            {
+                GameSceneData sd = null;
+                try
+                {
+                    sd = MainGame.WorldData.GetGameSceneDataById(inScene);
+                }
+                catch
+                {
+                }
+                if (sd == null)
+                {
+                    why = "There is no scene " + inScene + ".";
+                    return null;
+                }
+            }
+            bool snapHere = snap && inScene == scene.Id;
             var i = new Instance(NextId(), ownerId, ephemeral: false, hasDonkey: hasDonkey, hasCart: hasCart)
             {
-                Position = SnapToGround(position),
-                SceneId = parent != null ? parent.SceneId : scene.Id,
+                Position = snapHere ? SnapToGround(position) : position,
+                SceneId = inScene,
                 ViewScale = scale,
                 Rideable = rideable,
                 Parent = parent,
                 RemoveWithParent = removeWithParent,
+                Persist = persist,
+                Key = key,
             };
             using (Bind(i))
             {
-                i.MoveTo(i.Position, facingRight ? 1f : -1f);
+                i.MoveTo(i.Position, facingRight ? 1f : -1f, snapHere);
             }
-            Register(i);
-            Plugin.Log.LogInfo($"Mount: spawned {i.Describe()} for {ownerId} at {i.Position:F2} in {i.SceneId}{(scale != 1f ? $", scale {scale:F2}" : "")}{(!rideable ? ", not rideable" : "")}{(parent != null ? $", child of #{parent.Id}" : "")}.");
+            if (register)
+            {
+                Register(i);
+            }
+            Plugin.Log.LogInfo($"Mount: spawned {i.Describe()} for {ownerId} at {i.Position:F2} in {i.SceneId}{(scale != 1f ? $", scale {scale:F2}" : "")}{(!rideable ? ", not rideable" : "")}{(parent != null ? $", child of #{parent.Id}" : "")}{(persist ? ", kept with saves" : "")}.");
             return i;
         }
 
@@ -663,6 +703,20 @@ namespace GK2Mounts
                     Plugin.Log.LogInfo($"Cargo: {i.Describe()}: {kept} item(s) set down at the cart for the save{(left > 0 ? $", {left} left on the ground (dropped as copies)" : "")}.");
                 }
             }
+        }
+
+        // The GUIDs of the items an instance lent to the save being written (Persistence.cs keeps them).
+        internal static List<string> LentGuidsOf(Instance i)
+        {
+            var l = new List<string>();
+            foreach (var x in lent)
+            {
+                if (x.I == i && x.D?.Item?.UniqueId != null)
+                {
+                    l.Add(x.D.Item.UniqueId.Id);
+                }
+            }
+            return l;
         }
 
         internal static void TakeCargoBackFromSave()

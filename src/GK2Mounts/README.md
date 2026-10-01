@@ -10,7 +10,7 @@ A BepInEx library for Graveyard Keeper 2 that gives the game a rideable donkey:
 - **For mod authors:** the C# API is in [`docs/mounts-api.md`](../../docs/mounts-api.md). You can tie the mount into
   the story, or gate it on the tech tree, quests or story flags.
 
-Version 0.1.0 (API 0.8.0), built and audited against Steam game build 25601286 (Assembly-CSharp MVID
+Version 0.1.0 (API 0.9.0), built and audited against Steam game build 25601286 (Assembly-CSharp MVID
 `3ffadd70-…`, LazyBearTechnology `8a7a5e04-…`; re-audit in `docs/steam-move-audit.md`).
 - Design: [`docs/mounts-api-design.md`](../../docs/mounts-api-design.md) and [`FEASIBILITY.md`](FEASIBILITY.md).
 - Runtime facts the design rests on: [`PROBE-FINDINGS.md`](PROBE-FINDINGS.md).
