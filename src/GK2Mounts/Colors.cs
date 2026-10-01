@@ -338,14 +338,34 @@ namespace GK2Mounts
 
         // ------------------------------------------------------------------ colour maths
 
+        // "RRGGBB", with or without '#', spaces around allowed. Read in place: the lantern asks every frame, and
+        // Trim().TrimStart('#') made a char array and maybe a string each time.
         internal static bool TryHex(string hex, out Color32 c)
         {
             c = new Color32(255, 255, 255, 255);
             if (string.IsNullOrEmpty(hex)) return false;
-            string h = hex.Trim().TrimStart('#');
-            if (h.Length != 6 || !int.TryParse(h, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out int v)) return false;
+            int start = 0, end = hex.Length;
+            while (start < end && char.IsWhiteSpace(hex[start])) start++;
+            while (end > start && char.IsWhiteSpace(hex[end - 1])) end--;
+            while (start < end && hex[start] == '#') start++;
+            if (end - start != 6) return false;
+            int v = 0;
+            for (int k = start; k < end; k++)
+            {
+                int d = HexDigit(hex[k]);
+                if (d < 0) return false;
+                v = (v << 4) | d;
+            }
             c = new Color32((byte)(v >> 16), (byte)(v >> 8), (byte)v, 255);
             return true;
+        }
+
+        private static int HexDigit(char ch)
+        {
+            if (ch >= '0' && ch <= '9') return ch - '0';
+            if (ch >= 'a' && ch <= 'f') return ch - 'a' + 10;
+            if (ch >= 'A' && ch <= 'F') return ch - 'A' + 10;
+            return -1;
         }
 
         internal static string Hex(Color32 c) => $"{c.r:X2}{c.g:X2}{c.b:X2}";

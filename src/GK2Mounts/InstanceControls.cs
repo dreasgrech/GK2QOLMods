@@ -203,11 +203,29 @@ namespace GK2Mounts
 
         // As the game's handlers build it (WGOInteractionHandlerBase.LocalizeHintWithActionIcon): the key's icon (the
         // keyboard key or the gamepad button in use, with a space) and the text.
+        // Asked every frame while something is in reach. The game's GetIconId builds a new string on every call, so the
+        // icon is asked twice a second (a rebound key or another input device shows within half a second) and the
+        // joined text is kept until the icon or the text changes.
+        private static string hintIcon, hintText, hintJoined;
+        private static float nextIconCheck;
+
         private static string HintText(string text)
         {
             try
             {
-                return ControllerIconLibrary.GetIconId(GameKey.Interaction) + text;
+                string icon = hintIcon;
+                if (icon == null || Time.unscaledTime >= nextIconCheck)
+                {
+                    nextIconCheck = Time.unscaledTime + 0.5f;
+                    icon = ControllerIconLibrary.GetIconId(GameKey.Interaction);
+                }
+                if (hintJoined == null || !ReferenceEquals(text, hintText) || icon != hintIcon)
+                {
+                    hintIcon = icon;
+                    hintText = text;
+                    hintJoined = icon + text;
+                }
+                return hintJoined;
             }
             catch
             {

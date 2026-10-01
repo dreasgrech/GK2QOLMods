@@ -266,12 +266,8 @@ namespace GK2Mounts
                 {
                     return fallback;
                 }
-                string h = hex.Trim().TrimStart('#');
-                if (h.Length == 6 && ColorUtility.TryParseHtmlString("#" + h, out Color c))
-                {
-                    return c;
-                }
-                return fallback;
+                // Every frame per lamp: read in place (Colors.TryHex), not trimmed and joined into new strings.
+                return Colors.TryHex(hex, out Color32 c) ? (Color)c : fallback;
             }
 
             internal static string ToHex(Color c)

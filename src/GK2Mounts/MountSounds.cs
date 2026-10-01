@@ -18,6 +18,8 @@ namespace GK2Mounts
     {
         private static readonly RaycastHit[] hits = new RaycastHit[8];
         private static readonly List<AnimatorClipInfo> clipInfo = new List<AnimatorClipInfo>(2);
+        private static AnimationClip lastClip;
+        private static string lastClipName = "";
 
         private static AnimationComponentBase boundAnim;
         internal static AnimationComponentBase DonkeyAnimation => boundAnim;
@@ -134,7 +136,14 @@ namespace GK2Mounts
             a.GetCurrentAnimatorClipInfo(0, clipInfo);
             if (clipInfo.Count > 0 && clipInfo[0].clip != null)
             {
-                clip = clipInfo[0].clip.name;
+                // A clip's name is a new string on every read: kept for the clip it was read from.
+                AnimationClip c = clipInfo[0].clip;
+                if (!ReferenceEquals(c, lastClip))
+                {
+                    lastClip = c;
+                    lastClipName = c.name;
+                }
+                clip = lastClipName;
             }
             float t = a.GetCurrentAnimatorStateInfo(0).normalizedTime;
 

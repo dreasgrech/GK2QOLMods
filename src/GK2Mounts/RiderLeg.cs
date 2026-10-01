@@ -90,7 +90,7 @@ namespace GK2Mounts
                     renderer.sprite = SliceFor(body);
                 }
             }
-            else if (renderer.sprite == null || renderer.sprite.name != "mount_rider_leg")
+            else if (renderer.sprite == null || renderer.sprite != DrawnLeg.Get())
             {
                 currentSource = null;
                 renderer.sprite = DrawnLeg.Get();

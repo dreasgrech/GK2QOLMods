@@ -156,6 +156,9 @@ namespace GK2Mounts
             private sealed class CartPart
             {
                 public Transform T;
+                // The cargo holder (Cargo.ContainerName), told once: a Transform's name is a new string on every read,
+                // and the cart's parts are walked every frame.
+                public bool IsContainer;
                 public Vector3 Base;
                 public Vector3 Sample;
                 public float Weight;
@@ -648,6 +651,9 @@ namespace GK2Mounts
 
             // Anything that takes the keeper out of free walking ends the ride: work, ladders, building, planting,
             // fishing, combat, sleep, death, cutscenes. UI (chests, inventory) and doors (teleport) do not.
+            // Asked every frame while riding: Enum.GetValues makes a new array each call, and a foreach over it boxes each value.
+            private static readonly TakenControlType[] ControlTypes = (TakenControlType[])Enum.GetValues(typeof(TakenControlType));
+
             private string WhyMustDismount(PlayerController pc)
             {
                 SSMState cur = pc.Ssm?.CurState;
@@ -655,7 +661,7 @@ namespace GK2Mounts
                 {
                     return "state " + (cur?.GetType().Name ?? "none");
                 }
-                foreach (TakenControlType t in Enum.GetValues(typeof(TakenControlType)))
+                foreach (TakenControlType t in ControlTypes)
                 {
                     // ByUI: chests/inventory. ByTeleport: doors. BySelf: set by the animator itself while certain
                     // states play (tool, work and some fishing poses carry CharacterSelfStateMachineBehaviour); with a
@@ -1029,7 +1035,7 @@ namespace GK2Mounts
                     {
                         continue;
                     }
-                    var part = new CartPart { T = t, Base = t.localPosition, Sample = t.localPosition, Weight = t.name == "donkey_cart_bars" ? 0.5f : 1f };
+                    var part = new CartPart { T = t, IsContainer = t.name == Cargo.ContainerName, Base = t.localPosition, Sample = t.localPosition, Weight = t.name == "donkey_cart_bars" ? 0.5f : 1f };
                     Renderer r = t.GetComponentInChildren<Renderer>(includeInactive: false);
                     if (r != null)
                     {
@@ -1357,7 +1363,7 @@ namespace GK2Mounts
                 // animator's; an unchanged one means it left the node, and the last known one is kept).
                 foreach (CartPart p in cartParts)
                 {
-                    if (p.T == null || !p.T || p.T.name == Cargo.ContainerName)
+                    if (p.T == null || !p.T || p.IsContainer)
                     {
                         continue;
                     }
@@ -1383,7 +1389,7 @@ namespace GK2Mounts
                         continue;
                     }
                     Vector3 fullLift = Mathf.Abs(cartShiftApplied) < 0.0005f ? Vector3.zero : p.T.parent.InverseTransformVector(Vector3.up * cartShiftApplied);
-                    bool cargo = p.T.name == Cargo.ContainerName;
+                    bool cargo = p.IsContainer;
                     if (cargo)
                     {
                         // The cargo rocks with the cart the way the game's loaded corpse does: that corpse hangs under
@@ -1455,30 +1461,67 @@ namespace GK2Mounts
                 // points share" chose the box wherever the two points sat on different terrain tiles. The window (1.0
                 // above and below the keeper, more than any walkable slope climbs over the cart's length) keeps the box
                 // and far-away levels out.
-                ga = HighestHitUnder(a, levelY, out string ca);
-                gb = HighestHitUnder(b, levelY, out string cb);
-                source = "raycast:" + ca + "/" + cb;
+                ga = HighestHitUnder(a, levelY, out Collider ca);
+                gb = HighestHitUnder(b, levelY, out Collider cb);
+                source = RaycastPairSource(ca, cb);
+            }
+
+            // "raycast:<collider>/<collider>", made once per pair (the cart's ground is checked every frame).
+            private static readonly Dictionary<long, string> raycastPairSources = new Dictionary<long, string>();
+
+            private static string RaycastPairSource(Collider a, Collider b)
+            {
+                long key = ((long)(a != null ? a.GetInstanceID() : 0) << 32) ^ (uint)(b != null ? b.GetInstanceID() : 0);
+                if (!raycastPairSources.TryGetValue(key, out string s))
+                {
+                    if (raycastPairSources.Count > 512)
+                    {
+                        raycastPairSources.Clear();
+                    }
+                    s = "raycast:" + (a != null ? a.name : "none") + "/" + (b != null ? b.name : "none");
+                    raycastPairSources[key] = s;
+                }
+                return s;
+            }
+
+            // Whether a collider is the walkable top of a dropped big item, told once per collider (its name is a new
+            // string on every read).
+            private static readonly Dictionary<int, bool> bigDropTops = new Dictionary<int, bool>();
+
+            private static bool IsBigDropTop(Collider c)
+            {
+                int id = c.GetInstanceID();
+                if (!bigDropTops.TryGetValue(id, out bool top))
+                {
+                    if (bigDropTops.Count > 1024)
+                    {
+                        bigDropTops.Clear();
+                    }
+                    top = c.name == "BigDropTopSurface";
+                    bigDropTops[id] = top;
+                }
+                return top;
             }
 
             private static readonly RaycastHit[] rayHits = new RaycastHit[16];
 
-            private static float HighestHitUnder(Vector3 p, float levelY, out string colliderName)
+            private static float HighestHitUnder(Vector3 p, float levelY, out Collider bestCollider)
             {
                 int n = Physics.RaycastNonAlloc(new Ray(new Vector3(p.x, levelY + CartLevelWindow, p.z), Vector3.down), rayHits, 2f * CartLevelWindow, 6144);
                 float best = float.NaN;
-                colliderName = "none";
+                bestCollider = null;
                 for (int i = 0; i < n; i++)
                 {
                     // The walkable top of a dropped big item (a log lying on the road) is 0.4 above the ground; the keeper
                     // may step on it, the cart must not climb it.
-                    if (rayHits[i].collider.name == "BigDropTopSurface")
+                    if (IsBigDropTop(rayHits[i].collider))
                     {
                         continue;
                     }
                     if (float.IsNaN(best) || rayHits[i].point.y > best)
                     {
                         best = rayHits[i].point.y;
-                        colliderName = rayHits[i].collider.name;
+                        bestCollider = rayHits[i].collider;
                     }
                 }
                 return best;
@@ -2022,9 +2065,38 @@ namespace GK2Mounts
 
             // Height of the donkey's back above its ground line at the saddle, per body frame, measured from the atlas
             // (the frames' bottom edge never moves; the bob is painted inside them). Names arrive as "…(Clone)".
+            // Per frame while riding, two or three times: a sprite's name is a new string on every read, so the answer is
+            // kept per sprite (the donkey's atlas has a few dozen frames).
+            private static readonly Dictionary<int, float> backHeights = new Dictionary<int, float>();
+            private static bool warnedBackHeights;
+
             internal static float BackHeightPx(Sprite donkeyBody)
             {
-                string n = donkeyBody != null ? donkeyBody.name : null;
+                if (donkeyBody == null)
+                {
+                    return 25f;
+                }
+                int id = donkeyBody.GetInstanceID();
+                if (!backHeights.TryGetValue(id, out float h))
+                {
+                    if (backHeights.Count > 256)
+                    {
+                        // More frames than the atlas has: the sprites would be new objects, and this cache no help.
+                        if (!warnedBackHeights)
+                        {
+                            warnedBackHeights = true;
+                            Plugin.Log.LogInfo("[perf] the back-height cache filled (256 sprites): the donkey's body sprites are new objects, not reused.");
+                        }
+                        backHeights.Clear();
+                    }
+                    h = BackHeightPxByName(donkeyBody.name);
+                    backHeights[id] = h;
+                }
+                return h;
+            }
+
+            private static float BackHeightPxByName(string n)
+            {
                 if (string.IsNullOrEmpty(n))
                 {
                     return 25f;

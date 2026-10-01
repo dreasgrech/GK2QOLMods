@@ -39,13 +39,20 @@ namespace GK2Mounts
         private static string spawnItemId = "wood";
         private static readonly string[] TabNames = { "General", "Riding", "Lantern", "Sounds", "Colors", "Instances", "Debug", "Defaults" };
 
+        // Whether the panel draws this frame: in a game, switched on, not hidden by its key, and not while the cargo sheet
+        // photographs the cart. Plugin.LateUpdate switches Unity's layout pass off when it doesn't (useGUILayout).
+        internal static bool Showing()
+        {
+            bool inGame = Mount.IsMounted || (MainGame.Instance != null && MainGame.PlayerData != null);
+            return inGame && Plugin.TuningWindowEnabled.Value && !Plugin.TuningWindowHidden && !CargoSheet.Running;
+        }
+
         public static void Draw()
         {
             CargoLayout.SaveIfDue(now: !Mount.IsMounted);
-            bool inGame = Mount.IsMounted || (MainGame.Instance != null && MainGame.PlayerData != null);
-            if (!inGame || !Plugin.TuningWindowEnabled.Value || Plugin.TuningWindowHidden || CargoSheet.Running)
+            if (!Showing())
             {
-                return; // not in a game, hidden by its key, or while the cargo sheet photographs the cart
+                return;
             }
             float scale = Mathf.Clamp(Plugin.TuningWindowScale.Value, 0.75f, 3f);
             GUI.matrix = Matrix4x4.Scale(new Vector3(scale, scale, 1f));

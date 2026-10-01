@@ -74,7 +74,9 @@ namespace GK2Mounts
         internal static bool KeyTaken(string owner, string key) => FindInstance(owner, key) != null || DormantKeyTaken(owner, key);
 
         // Every instance, the ridden and the ephemeral summon included.
-        internal static IReadOnlyList<Instance> All => instances;
+        // The list itself (not IReadOnlyList): a foreach over the interface boxes its enumerator, every frame in the
+        // controls and the panel. Read only; the registry alone changes it.
+        internal static List<Instance> All => instances;
 
         // Bumped when the set of instances or any parent link changes: the caches built from them (Children, the API's
         // lists) are made again on their next use.
@@ -155,26 +157,64 @@ namespace GK2Mounts
         // instance failing does not stop the others.
         internal static void ForEachInstance(Action<Instance> a, bool bind = true)
         {
-            foreach (Instance i in instances.ToArray())
+            List<Instance> all = TakeSnapshot();
+            try
             {
-                try
+                for (int k = 0; k < all.Count; k++)
                 {
-                    if (bind)
-                    {
-                        using (Bind(i))
-                        {
-                            a(i);
-                        }
-                    }
-                    else
+                    ForOne(all[k], a, bind);
+                }
+            }
+            finally
+            {
+                ReturnSnapshot(all);
+            }
+        }
+
+        private static void ForOne(Instance i, Action<Instance> a, bool bind)
+        {
+            try
+            {
+                if (bind)
+                {
+                    using (Bind(i))
                     {
                         a(i);
                     }
                 }
-                catch (Exception e)
+                else
                 {
-                    Plugin.Log.LogWarning($"Mount: {i.Describe()}: {e.Message}");
+                    a(i);
                 }
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"Mount: {i.Describe()}: {e.Message}");
+            }
+        }
+
+        // A copy of the instance list, for a walk that may add or remove instances on the way. The lists are reused: a
+        // new array every frame (ToArray) was the most of the mod's steady garbage with hundreds of donkeys, about 8
+        // bytes each. A walk inside a walk takes its own list. Filled by Add: List.AddRange copies through a temporary
+        // array on this runtime.
+        private static readonly Stack<List<Instance>> snapshots = new Stack<List<Instance>>();
+
+        private static List<Instance> TakeSnapshot()
+        {
+            List<Instance> l = snapshots.Count > 0 ? snapshots.Pop() : new List<Instance>(instances.Count + 16);
+            for (int k = 0; k < instances.Count; k++)
+            {
+                l.Add(instances[k]);
+            }
+            return l;
+        }
+
+        private static void ReturnSnapshot(List<Instance> l)
+        {
+            l.Clear();
+            if (snapshots.Count < 8)
+            {
+                snapshots.Push(l);
             }
         }
 
@@ -426,26 +466,35 @@ namespace GK2Mounts
                     }
                 }
             }
-            foreach (Instance i in instances.ToArray())
+            List<Instance> all = TakeSnapshot();
+            try
             {
-                if (i.IsRidden || i.Ephemeral)
+                for (int k = 0; k < all.Count; k++)
                 {
-                    continue;
-                }
-                using (Bind(i))
-                {
-                    try
+                    Instance i = all[k];
+                    if (i.IsRidden || i.Ephemeral)
                     {
-                        using (Perf.Measure(Perf.S.Stand))
+                        continue;
+                    }
+                    using (Bind(i))
+                    {
+                        try
                         {
-                            i.StandTick(pc);
+                            using (Perf.Measure(Perf.S.Stand))
+                            {
+                                i.StandTick(pc);
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            Plugin.Log.LogWarning($"Mount: {i.Describe()}: frame update failed: {e.Message}");
                         }
                     }
-                    catch (Exception e)
-                    {
-                        Plugin.Log.LogWarning($"Mount: {i.Describe()}: frame update failed: {e.Message}");
-                    }
                 }
+            }
+            finally
+            {
+                ReturnSnapshot(all);
             }
             using (Perf.Measure(Perf.S.Spawn))
             {

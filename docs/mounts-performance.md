@@ -202,6 +202,44 @@ views on and off with `SetActive`. `WgoPart.OnEnable` and `OnDisable` initialise
 - **When many fall asleep at once:** only as many as fit are parked. The rest are destroyed as before; one second
   released 53 and parked 15.
 
+## Per-frame garbage, pass 2 (2026-10-01)
+
+**How:** the allocation counter is page-quantized (4 KB), so this pass was a code review of everything that runs every
+frame, checked against the game's code where it was called.
+
+**Found and fixed:**
+
+| Where | What allocated | Now |
+|---|---|---|
+| The stand loop, `ForEachInstance` | `instances.ToArray()`: a new array of every instance, every frame (8 bytes each) | reused lists filled by `Add` (List.AddRange copies through a temporary array on this runtime) |
+| Loops over `Mount.All` (controls, panel, API) | foreach over `IReadOnlyList` boxes its enumerator | `Mount.All` is the `List` itself |
+| Cart parts (4 carts) | `Transform.name` read for each part, twice a frame: a new string per read | `CartPart.IsContainer`, set once |
+| The cart's ground check | `collider.name` per raycast hit, and a joined source text per check | cached per collider and per pair |
+| The lantern (each lamp) | `sharedMaterials` (a new array per read); `ParseColor` trimmed and joined strings; `TryHex`'s `TrimStart('#')` made a `char[]` | `GetSharedMaterials` into a kept list; hex read in place |
+| Riding | `Enum.GetValues` every frame in the dismount check (array + boxing); the donkey's sprite name and `Substring` two or three times a frame (`BackHeightPx`); the clip name (sounds); the leg sprite's name | cached array; back height per sprite; clip name per clip; leg sprite compared by reference |
+| The interaction hint | the game's `GetIconId` builds a string on each call, and the hint was joined every frame | icon asked twice a second, the hint joined when it changes |
+| Unity's IMGUI | the layout pass before each OnGUI, even with the panel hidden | `useGUILayout` off while the panel isn't showing |
+| Spawn queue | `List.Sort(Comparison)` wraps it in a comparer per call | one comparer, made once |
+| Picking a step | a formatted failure text for every rejected line, only the first kept | built only while none is kept |
+
+**Check for the back-height cache:** if the donkey's body sprites were new objects every frame, the cache would fill.
+It logs `[perf] the back-height cache filled` once in that case.
+
+**Measured after (the user's run, 2026-10-01, panel hidden):**
+
+| | Before | After |
+|---|---|---|
+| Standing among 63: `Tick` B/frame | ~1.3–7 KB | 66–433 B |
+| Standing among 63: mod allocates | 2–7 KB | 0.1–0.4 KB |
+| Riding through them: mod allocates | not measured | 0.1–0.2 KB (1.4 KB in the 10 s with mounting and views waking) |
+| Riding: `Ride` B/frame | not measured | 43–168 B |
+| GC per second | 0 (one about every 15 s) | 0 (once 1, while views were made) |
+
+- **The self-tests:** 81 passed, 0 failed, 0 warnings, as before. In the frame-time test with 363 donkeys and levels
+  on, the mod allocated 0.2 KB a frame.
+- **The back-height cache** never filled: the sprites are reused objects.
+- **The panel open** (Debug tab) still makes about 12 KB a frame in its own window. That's the dev panel only.
+
 ## Still open
 
 - **The per-frame work, about 0.5 ms with 63:** Shuffle, Pose and Ground checks. Not visible at the cap. Worth a pass

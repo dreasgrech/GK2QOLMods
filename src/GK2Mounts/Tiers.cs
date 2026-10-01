@@ -124,13 +124,16 @@ namespace GK2Mounts
 
         internal static void QueueSpawn(Instance i, float distance) => spawnQueue.Add((i, distance));
 
+        // Made once: List.Sort wraps a comparison in a comparer object on every call on this runtime.
+        private static readonly IComparer<(Instance I, float D)> NearestFirst = Comparer<(Instance I, float D)>.Create((a, b) => a.D.CompareTo(b.D));
+
         private static void ProcessSpawnQueue(PlayerController pc)
         {
             if (spawnQueue.Count == 0)
             {
                 return;
             }
-            spawnQueue.Sort((a, b) => a.D.CompareTo(b.D));
+            spawnQueue.Sort(NearestFirst);
             int n = Mathf.Max(1, Lod.SpawnsPerFrame);
             int made = 0;
             for (int k = 0; k < spawnQueue.Count && n > 0; k++)

@@ -435,6 +435,13 @@ namespace GK2Mounts
         // LateUpdate: runs after the game moved the player for this frame, so the donkey follows without lag.
         private void LateUpdate()
         {
+            // Unity's layout pass runs before every OnGUI and makes garbage even when nothing is drawn: off while the
+            // panel isn't showing (set here, before this frame's OnGUI, so the events of one frame agree).
+            bool gui = harmony != null && Enabled.Value && TuningWindow.Showing();
+            if (useGUILayout != gui)
+            {
+                useGUILayout = gui;
+            }
             if (harmony == null)
             {
                 return;
@@ -479,6 +486,12 @@ namespace GK2Mounts
             }
             try
             {
+                if (!useGUILayout)
+                {
+                    // The panel is off this frame (LateUpdate): no GUILayout without the layout pass.
+                    CargoLayout.SaveIfDue(now: !Mount.IsMounted);
+                    return;
+                }
                 using (Perf.Measure(Perf.S.Panel))
                 {
                     TuningWindow.Draw();

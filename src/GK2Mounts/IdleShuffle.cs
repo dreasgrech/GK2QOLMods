@@ -475,7 +475,7 @@ namespace GK2Mounts
                     float g = GroundHeight(p, out string src);
                     if (float.IsNaN(g))
                     {
-                        NoteGroundFail($"{what} sample {i} at {p:F2}: no ground ({src})");
+                        if (groundFail == null) NoteGroundFail($"{what} sample {i} at {p:F2}: no ground ({src})");
                         return false;
                     }
                     if (i == 0)
@@ -487,7 +487,7 @@ namespace GK2Mounts
                     // more than 0.6 in small steps, found 2026-09-30).
                     else if (Mathf.Abs(g - prev) > MaxRisePerSample)
                     {
-                        NoteGroundFail($"{what} sample {i} at {p:F2}: ground {g:F2} ({src}) against {prev:F2} before, {start:F2} at the start");
+                        if (groundFail == null) NoteGroundFail($"{what} sample {i} at {p:F2}: ground {g:F2} ({src}) against {prev:F2} before, {start:F2} at the start");
                         return false;
                     }
                     prev = g;
@@ -502,7 +502,7 @@ namespace GK2Mounts
                         {
                             continue; // its own view, or the keeper (KeeperClose handles him; a foal trots right behind him)
                         }
-                        NoteGroundFail($"{what} sample {i} at {foot:F2}: blocked by {c.name} (layer {LayerMask.LayerToName(c.gameObject.layer)})");
+                        if (groundFail == null) NoteGroundFail($"{what} sample {i} at {foot:F2}: blocked by {c.name} (layer {LayerMask.LayerToName(c.gameObject.layer)})");
                         return false;
                     }
                 }
@@ -575,6 +575,8 @@ namespace GK2Mounts
                 return true;
             }
 
+            // Only the first failure is kept: callers test groundFail == null before building the text, since a rejected
+            // line is common (every pick tries several) and the formatted text is garbage once one is kept.
             private void NoteGroundFail(string s)
             {
                 if (groundFail == null)

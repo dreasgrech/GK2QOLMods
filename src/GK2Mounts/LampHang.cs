@@ -50,6 +50,7 @@ namespace GK2Mounts
             private MaterialPropertyBlock mpb;
             private bool failed;
             private Material[] copiedMaterials;
+            private readonly List<Material> matsNow = new List<Material>();
 
             public bool Active => lampGo != null && mf != null && mf;
             public string Note { get; private set; } = "off";
@@ -317,11 +318,12 @@ namespace GK2Mounts
             // (textures, LUT, transparency when the keeper is behind it, selection tint, wind), and its enabled state.
             private void CopyLook()
             {
-                Material[] mats = mr.sharedMaterials;
-                if (copiedMaterials == null || copiedMaterials.Length != mats.Length || !SameMaterials(copiedMaterials, mats))
+                // Into a kept list: sharedMaterials is a new array on every read, and this runs every frame.
+                mr.GetSharedMaterials(matsNow);
+                if (copiedMaterials == null || copiedMaterials.Length != matsNow.Count || !SameMaterials(copiedMaterials, matsNow))
                 {
-                    lampMr.sharedMaterials = mats;
-                    copiedMaterials = mats;
+                    copiedMaterials = matsNow.ToArray();
+                    lampMr.sharedMaterials = copiedMaterials;
                 }
                 if (mpb == null)
                 {
@@ -329,7 +331,7 @@ namespace GK2Mounts
                 }
                 mr.GetPropertyBlock(mpb);
                 lampMr.SetPropertyBlock(mpb);
-                for (int i = 0; i < mats.Length; i++)
+                for (int i = 0; i < matsNow.Count; i++)
                 {
                     mr.GetPropertyBlock(mpb, i);
                     lampMr.SetPropertyBlock(mpb, i);
@@ -337,7 +339,7 @@ namespace GK2Mounts
                 lampMr.enabled = mr.enabled;
             }
 
-            private static bool SameMaterials(Material[] a, Material[] b)
+            private static bool SameMaterials(Material[] a, List<Material> b)
             {
                 for (int i = 0; i < a.Length; i++) if (a[i] != b[i]) return false;
                 return true;
