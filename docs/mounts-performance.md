@@ -240,6 +240,42 @@ It logs `[perf] the back-height cache filled` once in that case.
 - **The back-height cache** never filled: the sprites are reused objects.
 - **The panel open** (Debug tab) still makes about 12 KB a frame in its own window. That's the dev panel only.
 
+## The panel's own cost (2026-10-01)
+
+Measured before: with the panel open, its window cost about 1 ms and 100–120 KB of garbage a frame (IMGUI runs it at
+least twice a frame, a layout pass and a repaint).
+
+**Changed:**
+- **The settings-differ snapshot** (yellow rows and the footer count) compared every setting with its default on every
+  layout pass, boxing each value. Now at most four times a second, into a kept list, without boxing float, int, bool
+  and string settings; the footer's texts are made with it.
+- **Layout options:** `GUILayout.Width(...)` made an option object and an array on every call (72 call sites, every
+  row). Now one cached array per width (`Wd`).
+- **Enum rows:** `Enum.GetValues` and the enum's name per row and event; now read once per type.
+- **The Instances tab:** the groups by mod (new lists, closures, header texts) and every compact row's text were made
+  on every event. Now made in a layout event, at most four times a second or at once when an instance or a dormant
+  record comes or goes.
+- **Measured from now on:** the window's time is split into `WinTop` (tab bar, scope line, snapshot), `WinTab` (the
+  open tab's rows, named in brackets) and `WinFooter`.
+
+**Measured after (the user's run, 2026-10-01, 63 donkeys, 10 s lines):**
+
+| Tab | Window before | Window after | WinTab (the tab's rows) | WinTop / WinFooter |
+|---|---|---|---|---|
+| General | | 0.36–0.45 ms, 31–95 KB | 0.10 ms | 0.08 / 0.17–0.23 ms |
+| Riding | | 0.66–0.82 ms, 28–61 KB | 0.30–0.45 ms | 0.10 / 0.25 ms |
+| Instances (a group open) | | 0.76–1.04 ms, 31–108 KB | 0.39–0.65 ms | 0.09 / 0.25 ms |
+| Debug | ~1 ms, 100–120 KB | 0.66–0.86 ms, 28–108 KB | 0.49 ms | 0.10 / 0.25 ms |
+
+- **The time is down** (Debug about 1 → 0.7–0.9 ms). **The garbage is not**: what is left is Unity's IMGUI itself.
+  The footer (three labels and two buttons, none of the mod's code allocating) took 0.25 ms and 2–11 KB a frame:
+  about 0.04 ms and 0.5–1 KB per control per event, the word-wrapped help labels the most. The amounts per part
+  swing a lot from line to line (4 KB pages, two events a frame).
+- **The world markers** (Instances tab) were drawn on every event: 0.33 ms and 12–22 KB a frame for 63 labels. They
+  are plain labels, so they are drawn on the repaint only now (built after this run).
+- **What would still help:** fewer controls per event. The help texts are most of them: hiding them behind a switch
+  would cut the panel's work by about half. The panel is a dev tool, closed in normal play, so this is optional.
+
 ## Still open
 
 - **The per-frame work, about 0.5 ms with 63:** Shuffle, Pose and Ground checks. Not visible at the cap. Worth a pass

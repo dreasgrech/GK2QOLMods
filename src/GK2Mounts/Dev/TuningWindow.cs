@@ -82,7 +82,7 @@ namespace GK2Mounts
             }
             Rect got = GUILayout.Window(WindowId, want, DrawContents,
                 Plugin.TuningWindowKey.Value == KeyCode.None ? "GK2 Mounts tuning" : $"GK2 Mounts tuning ({Plugin.TuningWindowKey.Value} hides)",
-                GUILayout.Width(W));
+                Wd(W));
             if (got.height >= 1f)
             {
                 rect = got;
@@ -162,10 +162,33 @@ namespace GK2Mounts
 
         private static GUIStyle rule;
 
+        // Layout options made once per width: GUILayout.Width makes an option object and a params array on every call,
+        // for every row on every event (the panel's own garbage, 2026-10-01). Options never change, so one per width.
+        private static readonly Dictionary<float, GUILayoutOption[]> widths = new Dictionary<float, GUILayoutOption[]>();
+        private static readonly GUILayoutOption[] ExpandW = { GUILayout.ExpandWidth(true) };
+
+        private static GUILayoutOption[] Wd(float w)
+        {
+            if (!widths.TryGetValue(w, out GUILayoutOption[] o))
+            {
+                if (widths.Count > 256)
+                {
+                    widths.Clear(); // a panel width or text size being dragged makes new ones
+                }
+                o = new[] { GUILayout.Width(w) };
+                widths[w] = o;
+            }
+            return o;
+        }
+
+        private static readonly string[] FixedFormats = { "F0", "F1", "F2", "F3", "F4" };
+
+        private static string Fixed(int decimals) => decimals >= 0 && decimals < FixedFormats.Length ? FixedFormats[decimals] : "F" + decimals;
+
         // A section title with a rule line above it, so the rows below visibly belong to it.
         private static void Header(string text)
         {
-            GUILayout.Box(GUIContent.none, rule, GUILayout.ExpandWidth(true));
+            GUILayout.Box(GUIContent.none, rule, ExpandW);
             GUILayout.Label(text, header);
         }
 
@@ -175,6 +198,30 @@ namespace GK2Mounts
         private static List<(string Group, ConfigEntryBase Entry)> diffSnapshot = new List<(string, ConfigEntryBase)>();
 
         private static int overrideSnapshot; // taken with diffSnapshot, for the same reason
+
+        // Taken in a Layout event, at most four times a second: comparing every setting with its default on every
+        // layout pass was a good part of the panel's own cost. A change shows within a quarter second. The footer's
+        // texts are made with it, not on every event.
+        private static float nextDiffSnapshot;
+        private static string footerDiffText = "", footerOverrideText = "";
+
+        private static void TakeDiffSnapshot()
+        {
+            if (Time.unscaledTime < nextDiffSnapshot)
+            {
+                return;
+            }
+            nextDiffSnapshot = Time.unscaledTime + 0.25f;
+            Defaults.Differing(diffSnapshot);
+            overrideSnapshot = Tuned.OverrideCount();
+            int differing = diffSnapshot.Count;
+            footerDiffText = differing == 0
+                ? "Your changes are saved as you make them. All settings match the mod defaults."
+                : $"Your changes are saved as you make them. {differing} setting{(differing == 1 ? "" : "s")} differ from the mod defaults ({DiffByGroup()}; yellow, listed on the Defaults tab).";
+            footerOverrideText = overrideSnapshot > 0
+                ? $"{overrideSnapshot} value{(overrideSnapshot == 1 ? " is" : "s are")} set by another mod for this session (cyan): those rows are locked and show the value in effect. Your saved value is unchanged and comes back when the mod clears it or the game restarts."
+                : "";
+        }
 
         private static string DiffByGroup()
         {
@@ -232,19 +279,22 @@ namespace GK2Mounts
 
         private static void DrawContentsInner(int id)
         {
-            if (Event.current.type == EventType.Layout)
+            using (Perf.Measure(Perf.S.WinTop))
             {
-                diffSnapshot = Defaults.Differing();
-                overrideSnapshot = Tuned.OverrideCount();
+                if (Event.current.type == EventType.Layout)
+                {
+                    TakeDiffSnapshot();
+                }
+                int newTab = GUILayout.Toolbar(tab, TabNames);
+                if (newTab != tab)
+                {
+                    tab = newTab;
+                    scroll = Vector2.zero;
+                }
+                DrawScope();
+                GUILayout.Space(6f);
             }
-            int newTab = GUILayout.Toolbar(tab, TabNames);
-            if (newTab != tab)
-            {
-                tab = newTab;
-                scroll = Vector2.zero;
-            }
-            DrawScope();
-            GUILayout.Space(6f);
+            Perf.PanelTab = TabNames[Mathf.Clamp(tab, 0, TabNames.Length - 1)];
             // An IMGUI scroll view needs an explicit height, or it collapses; the content's height is measured on
             // each repaint (last frame's value is used) and capped to what fits on the screen.
             // The vertical scrollbar is always shown so its width never changes how text wraps (an appearing and
@@ -254,17 +304,20 @@ namespace GK2Mounts
             lastScrollHeight = h;
             // No horizontal scrollbar: the content is held to the panel's width (ContentW).
             scroll = GUILayout.BeginScrollView(scroll, false, true, GUIStyle.none, GUI.skin.verticalScrollbar, GUILayout.Height(h));
-            GUILayout.BeginVertical(GUILayout.Width(ContentW));
-            switch (tab)
+            GUILayout.BeginVertical(Wd(ContentW));
+            using (Perf.Measure(Perf.S.WinTab))
             {
-                case 0: DrawGeneral(); break;
-                case 1: DrawRiding(); break;
-                case 2: DrawLantern(); break;
-                case 3: DrawSounds(); break;
-                case 4: DrawColors(); break;
-                case 5: DrawInstances(); break;
-                case 6: DrawDebug(); break;
-                default: DrawDefaults(); break;
+                switch (tab)
+                {
+                    case 0: DrawGeneral(); break;
+                    case 1: DrawRiding(); break;
+                    case 2: DrawLantern(); break;
+                    case 3: DrawSounds(); break;
+                    case 4: DrawColors(); break;
+                    case 5: DrawInstances(); break;
+                    case 6: DrawDebug(); break;
+                    default: DrawDefaults(); break;
+                }
             }
             GUILayout.EndVertical();
             if (Event.current.type == EventType.Repaint)
@@ -277,14 +330,13 @@ namespace GK2Mounts
             }
             GUILayout.EndScrollView();
 
+            using var footer = Perf.Measure(Perf.S.WinFooter);
             GUILayout.Space(8f);
             int differing = diffSnapshot.Count;
-            GUILayout.Label(differing == 0
-                ? "Your changes are saved as you make them. All settings match the mod defaults."
-                : $"Your changes are saved as you make them. {differing} setting{(differing == 1 ? "" : "s")} differ from the mod defaults ({DiffByGroup()}; yellow, listed on the Defaults tab).", small);
+            GUILayout.Label(footerDiffText, small);
             if (overrideSnapshot > 0)
             {
-                GUILayout.Label($"{overrideSnapshot} value{(overrideSnapshot == 1 ? " is" : "s are")} set by another mod for this session (cyan): those rows are locked and show the value in effect. Your saved value is unchanged and comes back when the mod clears it or the game restarts.", small);
+                GUILayout.Label(footerOverrideText, small);
             }
             DrawDefaultsButtons(differing);
             GUILayout.Label("Right-click a row to put it back to its mod default.", small);
@@ -307,8 +359,8 @@ namespace GK2Mounts
 
             Header("Setup");
             GUILayout.BeginHorizontal();
-            GUILayout.Label("Mount: world-object id to summon (General.MountWgoId)", label, GUILayout.Width(LabelW));
-            string wgo = GUILayout.TextField(Plugin.MountWgoId.Value ?? "", GUILayout.Width(150f)).Trim(); // ids have no spaces
+            GUILayout.Label("Mount: world-object id to summon (General.MountWgoId)", label, Wd(LabelW));
+            string wgo = GUILayout.TextField(Plugin.MountWgoId.Value ?? "", Wd(150f)).Trim(); // ids have no spaces
             GUILayout.EndHorizontal();
             if (ResetOnRightClick(Plugin.MountWgoId, null)) { }
             else if (wgo != Plugin.MountWgoId.Value)
@@ -327,8 +379,8 @@ namespace GK2Mounts
 
             Header("Style being tuned: " + (ride ? "riding on the donkey's back" : "the donkey pulling its cart") + "  [" + s.Section + "]");
             GUILayout.BeginHorizontal();
-            GUILayout.Label("Switch style (the donkey is summoned again)", label, GUILayout.Width(LabelW));
-            if (GUILayout.Button(ride ? "Go to cart" : "Go to riding", GUILayout.Width(SliderW)))
+            GUILayout.Label("Switch style (the donkey is summoned again)", label, Wd(LabelW));
+            if (GUILayout.Button(ride ? "Go to cart" : "Go to riding", Wd(SliderW)))
             {
                 Mounts.SwitchStyle(ride ? MountStyle.Cart : MountStyle.Ride);
             }
@@ -539,7 +591,7 @@ namespace GK2Mounts
             SoundIdRow("Graze sound id", s.GrazeSoundId, "graze", allowEmpty: false);
             FloatSlider("Graze volume", s.GrazeVolume, 0f, 3f, 2, null);
             FloatSlider("Lip-smacking volume (the game's own lips sound; 0 = silent)", s.LipsVolume, 0f, 3f, 2, null);
-            if (GUILayout.Button("Play the lips sound", GUILayout.Width(160f))) MountSounds.Preview("lips");
+            if (GUILayout.Button("Play the lips sound", Wd(160f))) MountSounds.Preview("lips");
 
             Header("Braying");
             SoundIdRow("Bray sound id (voice_donkey: four short ee-aw sounds)", s.BraySoundId, "bray", allowEmpty: false);
@@ -590,8 +642,8 @@ namespace GK2Mounts
         private static void SoundIdRow(string name, ConfigEntry<string> entry, string preview, bool allowEmpty)
         {
             GUILayout.BeginHorizontal();
-            GUILayout.Label(name, LabelFor(entry), GUILayout.Width(LabelW));
-            if (GUILayout.Button("Play", GUILayout.Width(50f)))
+            GUILayout.Label(name, LabelFor(entry), Wd(LabelW));
+            if (GUILayout.Button("Play", Wd(50f)))
             {
                 MountSounds.Preview(preview);
             }
@@ -599,7 +651,7 @@ namespace GK2Mounts
             GUILayout.BeginHorizontal();
             bool locked = Locked(entry, out string shown);
             GUI.enabled = !locked;
-            string v = GUILayout.TextField(shown ?? "", GUILayout.Width(LabelW));
+            string v = GUILayout.TextField(shown ?? "", Wd(LabelW));
             GUI.enabled = true;
             string id = (v ?? "").Trim(); // stored trimmed: a space around a pasted id would not be found
             bool ok = (allowEmpty && id.Length == 0) || MountSounds.KnownId(id);
@@ -619,8 +671,8 @@ namespace GK2Mounts
             bool locked = Locked(entry, out string shown);
             Color c = Lantern.ParseColor(shown, new Color(1f, 0.59f, 0f));
             GUILayout.BeginHorizontal();
-            GUILayout.Label(name, LabelFor(entry), GUILayout.Width(LabelW));
-            GUILayout.Label(shown, label, GUILayout.Width(70f));
+            GUILayout.Label(name, LabelFor(entry), Wd(LabelW));
+            GUILayout.Label(shown, label, Wd(70f));
             GUILayout.EndHorizontal();
             if (!locked && ResetOnRightClick(entry, onChange)) { return; }
             GUI.enabled = !locked;
@@ -640,9 +692,9 @@ namespace GK2Mounts
         private static float Channel(string name, float v)
         {
             GUILayout.BeginHorizontal();
-            GUILayout.Label("    " + name, label, GUILayout.Width(LabelW));
-            float r = GUILayout.HorizontalSlider(v, 0f, 1f, GUILayout.Width(90f));
-            GUILayout.Label(Mathf.RoundToInt(r * 255f).ToString(), label, GUILayout.Width(45f));
+            GUILayout.Label("    " + name, label, Wd(LabelW));
+            float r = GUILayout.HorizontalSlider(v, 0f, 1f, Wd(90f));
+            GUILayout.Label(Mathf.RoundToInt(r * 255f).ToString(), label, Wd(45f));
             GUILayout.EndHorizontal();
             return Mathf.Abs(r - v) > 0.002f ? r : v;
         }
@@ -761,7 +813,7 @@ namespace GK2Mounts
                     string hex = region.SourceColors[j];
                     Colors.TryHex(hex, out Color32 src);
                     Color32 dst = Colors.Preview(region.Key, src);
-                    GUILayout.BeginVertical(GUILayout.Width(size));
+                    GUILayout.BeginVertical(Wd(size));
                     Rect top = Swatch(src, size);
                     Rect bottom = Swatch(dst, size);
                     GUILayout.EndVertical();
@@ -827,7 +879,7 @@ namespace GK2Mounts
             bool has = swaps.TryGetValue(src, out string dstHex);
             Color32 to = has && Colors.TryHex(dstHex, out Color32 d) ? d : Colors.Preview(colorRegion, from);
             GUILayout.BeginHorizontal();
-            GUILayout.Label($"Swap #{src} for #{Colors.Hex(to)}", LabelFor(s.Swaps.Entry), GUILayout.Width(LabelW));
+            GUILayout.Label($"Swap #{src} for #{Colors.Hex(to)}", LabelFor(s.Swaps.Entry), Wd(LabelW));
             Swatch(to, 22f);
             GUILayout.EndHorizontal();
             GUI.enabled = !locked;
@@ -878,14 +930,14 @@ namespace GK2Mounts
             bool locked = Locked(entry, out string shown);
             bool on = Colors.TryHex(shown, out Color32 c32);
             GUILayout.BeginHorizontal();
-            GUILayout.Label(name, LabelFor(entry), GUILayout.Width(LabelW));
+            GUILayout.Label(name, LabelFor(entry), Wd(LabelW));
             if (on)
             {
                 Swatch(c32, 18f);
-                GUILayout.Label(Colors.Hex(c32), label, GUILayout.Width(62f));
+                GUILayout.Label(Colors.Hex(c32), label, Wd(62f));
             }
             GUI.enabled = !locked;
-            bool clicked = GUILayout.Button(on ? "On" : "Off", GUILayout.Width(44f)) && !locked;
+            bool clicked = GUILayout.Button(on ? "On" : "Off", Wd(44f)) && !locked;
             GUI.enabled = true;
             GUILayout.EndHorizontal();
             if (!locked && ResetOnRightClick(entry, onChange)) { return; }
@@ -1001,9 +1053,9 @@ namespace GK2Mounts
                 Plugin.Log.LogInfo("[script] " + ScriptDump.DumpWgoScript("npc_donkey"));
             }
             GUILayout.BeginHorizontal();
-            GUILayout.Label("Send event to the real donkey's script", label, GUILayout.Width(LabelW));
-            donkeyEvent = GUILayout.TextField(donkeyEvent, GUILayout.Width(110f));
-            if (GUILayout.Button("Send", GUILayout.Width(50f)))
+            GUILayout.Label("Send event to the real donkey's script", label, Wd(LabelW));
+            donkeyEvent = GUILayout.TextField(donkeyEvent, Wd(110f));
+            if (GUILayout.Button("Send", Wd(50f)))
             {
                 Plugin.Log.LogInfo("[script] " + ScriptDump.FireEventOnWgo("npc_donkey", donkeyEvent.Trim()));
             }
@@ -1022,13 +1074,13 @@ namespace GK2Mounts
             }
             GUILayout.Label("Writes BepInEx/GK2-head-facts.txt for routing pickups straight onto the cart: whether patches on the game's small head methods take effect when the game calls them, which quests listen to the head triggers, every expression in the game data and every world-object script that mentions the head, and a live test of the item mechanics on the cart's inventory. Mount in Cart style with empty hands and one free cart slot for the full set. " + HeadProbe.Status, small);
             GUILayout.BeginHorizontal();
-            GUILayout.Label("Test item id", label, GUILayout.Width(100f));
-            cargoItemId = GUILayout.TextField(cargoItemId, GUILayout.Width(110f));
-            if (GUILayout.Button("Put in cart inventory", GUILayout.Width(170f)))
+            GUILayout.Label("Test item id", label, Wd(100f));
+            cargoItemId = GUILayout.TextField(cargoItemId, Wd(110f));
+            if (GUILayout.Button("Put in cart inventory", Wd(170f)))
             {
                 Plugin.Log.LogInfo("[cargo] " + CarryProbe.TestLoad(cargoItemId.Trim()));
             }
-            if (GUILayout.Button("Take first out", GUILayout.Width(120f)))
+            if (GUILayout.Button("Take first out", Wd(120f)))
             {
                 Plugin.Log.LogInfo("[cargo] " + CarryProbe.TestUnload());
             }
@@ -1053,16 +1105,16 @@ namespace GK2Mounts
             GUILayout.BeginHorizontal();
             System.Collections.Generic.List<string> big = CarryProbe.BigItemIds();
             int at = big.IndexOf(spawnItemId.Trim());
-            if (GUILayout.Button("<", GUILayout.Width(28f)) && big.Count > 0)
+            if (GUILayout.Button("<", Wd(28f)) && big.Count > 0)
             {
                 spawnItemId = big[(at <= 0 ? big.Count : at) - 1];
             }
-            spawnItemId = GUILayout.TextField(spawnItemId, GUILayout.Width(200f));
-            if (GUILayout.Button(">", GUILayout.Width(28f)) && big.Count > 0)
+            spawnItemId = GUILayout.TextField(spawnItemId, Wd(200f));
+            if (GUILayout.Button(">", Wd(28f)) && big.Count > 0)
             {
                 spawnItemId = big[(at + 1) % big.Count];
             }
-            if (GUILayout.Button("Drop it here", GUILayout.Width(120f)))
+            if (GUILayout.Button("Drop it here", Wd(120f)))
             {
                 Plugin.Log.LogInfo("[cargo] " + CarryProbe.SpawnDrop(spawnItemId.Trim()));
             }
@@ -1224,14 +1276,14 @@ namespace GK2Mounts
                 // pair: a click starts the pair over in that arrangement (the tuning is forgotten, the packer lays it
                 // out, and the next move tunes it again from there); the highlighted button is the tuned layout's.
                 GUILayout.BeginHorizontal();
-                GUILayout.Label(pair.Tuned ? "  start over as" : "  arrangement", label, GUILayout.Width(120f));
+                GUILayout.Label(pair.Tuned ? "  start over as" : "  arrangement", label, Wd(120f));
                 foreach (string mode in new[] { "auto", "side", "along", "stack" })
                 {
                     bool on = pair.Mode == mode;
                     // A click is a change of the toggle's state (a toggle that is on returns true on every event;
                     // taking that as a click started a tuned pair over every frame, found 2026-09-30). Automatic: only
                     // switching a button on counts. Tuned: a click on any button, the highlighted one too.
-                    bool now = GUILayout.Toggle(on, mode, GUI.skin.button, GUILayout.Width(70f));
+                    bool now = GUILayout.Toggle(on, mode, GUI.skin.button, Wd(70f));
                     bool clicked = now != on && (pair.Tuned || now);
                     if (clicked)
                     {
@@ -1294,21 +1346,21 @@ namespace GK2Mounts
         private static void Stepper(string name, ConfigEntry<float> entry, float step, float min, float max, string format)
         {
             GUILayout.BeginHorizontal();
-            GUILayout.Label(name, LabelFor(entry), GUILayout.Width(LabelW));
+            GUILayout.Label(name, LabelFor(entry), Wd(LabelW));
             bool locked = Locked(entry, out float shown);
             GUI.enabled = !locked;
-            if (GUILayout.Button("-", GUILayout.Width(30f)) && !locked)
+            if (GUILayout.Button("-", Wd(30f)) && !locked)
             {
                 Put(entry, Mathf.Max(min, (float)Math.Round(Val(entry) - step, 2)));
             }
-            GUILayout.Label(shown.ToString(format), label, GUILayout.Width(50f));
+            GUILayout.Label(shown.ToString(format), label, Wd(50f));
             Rect r = GUILayoutUtility.GetLastRect();
             if (!locked && Event.current.type == EventType.MouseDown && Event.current.button == 1 && r.Contains(Event.current.mousePosition))
             {
                 if (EditsInstance(entry)) Unput(entry); else Defaults.ResetToDefault(entry);
                 Event.current.Use();
             }
-            if (GUILayout.Button("+", GUILayout.Width(30f)) && !locked)
+            if (GUILayout.Button("+", Wd(30f)) && !locked)
             {
                 Put(entry, Mathf.Min(max, (float)Math.Round(Val(entry) + step, 2)));
             }
@@ -1321,8 +1373,8 @@ namespace GK2Mounts
         {
             GUILayout.BeginHorizontal();
             // Inside a box (its padding) with a slider and a value: the label gets the rest of the content width.
-            GUILayout.Label(name, label, GUILayout.Width(Mathf.Max(80f, ContentW - SliderW - 50f - GUI.skin.box.padding.horizontal - 12f)));
-            float v = GUILayout.HorizontalSlider(value, min, max, GUILayout.Width(SliderW));
+            GUILayout.Label(name, label, Wd(Mathf.Max(80f, ContentW - SliderW - 50f - GUI.skin.box.padding.horizontal - 12f)));
+            float v = GUILayout.HorizontalSlider(value, min, max, Wd(SliderW));
             // Only a drag (or the right-click reset) is a change. The slider hands back the value it was given when it
             // is not touched (clamped to its range); rounding that for display must not count as a move, or a value
             // with more decimals (a pair's measured places) "changed" on every event: the pair re-tuned itself right
@@ -1335,7 +1387,7 @@ namespace GK2Mounts
                 touched = true;
                 Event.current.Use();
             }
-            GUILayout.Label((touched ? v : value).ToString("0.00"), label, GUILayout.Width(50f));
+            GUILayout.Label((touched ? v : value).ToString("0.00"), label, Wd(50f));
             GUILayout.EndHorizontal();
             if (!touched)
             {
@@ -1353,13 +1405,13 @@ namespace GK2Mounts
         private static void FloatSlider(string name, ConfigEntry<float> entry, float min, float max, int decimals, Action onChange)
         {
             GUILayout.BeginHorizontal();
-            GUILayout.Label(name, LabelFor(entry), GUILayout.Width(LabelW));
+            GUILayout.Label(name, LabelFor(entry), Wd(LabelW));
             bool locked = Locked(entry, out float shown);
             GUI.enabled = !locked;
-            float v = GUILayout.HorizontalSlider(shown, min, max, GUILayout.Width(90f));
+            float v = GUILayout.HorizontalSlider(shown, min, max, Wd(90f));
             GUI.enabled = true;
             v = (float)Math.Round(v, decimals);
-            GUILayout.Label(v.ToString("F" + decimals), label, GUILayout.Width(45f));
+            GUILayout.Label(v.ToString(Fixed(decimals)), label, Wd(45f));
             GUILayout.EndHorizontal();
             if (locked) { return; }
             if (ResetOnRightClick(entry, onChange)) { return; }
@@ -1373,17 +1425,17 @@ namespace GK2Mounts
         private static void IntSlider(string name, ConfigEntry<int> entry, int min, int max, Action onChange)
         {
             GUILayout.BeginHorizontal();
-            GUILayout.Label(name, LabelFor(entry), GUILayout.Width(LabelW));
+            GUILayout.Label(name, LabelFor(entry), Wd(LabelW));
             // The slider is laid out between the buttons and reads the value before "+" runs; a button press must
             // therefore win over the slider's (stale) value in the same pass.
             bool pressed = false;
             bool locked = Locked(entry, out int shown);
             GUI.enabled = !locked;
-            if (GUILayout.Button("-", GUILayout.Width(22f)) && !locked && Val(entry) > min) { Put(entry, Val(entry) - 1); pressed = true; onChange?.Invoke(); }
-            int v = Mathf.RoundToInt(GUILayout.HorizontalSlider(locked ? shown : Val(entry), min, max, GUILayout.Width(50f)));
-            if (GUILayout.Button("+", GUILayout.Width(22f)) && !locked && Val(entry) < max) { Put(entry, Val(entry) + 1); pressed = true; onChange?.Invoke(); }
+            if (GUILayout.Button("-", Wd(22f)) && !locked && Val(entry) > min) { Put(entry, Val(entry) - 1); pressed = true; onChange?.Invoke(); }
+            int v = Mathf.RoundToInt(GUILayout.HorizontalSlider(locked ? shown : Val(entry), min, max, Wd(50f)));
+            if (GUILayout.Button("+", Wd(22f)) && !locked && Val(entry) < max) { Put(entry, Val(entry) + 1); pressed = true; onChange?.Invoke(); }
             GUI.enabled = true;
-            GUILayout.Label((locked ? shown : Val(entry)).ToString(), label, GUILayout.Width(30f));
+            GUILayout.Label((locked ? shown : Val(entry)).ToString(), label, Wd(30f));
             GUILayout.EndHorizontal();
             if (locked) { return; }
             if (ResetOnRightClick(entry, onChange)) { return; }
@@ -1398,9 +1450,9 @@ namespace GK2Mounts
         private static bool OnOffRow(string name, bool value, GUIStyle style = null, bool enabled = true)
         {
             GUILayout.BeginHorizontal();
-            GUILayout.Label(name, style ?? label, GUILayout.Width(LabelW));
+            GUILayout.Label(name, style ?? label, Wd(LabelW));
             GUI.enabled = enabled;
-            bool clicked = GUILayout.Button(value ? "On" : "Off", GUILayout.Width(70f)) && enabled;
+            bool clicked = GUILayout.Button(value ? "On" : "Off", Wd(70f)) && enabled;
             GUI.enabled = true;
             GUILayout.EndHorizontal();
             return clicked;
@@ -1419,6 +1471,24 @@ namespace GK2Mounts
             }
         }
 
+        // An enum's values and names, read once per type: Enum.GetValues makes an array and an enum's ToString goes
+        // through reflection, on every row and every event.
+        private static class EnumInfo<T> where T : struct, Enum
+        {
+            internal static readonly T[] Values = (T[])Enum.GetValues(typeof(T));
+            private static readonly Dictionary<T, string> names = new Dictionary<T, string>();
+
+            internal static string Name(T v)
+            {
+                if (!names.TryGetValue(v, out string n))
+                {
+                    n = v.ToString();
+                    names[v] = n;
+                }
+                return n;
+            }
+        }
+
         // Type inference does not look through Tuned<T>'s implicit conversion, hence this overload.
         private static void EnumCycler<T>(string name, Tuned<T> tuned, Action onChange) where T : struct, Enum
         {
@@ -1427,16 +1497,16 @@ namespace GK2Mounts
 
         private static void EnumCycler<T>(string name, ConfigEntry<T> entry, Action onChange) where T : struct, Enum
         {
-            T[] values = (T[])Enum.GetValues(typeof(T));
+            T[] values = EnumInfo<T>.Values;
             int idx = Array.IndexOf(values, Val(entry));
             bool locked = Locked(entry, out T shown);
             GUILayout.BeginHorizontal();
-            GUILayout.Label(name, LabelFor(entry), GUILayout.Width(LabelW));
+            GUILayout.Label(name, LabelFor(entry), Wd(LabelW));
             bool changed = false;
             GUI.enabled = !locked;
-            if (GUILayout.Button("<", GUILayout.Width(22f)) && !locked) { idx = (idx - 1 + values.Length) % values.Length; changed = true; }
-            GUILayout.Label(shown.ToString(), label, GUILayout.Width(90f));
-            if (GUILayout.Button(">", GUILayout.Width(22f)) && !locked) { idx = (idx + 1) % values.Length; changed = true; }
+            if (GUILayout.Button("<", Wd(22f)) && !locked) { idx = (idx - 1 + values.Length) % values.Length; changed = true; }
+            GUILayout.Label(EnumInfo<T>.Name(shown), label, Wd(90f));
+            if (GUILayout.Button(">", Wd(22f)) && !locked) { idx = (idx + 1) % values.Length; changed = true; }
             GUI.enabled = true;
             GUILayout.EndHorizontal();
             if (locked) { return; }

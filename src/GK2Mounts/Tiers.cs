@@ -254,6 +254,38 @@ namespace GK2Mounts
                 return d > sleepR ? Tier.Asleep : Tier.Idle;
             }
 
+            // For the panel's Details row: the level, why it is at it (WantTier's reasons, in its order), and what its view
+            // does there.
+            internal string LevelText()
+            {
+                string why;
+                PlayerData pd = MainGame.Instance != null ? MainGame.PlayerData : null;
+                Instance p = Parent;
+                switch (tier)
+                {
+                    case Tier.Active:
+                        why = !Lod.On ? "levels are off"
+                            : mounted ? "ridden"
+                            : Ephemeral ? "the summoned donkey"
+                            : ReferenceEquals(this, TuningWindow.Editing) ? "edited on the panel"
+                            : pd != null && SceneId != pd.currentGameSceneId ? "in another scene: its scene decides"
+                            : p != null && p.tier == Tier.Active && p.SceneId == SceneId ? $"its parent {p.FullId} is active"
+                            : $"within {Lod.ActiveRadius:F0} of the keeper or on screen";
+                        break;
+                    case Tier.Idle:
+                        why = $"off screen, within {Lod.SleepRadius:F0}";
+                        break;
+                    default:
+                        why = $"farther than {Lod.SleepRadius:F0}; wakes within {Lod.WakeRadius:F0}";
+                        break;
+                }
+                string view = donkey == null || !donkey ? (tier == Tier.Asleep ? "no view (released)" : "no view yet")
+                    : switchedOff ? "view switched off"
+                    : quietAnimators.Count > 0 || quietRenderers.Count > 0 ? "view frozen"
+                    : "view on";
+                return $"Level: {tier.ToString().ToLowerInvariant()} ({why}); {view}.";
+            }
+
             private static bool OnScreen(Vector3 world, float margin)
             {
                 try

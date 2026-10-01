@@ -35,6 +35,9 @@ namespace GK2Mounts
             Panel,      // the dev panel (OnGUI: every event of the frame), without its window's contents
             Window,     // the panel window's contents (IMGUI runs them after OnGUI returns, so they are not in Panel)
             Markers,    // the panel's world markers
+            WinTop,     //   inside Window: the tab bar, the scope line and the settings-differ snapshot
+            WinTab,     //   inside Window: the open tab's rows (PanelTab names it)
+            WinFooter,  //   inside Window: the footer (differ text, defaults buttons)
             Count,
         }
 
@@ -58,6 +61,7 @@ namespace GK2Mounts
         internal static int Instances, Views, Foals;
         internal static int LogLinesPerSecond;
         internal static string SummaryText = "Measuring (one second)...";
+        internal static string PanelTab; // the panel's open tab, named after WinTab in the summary
 
         // The panel's switches (session only): a summary line in the log every 10 s, and the two experiments
         // (Mount.Instance.ApplyPerfExperiment).
@@ -324,7 +328,7 @@ namespace GK2Mounts
                 {
                     continue;
                 }
-                sb.Append(sep).Append($"{Names[i]} {AvgMs[i]:F2} ms (worst {WorstMs[i]:F1}, {CallsPerFrame[i]:F1}x{(BytesPerFrame[i] >= 1 ? $", +{BytesPerFrame[i]:F0} B" : "")})");
+                sb.Append(sep).Append($"{Names[i]}{(i == (int)S.WinTab && PanelTab != null ? $" [{PanelTab}]" : "")} {AvgMs[i]:F2} ms (worst {WorstMs[i]:F1}, {CallsPerFrame[i]:F1}x{(BytesPerFrame[i] >= 1 ? $", +{BytesPerFrame[i]:F0} B" : "")})");
             }
             return sb.ToString();
         }

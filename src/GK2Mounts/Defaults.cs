@@ -204,6 +204,18 @@ namespace GK2Mounts
         public static bool Differs(ConfigEntryBase e)
         {
             object d = DefaultFor(e);
+            // The common types read without BoxedValue, which boxes the value on every read (every row of the panel asks).
+            switch (e)
+            {
+                case ConfigEntry<float> f when d is float fd:
+                    return Math.Abs(f.Value - fd) > 0.0001f;
+                case ConfigEntry<int> n when d is int nd:
+                    return n.Value != nd;
+                case ConfigEntry<bool> bo when d is bool bd:
+                    return bo.Value != bd;
+                case ConfigEntry<string> s:
+                    return !string.Equals(s.Value ?? "", d as string ?? "", StringComparison.Ordinal);
+            }
             object v = e.BoxedValue;
             if (v is float a && d is float b)
             {
@@ -267,14 +279,21 @@ namespace GK2Mounts
         public static List<(string Group, ConfigEntryBase Entry)> Differing()
         {
             var list = new List<(string, ConfigEntryBase)>();
+            Differing(list);
+            return list;
+        }
+
+        // Into a kept list (the panel takes this a few times a second).
+        public static void Differing(List<(string Group, ConfigEntryBase Entry)> into)
+        {
+            into.Clear();
             foreach (var t in Tracked)
             {
                 if (Differs(t.Entry))
                 {
-                    list.Add(t);
+                    into.Add(t);
                 }
             }
-            return list;
         }
 
         public static string Show(object v)

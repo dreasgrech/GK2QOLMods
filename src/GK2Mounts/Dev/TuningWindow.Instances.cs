@@ -91,7 +91,7 @@ namespace GK2Mounts
             {
                 GUILayout.BeginHorizontal();
                 GUILayout.Label($"Editing {editing.Describe()}'s own settings (marked in the world). Every row changes only this one: magenta = its own value, right-click = back to everyone's. The style tabs show its style ({editing.CurrentStyle}).", instanceSet);
-                if (GUILayout.Button("Stop", GUILayout.Width(60f)))
+                if (GUILayout.Button("Stop", Wd(60f)))
                 {
                     editing = null;
                 }
@@ -222,7 +222,9 @@ namespace GK2Mounts
 
         private static void DrawWorldMarkers(float scale)
         {
-            if (tab != 5 && !EditingNow)
+            // Drawn on the repaint only: plain labels take no input, and every other event (the layout pass, mouse moves)
+            // drew all 63 again for nothing (0.33 ms and 12-22 KB a frame, measured 2026-10-01).
+            if (tab != 5 && !EditingNow || Event.current.type != EventType.Repaint)
             {
                 return;
             }
@@ -327,65 +329,45 @@ namespace GK2Mounts
                 }
             }
 
-            // Removed instances out of the panel's own view state (it held on to them: a small leak, 2026-10-01).
-            expanded.RemoveWhere(x => !Mount.IsRegistered(x));
-            // Grouped by the mod that owns them (each numbers its own: #1 of one mod and #1 of another are two donkeys),
-            // with that mod's dormant records (kept with the save, its mod not installed) at the end of its group.
-            List<Mount.Instance> list = new List<Mount.Instance>();
-            var owners = new List<string>();
-            foreach (Mount.Instance i in Mount.All)
+            if (Event.current.type == EventType.Layout)
             {
-                if (i.Ephemeral) continue;
-                list.Add(i);
-                if (!owners.Contains(i.OwnerId)) owners.Add(i.OwnerId);
+                RefreshGroups();
             }
-            foreach (Mount.DormantRecord d in Mount.Dormant)
-            {
-                if (!owners.Contains(d.Owner)) owners.Add(d.Owner);
-            }
-            Header($"In the world ({list.Count}{(Mount.Dormant.Count > 0 ? $", {Mount.Dormant.Count} dormant" : "")}), by mod");
-            if (owners.Count == 0)
+            Header(groupsTitle);
+            if (groups.Count == 0)
             {
                 GUILayout.Label("None yet.", small);
             }
             PlayerData pd = MainGame.Instance != null ? MainGame.PlayerData : null;
-            foreach (string owner in owners)
+            foreach (OwnerGroup g in groups)
             {
-                List<Mount.Instance> mine = list.FindAll(x => x.OwnerId == owner);
-                List<Mount.DormantRecord> sleeping = new List<Mount.DormantRecord>();
-                foreach (Mount.DormantRecord d in Mount.Dormant)
-                {
-                    if (d.Owner == owner) sleeping.Add(d);
-                }
-                int keptCount = mine.FindAll(x => x.Persist).Count;
                 // A click on the header folds the group. Many rows of IMGUI controls are expensive (63 donkeys
                 // with all their buttons took 27 ms a frame, measured 2026-10-01), so a big group starts folded.
-                bool open = groupOpen.TryGetValue(owner, out bool o) ? o : mine.Count + sleeping.Count <= 6;
-                string ownerKey = owner;
-                if (GUILayout.Button($"{(open ? "[-]" : "[+]")} {Mount.OwnerName(owner)} ({owner}){(Mount.OwnerPresent(owner) ? "" : ", NOT INSTALLED")}: {mine.Count} in the world, {keptCount} kept with saves{(sleeping.Count > 0 ? $", {sleeping.Count} dormant" : "")}",
-                    OwnerStyle(ownerHeaderStyles, label, owner)))
+                bool open = groupOpen.TryGetValue(g.Owner, out bool o) ? o : g.Mine.Count + g.Sleeping.Count <= 6;
+                if (GUILayout.Button(open ? g.HeaderOpen : g.HeaderClosed, OwnerStyle(ownerHeaderStyles, label, g.Owner)))
                 {
+                    string ownerKey = g.Owner;
                     bool now = open;
                     pending = () => groupOpen[ownerKey] = !now;
-                }
-                foreach (Mount.DormantRecord d in open ? sleeping : new List<Mount.DormantRecord>())
-                {
-                    // The text above its button, not beside it: a long wrapped label beside a button pushes the
-                    // button off the panel's right edge (seen 2026-10-01).
-                    GUILayout.BeginVertical(GUI.skin.box);
-                    GUILayout.Label($"#{d.Id} {d.Kind}{(d.Key != null ? $" '{d.Key}'" : "")}: dormant ({d.Why}), in {d.Scene}{(d.Cargo > 0 ? $", {d.Cargo} cargo item(s) on the ground there" : "")}. Back with its mod; Forget drops it at the next save.", small);
-                    Mount.DormantRecord forget = d;
-                    if (GUILayout.Button("Forget"))
-                    {
-                        pending = () => Mount.ForgetDormant(forget);
-                    }
-                    GUILayout.EndVertical();
                 }
                 if (!open)
                 {
                     continue;
                 }
-                foreach (Mount.Instance i in mine)
+                foreach (Mount.DormantRecord d in g.Sleeping)
+                {
+                    // The text above its button, not beside it: a long wrapped label beside a button pushes the
+                    // button off the panel's right edge (seen 2026-10-01).
+                    GUILayout.BeginVertical(GUI.skin.box);
+                    GUILayout.Label($"#{d.Id} {d.Kind}{(d.Key != null ? $" '{d.Key}'" : "")}: dormant ({d.Why}), in {d.Scene}{(d.Cargo > 0 ? $", {d.Cargo} cargo item(s) on the ground there" : "")}. Back with its mod; Forget drops it at the next save.", small);
+                    if (GUILayout.Button("Forget"))
+                    {
+                        Mount.DormantRecord forget = d;
+                        pending = () => Mount.ForgetDormant(forget);
+                    }
+                    GUILayout.EndVertical();
+                }
+                foreach (Mount.Instance i in g.Mine)
                 {
                     if (editing == i || expanded.Contains(i))
                     {
@@ -464,10 +446,10 @@ namespace GK2Mounts
         private static int SessionIntRow(string name, int value, int min, int max)
         {
             GUILayout.BeginHorizontal();
-            GUILayout.Label(name, label, GUILayout.Width(LabelW));
-            if (GUILayout.Button("-", GUILayout.Width(22f)) && value > min) value--;
-            GUILayout.Label(value.ToString(), label, GUILayout.Width(30f));
-            if (GUILayout.Button("+", GUILayout.Width(22f)) && value < max) value++;
+            GUILayout.Label(name, label, Wd(LabelW));
+            if (GUILayout.Button("-", Wd(22f)) && value > min) value--;
+            GUILayout.Label(value.ToString(), label, Wd(30f));
+            if (GUILayout.Button("+", Wd(22f)) && value < max) value++;
             GUILayout.EndHorizontal();
             return value;
         }
@@ -475,9 +457,9 @@ namespace GK2Mounts
         private static float SessionFloatRow(string name, float value, float min, float max)
         {
             GUILayout.BeginHorizontal();
-            GUILayout.Label(name, label, GUILayout.Width(LabelW));
-            value = (float)Math.Round(GUILayout.HorizontalSlider(value, min, max, GUILayout.Width(90f)), 2);
-            GUILayout.Label(value.ToString("F2"), label, GUILayout.Width(45f));
+            GUILayout.Label(name, label, Wd(LabelW));
+            value = (float)Math.Round(GUILayout.HorizontalSlider(value, min, max, Wd(90f)), 2);
+            GUILayout.Label(value.ToString("F2"), label, Wd(45f));
             GUILayout.EndHorizontal();
             return value;
         }
@@ -486,6 +468,115 @@ namespace GK2Mounts
         {
             Vector2 d = pd.Direction.sqrMagnitude > 0.01f ? pd.Direction.normalized : Vector2.right;
             return pd.position.Value + new Vector3(d.x, 0f, d.y) * distance;
+        }
+
+        // The list's groups by the mod that owns them (each numbers its own: #1 of one mod and #1 of another are two
+        // donkeys), with that mod's dormant records (kept with the save, its mod not installed) at the end of its group.
+        // Made in a Layout event, so the events after it draw the same rows; again at most four times a second, or at
+        // once when an instance or a dormant record came or went. Rebuilding it and its texts on every event was most
+        // of this tab's garbage.
+        private sealed class OwnerGroup
+        {
+            internal string Owner;
+            internal readonly List<Mount.Instance> Mine = new List<Mount.Instance>();
+            internal readonly List<Mount.DormantRecord> Sleeping = new List<Mount.DormantRecord>();
+            internal string HeaderOpen, HeaderClosed;
+        }
+
+        private static readonly List<OwnerGroup> groups = new List<OwnerGroup>();
+        private static readonly List<OwnerGroup> spareGroups = new List<OwnerGroup>();
+        private static string groupsTitle = "In the world";
+        private static float nextGroups;
+        private static int groupsVersion = -1, groupsDormant = -1;
+
+        private static void RefreshGroups()
+        {
+            if (Time.unscaledTime < nextGroups && groupsVersion == Mount.structureVersion && groupsDormant == Mount.Dormant.Count)
+            {
+                return;
+            }
+            nextGroups = Time.unscaledTime + 0.25f;
+            groupsVersion = Mount.structureVersion;
+            groupsDormant = Mount.Dormant.Count;
+            // Removed instances out of the panel's own view state (it held on to them: a small leak, 2026-10-01).
+            expanded.RemoveWhere(x => !Mount.IsRegistered(x));
+            foreach (OwnerGroup g in groups)
+            {
+                g.Mine.Clear();
+                g.Sleeping.Clear();
+                spareGroups.Add(g);
+            }
+            groups.Clear();
+            int total = 0;
+            foreach (Mount.Instance i in Mount.All)
+            {
+                if (i.Ephemeral) continue;
+                GroupFor(i.OwnerId).Mine.Add(i);
+                total++;
+            }
+            foreach (Mount.DormantRecord d in Mount.Dormant)
+            {
+                GroupFor(d.Owner).Sleeping.Add(d);
+            }
+            foreach (OwnerGroup g in groups)
+            {
+                int kept = 0;
+                foreach (Mount.Instance i in g.Mine)
+                {
+                    if (i.Persist) kept++;
+                }
+                string text = $"{Mount.OwnerName(g.Owner)} ({g.Owner}){(Mount.OwnerPresent(g.Owner) ? "" : ", NOT INSTALLED")}: {g.Mine.Count} in the world, {kept} kept with saves{(g.Sleeping.Count > 0 ? $", {g.Sleeping.Count} dormant" : "")}";
+                g.HeaderOpen = "[-] " + text;
+                g.HeaderClosed = "[+] " + text;
+            }
+            groupsTitle = $"In the world ({total}{(Mount.Dormant.Count > 0 ? $", {Mount.Dormant.Count} dormant" : "")}), by mod";
+            if (rowText.Count > total + 64)
+            {
+                rowText.Clear();
+            }
+        }
+
+        private static OwnerGroup GroupFor(string owner)
+        {
+            foreach (OwnerGroup g in groups)
+            {
+                if (g.Owner == owner) return g;
+            }
+            OwnerGroup n;
+            if (spareGroups.Count > 0)
+            {
+                n = spareGroups[spareGroups.Count - 1];
+                spareGroups.RemoveAt(spareGroups.Count - 1);
+            }
+            else
+            {
+                n = new OwnerGroup();
+            }
+            n.Owner = owner;
+            groups.Add(n);
+            return n;
+        }
+
+        // A compact row's text, made in a Layout event at most four times a second (the distance moves; the rest
+        // rarely changes): 63 rows formatted on every event were the rest of this tab's garbage.
+        private static readonly Dictionary<Mount.Instance, (float Until, string Text)> rowText = new Dictionary<Mount.Instance, (float, string)>();
+
+        private static string CompactText(Mount.Instance i, PlayerData pd)
+        {
+            bool have = rowText.TryGetValue(i, out var c);
+            if (have && (Event.current.type != EventType.Layout || Time.unscaledTime < c.Until))
+            {
+                return c.Text;
+            }
+            string where = i.IsRidden ? "ridden by you"
+                : pd != null && pd.currentGameSceneId == i.SceneId
+                ? $"{Vector3.Distance(pd.position.Value, i.BodyPoint()):F1} away"
+                : $"in {i.SceneId}";
+            string family = i.Parent != null ? $", foal of {Ref(i, i.Parent)}" : "";
+            string level = i.tier == Mount.Tier.Idle ? ", idle (off screen)" : i.tier == Mount.Tier.Asleep ? ", asleep (far)" : "";
+            string text = $"#{i.Id} {i.KindName}{(i.Key != null ? $" '{i.Key}'" : "")}{family}, {where}{level}{(i.IsStepping ? ", stepping" : "")}{(i.Persist ? "" : ", not kept")}";
+            rowText[i] = (Time.unscaledTime + 0.25f, text);
+            return text;
         }
 
         // The free cart nearest to a donkey in its scene (for the panel's hitch button: any distance).
@@ -497,14 +588,8 @@ namespace GK2Mounts
         private static void DrawInstanceCompact(Mount.Instance i, PlayerData pd)
         {
             GUILayout.BeginHorizontal(GUI.skin.box);
-            string where = i.IsRidden ? "ridden by you"
-                : pd != null && pd.currentGameSceneId == i.SceneId
-                ? $"{Vector3.Distance(pd.position.Value, i.BodyPoint()):F1} away"
-                : $"in {i.SceneId}";
-            string family = i.Parent != null ? $", foal of {Ref(i, i.Parent)}" : "";
-            string level = i.tier == Mount.Tier.Idle ? ", idle (off screen)" : i.tier == Mount.Tier.Asleep ? ", asleep (far)" : "";
-            GUILayout.Label($"#{i.Id} {i.KindName}{(i.Key != null ? $" '{i.Key}'" : "")}{family}, {where}{level}{(i.IsStepping ? ", stepping" : "")}{(i.Persist ? "" : ", not kept")}", label);
-            if (GUILayout.Button("Details", GUILayout.Width(80f)))
+            GUILayout.Label(CompactText(i, pd), label);
+            if (GUILayout.Button("Details", Wd(80f)))
             {
                 pending = () => expanded.Add(i);
             }
@@ -524,28 +609,28 @@ namespace GK2Mounts
                 : i.Children().Count > 0 ? $" parent of {string.Join(", ", i.Children().ConvertAll(c => Ref(i, c)))};" : "";
             GUILayout.Label($"#{i.Id} {i.KindName}{(i.Key != null ? $" '{i.Key}'" : "")}:{family} {where}, facing {(i.FacingRight ? "right" : "left")}{(i.HasCart ? $", cargo [{string.Join(", ", cargo)}]" : "")}; {i.Overrides.Count} own setting(s); {(i.Persist ? "kept with saves" : "not kept with saves")}", editing == i ? instanceSet : label);
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button(editing == i ? "Stop editing" : "Edit its settings", GUILayout.Width(120f)))
+            if (GUILayout.Button(editing == i ? "Stop editing" : "Edit its settings", Wd(120f)))
             {
                 editing = editing == i ? null : i;
             }
             GUI.enabled = i.HasDonkey && i.Rideable && !i.IsRidden && !Mount.IsMounted && i.Ready;
-            if (GUILayout.Button("Ride", GUILayout.Width(60f)))
+            if (GUILayout.Button("Ride", Wd(60f)))
             {
                 pending = () => i.Handle.Ride();
             }
             GUI.enabled = !i.IsRidden;
-            if (GUILayout.Button("Move here", GUILayout.Width(90f)) && pd != null)
+            if (GUILayout.Button("Move here", Wd(90f)) && pd != null)
             {
                 pending = () => i.Handle.MoveTo(InFront(pd, 1.8f), pd.Direction.x >= 0f);
             }
             GUI.enabled = i.HasDonkey && i.HasCart && i.Ready;
-            if (GUILayout.Button("Unhitch", GUILayout.Width(80f)))
+            if (GUILayout.Button("Unhitch", Wd(80f)))
             {
                 pending = () => Mounts.Unhitch(i.Handle);
             }
             Mount.Instance cart = NearestFreeCart(i);
             GUI.enabled = i.HasDonkey && i.Rideable && !i.HasCart && cart != null;
-            if (GUILayout.Button(cart != null ? $"Hitch {Ref(i, cart)}" : "Hitch", GUILayout.Width(110f)))
+            if (GUILayout.Button(cart != null ? $"Hitch {Ref(i, cart)}" : "Hitch", Wd(110f)))
             {
                 pending = () =>
                 {
@@ -554,7 +639,7 @@ namespace GK2Mounts
                 };
             }
             GUI.enabled = true;
-            if (GUILayout.Button("Remove", GUILayout.Width(80f)))
+            if (GUILayout.Button("Remove", Wd(80f)))
             {
                 pending = () =>
                 {
@@ -565,7 +650,7 @@ namespace GK2Mounts
             GUILayout.EndHorizontal();
             // A second row: the first one is full (Keep in it pushed Remove off the edge, seen 2026-10-01).
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("Fewer details", GUILayout.Width(120f)))
+            if (GUILayout.Button("Fewer details", Wd(120f)))
             {
                 pending = () => expanded.Remove(i);
             }
@@ -585,6 +670,7 @@ namespace GK2Mounts
                 }
             }
             GUILayout.EndHorizontal();
+            GUILayout.Label(i.LevelText(), small);
             if (i.HasDonkey)
             {
                 GUILayout.Label("Idle shuffle: " + i.ShuffleStatusText(), small);
@@ -640,8 +726,8 @@ namespace GK2Mounts
         private static void HitchKeyRow()
         {
             GUILayout.BeginHorizontal();
-            GUILayout.Label("Hitch key (General.HitchKey)", label, GUILayout.Width(LabelW));
-            if (GUILayout.Button(Plugin.HitchKey.Value.ToString(), GUILayout.Width(90f)))
+            GUILayout.Label("Hitch key (General.HitchKey)", label, Wd(LabelW));
+            if (GUILayout.Button(Plugin.HitchKey.Value.ToString(), Wd(90f)))
             {
                 Plugin.HitchKey.Value = Plugin.HitchKey.Value == KeyCode.None ? KeyCode.J : KeyCode.None;
             }
