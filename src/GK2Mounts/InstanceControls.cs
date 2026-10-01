@@ -52,9 +52,13 @@ namespace GK2Mounts
             }
             try
             {
+                // The game's own interaction target wins the key (TryInteract steps aside for it), so our label hides
+                // while it has one: two labels on one key promised what the key would not do (an NPC's Speak next to a
+                // donkey's Drive, 2026-09-30).
+                bool gameTarget = GameHasTarget(pc);
                 if (!Mount.IsMounted)
                 {
-                    if (!pc.PlayerData.HasOverheadItem)
+                    if (!gameTarget && !pc.PlayerData.HasOverheadItem)
                     {
                         target = Nearest(pc, pc.PlayerData.position.Value, RideReach, i => i.HasDonkey && i.Rideable);
                         if (target != null)
@@ -65,7 +69,7 @@ namespace GK2Mounts
                     return;
                 }
                 Mount.Instance r = Mount.Ridden;
-                if (r.HasDonkey && !r.HasCart && r.Ready)
+                if (!gameTarget && r.HasDonkey && !r.HasCart && r.Ready)
                 {
                     target = Nearest(pc, r.BodyPoint(), HitchReach, i => !i.HasDonkey && i.Parent == null);
                     if (target != null)
@@ -83,6 +87,15 @@ namespace GK2Mounts
             {
                 Plugin.Log.LogWarning("Mount: instance controls failed: " + e.Message);
             }
+        }
+
+        // Something of the game's own is under interaction (a character, a work station, a pile): its prompt is shown and
+        // the interact key is its.
+        private static bool GameHasTarget(PlayerController pc)
+        {
+            PlayerInteractionComponent ic = pc.PlayerInteractionComponent;
+            return ic != null && (ic.WgoUnderInteraction != null
+                || ic.BigDropUnderInteraction != null && ic.BigDropUnderInteraction.InteractionHandler.HasInteraction());
         }
 
         private static void HitchKey(PlayerController pc, Mount.Instance r)
@@ -131,8 +144,7 @@ namespace GK2Mounts
             {
                 return false;
             }
-            PlayerInteractionComponent ic = pc.PlayerInteractionComponent;
-            if ((ic.BigDropUnderInteraction != null && ic.BigDropUnderInteraction.InteractionHandler.HasInteraction()) || ic.WgoUnderInteraction != null)
+            if (GameHasTarget(pc))
             {
                 return false;
             }

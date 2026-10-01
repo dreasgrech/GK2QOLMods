@@ -639,8 +639,9 @@ namespace GK2Mounts
                 {
                     // ByUI: chests/inventory. ByTeleport: doors. BySelf: set by the animator itself while certain
                     // states play (tool, work and some fishing poses carry CharacterSelfStateMachineBehaviour); with a
-                    // pose like that selected it is our own doing, so it must not end the ride.
-                    if (t == TakenControlType.ByUI || t == TakenControlType.ByTeleport || t == TakenControlType.BySelf)
+                    // pose like that selected it is our own doing, so it must not end the ride. ByFlow: below.
+                    if (t == TakenControlType.ByUI || t == TakenControlType.ByTeleport || t == TakenControlType.BySelf
+                        || t == TakenControlType.ByFlow)
                     {
                         continue;
                     }
@@ -648,6 +649,29 @@ namespace GK2Mounts
                     {
                         return "control taken " + t;
                     }
+                }
+                // A script holding control (an NPC's conversation, a quest moment, the town building window): the ride
+                // goes on while it only talks, and ends as soon as it stages something with the keeper
+                // (docs/mounts-talk-while-mounted.md).
+                if (!pc.IsControlEnabledByType(TakenControlType.ByFlow))
+                {
+                    string staged = ScriptStaged;
+                    if (staged != null)
+                    {
+                        return "script: " + staged;
+                    }
+                    if (pc.MovementComponent != null && pc.MovementComponent.IsMoving)
+                    {
+                        return "script: scripted walk";
+                    }
+                    if (CinematicShown())
+                    {
+                        return "script: cinematic";
+                    }
+                }
+                else
+                {
+                    ScriptStaged = null;
                 }
                 if (IsCoop())
                 {
@@ -658,6 +682,20 @@ namespace GK2Mounts
                     return "indoors";
                 }
                 return null;
+            }
+
+            // The letterbox bars of a staged scene (Flow_Cinematic, Flow_SetControlActive with cinematic).
+            private static bool CinematicShown()
+            {
+                try
+                {
+                    UICinematic c = LazyBearTechnology.LazyUI.Get<UICinematic>();
+                    return c != null && c.gameObject.activeSelf;
+                }
+                catch
+                {
+                    return false;
+                }
             }
 
             // The game switches its time-of-day lighting preset per area; interiors, the church and dungeons use presets

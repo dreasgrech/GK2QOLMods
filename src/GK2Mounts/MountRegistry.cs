@@ -26,6 +26,19 @@ namespace GK2Mounts
 
         internal static Instance Ridden { get; private set; }
 
+        // Set by the keeper-animation prefixes while mounted (Patches.cs), read by WhyMustDismount while a script holds
+        // control, cleared when it gives control back: what the script staged with the keeper.
+        internal static string ScriptStaged;
+
+        internal static void NoteScriptStaged(string what)
+        {
+            PlayerController pc = MainGame.Instance != null ? MainGame.PlayerController : null;
+            if (pc != null && !pc.IsControlEnabledByType(TakenControlType.ByFlow) && ScriptStaged == null)
+            {
+                ScriptStaged = what;
+            }
+        }
+
         internal static Instance Current => bound ?? Ridden;
 
         internal static int NextId() => nextId++;

@@ -21,6 +21,9 @@ namespace GK2Mounts
             Require(AccessTools.Method(typeof(AnimationComponentBase), nameof(AnimationComponentBase.SetWalkAnimationSpeedMultiplier)), "AnimationComponentBase.SetWalkAnimationSpeedMultiplier");
             Require(AccessTools.Method(typeof(AnimationComponentBase), nameof(AnimationComponentBase.SetDirection), new[] { typeof(UnityEngine.Vector2) }), "AnimationComponentBase.SetDirection(Vector2)");
             Require(AccessTools.Method(typeof(AnimationComponentBase), nameof(AnimationComponentBase.SetState), new[] { typeof(AnimationState) }), "AnimationComponentBase.SetState");
+            Require(AccessTools.Method(typeof(AnimationComponentBase), nameof(AnimationComponentBase.SetDirection), new[] { typeof(Direction) }), "AnimationComponentBase.SetDirection(Direction)");
+            Require(AccessTools.Method(typeof(AnimationComponentBase), nameof(AnimationComponentBase.SetTrigger), new[] { typeof(string) }), "AnimationComponentBase.SetTrigger(string)");
+            Require(AccessTools.Property(typeof(PlayerController), nameof(PlayerController.MovementComponent)), "PlayerController.MovementComponent");
             Require(typeof(PlayerAnimation).IsSubclassOf(typeof(AnimationComponentBase)) ? typeof(PlayerAnimation) : null, "PlayerAnimation : AnimationComponentBase");
             Require(AccessTools.Method(typeof(GK2.FlowCanvasNodes.Flow_Body), "DoAction", new[] { typeof(FlowCanvas.Flow) }), "Flow_Body.DoAction(Flow)");
             Require(AccessTools.Field(typeof(GK2.FlowCanvasNodes.Flow_Body), "success"), "Flow_Body.success");
@@ -103,6 +106,10 @@ namespace GK2Mounts
             {
                 return;
             }
+            if (animationState != AnimationState.Walk && animationState != AnimationState.Idle)
+            {
+                Mount.NoteScriptStaged("player state " + animationState); // a pose a script puts him in ends the ride
+            }
             if (animationState == AnimationState.Walk || animationState == AnimationState.Idle)
             {
                 AnimationState pose = Mount.RiderPoseState;
@@ -110,6 +117,37 @@ namespace GK2Mounts
                 {
                     animationState = pose;
                 }
+            }
+        }
+    }
+
+    // The Direction overload of the keeper's facing (scripts use it: Flow_SetDirection for the player can say Up or
+    // Down): while mounted the same left/right rule as the Vector2 one, or he would be shown from behind or the front
+    // sitting on a side-view donkey.
+    [HarmonyPatch(typeof(AnimationComponentBase), nameof(AnimationComponentBase.SetDirection), typeof(Direction))]
+    internal static class AnimationComponentBase_SetDirectionEnum_Patch
+    {
+        private static void Prefix(AnimationComponentBase __instance, ref Direction direction)
+        {
+            if (Mount.IsMounted && Mount.SideView && __instance is PlayerAnimation)
+            {
+                UnityEngine.Vector2 v = Mount.RiderFacing(direction.ConvertToVector2XZ());
+                direction = v.x >= 0f ? Direction.Right : Direction.Left;
+            }
+        }
+    }
+
+    // A trigger on the keeper's animator (a script's gesture: Flow_SetTriggerToAnimator for the player). The mod never
+    // sets one, so while mounted under a script's control it means a staged moment: the ride ends
+    // (docs/mounts-talk-while-mounted.md). Only noted here; WhyMustDismount acts on it.
+    [HarmonyPatch(typeof(AnimationComponentBase), nameof(AnimationComponentBase.SetTrigger), typeof(string))]
+    internal static class AnimationComponentBase_SetTrigger_Patch
+    {
+        private static void Prefix(AnimationComponentBase __instance, string trigger)
+        {
+            if (Mount.IsMounted && __instance is PlayerAnimation)
+            {
+                Mount.NoteScriptStaged($"player trigger '{trigger}'");
             }
         }
     }
