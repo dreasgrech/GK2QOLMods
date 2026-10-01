@@ -141,6 +141,67 @@ not kept with the save. The game was still at its 117 fps cap, because uncapping
 - **The panel:** the "mod" figure of 1.7 ms in these lines includes about 1 ms for the open Debug tab. With the panel
   closed, the per-frame work is Tick, 0.75 ms.
 
+## Memory and leaks (2026-10-01)
+
+**What the `[perf]` line shows:**
+- **Allocations:** the mod's managed allocations per frame (`GC.GetTotalMemory` around Tick and the panel window), and
+  per part, as "+N B", with the dev panel on.
+- **The game:** its garbage collections per second and its managed heap.
+- **Live counters for every Unity object the mod makes and must destroy:** colour textures (count and KB), colour
+  materials, hanging lamps, meshes, cargo holders, and shared colour textures (`Live` in Perf.cs).
+- **Slow frames:** a separate line for any frame over 20 ms, with each part of the mod's time in it.
+
+**The measurements:** the scatter test twice, and riding through 363 donkeys.
+
+| | 63 before | 363 | 63 after the 1st removal | 63 after the 2nd cycle |
+|---|---|---|---|---|
+| Textures | 427 (39 MB) | 1,197–1,400 (110–128 MB) | 441 (40 MB) | 441 (40 MB) |
+| Materials | 244 | 616–684 | 252 | 252 |
+| Lamps / meshes / cargo holders | 4 / 8 / 4 | 4 / 8 / 4 | 4 / 8 / 4 | 4 / 8 / 4 |
+
+- **No leak:** every counter returns to the same level after each cycle. The game's heap moves between 440 and 520 MB
+  without drifting.
+- **Colour textures were the big item:** each donkey kept its own copies, about 350 KB, also while asleep. That's
+  128 MB at 363, nearly all identical default colours. Building them allocated 700–800 KB of garbage per new view.
+  - **The fix:** `Colors.SharedTextures`, keyed by group and content, counted by users; the last user destroys the
+    texture. A shared texture is never filled in place.
+- **Per-frame garbage:** 6–17 KB a frame (1–2 MB/s at 120 fps). The game collected about every 15 s.
+  - A status string rebuilt every frame for every donkey near the keeper is now cached.
+  - The per-part allocation figures are there to find the rest.
+- **Riding through the herd:** views were made and released at up to 11–14 a second. Making a view took 2–5 ms in its
+  worst frame (the view 1.7–2.4, parts up to 1.4, colours up to 1.2). Most slow frames while riding (21–34 ms) had the
+  mod at about 1 ms, so they were the game's own.
+- **Found by the ride:** a donkey mounted while idle stayed invisible, and then faced the wrong way.
+  - **Invisible:** riding never runs the level check, so the ridden one is now woken every frame.
+  - **Facing:** an Animator switched off forgets its state and parameters by default. It now keeps them
+    (`keepAnimatorStateOnDisable`), and the stand pose is sent again on waking.
+
+## View reuse (2026-10-01, `ViewPool` in Tiers.cs)
+
+**How it works:**
+- **Parking:** a view released because its donkey fell asleep is put back to the prefab's state (`ReleaseView`, as for
+  the game's own part pool), switched off with `SetActive(false)` (the game's own way of hiding a Wgo), and parked by
+  scene, kind and size, at most 24 each.
+- **Reuse:** the next donkey of that scene, kind and size takes it. It gets its place and facing, stays hidden for the
+  frame its parts are prepared in, and is switched on.
+- **Excluded:** carts (their data holds the cargo inventory), ridden donkeys and the summon.
+
+**The game's code behind this:** `Wgo.Spawn` leaves a new view inactive, and `RefreshVisuals` (chunk culling) switches
+views on and off with `SetActive`. `WgoPart.OnEnable` and `OnDisable` initialise and deinitialise its drawer, and
+`AnimationComponentBase.OnDisable` resets to Idle.
+
+**Riding through 363 donkeys:**
+
+| | Before (new views only) | With reuse |
+|---|---|---|
+| Views made while riding | 11–15/s, all new | 4–18/s, 4–16 of them reused |
+| Worst Spawn in a second | 4.6–4.9 ms | 1.5–3.1 ms |
+| Worst making of the view itself | 1.7–2.4 ms | 0.8–1.6 ms (switching the parked view on) |
+
+- **What a reused view still costs:** preparing its parts and colours, up to about 0.6 and 0.3 ms.
+- **When many fall asleep at once:** only as many as fit are parked. The rest are destroyed as before; one second
+  released 53 and parked 15.
+
 ## Still open
 
 - **The per-frame work, about 0.5 ms with 63:** Shuffle, Pose and Ground checks. Not visible at the cap. Worth a pass

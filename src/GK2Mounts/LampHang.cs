@@ -63,12 +63,18 @@ namespace GK2Mounts
                     {
                         mf.sharedMesh = original;
                     }
+                    // Counted by reference: the lamp is a child of the view, so a view the game destroyed has already taken
+                    // it (Unity's == null says so), and it must still be counted down.
+                    if (!ReferenceEquals(lampGo, null))
+                    {
+                        Live.LampObjects--;
+                    }
                     if (lampGo != null)
                     {
                         UnityEngine.Object.Destroy(lampGo);
                     }
-                    if (poleMesh != null) UnityEngine.Object.Destroy(poleMesh);
-                    if (lampMesh != null) UnityEngine.Object.Destroy(lampMesh);
+                    if (poleMesh != null) { UnityEngine.Object.Destroy(poleMesh); Live.Meshes--; }
+                    if (lampMesh != null) { UnityEngine.Object.Destroy(lampMesh); Live.Meshes--; }
                 }
                 catch
                 {
@@ -142,6 +148,7 @@ namespace GK2Mounts
                     mf.sharedMesh = poleMesh;
 
                     lampGo = new GameObject("gk2_hanging_lamp");
+                    Live.LampObjects++;
                     lampGo.layer = mf.gameObject.layer;
                     lampGo.transform.SetParent(mf.transform, worldPositionStays: false);
                     lampGo.AddComponent<MeshFilter>().sharedMesh = lampMesh;
@@ -278,6 +285,7 @@ namespace GK2Mounts
             private static Mesh Build(string name, byte[] vertices, ushort[] idx, bool[] lampTri, bool keepLamp)
             {
                 var mesh = new Mesh { name = name };
+                Live.Meshes++;
                 mesh.SetVertexBufferParams(VertexCount,
                     new VertexAttributeDescriptor(VertexAttribute.Position, VertexAttributeFormat.Float32, 3),
                     new VertexAttributeDescriptor(VertexAttribute.Normal, VertexAttributeFormat.Float16, 4),

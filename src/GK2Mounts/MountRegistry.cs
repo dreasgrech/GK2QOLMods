@@ -334,6 +334,7 @@ namespace GK2Mounts
         public static void Tick()
         {
             Perf.BeginFrame();
+            using (Perf.MeasureAlloc())
             using (Perf.Measure(Perf.S.Tick))
             {
                 TickInner();
@@ -411,6 +412,7 @@ namespace GK2Mounts
                     {
                         using (Perf.Measure(Perf.S.Ride))
                         {
+                            r.WakeForRide();
                             r.Tick(pc, scene);
                         }
                     }
@@ -589,6 +591,7 @@ namespace GK2Mounts
             byFullId.Clear();
             structureVersion++;
             lent.Clear();
+            ViewPool.DestroyAll(); // the parked views belong to this game's scenes
         }
 
         internal static void OnVisualPartsLoaded(Wgo wgo)

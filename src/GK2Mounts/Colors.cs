@@ -28,6 +28,50 @@ namespace GK2Mounts
     // delivery donkey reuses them), so Detach puts every material, keyword and LUT back before the view is destroyed.
     internal static partial class Colors
     {
+        // Colour textures by what they hold, counted by the donkeys using them; the last one out destroys it.
+        internal static class SharedTextures
+        {
+            private sealed class Entry
+            {
+                internal Texture2D Tex;
+                internal int Refs;
+            }
+
+            private static readonly Dictionary<string, Entry> byKey = new Dictionary<string, Entry>(System.StringComparer.Ordinal);
+
+            internal static int Count => byKey.Count;
+
+            internal static Texture2D Acquire(string key, System.Func<Texture2D> build, ref int uploads)
+            {
+                if (!byKey.TryGetValue(key, out Entry e) || e.Tex == null)
+                {
+                    e = new Entry { Tex = build() };
+                    byKey[key] = e;
+                    uploads++;
+                }
+                e.Refs++;
+                return e.Tex;
+            }
+
+            internal static void Release(string key)
+            {
+                if (key == null || !byKey.TryGetValue(key, out Entry e))
+                {
+                    return;
+                }
+                if (--e.Refs > 0)
+                {
+                    return;
+                }
+                byKey.Remove(key);
+                if (e.Tex != null)
+                {
+                    Live.TextureGone(e.Tex);
+                    UnityEngine.Object.Destroy(e.Tex);
+                }
+            }
+        }
+
         internal const string Section = "Colors";
 
         // Where each colour list lives. A region can cover several (the wheels are sprites and meshes).
@@ -445,6 +489,9 @@ namespace GK2Mounts
             private readonly List<MeshTarget> meshes = new List<MeshTarget>();
             private readonly Texture2D[] palettes = new Texture2D[GroupCount];
             private readonly Texture2D[] luts = new Texture2D[GroupCount];
+            // Their keys in the shared cache (SharedTextures): donkeys with the same colours use the same textures.
+            private readonly string[] paletteKeys = new string[GroupCount];
+            private readonly string[] lutKeys = new string[GroupCount];
             private readonly bool[] groupActive = new bool[GroupCount];
             private Wgo attachedTo;
             private bool dirty = true;
@@ -564,8 +611,12 @@ namespace GK2Mounts
                     {
                         dirty = false;
                         var watch = System.Diagnostics.Stopwatch.StartNew();
-                        int uploaded = Rebuild();
-                        ApplyAll();
+                        int uploaded;
+                        using (Perf.Measure(Perf.S.ColorBuild))
+                        {
+                            uploaded = Rebuild();
+                            ApplyAll();
+                        }
                         double ms = watch.Elapsed.TotalMilliseconds;
                         // A slider drag rebuilds every frame: say so when that is not cheap (at most every 2 s).
                         if (ms > 4.0 && Time.unscaledTime >= nextSlowLog)
@@ -643,8 +694,9 @@ namespace GK2Mounts
             {
                 for (int i = 0; i < GroupCount; i++)
                 {
-                    if (palettes[i] != null) UnityEngine.Object.Destroy(palettes[i]);
-                    if (luts[i] != null) UnityEngine.Object.Destroy(luts[i]);
+                    SharedTextures.Release(paletteKeys[i]);
+                    SharedTextures.Release(lutKeys[i]);
+                    paletteKeys[i] = lutKeys[i] = null;
                     palettes[i] = null;
                     luts[i] = null;
                     builtFor[i] = false;
@@ -722,13 +774,27 @@ namespace GK2Mounts
                     {
                         continue; // this change was in another group
                     }
+                    // From the shared cache: built only when no other donkey has these colours yet (each donkey kept its own
+                    // copies: 363 donkeys held 1,400 textures, 128 MB, nearly all the same default colours; 2026-10-01).
+                    // A shared texture is never changed in place: other colours are another key, so another texture.
+                    string key = PairsKey(pairs);
                     if (IsSpriteGroup(g))
                     {
-                        palettes[gi] = BuildPalette(palettes[gi], pairs, "gk2mounts palette " + g);
-                        uploads++;
+                        string pk = "palette " + g + " " + key;
+                        if (pk != paletteKeys[gi])
+                        {
+                            palettes[gi] = SharedTextures.Acquire(pk, () => BuildPalette(null, pairs, "gk2mounts palette " + g), ref uploads);
+                            SharedTextures.Release(paletteKeys[gi]);
+                            paletteKeys[gi] = pk;
+                        }
                     }
-                    luts[gi] = BuildLut(luts[gi], pairs, "gk2mounts lut " + g);
-                    uploads++;
+                    string lk = "lut " + g + " " + key;
+                    if (lk != lutKeys[gi])
+                    {
+                        luts[gi] = SharedTextures.Acquire(lk, () => BuildLut(null, pairs, "gk2mounts lut " + g), ref uploads);
+                        SharedTextures.Release(lutKeys[gi]);
+                        lutKeys[gi] = lk;
+                    }
                     var mapped = new Color32[pairs.Count];
                     for (int i = 0; i < mapped.Length; i++) mapped[i] = pairs[i].Dst;
                     lastDst[gi] = mapped;
@@ -749,6 +815,18 @@ namespace GK2Mounts
 
             private static bool Same(Color32 a, Color32 b) => a.r == b.r && a.g == b.g && a.b == b.b;
 
+            // The colours a texture holds, as a key: every source and target colour in order.
+            private static string PairsKey(List<(Color32 Src, Color32 Dst)> pairs)
+            {
+                var sb = new System.Text.StringBuilder(pairs.Count * 13);
+                foreach (var p in pairs)
+                {
+                    sb.Append(p.Src.r.ToString("x2")).Append(p.Src.g.ToString("x2")).Append(p.Src.b.ToString("x2"))
+                      .Append('>').Append(p.Dst.r.ToString("x2")).Append(p.Dst.g.ToString("x2")).Append(p.Dst.b.ToString("x2")).Append(';');
+                }
+                return sb.ToString();
+            }
+
             // Width N, height 2: row 1 the source colours, row 0 their replacements (the game's layout,
             // PaletteReplaceHelper.CombinePalettes). Point-sampled, uncompressed, no mipmaps: the shader samples texel centres.
             private static Texture2D BuildPalette(Texture2D tex, List<(Color32 Src, Color32 Dst)> pairs, string name)
@@ -756,8 +834,9 @@ namespace GK2Mounts
                 int n = pairs.Count;
                 if (tex == null || tex.width != n)
                 {
-                    if (tex != null) UnityEngine.Object.Destroy(tex);
+                    if (tex != null) { Live.TextureGone(tex); UnityEngine.Object.Destroy(tex); }
                     tex = new Texture2D(n, 2, TextureFormat.RGBA32, mipChain: false) { name = name, filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
+                    Live.TextureMade(tex);
                 }
                 var px = new Color32[n * 2];
                 for (int i = 0; i < n; i++)
@@ -778,6 +857,7 @@ namespace GK2Mounts
                 if (tex == null)
                 {
                     tex = new Texture2D(1024, 32, TextureFormat.RGBA32, mipChain: false) { name = name, filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
+                    Live.TextureMade(tex);
                 }
                 var px = (Color32[])IdentityLut.Clone();
                 foreach (var p in pairs)
@@ -839,6 +919,7 @@ namespace GK2Mounts
                         t.Orig = t.R.sharedMaterial;
                         if (t.Orig == null) continue;
                         t.Mine = new Material(t.Orig) { name = t.Orig.name + " (GK2 Mounts colours)" };
+                        Live.Materials++;
                         t.R.sharedMaterial = t.Mine;
                         SetSpriteKeywords(t);
                     }
@@ -944,6 +1025,7 @@ namespace GK2Mounts
                         t.R.sharedMaterial = t.Orig;
                     }
                     UnityEngine.Object.Destroy(t.Mine);
+                    Live.Materials--;
                 }
                 catch
                 {

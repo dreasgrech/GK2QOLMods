@@ -205,6 +205,7 @@ namespace GK2Mounts
                 // The edited instance bound (IMGUI calls this at the end of OnGUI, so the binding is made here): rows
                 // that read a setting directly show its value, like Val does.
                 using (Mount.Bind(editing))
+                using (Perf.MeasureAlloc())
                 using (Perf.Measure(Perf.S.Window))
                 {
                     DrawContentsInner(id);

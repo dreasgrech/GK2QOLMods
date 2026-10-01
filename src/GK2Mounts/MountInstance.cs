@@ -69,6 +69,7 @@ namespace GK2Mounts
 
             private float nextSpawnTry;
             private int spawnFailures;
+            private bool loggedViewOff;
             private float nextViewlessTick;
 
             // A frame of an instance that is not ridden (bound): its view is spawned while its scene is loaded, then
@@ -76,6 +77,7 @@ namespace GK2Mounts
             internal void StandTick(PlayerController pc)
             {
                 Tier t = UpdateTier(pc); // Tiers.cs: active, idle (frozen view) or asleep (no view)
+                CheckWake();
                 if (donkey == null || !donkey)
                 {
                     if (donkey != null)
@@ -118,6 +120,7 @@ namespace GK2Mounts
                         return;
                     }
                     using (Perf.Measure(Perf.S.Spawn))
+                    using (Perf.Measure(Perf.S.Prepare))
                     {
                         PrepareParts(pc);
                     }
@@ -162,11 +165,34 @@ namespace GK2Mounts
 
             private void Stand()
             {
-                // Written every frame, also when unchanged. Writing only on a change (tried 2026-10-01 to save 0.02 ms of
-                // Pose) broke the one-frame turn (the body jumped 0.57 out and back on the frame after a turn: foals
-                // seemed to dart) and foals vanished from view; the write itself is what keeps the view placed.
-                donkey.Data.MovableDirection = new Vector2(riderFacingX, 0f);
-                donkey.Data.Position = VisualConsts.GetRoundedPosXYZ(Position, PixelSize());
+                // Written only when different: every write runs the game's own listeners, and its direction notificator
+                // compares with a generic Equals that boxes, about 130 bytes of garbage per donkey per frame (the most of
+                // the mod's per-frame garbage, measured 2026-10-01). The place is compared with the view's own transform
+                // too, so anything else moving the view is put right on the next frame. (A first try, compared with the
+                // data only, was blamed for darting and vanishing foals; those were the crowd teleports, fixed since.)
+                Vector2 facing = new Vector2(riderFacingX, 0f);
+                if (donkey.Data.MovableDirection != facing)
+                {
+                    donkey.Data.MovableDirection = facing;
+                    Perf.FacingWrites++;
+                }
+                Vector3 at = VisualConsts.GetRoundedPosXYZ(Position, PixelSize());
+                bool dataOff = donkey.Data.Position != at, viewOff = donkey.transform.position != at;
+                if (dataOff || viewOff)
+                {
+                    donkey.Data.Position = at;
+                    Perf.PositionWrites++;
+                    if (!dataOff && !loggedViewOff)
+                    {
+                        // The data was right but the view's transform wasn't: say where once, to see how the game places it.
+                        loggedViewOff = true;
+                        DiagLog($"[pose] {Describe()}: the view stands at {donkey.transform.position:F3}, its data at {at:F3}.");
+                    }
+                }
+                else
+                {
+                    Perf.PoseSkips++;
+                }
                 ApplyStandState(); // Idle, or Walk during an idle-shuffle step (IdleShuffle.cs)
                 if (cartParts.Count > 0)
                 {

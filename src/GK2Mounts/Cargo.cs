@@ -245,6 +245,10 @@ namespace GK2Mounts
                 // frame's end).
                 try
                 {
+                    if (!ReferenceEquals(container, null))
+                    {
+                        Live.CargoHolders--; // also when the game's destroying the view already took it (a child of the view)
+                    }
                     if (container != null && container)
                     {
                         container.SetParent(null, worldPositionStays: false);
@@ -1148,6 +1152,7 @@ namespace GK2Mounts
                 }
                 Transform parent = emptySway.parent;
                 var go = new GameObject(ContainerName);
+                Live.CargoHolders++;
                 container = go.transform;
                 container.SetParent(parent, worldPositionStays: false);
                 container.localRotation = Quaternion.identity;

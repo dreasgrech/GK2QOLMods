@@ -211,7 +211,7 @@ namespace GK2Mounts
                 }
                 if (KeeperClose(pc, BodyAt(Position, riderFacingX)))
                 {
-                    shuffleHold = $"holding: the keeper is within {IdleShuffle.KeeperDistance.Value:F1}";
+                    shuffleHold = HoldingText(); // the same string while the distance is (it ran every frame for every near donkey)
                     if (IsStepping)
                     {
                         EndStep(firstPause: false);
@@ -246,6 +246,20 @@ namespace GK2Mounts
                         break;
                 }
                 LogTurn();
+            }
+
+            private static float holdingFor = float.NaN;
+            private static string holdingText;
+
+            private static string HoldingText()
+            {
+                float d = IdleShuffle.KeeperDistance.Value;
+                if (d != holdingFor || holdingText == null)
+                {
+                    holdingFor = d;
+                    holdingText = $"holding: the keeper is within {d:F1}";
+                }
+                return holdingText;
             }
 
             private void StopShuffle()

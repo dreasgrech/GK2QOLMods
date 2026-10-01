@@ -182,6 +182,25 @@ namespace GK2Mounts
             // Ground height at a point, the way the game's WgoMovementAdjustComponent finds it: the scene's navigation
             // mesh first (nearest walkable node as seen from above, accepted if it is under the point), the ground raycast
             // (walkable layers 11/12) only as a fallback. NaN when neither knows.
+            // "raycast:<collider>@<layer>", made once per collider: built on every ground check it was most of the ground
+            // checks' garbage, and only failure messages read it (measured 2026-10-01).
+            private static readonly Dictionary<int, string> raycastSources = new Dictionary<int, string>();
+
+            private static string RaycastSource(Collider c)
+            {
+                int id = c.GetInstanceID();
+                if (!raycastSources.TryGetValue(id, out string s))
+                {
+                    if (raycastSources.Count > 512)
+                    {
+                        raycastSources.Clear();
+                    }
+                    s = "raycast:" + c.name + "@" + LayerMask.LayerToName(c.gameObject.layer);
+                    raycastSources[id] = s;
+                }
+                return s;
+            }
+
             internal static float GroundHeight(Vector3 p, out string source)
             {
                 using var perf = Perf.Measure(Perf.S.Ground);
@@ -203,7 +222,7 @@ namespace GK2Mounts
                     }
                     if (Physics.Raycast(new Ray(p + Vector3.up * 1f, Vector3.down), out RaycastHit hit, 10f, 6144))
                     {
-                        source = "raycast:" + hit.collider.name + "@" + LayerMask.LayerToName(hit.collider.gameObject.layer);
+                        source = RaycastSource(hit.collider);
                         return hit.point.y;
                     }
                 }
@@ -822,6 +841,17 @@ namespace GK2Mounts
                 try
                 {
                     string id = WgoId;
+                    if (TakeParkedView(scene, id)) // a released view of the same kind (Tiers.cs, ViewPool): no Wgo.Spawn
+                    {
+                        quietAnimators.Clear();
+                        quietKeepState.Clear();
+                        quietRenderers.Clear();
+                        SceneId = scene.Id;
+                        partsReady = false;
+                        cartParts.Clear();
+                        lastMirrored = (AnimationState)(-1);
+                        return true;
+                    }
                     WgoData data;
                     SuppressScripts = true;
                     try
@@ -840,6 +870,7 @@ namespace GK2Mounts
                     donkey = Wgo.Spawn(data, scene.transform, registerInChunkManagerIfStatic: true, ignoreChunkRegistration: true, applyDefaultWgoPartState: true);
                     donkey.UpdateChunkVisibility(isVisible: true);
                     quietAnimators.Clear(); // the old view's (Tiers.cs): a view the game destroyed while idle left them
+                    quietKeepState.Clear();
                     quietRenderers.Clear();
                     SceneId = scene.Id;
                     partsReady = false;

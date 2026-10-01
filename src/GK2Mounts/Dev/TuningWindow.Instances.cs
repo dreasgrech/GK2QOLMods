@@ -187,9 +187,18 @@ namespace GK2Mounts
             {
                 return c.Text;
             }
-            if (markerText.Count > 512)
+            if (markerText.Count > Mount.All.Count + 64)
             {
-                markerText.Clear(); // removed instances
+                // Removed instances (it held on to them): keep only the registered ones.
+                var gone = new List<Mount.Instance>();
+                foreach (Mount.Instance k in markerText.Keys)
+                {
+                    if (!Mount.IsRegistered(k)) gone.Add(k);
+                }
+                foreach (Mount.Instance k in gone)
+                {
+                    markerText.Remove(k);
+                }
             }
             string text = $"{OwnerShort(i.OwnerId)} #{i.Id}{(ed ? " editing" : "")}{(step ? " ~" : "")}";
             markerText[i] = (ed, step, text);
@@ -318,6 +327,8 @@ namespace GK2Mounts
                 }
             }
 
+            // Removed instances out of the panel's own view state (it held on to them: a small leak, 2026-10-01).
+            expanded.RemoveWhere(x => !Mount.IsRegistered(x));
             // Grouped by the mod that owns them (each numbers its own: #1 of one mod and #1 of another are two donkeys),
             // with that mod's dormant records (kept with the save, its mod not installed) at the end of its group.
             List<Mount.Instance> list = new List<Mount.Instance>();

@@ -26,7 +26,80 @@ namespace GK2Mounts
 
         // For the [perf] line: how many are in each level, and views made / released in the last second.
         internal static int ActiveCount, IdleCount, AsleepCount;
-        internal static int Spawned, Released;
+        internal static int Spawned, Released, Parked, Reused;
+    }
+
+    // Released views kept for the next donkey that needs one (docs/mounts-performance.md, "View reuse"): building a view
+    // cost 1 to 4 ms (the game's Wgo.Spawn, then the parts), every time a donkey woke while the keeper rode through a
+    // herd. A released view is put back to the prefab's state (ReleaseView, as for the game's pool) and switched off with
+    // SetActive(false), the game's own way of hiding a Wgo (Spawn leaves one inactive; its chunk culling switches them).
+    // Taken again by a donkey of the same scene, kind and size: its place and facing set, hidden for the frame its parts
+    // are prepared in, switched on. Only donkeys without a cart: a cart's view holds the cargo inventory in its data.
+    internal static class ViewPool
+    {
+        internal const int MaxPerKey = 24;
+        private static readonly Dictionary<string, Stack<Wgo>> parked = new Dictionary<string, Stack<Wgo>>(System.StringComparer.Ordinal);
+
+        internal static int Count
+        {
+            get
+            {
+                int n = 0;
+                foreach (Stack<Wgo> s in parked.Values) n += s.Count;
+                return n;
+            }
+        }
+
+        internal static string Key(string sceneId, string wgoId, float scale) => sceneId + "|" + wgoId + "|" + scale.ToString("F2");
+
+        internal static bool HasRoom(string key) => !parked.TryGetValue(key, out Stack<Wgo> s) || s.Count < MaxPerKey;
+
+        internal static void Park(string key, Wgo v)
+        {
+            if (!parked.TryGetValue(key, out Stack<Wgo> s))
+            {
+                parked[key] = s = new Stack<Wgo>();
+            }
+            s.Push(v);
+        }
+
+        internal static bool TryTake(string key, out Wgo v)
+        {
+            v = null;
+            if (!parked.TryGetValue(key, out Stack<Wgo> s))
+            {
+                return false;
+            }
+            while (s.Count > 0)
+            {
+                Wgo w = s.Pop();
+                if (w != null && w) // a view whose scene unloaded is gone (the game destroyed it with the scene)
+                {
+                    v = w;
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // Leaving the game, another game loaded, the mod switched off: the parked views go for good.
+        internal static void DestroyAll()
+        {
+            foreach (Stack<Wgo> s in parked.Values)
+            {
+                foreach (Wgo w in s)
+                {
+                    try
+                    {
+                        if (w != null && w) Object.Destroy(w.gameObject);
+                    }
+                    catch
+                    {
+                    }
+                }
+            }
+            parked.Clear();
+        }
     }
 
     internal static partial class Mount
@@ -75,10 +148,64 @@ namespace GK2Mounts
             private float nextTierCheck;
             private float nextAsleepTick;
             private readonly List<Behaviour> quietAnimators = new List<Behaviour>();
+            private readonly List<bool> quietKeepState = new List<bool>(); // each one's own keepAnimatorStateOnDisable
             private readonly List<Renderer> quietRenderers = new List<Renderer>();
 
             // Check the level at once on the next frame (moved by the API or the panel, caught up, came to the keeper).
             internal void TierNow() => nextTierCheck = 0f;
+
+            // Two frames after waking: the view's animator's own Direction parameter next to the facing wanted, in the
+            // log ([wake]), so a wrong facing after waking shows as a measurement, not only if someone happens to see it.
+            private int wakeCheckFrame = -1;
+
+            internal void CheckWake()
+            {
+                if (wakeCheckFrame < 0 || Time.frameCount < wakeCheckFrame)
+                {
+                    return;
+                }
+                wakeCheckFrame = -1;
+                if (donkey == null || !donkey)
+                {
+                    return;
+                }
+                try
+                {
+                    foreach (Animator a in donkey.GetComponentsInChildren<Animator>())
+                    {
+                        if (a == null || !a.isActiveAndEnabled || a.runtimeAnimatorController == null)
+                        {
+                            continue;
+                        }
+                        foreach (AnimatorControllerParameter p in a.parameters)
+                        {
+                            if (p.name == "Direction" && p.type == AnimatorControllerParameterType.Float)
+                            {
+                                DiagLog($"[wake] {Describe()}{(mounted ? " (ridden)" : "")}: animator Direction {a.GetFloat(p.nameHash):F0}, wanted {(riderFacingX > 0f ? "right" : "left")} (data {donkey.Data.MovableDirection.x:F0}).");
+                                return;
+                            }
+                        }
+                    }
+                }
+                catch
+                {
+                }
+            }
+
+            // The ridden one, every frame (MountRegistry.Tick): fully awake. Riding never goes through StandTick, where the
+            // level is checked, so a donkey mounted while idle kept its frozen, undrawn view: the keeper rode an invisible
+            // donkey (found 2026-10-01, the showcase's H on a donkey standing off screen).
+            internal void WakeForRide()
+            {
+                CheckWake();
+                if (tier == Tier.Active && quietAnimators.Count == 0 && quietRenderers.Count == 0)
+                {
+                    return;
+                }
+                tier = Tier.Active;
+                QuietAnimators(false);
+                nextTierCheck = 0f;
+            }
 
             private Tier WantTier(PlayerController pc)
             {
@@ -145,7 +272,10 @@ namespace GK2Mounts
                 if (want == Tier.Asleep && donkey != null && donkey)
                 {
                     QuietAnimators(false);
-                    DestroyDonkey(); // the scene-change release: cargo, colours, settings stay with the instance
+                    using (Perf.Measure(Perf.S.Release))
+                    {
+                        ParkOrDestroyView(); // cargo, colours, settings stay with the instance; the view is kept if it can be
+                    }
                     Lod.Released++;
                 }
                 else if (want == Tier.Idle)
@@ -170,11 +300,35 @@ namespace GK2Mounts
             {
                 if (!quiet)
                 {
-                    foreach (Behaviour a in quietAnimators)
+                    bool any = quietAnimators.Count > 0;
+                    for (int k = 0; k < quietAnimators.Count; k++)
                     {
-                        if (a != null && a) a.enabled = true;
+                        Behaviour a = quietAnimators[k];
+                        if (a == null || !a) continue;
+                        a.enabled = true;
+                        if (a is Animator an && k < quietKeepState.Count)
+                        {
+                            an.keepAnimatorStateOnDisable = quietKeepState[k]; // the pooled part as the game made it
+                        }
                     }
                     quietAnimators.Clear();
+                    quietKeepState.Clear();
+                    if (any)
+                    {
+                        lastMirrored = (AnimationState)(-1); // the stand pose is sent again on its next frame
+                        // The facing too, straight to the animation: one set while the animator was off (the showcase's H
+                        // turning a frozen donkey towards the keeper) never reached it, and the data, already holding the
+                        // new facing, doesn't tell it again: mounted, the donkey faced away until the first turn
+                        // (2026-10-01).
+                        try
+                        {
+                            donkey?.MainWgoPart?.AnimationComponent?.SetDirection(new Vector2(riderFacingX, 0f));
+                        }
+                        catch
+                        {
+                        }
+                        wakeCheckFrame = Time.frameCount + 2; // and checked: the animator's own facing (CheckWake)
+                    }
                     foreach (Renderer r in quietRenderers)
                     {
                         if (r != null && r) r.forceRenderingOff = false;
@@ -190,6 +344,10 @@ namespace GK2Mounts
                 {
                     if (a.enabled)
                     {
+                        // An Animator switched off forgets its state and parameters by default: woken again, the donkey
+                        // stood in the controller's default facing while the keeper sat the other way (found 2026-10-01).
+                        quietKeepState.Add(a.keepAnimatorStateOnDisable);
+                        a.keepAnimatorStateOnDisable = true;
                         a.enabled = false;
                         quietAnimators.Add(a);
                     }
@@ -225,6 +383,81 @@ namespace GK2Mounts
                 }
             }
 
+            // Asleep: the view to the pool (ViewPool) when another donkey can use it, else released for good as before.
+            private void ParkOrDestroyView()
+            {
+                Wgo v = donkey;
+                string key = v != null && v ? ViewPool.Key(SceneId, WgoId, ViewScale) : null;
+                bool can = key != null && !mounted && !riderAttached && HasDonkey && !HasCart && !Ephemeral
+                    && InventoryEmpty(v) && ViewPool.HasRoom(key);
+                if (!can)
+                {
+                    DestroyDonkey();
+                    return;
+                }
+                ReleaseView(); // back to the prefab's state, as for the game's own pool
+                donkey = null;
+                partsReady = false;
+                cartParts.Clear();
+                hiddenRenderers.Clear();
+                seatPending = false;
+                bodySprite = null;
+                donkeyBodyRenderer = null;
+                try
+                {
+                    v.gameObject.SetActive(false);
+                    ViewPool.Park(key, v);
+                    Lod.Parked++;
+                }
+                catch
+                {
+                    try { Object.Destroy(v.gameObject); } catch { }
+                }
+            }
+
+            private static bool InventoryEmpty(Wgo v)
+            {
+                try
+                {
+                    Inventory inv = v.Data?.Inventory;
+                    if (inv?.Data?.Inventory == null)
+                    {
+                        return true;
+                    }
+                    foreach (Item it in inv.Data.Inventory)
+                    {
+                        if (it != null && !it.IsEmpty) return false;
+                    }
+                    return true;
+                }
+                catch
+                {
+                    return false;
+                }
+            }
+
+            // TrySpawn: a parked view of this scene, kind and size instead of a new one, when there is one.
+            private bool TakeParkedView(GameScene scene, string wgoId)
+            {
+                if (mounted || !HasDonkey || HasCart || Ephemeral)
+                {
+                    return false;
+                }
+                if (!ViewPool.TryTake(ViewPool.Key(scene.Id, wgoId, ViewScale), out Wgo v))
+                {
+                    return false;
+                }
+                donkey = v;
+                v.Data.Position = VisualConsts.GetRoundedPosXYZ(Position, PixelSize());
+                v.Data.MovableDirection = new Vector2(riderFacingX, 0f);
+                hiddenRenderers.Clear();
+                HideRenderersNow();          // shown again one frame after PrepareParts, as a new view is
+                revealFrame = int.MaxValue;
+                v.gameObject.SetActive(true);
+                Lod.Reused++;
+                return true;
+            }
+
             // The registry's spawn queue made room for this one: its view now.
             internal bool SpawnQueued(PlayerController pc)
             {
@@ -236,7 +469,10 @@ namespace GK2Mounts
                 bool spawned;
                 using (Perf.Measure(Perf.S.Spawn))
                 {
-                    spawned = TrySpawn(pc, scene);
+                    using (Perf.Measure(Perf.S.SpawnView))
+                    {
+                        spawned = TrySpawn(pc, scene);
+                    }
                 }
                 if (spawned)
                 {
