@@ -149,17 +149,28 @@ namespace GK2Mounts
 
         private static void CountInstances()
         {
-            int n = 0, v = 0, f = 0;
+            int n = 0, v = 0, f = 0, act = 0, idle = 0, asleep = 0;
             foreach (Mount.Instance i in Mount.All)
             {
                 n++;
                 if (i.Ready) v++;
                 if (i.Parent != null) f++;
+                if (i.tier == Mount.Tier.Idle) idle++;
+                else if (i.tier == Mount.Tier.Asleep) asleep++;
+                else act++;
             }
             Instances = n;
             Views = v;
             Foals = f;
+            Lod.ActiveCount = act;
+            Lod.IdleCount = idle;
+            Lod.AsleepCount = asleep;
+            SpawnedPerSecond = Lod.Spawned;
+            ReleasedPerSecond = Lod.Released;
+            Lod.Spawned = Lod.Released = 0;
         }
+
+        internal static int SpawnedPerSecond, ReleasedPerSecond;
 
         // Ours: the per-frame work (Tick) plus the panel (Panel contains Markers; Window is measured on its own).
         internal static double OursAvgMs => AvgMs[(int)S.Tick] + AvgMs[(int)S.Panel] + AvgMs[(int)S.Window];
@@ -168,7 +179,7 @@ namespace GK2Mounts
         {
             var sb = new StringBuilder();
             string sep = oneLine ? "; " : "\n";
-            sb.Append($"{Fps:F0} fps, frame {FrameAvgMs:F1} ms (worst {FrameWorstMs:F0}); mod {OursAvgMs:F2} ms ({(FrameAvgMs > 0 ? OursAvgMs / FrameAvgMs * 100 : 0):F0}% of the frame); {Instances} instance(s), {Views} view(s), {Foals} foal(s); {LogLinesPerSecond} log line(s)/s");
+            sb.Append($"{Fps:F0} fps, frame {FrameAvgMs:F1} ms (worst {FrameWorstMs:F0}); mod {OursAvgMs:F2} ms ({(FrameAvgMs > 0 ? OursAvgMs / FrameAvgMs * 100 : 0):F0}% of the frame); {Instances} instance(s), {Views} view(s), {Foals} foal(s); levels {Lod.ActiveCount} active / {Lod.IdleCount} idle / {Lod.AsleepCount} asleep{(Lod.On ? "" : " (levels off)")}, views made {SpawnedPerSecond}/s, released {ReleasedPerSecond}/s; {LogLinesPerSecond} log line(s)/s");
             for (int i = 0; i < (int)S.Count; i++)
             {
                 if (AvgMs[i] < 0.005 && CallsPerFrame[i] < 0.01)

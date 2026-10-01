@@ -169,7 +169,7 @@ namespace GK2Mounts
             {
                 return true;
             }
-            Plugin.Log.LogInfo($"Mount: skipped attached script [{scriptName}] for the temporary [{wgoData?.id}].");
+            Mount.DiagLog($"Mount: skipped attached script [{scriptName}] for the temporary [{wgoData?.id}]."); // once per view
             return false;
         }
     }

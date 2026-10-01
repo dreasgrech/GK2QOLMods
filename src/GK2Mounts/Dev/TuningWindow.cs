@@ -915,6 +915,15 @@ namespace GK2Mounts
             Perf.ExpNoShuffle = GUILayout.Toggle(Perf.ExpNoShuffle, " Experiment: standing donkeys don't shuffle or follow (the mod's movement work off)");
             Perf.ExpHideViews = GUILayout.Toggle(Perf.ExpHideViews, " Experiment: hide standing donkeys (no drawing, no animation: the game's cost of showing them)");
 
+            Header("Levels: far and off-screen donkeys do less (this session)");
+            GUILayout.Label("Active: ridden, edited here, near the keeper or on screen: everything. Idle: off screen up to the sleep distance: the view stays but stands frozen. Asleep: beyond it: no view (it comes back inside the wake distance). New views: a few per frame, nearest first.", small);
+            Lod.On = GUILayout.Toggle(Lod.On, " Levels on (off: every donkey is always active, as before)");
+            Lod.ActiveRadius = SessionFloatRow("Always active within", Lod.ActiveRadius, 3f, 60f);
+            Lod.SleepRadius = SessionFloatRow("Asleep beyond", Lod.SleepRadius, 10f, 200f);
+            Lod.WakeRadius = Mathf.Min(SessionFloatRow("Awake again within", Lod.WakeRadius, 5f, 200f), Lod.SleepRadius - 2f);
+            Lod.ScreenMargin = SessionFloatRow("On screen margin (fraction of the screen)", Lod.ScreenMargin, 0f, 1f);
+            Lod.SpawnsPerFrame = SessionIntRow("New views per frame", Lod.SpawnsPerFrame, 1, 20);
+
             Header("This panel");
             // Stepped, not sliders: dragging a slider that rescales the panel moves the slider under the mouse.
             Stepper("Panel size, everything (Debug.TuningWindowScale)", Plugin.TuningWindowScale, 0.1f, 0.75f, 3f, "0.00");

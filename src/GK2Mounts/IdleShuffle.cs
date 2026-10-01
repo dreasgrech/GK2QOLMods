@@ -587,9 +587,9 @@ namespace GK2Mounts
 
             private bool NearOther(Vector3 point)
             {
-                foreach (Instance o in All)
+                foreach (Instance o in InScene(SceneId))
                 {
-                    if (o == this || o.SceneId != SceneId)
+                    if (o == this)
                     {
                         continue;
                     }

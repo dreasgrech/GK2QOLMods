@@ -450,16 +450,36 @@ namespace GK2Mounts.Api
         // Every instance of one owner, in spawn order.
         public static IReadOnlyList<MountHandle> InstancesOf(string ownerId)
         {
-            var l = new List<MountHandle>();
-            foreach (Mount.Instance i in Mount.All)
+            if (ownerId == null)
             {
-                if (!i.Ephemeral && i.OwnerId == ownerId && i.Handle != null)
+                return new List<MountHandle>();
+            }
+            if (ofOwnerVersion != Mount.structureVersion)
+            {
+                ofOwner.Clear();
+                ofOwnerVersion = Mount.structureVersion;
+            }
+            if (!ofOwner.TryGetValue(ownerId, out List<MountHandle> l))
+            {
+                l = new List<MountHandle>();
+                foreach (Mount.Instance i in Mount.All)
                 {
-                    l.Add(i.Handle);
+                    if (!i.Ephemeral && i.OwnerId == ownerId && i.Handle != null)
+                    {
+                        l.Add(i.Handle);
+                    }
                 }
+                ofOwner[ownerId] = l;
             }
             return l;
         }
+
+        // Cached per change of the set of instances (Mount.structureVersion): a mod reading Instances or InstancesOf
+        // every frame no longer builds a list every frame. Each change makes new lists, so a list a caller holds stays
+        // as it was (a snapshot, as before), also while it removes instances in a loop over it.
+        private static List<MountHandle> allHandles;
+        private static int allVersion = -1, ofOwnerVersion = -1;
+        private static readonly Dictionary<string, List<MountHandle>> ofOwner = new Dictionary<string, List<MountHandle>>(StringComparer.Ordinal);
 
         // Owner-only changes (MountHandle.SetPersist, SetKey): its owner, or the core and its panel.
         internal static string WhyNotOwner(MountHandle h, string ownerId)
@@ -484,15 +504,20 @@ namespace GK2Mounts.Api
         {
             get
             {
-                var l = new List<MountHandle>();
-                foreach (Mount.Instance i in Mount.All)
+                if (allHandles == null || allVersion != Mount.structureVersion)
                 {
-                    if (!i.Ephemeral && i.Handle != null)
+                    var l = new List<MountHandle>();
+                    foreach (Mount.Instance i in Mount.All)
                     {
-                        l.Add(i.Handle);
+                        if (!i.Ephemeral && i.Handle != null)
+                        {
+                            l.Add(i.Handle);
+                        }
                     }
+                    allHandles = l;
+                    allVersion = Mount.structureVersion;
                 }
-                return l;
+                return allHandles;
             }
         }
 

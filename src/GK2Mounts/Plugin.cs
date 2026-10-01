@@ -424,6 +424,9 @@ namespace GK2Mounts
                 return;
             }
             Patched = true;
+            // With the dev panel on (Debug.TuningWindow), the [perf] line is written every 10 s from the start: a
+            // measurement no longer depends on remembering the panel's switch (it can still be switched off there).
+            Perf.LogEvery10s = TuningWindowEnabled.Value;
             MainGame.OnGameStarted = (Action)Delegate.Combine(MainGame.OnGameStarted, new Action(Mount.OnGameStarted));
             Log.LogInfo($"GK2 Mounts {Version} loaded (API {Mounts.ApiVersion}); nothing happens until a mod uses it.");
         }

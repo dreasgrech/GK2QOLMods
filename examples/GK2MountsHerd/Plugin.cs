@@ -19,6 +19,8 @@ namespace GK2MountsHerd
     //   RemoveKey (Shift+K) the herd and its foals go (cargo set down first)
     //   FoalKey (U)         a herd foal for the nearest donkey of another mod (or of the herd, if there is none)
     //   ReportKey (Shift+U) every instance of every mod in the log: number, key, kept, data
+    //   ScatterKey (L)      50 more donkeys scattered up to ScatterRadius around the keeper, not kept with the save (a
+    //                       load test: docs/mounts-performance.md); Shift+L removes every scattered one
     // Every line it logs starts with "Herd:". Remove its DLL to test dormant records: its donkeys stay in the side file.
     [BepInPlugin(Guid, "GK2 Herd (test)", "0.1.0")]
     [BepInDependency("dreas.gk2.mounts", "0.1.0")]
@@ -31,7 +33,9 @@ namespace GK2MountsHerd
         private static readonly string[] FoalNames = { "Pip", "Bean", "Nettle", "Sprout", "Wren", "Fig", "Pebble", "Thistle" };
         private const int HerdSize = 5;
 
-        private ConfigEntry<KeyboardShortcut> spawnKey, removeKey, foalKey, reportKey;
+        private ConfigEntry<KeyboardShortcut> spawnKey, removeKey, foalKey, reportKey, scatterKey, unscatterKey;
+        private ConfigEntry<float> scatterRadius;
+        private int scattered;
         private ConfigEntry<bool> keepWithSaves;
         private bool ready;
         private object earlyTriedFor; // the game save an early spawn was tried for (once per load)
@@ -43,6 +47,9 @@ namespace GK2MountsHerd
             foalKey = Config.Bind("Keys", "FoalKey", new KeyboardShortcut(KeyCode.U), "A herd foal for the nearest donkey of another mod (or of the herd).");
             reportKey = Config.Bind("Keys", "ReportKey", new KeyboardShortcut(KeyCode.U, KeyCode.LeftShift), "Every instance of every mod in the log.");
             keepWithSaves = Config.Bind("Herd", "KeepWithSaves", true, "The herd and its foals are kept with the save.");
+            scatterKey = Config.Bind("Keys", "ScatterKey", new KeyboardShortcut(KeyCode.L), "50 more donkeys scattered around the keeper (load test, not kept with the save).");
+            unscatterKey = Config.Bind("Keys", "UnscatterKey", new KeyboardShortcut(KeyCode.L, KeyCode.LeftShift), "Remove every scattered donkey.");
+            scatterRadius = Config.Bind("Herd", "ScatterRadius", 60f, "How far around the keeper the scatter key spreads its donkeys.");
 
             if (Mounts.ApiVersion < NeedsApi)
             {
@@ -140,7 +147,9 @@ namespace GK2MountsHerd
                 {
                     return;
                 }
-                if (Pressed(removeKey)) RemoveHerd();
+                if (Pressed(unscatterKey)) Unscatter();
+                else if (Pressed(scatterKey)) Scatter();
+                else if (Pressed(removeKey)) RemoveHerd();
                 else if (Pressed(spawnKey)) SpawnOrCall();
                 else if (Pressed(reportKey)) Report();
                 else if (Pressed(foalKey)) AddFoal();
@@ -194,12 +203,54 @@ namespace GK2MountsHerd
             Logger.LogInfo($"Herd: {made} spawned, {called} called to the keeper.");
         }
 
+        // A load test: 50 donkeys at random points up to ScatterRadius around the keeper (the core puts each on the ground
+        // under its point; a point with no ground is refused), shuffling, not kept with the save.
+        private void Scatter()
+        {
+            Vector3 keeper = Keeper();
+            int made = 0, refused = 0;
+            for (int n = 0; n < 50; n++)
+            {
+                Vector2 r = UnityEngine.Random.insideUnitCircle * scatterRadius.Value;
+                MountHandle h = Mounts.Spawn(Guid, new MountSpawn
+                {
+                    Position = keeper + new Vector3(r.x, 0f, r.y),
+                    FacingRight = UnityEngine.Random.value < 0.5f,
+                    Key = "scatter-" + (++scattered),
+                    Persist = false,
+                });
+                if (h == null)
+                {
+                    refused++;
+                    continue;
+                }
+                h.Tuning.Set(Guid, "IdleShuffle", true);
+                made++;
+            }
+            Logger.LogInfo($"Herd: scattered {made} donkey(s) up to {scatterRadius.Value:F0} around the keeper ({refused} refused); {Mounts.Instances.Count} instance(s) in all.");
+        }
+
+        private void Unscatter()
+        {
+            int n = 0;
+            foreach (MountHandle h in Mounts.InstancesOf(Guid))
+            {
+                if (h.Exists && h.Key != null && h.Key.StartsWith("scatter-", StringComparison.Ordinal))
+                {
+                    h.Remove();
+                    n++;
+                }
+            }
+            Logger.LogInfo($"Herd: removed {n} scattered donkey(s).");
+        }
+
         private void RemoveHerd()
         {
             int n = 0;
             foreach (MountHandle h in Mounts.InstancesOf(Guid))
             {
                 if (!h.Exists) continue; // a foal that went with its parent
+                if (h.Key != null && h.Key.StartsWith("scatter-", StringComparison.Ordinal)) continue; // Shift+L for those
                 h.SetDownCargo();
                 h.Remove();
                 n++;

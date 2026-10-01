@@ -69,11 +69,13 @@ namespace GK2Mounts
 
             private float nextSpawnTry;
             private int spawnFailures;
+            private float nextViewlessTick;
 
             // A frame of an instance that is not ridden (bound): its view is spawned while its scene is loaded, then
             // posed where it stands, idle, with its cart on the ground, lantern and colours as when ridden.
             internal void StandTick(PlayerController pc)
             {
+                Tier t = UpdateTier(pc); // Tiers.cs: active, idle (frozen view) or asleep (no view)
                 if (donkey == null || !donkey)
                 {
                     if (donkey != null)
@@ -83,6 +85,18 @@ namespace GK2Mounts
                         partsReady = false;
                         cartParts.Clear();
                     }
+                    if (t == Tier.Asleep)
+                    {
+                        AsleepTick();
+                        return;
+                    }
+                    // Without a view (its scene isn't loaded): twice a second is enough, and a world full of donkeys in
+                    // other scenes then costs next to nothing per frame.
+                    if (Time.unscaledTime < nextViewlessTick)
+                    {
+                        return;
+                    }
+                    nextViewlessTick = Time.unscaledTime + 0.5f;
                     StopShuffle(); // a step in progress ends where it is; home is taken again with the new view
                     FollowWithoutView(); // a foal goes to its parent's place when that is somewhere else (Foals.cs)
                     GameScene scene = LoadedScene(SceneId);
@@ -90,20 +104,11 @@ namespace GK2Mounts
                     {
                         return;
                     }
-                    bool spawned;
-                    using (Perf.Measure(Perf.S.Spawn))
-                    {
-                        spawned = TrySpawn(pc, scene);
-                    }
-                    if (spawned)
-                    {
-                        spawnFailures = 0;
-                    }
-                    else
-                    {
-                        spawnFailures++;
-                        nextSpawnTry = Time.unscaledTime + Mathf.Min(60f, Mathf.Pow(2f, spawnFailures - 1));
-                    }
+                    // Made by the registry after this frame's loop, the nearest few a frame (Tiers.cs): fifty views in one
+                    // frame hitched (2026-10-01).
+                    float d = SceneId == pc.PlayerData.currentGameSceneId ? FlatDistance(Position, pc.PlayerData.position.Value) : 10000f;
+                    QueueSpawn(this, d);
+                    nextViewlessTick = 0f; // asked again next frame if the queue had no room this time
                     return;
                 }
                 if (!partsReady)
@@ -120,6 +125,14 @@ namespace GK2Mounts
                     {
                         return;
                     }
+                    if (tier == Tier.Idle)
+                    {
+                        QuietAnimators(true); // made while idle (the ring around the keeper): ready, but frozen
+                    }
+                }
+                if (t == Tier.Idle)
+                {
+                    return; // frozen where it stands until it is active again (Tiers.cs)
                 }
                 if (!Perf.ExpNoShuffle)
                 {
@@ -538,6 +551,8 @@ namespace GK2Mounts
                     DestroyDonkey(); // spawned again in the keeper's scene by StandTick
                     SceneId = scene.Id;
                     nextSpawnTry = 0f;
+                    nextViewlessTick = 0f;
+                    TierNow();
                     spawnFailures = 0;
                 }
                 Position = target;
@@ -581,6 +596,7 @@ namespace GK2Mounts
             // Moves a standing instance (MountHandle.MoveTo). Ground height from the ground under the point.
             internal void MoveTo(Vector3 position, float? facingX, bool snap = true)
             {
+                TierNow(); // somewhere else now: its level is checked on the next frame
                 Position = snap ? SnapToGround(position) : position;
                 if (facingX.HasValue)
                 {

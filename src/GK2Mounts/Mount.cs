@@ -839,6 +839,8 @@ namespace GK2Mounts
                     }
                     donkey = Wgo.Spawn(data, scene.transform, registerInChunkManagerIfStatic: true, ignoreChunkRegistration: true, applyDefaultWgoPartState: true);
                     donkey.UpdateChunkVisibility(isVisible: true);
+                    quietAnimators.Clear(); // the old view's (Tiers.cs): a view the game destroyed while idle left them
+                    quietRenderers.Clear();
                     SceneId = scene.Id;
                     partsReady = false;
                     cartParts.Clear();

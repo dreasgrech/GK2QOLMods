@@ -76,6 +76,40 @@ namespace GK2Mounts
         // Every instance, the ridden and the ephemeral summon included.
         internal static IReadOnlyList<Instance> All => instances;
 
+        // Bumped when the set of instances or any parent link changes: the caches built from them (Children, the API's
+        // lists) are made again on their next use.
+        internal static int structureVersion;
+
+        // This frame's instances by scene (built once at the top of the frame): the per-frame neighbour lookups
+        // (NearOther, the keeper's prompt) walk only the keeper's scene, not every instance in the world.
+        private static readonly Dictionary<string, List<Instance>> byScene = new Dictionary<string, List<Instance>>(StringComparer.Ordinal);
+        private static readonly List<Instance> noInstances = new List<Instance>();
+
+        internal static List<Instance> InScene(string sceneId)
+        {
+            return sceneId != null && byScene.TryGetValue(sceneId, out List<Instance> l) ? l : noInstances;
+        }
+
+        private static void BuildByScene()
+        {
+            foreach (List<Instance> l in byScene.Values)
+            {
+                l.Clear();
+            }
+            foreach (Instance i in instances)
+            {
+                if (i.SceneId == null)
+                {
+                    continue;
+                }
+                if (!byScene.TryGetValue(i.SceneId, out List<Instance> l))
+                {
+                    byScene[i.SceneId] = l = new List<Instance>();
+                }
+                l.Add(i);
+            }
+        }
+
         internal static Instance Ridden { get; private set; }
 
         // Set by the keeper-animation prefixes while mounted (Patches.cs), read by WhyMustDismount while a script holds
@@ -152,6 +186,7 @@ namespace GK2Mounts
             }
             instances.Add(i);
             byFullId[i.FullId] = i;
+            structureVersion++;
             if (!i.Ephemeral)
             {
                 Mounts.RaiseInstanceSpawned(i.Handle);
@@ -168,6 +203,7 @@ namespace GK2Mounts
             {
                 byFullId.Remove(i.FullId);
             }
+            structureVersion++;
             if (Ridden == i)
             {
                 Ridden = null;
@@ -359,6 +395,7 @@ namespace GK2Mounts
                 BecomeReady(save, started);
             }
 
+            BuildByScene();
             if (Ridden == null && Time.frameCount <= Instance.gearHideUntilFrame)
             {
                 // A pose's animator state switches its gear on every frame and needs a frame or two to be left after
@@ -406,6 +443,10 @@ namespace GK2Mounts
                         Plugin.Log.LogWarning($"Mount: {i.Describe()}: frame update failed: {e.Message}");
                     }
                 }
+            }
+            using (Perf.Measure(Perf.S.Spawn))
+            {
+                ProcessSpawnQueue(pc); // the views asked for this frame, nearest first, a few a frame (Tiers.cs)
             }
             using (Perf.Measure(Perf.S.Controls))
             {
@@ -546,6 +587,7 @@ namespace GK2Mounts
                 instances.Clear();
             }
             byFullId.Clear();
+            structureVersion++;
             lent.Clear();
         }
 
@@ -739,7 +781,7 @@ namespace GK2Mounts
             {
                 Plugin.Log.LogWarning($"Mount: {ownerId} is not a loaded plugin's GUID (a typo?); its donkeys would go dormant after a reload.");
             }
-            Plugin.Log.LogInfo($"Mount: {(a.Restoring ? "restored" : "spawned")} {i.Describe()}{(i.Key != null ? $" '{i.Key}'" : "")} at {i.Position:F2} in {i.SceneId}{(scale != 1f ? $", scale {scale:F2}" : "")}{(!rideable ? ", not rideable" : "")}{(parent != null ? $", child of {parent.FullId}" : "")}{(a.Persist ? ", kept with saves" : "")}.");
+            DiagLog($"Mount: {(a.Restoring ? "restored" : "spawned")} {i.Describe()}{(i.Key != null ? $" '{i.Key}'" : "")} at {i.Position:F2} in {i.SceneId}{(scale != 1f ? $", scale {scale:F2}" : "")}{(!rideable ? ", not rideable" : "")}{(parent != null ? $", child of {parent.FullId}" : "")}{(a.Persist ? ", kept with saves" : "")}.");
             return i;
         }
 

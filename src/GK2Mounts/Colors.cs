@@ -497,7 +497,7 @@ namespace GK2Mounts
                         }
                     }
                     Note = $"{sprites.Count} sprites ({Count(sprites, Group.DonkeySprites)} donkey, {Count(sprites, Group.WheelSprites)} wheel), {meshes.Count} cart meshes";
-                    Plugin.Log.LogInfo("Colors: attached; " + Note + ".");
+                    Mount.DiagLog("Colors: attached; " + Note + "."); // once per view: shares the 4-a-second budget
                 }
                 catch (Exception e)
                 {

@@ -381,6 +381,11 @@ Mounts.GameReady += () =>                        // once per loaded game, after 
   instance, for example a naming mod naming other mods' donkeys.
 - **Hitching** merges the free cart's data into the donkey's, without replacing the donkey's values.
 
+**Far donkeys do less** (docs/mounts-performance.md, "Levels"): off screen they stand frozen, and far away (beyond about 45
+units) they have no view at all. An asleep donkey's `IsReady` is false and `Ride` refuses; `MoveTo` or `ComeToKeeper`
+brings it near, and it wakes on the next frame. New views are made a few per frame, so spawning many at once spreads
+over some frames.
+
 **An owner that isn't installed.** Its kept instances are **dormant** after a load:
 - they aren't spawned, but are written back into the side file unchanged, with their number and key reserved;
 - they come back when the mod does;

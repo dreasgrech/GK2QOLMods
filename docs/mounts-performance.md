@@ -59,6 +59,88 @@ other donkeys and carts; 43 of them foals. The game runs at a frame cap of about
     - a catch-up happens only out of sight, unless truly wedged;
     - within about 1 unit of its spot a foal walks at about 1 u/s, and trots at full speed only from 4 units out.
 
+## Many donkeys scattered around the world (2026-10-01)
+
+**The test:** the herd test mod's scatter key (L) adds 50 donkeys at random up to 60 units around the keeper. They're
+not kept with the save. The game was still at its 117 fps cap, because uncapping hadn't taken.
+
+| Donkeys | Frame | The mod |
+|---|---|---|
+| 63 | 8.5 ms (the cap) | 0.5 ms |
+| 163 | 8.5–9.1 ms | 0.8–1.0 ms |
+| 363 | 12.3–14.1 ms (71–81 fps) | 1.9–2.0 ms (Shuffle 1.0, Pose 0.45) |
+
+**What it shows:**
+- **The game's share is the large one:** at 363, about 11 ms of a 13 ms frame went to the game updating, animating and
+  culling 363 donkey views.
+- **Why the game can't cull them itself:** our views are spawned outside the game's chunk system
+  (`ignoreChunkRegistration: true`, then `UpdateChunkVisibility(true)`), so its distance culling never hides them.
+- **The mod's own cost:** about 5 µs per donkey per frame.
+- **Pressing L hitched:** 50 views made in one frame, a 20 ms frame.
+
+### Pass A (no behaviour change)
+
+- **Families:** `Children()` and the sibling index are cached until a parent link or the set of instances changes
+  (`Mount.structureVersion`; `Parent` is a property that bumps it).
+- **Neighbour lookups:** `NearOther` walks only this frame's instances of its own scene (`Mount.InScene`).
+- **The API's lists:** `Mounts.Instances` and `InstancesOf` are cached per change. A new list is made per change, so a
+  list a caller holds stays a snapshot, as before.
+- **Unloaded scenes:** instances there tick twice a second instead of every frame.
+
+### Pass B: levels (`src/GK2Mounts/Tiers.cs`)
+
+| Level | When | What it does |
+|---|---|---|
+| Active | ridden, edited on the panel, within 15 of the keeper, or on screen (30% margin beyond each edge) | everything |
+| Idle | the keeper's scene, off screen, up to 35 | the view stays (no pop-in when the camera turns), frozen: no shuffle, no posing, animators off, renderers left out of drawing |
+| Asleep | beyond 35 (awake again inside 30) | the view is released through the mod's scene-change path; cargo, colours, settings and data stay with the instance. A foal goes to its still parent once a second |
+
+- **When levels are checked:** four times a second per instance, staggered, and at once after a move (MoveTo,
+  ComeToKeeper, a catch-up).
+- **Hysteresis:** leaving Active needs 3 more units and 10% more margin.
+- **New views:** at most 1 per frame, nearest first (`Mount.ProcessSpawnQueue`). That covers spawns from the API, a
+  restore at load, and waking up.
+- **Panel:** every number is tunable for the session on the Debug tab ("Levels"), with a switch to turn levels off.
+  The `[perf]` line has the counts per level and the views made and released per second. Compact rows say "idle (off
+  screen)" or "asleep (far)".
+- **For API users:** an asleep donkey has no view, so `IsReady` is false and `Ride` refuses. `MoveTo` or
+  `ComeToKeeper` brings it near, and it wakes on the next frame.
+
+### Measured, uncapped (2026-10-01; the NVIDIA cap removed)
+
+| 363 donkeys, the same spot | Frame | The mod |
+|---|---|---|
+| Levels off | 64–72 fps (13.8–15.6 ms) | 2.1–2.3 ms |
+| Levels on (45 / 38, 3 views a frame) | 96–98 fps (10.2–10.4 ms); 144–158 with fewer in view | 0.83–0.87 ms |
+| 63 donkeys, baseline | 200 fps (5.0 ms) | 0.40 ms |
+
+- **Levels on:** about 4 ms off the frame. At that spot 101 were active, 138 idle and 124 asleep.
+- **Scattering 50:** still a 22 ms frame. Making views cost up to 12 ms in one frame, and the log took 114 lines a second,
+  two per new view.
+- **After that:**
+  - one new view per frame;
+  - the per-view lines (spawned, colours attached, skipped script) share the 4-a-second log budget;
+  - idle views also stop rendering;
+  - asleep beyond 35, awake again within 30.
+
+  Measured in the next run:
+
+| 363 donkeys, the same spot | Frame | The mod (per-frame work) |
+|---|---|---|
+| Levels off | 61–70 fps (14.3–16.4 ms) | 1.9–2.2 ms |
+| Levels on (35 / 30, 1 view a frame) | 100–104 fps (9.6–10.0 ms) | 0.74–0.79 ms |
+| 63 donkeys at that spot, after removing the 300 | 110 fps (9.1 ms) | 0.31 ms |
+
+- **What 300 extra scattered donkeys cost with levels on:** about 0.6 ms over the 63-donkey frame at the same spot.
+  Without levels they cost about 6 ms.
+- **The levels at 363 donkeys:** 92 active, 60 idle, 211 asleep, so 152 views (239 with the 45 / 38 ring).
+- **Scattering 50:** the worst frame of that second fell from 22 to 13–20 ms. Making a view now costs at most about
+  4 ms (one a frame), and the log stays at 4 lines a second.
+- **Switching levels off:** all 211 asleep views come back at once, one a frame (63 a second).
+- **In game:** the user saw no donkeys popping in or freezing at the screen edges while walking and riding through the 363.
+- **The panel:** the "mod" figure of 1.7 ms in these lines includes about 1 ms for the open Debug tab. With the panel
+  closed, the per-frame work is Tick, 0.75 ms.
+
 ## Still open
 
 - **The per-frame work, about 0.5 ms with 63:** Shuffle, Pose and Ground checks. Not visible at the cap. Worth a pass

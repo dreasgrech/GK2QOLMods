@@ -16,6 +16,9 @@ namespace GK2Mounts
 
         private static Mount.Instance editing;
 
+        // The instance edited on the panel: always active (Tiers.cs), so what you tune is what you see.
+        internal static Mount.Instance Editing => editing;
+
         private static bool EditingNow => editing != null;
 
         // The style the tabs show: the edited instance's, else the ride's.
@@ -488,7 +491,8 @@ namespace GK2Mounts
                 ? $"{Vector3.Distance(pd.position.Value, i.BodyPoint()):F1} away"
                 : $"in {i.SceneId}";
             string family = i.Parent != null ? $", foal of {Ref(i, i.Parent)}" : "";
-            GUILayout.Label($"#{i.Id} {i.KindName}{(i.Key != null ? $" '{i.Key}'" : "")}{family}, {where}{(i.IsStepping ? ", stepping" : "")}{(i.Persist ? "" : ", not kept")}", label);
+            string level = i.tier == Mount.Tier.Idle ? ", idle (off screen)" : i.tier == Mount.Tier.Asleep ? ", asleep (far)" : "";
+            GUILayout.Label($"#{i.Id} {i.KindName}{(i.Key != null ? $" '{i.Key}'" : "")}{family}, {where}{level}{(i.IsStepping ? ", stepping" : "")}{(i.Persist ? "" : ", not kept")}", label);
             if (GUILayout.Button("Details", GUILayout.Width(80f)))
             {
                 pending = () => expanded.Add(i);

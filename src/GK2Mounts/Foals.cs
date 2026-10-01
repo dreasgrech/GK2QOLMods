@@ -16,8 +16,9 @@ namespace GK2Mounts
     // Mounts.SpawnFoal is the convenience over the three (scale 0.6, not rideable, its own shuffle switched on).
     internal static partial class Mount
     {
-        // The foal and shuffle diagnostics share a budget: at most 4 lines a second, the rest counted and named on the
-        // next line that is written (63 donkeys wrote 10 to 19 lines a second, measured 2026-10-01).
+        // The per-donkey diagnostics share a budget: at most 4 lines a second, the rest counted and named on the next line
+        // that is written (63 donkeys wrote 10 to 19 lines a second; 50 new views at once 114 a second, measured
+        // 2026-10-01). Foals, the shuffle, each spawn, each view's colours and skipped script.
         private static float diagWindow;
         private static int diagInWindow, diagSkipped;
 
@@ -37,7 +38,7 @@ namespace GK2Mounts
             diagInWindow++;
             if (diagSkipped > 0)
             {
-                line += $" ({diagSkipped} more foal/shuffle line(s) skipped before this)";
+                line += $" ({diagSkipped} more line(s) of this kind skipped before this)";
                 diagSkipped = 0;
             }
             Plugin.Log.LogInfo(line);
@@ -47,7 +48,22 @@ namespace GK2Mounts
         {
             internal float ViewScale = 1f;
             internal bool Rideable = true;
-            internal Instance Parent;
+            // The parent: a property so every change empties the families cache (Children, SiblingIndex).
+            private Instance parent;
+
+            internal Instance Parent
+            {
+                get => parent;
+                set
+                {
+                    if (parent != value)
+                    {
+                        parent = value;
+                        structureVersion++;
+                    }
+                }
+            }
+
             internal bool RemoveWithParent = true;
 
             // A route around obstacles (FoalRoute.cs): the search in progress, or the corners being walked.
@@ -131,17 +147,28 @@ namespace GK2Mounts
             private float parentStillSince;
             private int followsLogged;
 
+            // Its children in spawn order. Cached until a parent link or the set of instances changes (Mount.structureVersion):
+            // foals asked for it and for their sibling index several times a frame, each a walk over every instance.
+            // A new list per change, never changed afterwards: a caller holding one keeps a snapshot, as before.
+            private List<Instance> childrenCache;
+            private int childrenVersion = -1;
+
             internal List<Instance> Children()
             {
-                var l = new List<Instance>();
-                foreach (Instance o in All)
+                if (childrenVersion != structureVersion || childrenCache == null)
                 {
-                    if (o.Parent == this)
+                    var l = new List<Instance>();
+                    foreach (Instance o in All)
                     {
-                        l.Add(o);
+                        if (o.Parent == this)
+                        {
+                            l.Add(o);
+                        }
                     }
+                    childrenCache = l;
+                    childrenVersion = structureVersion;
                 }
-                return l;
+                return childrenCache;
             }
 
             private int SiblingIndex()
@@ -150,19 +177,8 @@ namespace GK2Mounts
                 {
                     return 0;
                 }
-                int n = 0;
-                foreach (Instance o in All)
-                {
-                    if (o == this)
-                    {
-                        return n;
-                    }
-                    if (o.Parent == Parent)
-                    {
-                        n++;
-                    }
-                }
-                return n;
+                int n = Parent.Children().IndexOf(this);
+                return n >= 0 ? n : 0;
             }
 
             // How long the parent has stood where it is (it moves while ridden or shuffling).
@@ -660,6 +676,8 @@ namespace GK2Mounts
                     DestroyDonkey(); // spawned again in the parent's scene by StandTick
                     SceneId = p.SceneId;
                     nextSpawnTry = 0f;
+                    nextViewlessTick = 0f; // spawned there on the next frame, not within the half-second viewless tick
+                    TierNow();
                     spawnFailures = 0;
                 }
                 Vector3 root = SnapToGround(slot - right * LateralFor(riderFacingX));

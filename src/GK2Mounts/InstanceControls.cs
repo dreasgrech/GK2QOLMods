@@ -171,6 +171,8 @@ namespace GK2Mounts
             string scene = pc.PlayerData.currentGameSceneId;
             Mount.Instance best = null;
             float bestD = reach * reach;
+            // Every instance, not only the keeper's scene's: the check below says once when one is in reach but filed
+            // under another scene id. Cheap (a distance per instance), but at most once per frame.
             foreach (Mount.Instance i in Mount.All)
             {
                 if (i.Ephemeral || i.IsRidden || !i.Ready || !which(i))
