@@ -423,6 +423,7 @@ namespace GK2Mounts
                 return;
             }
             Patched = true;
+            MainGame.OnGameStarted = (Action)Delegate.Combine(MainGame.OnGameStarted, new Action(Mount.OnGameStarted));
             Log.LogInfo($"GK2 Mounts {Version} loaded (API {Mounts.ApiVersion}); nothing happens until a mod uses it.");
         }
 
@@ -491,6 +492,7 @@ namespace GK2Mounts
             {
             }
             Patched = false;
+            MainGame.OnGameStarted = (Action)Delegate.Remove(MainGame.OnGameStarted, new Action(Mount.OnGameStarted));
             harmony?.UnpatchSelf();
             harmony = null;
         }

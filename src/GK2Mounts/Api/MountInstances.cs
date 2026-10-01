@@ -20,10 +20,15 @@ namespace GK2Mounts.Api
             Tuning = new InstanceTuning(i);
         }
 
+        // Its number within its owner: each mod numbers its own (two mods can both have a #2), kept with the save, so
+        // the same donkey has the same number after every load. Given at spawn (MountSpawn.Id, or the owner's next).
         public int Id => I.Id;
 
         // The mod that spawned it (a cart left standing by unhitching: the donkey's owner; the core's GUID after the summon).
         public string Owner => I.OwnerId;
+
+        // Its identity: owner#id, e.g. dreas.gk2.showcase#1.
+        public string FullId => I.FullId;
 
         public bool Exists => Mount.IsRegistered(I);
 
@@ -65,33 +70,109 @@ namespace GK2Mounts.Api
         // With a Parent: whether it is removed with the parent (MountSpawn.RemoveWithParent).
         public bool RemoveWithParent => I.RemoveWithParent;
 
-        // Kept with the save (MountSpawn.Persist): after each save it is written to the slot's side file
-        // (<slot>.gk2mounts.dat next to the saves, synced by Steam Cloud with them), and loading
-        // that save spawns it again where it stood, with its cargo and its own settings (docs/mounts-persistence.md).
-        // Setting it on a parent sets it on its children too. Never the summon of TryMount.
-        public bool Persist
+        // Kept with the save (MountSpawn.Persist, SetPersist): after each save it is written to the slot's side file
+        // (<slot>.gk2mounts.dat next to the saves, synced by Steam Cloud with them), and loading that save spawns it
+        // again where it stood, with its number, cargo, own settings and data (docs/mounts-persistence.md).
+        public bool Persist => I.Persist;
+
+        // Only its owner changes it (and the core's panel): another mod keeping it while its owner spawns its own each
+        // session would make two. Its children of the same owner follow. Never the summon of TryMount.
+        public MountResult SetPersist(string ownerId, bool keep)
         {
-            get => I.Persist;
-            set
+            string why = Mounts.WhyNotOwner(this, ownerId);
+            if (why != null)
             {
-                if (I.Ephemeral)
+                return MountResult.Refused(why);
+            }
+            if (I.Ephemeral)
+            {
+                return MountResult.Refused("The summon of TryMount is never kept.");
+            }
+            I.Persist = keep;
+            foreach (Mount.Instance c in I.Children())
+            {
+                if (c.OwnerId == I.OwnerId)
+                {
+                    c.Persist = keep;
+                }
+            }
+            return MountResult.Success;
+        }
+
+        // The owner's own name for it (MountSpawn.Key), unique within the owner and kept with the save: after a load
+        // Mounts.Find(owner, key) finds it.
+        public string Key => I.Key;
+
+        // Only its owner (or the core's panel); null clears it. Refused when the owner already uses the key.
+        public MountResult SetKey(string ownerId, string key)
+        {
+            string why = Mounts.WhyNotOwner(this, ownerId);
+            if (why != null)
+            {
+                return MountResult.Refused(why);
+            }
+            if (string.IsNullOrEmpty(key))
+            {
+                I.Key = null;
+                return MountResult.Success;
+            }
+            if (I.Key == key)
+            {
+                return MountResult.Success;
+            }
+            if (Mount.KeyTaken(I.OwnerId, key))
+            {
+                return MountResult.Refused($"{I.OwnerId} already has one with the key '{key}'.");
+            }
+            I.Key = key;
+            return MountResult.Success;
+        }
+
+        // A mod's own values on this instance, kept with the save: a name, a home, a mood. Each mod has its own
+        // namespace (its ownerId), so two mods can't overwrite each other, and any mod may keep values on any instance
+        // (a naming mod naming another mod's donkeys). Hitching moves the free cart's values onto the donkey.
+        public string GetData(string ownerId, string key)
+        {
+            return ownerId != null && key != null && I.Data.TryGetValue(ownerId, out Dictionary<string, string> d) && d.TryGetValue(key, out string v) ? v : null;
+        }
+
+        // null clears it.
+        public void SetData(string ownerId, string key, string value)
+        {
+            if (string.IsNullOrEmpty(ownerId))
+            {
+                throw new ArgumentException("An owner id (your plugin GUID) is required.", nameof(ownerId));
+            }
+            if (string.IsNullOrEmpty(key))
+            {
+                throw new ArgumentException("A key is required.", nameof(key));
+            }
+            if (!I.Data.TryGetValue(ownerId, out Dictionary<string, string> d))
+            {
+                if (value == null)
                 {
                     return;
                 }
-                I.Persist = value;
-                foreach (Mount.Instance c in I.Children())
+                I.Data[ownerId] = d = new Dictionary<string, string>(StringComparer.Ordinal);
+            }
+            if (value == null)
+            {
+                d.Remove(key);
+                if (d.Count == 0)
                 {
-                    c.Persist = value;
+                    I.Data.Remove(ownerId);
                 }
+            }
+            else
+            {
+                d[key] = value;
             }
         }
 
-        // The owner's own name for it (MountSpawn.Key), kept with the save: after a load the owner finds its
-        // instances by key (Mounts.InstancesRestored), as the ids are new. Tabs and line breaks become spaces.
-        public string Key
+        // The keys a mod keeps on this instance.
+        public IReadOnlyList<string> DataKeys(string ownerId)
         {
-            get => I.Key;
-            set => I.Key = value;
+            return ownerId != null && I.Data.TryGetValue(ownerId, out Dictionary<string, string> d) ? new List<string>(d.Keys) : new List<string>();
         }
 
         // The instances whose parent it is, in spawn order.
@@ -214,11 +295,15 @@ namespace GK2Mounts.Api
         // height is used as given (its ground can't be tested while it isn't loaded).
         public string SceneId;
 
-        // Kept with the save (MountHandle.Persist); a foal of Mounts.SpawnFoal takes its parent's.
+        // Kept with the save (MountHandle.Persist); a foal of Mounts.SpawnFoal takes its parent's unless told.
         public bool Persist;
 
-        // The owner's own name for it, kept with the save (MountHandle.Key).
+        // The owner's own name for it, unique within the owner, kept with the save (MountHandle.Key).
         public string Key;
+
+        // The owner's number for it (MountHandle.Id): refused when the owner already has that number (also one kept
+        // with the save that isn't back, dormant). 0: the owner's next number, never one it has had before.
+        public int Id;
 
         public bool FacingRight = true;
 

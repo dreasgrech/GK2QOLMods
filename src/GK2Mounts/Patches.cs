@@ -30,6 +30,8 @@ namespace GK2Mounts
             Require(AccessTools.Method(typeof(SaveSystem), nameof(SaveSystem.Save)), "SaveSystem.Save");
             Require(AccessTools.Method(typeof(SaveSystem), nameof(SaveSystem.Remove)), "SaveSystem.Remove");
             Require(AccessTools.PropertyGetter(typeof(MainGame), nameof(MainGame.SaveSlotData)), "MainGame.SaveSlotData");
+            Require(AccessTools.Field(typeof(MainGame), nameof(MainGame.OnGameStarted)), "MainGame.OnGameStarted");
+            Require(AccessTools.Property(typeof(BepInEx.Bootstrap.Chainloader), nameof(BepInEx.Bootstrap.Chainloader.PluginInfos)), "Chainloader.PluginInfos");
             Require(AccessTools.Method(typeof(PlayerData), nameof(PlayerData.TryAddOverheadItemNoReplace)), "PlayerData.TryAddOverheadItemNoReplace");
             Require(AccessTools.Method(typeof(PlayerData), nameof(PlayerData.InsertOverheadItemTo), new[] { typeof(WgoData), typeof(Item) }), "PlayerData.InsertOverheadItemTo(WgoData, Item)");
             Require(AccessTools.Method(typeof(Inventory), nameof(Inventory.RemoveItemFromInventoryByUID)), "Inventory.RemoveItemFromInventoryByUID");

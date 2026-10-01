@@ -107,9 +107,54 @@ namespace GK2Mounts
             GUILayout.Label($"Editing everyone's settings (your cfg). They apply to {ride}, to {standing} donkey(s) and cart(s) standing in the world, and to every later ride; a donkey keeps its own value where it has one. Style rows ([Ride] / [Cart]) apply to donkeys in that style; the style tabs show the {PanelStyle} set. One donkey only: Instances tab, Edit its settings.", small);
         }
 
-        // Over every donkey and cart in the keeper's scene while the Instances tab is open or one is edited: its number,
-        // so the list and the world can be matched.
+        // Over every donkey and cart in the keeper's scene while the Instances tab is open or one is edited: its mod and
+        // number, in its mod's colour (the same colour as its group in the list), so the list and the world match.
         private static GUIStyle markerStyle, markerEditStyle;
+        private static readonly Dictionary<string, GUIStyle> ownerMarkerStyles = new Dictionary<string, GUIStyle>();
+        private static readonly Dictionary<string, GUIStyle> ownerHeaderStyles = new Dictionary<string, GUIStyle>();
+
+        // A steady colour per mod: its GUID hashed to a hue (the same every session).
+        private static Color OwnerColor(string owner)
+        {
+            unchecked
+            {
+                int h = 17;
+                foreach (char c in owner ?? "")
+                {
+                    h = h * 31 + c;
+                }
+                float hue = (h & 0x7fffffff) % 360 / 360f;
+                return Color.HSVToRGB(hue, 0.45f, 1f);
+            }
+        }
+
+        // The mod's name, short enough for a marker.
+        private static string OwnerShort(string owner)
+        {
+            string n = Mount.OwnerName(owner);
+            if (n.StartsWith("GK2 ", StringComparison.Ordinal) && n.Length > 4)
+            {
+                n = n.Substring(4);
+            }
+            return n.Length > 14 ? n.Substring(0, 13) + "…" : n;
+        }
+
+        private static GUIStyle OwnerStyle(Dictionary<string, GUIStyle> cache, GUIStyle basis, string owner)
+        {
+            if (!cache.TryGetValue(owner, out GUIStyle st))
+            {
+                st = new GUIStyle(basis);
+                st.normal.textColor = OwnerColor(owner);
+                cache[owner] = st;
+            }
+            return st;
+        }
+
+        // Another instance as this row names it: #id within the same mod, owner#id across mods.
+        private static string Ref(Mount.Instance from, Mount.Instance to)
+        {
+            return to == null ? "?" : to.OwnerId == from.OwnerId ? "#" + to.Id : $"{OwnerShort(to.OwnerId)} #{to.Id}";
+        }
 
         private static void DrawWorldMarkers(float scale)
         {
@@ -144,8 +189,8 @@ namespace GK2Mounts
                     continue;
                 }
                 bool ed = editing == i;
-                string text = $"#{i.Id}{(ed ? " editing" : "")}{(i.IsStepping ? " ~" : "")}";
-                GUIStyle st = ed ? markerEditStyle : markerStyle;
+                string text = $"{OwnerShort(i.OwnerId)} #{i.Id}{(ed ? " editing" : "")}{(i.IsStepping ? " ~" : "")}";
+                GUIStyle st = ed ? markerEditStyle : OwnerStyle(ownerMarkerStyles, markerStyle, i.OwnerId);
                 Vector2 size = st.CalcSize(new GUIContent(text));
                 float x = sp.x / scale - size.x / 2f;
                 float y = (Screen.height - sp.y) / scale - size.y;
@@ -218,102 +263,151 @@ namespace GK2Mounts
                 }
             }
 
+            // Grouped by the mod that owns them (each numbers its own: #1 of one mod and #1 of another are two donkeys),
+            // with that mod's dormant records (kept with the save, its mod not installed) at the end of its group.
             List<Mount.Instance> list = new List<Mount.Instance>();
+            var owners = new List<string>();
             foreach (Mount.Instance i in Mount.All)
             {
-                if (!i.Ephemeral) list.Add(i);
+                if (i.Ephemeral) continue;
+                list.Add(i);
+                if (!owners.Contains(i.OwnerId)) owners.Add(i.OwnerId);
             }
-            Header($"In the world ({list.Count})");
-            if (list.Count == 0)
+            foreach (Mount.DormantRecord d in Mount.Dormant)
+            {
+                if (!owners.Contains(d.Owner)) owners.Add(d.Owner);
+            }
+            Header($"In the world ({list.Count}{(Mount.Dormant.Count > 0 ? $", {Mount.Dormant.Count} dormant" : "")}), by mod");
+            if (owners.Count == 0)
             {
                 GUILayout.Label("None yet.", small);
             }
             PlayerData pd = MainGame.Instance != null ? MainGame.PlayerData : null;
-            foreach (Mount.Instance i in list)
+            foreach (string owner in owners)
             {
-                GUILayout.BeginVertical(GUI.skin.box);
-                // Ridden: under the keeper (a distance to its root would jitter with the ride). Standing: to its body.
-                string where = i.IsRidden ? "ridden by you"
-                    : pd != null && pd.currentGameSceneId == i.SceneId
-                    ? $"{Vector3.Distance(pd.position.Value, i.BodyPoint()):F1} away"
-                    : $"in {i.SceneId}";
-                List<string> cargo = i.CargoRig.Ids();
-                string family = i.Parent != null ? $" foal of #{i.Parent.Id}, size {i.ViewScale:F2};"
-                    : i.Children().Count > 0 ? $" parent of {string.Join(", ", i.Children().ConvertAll(c => "#" + c.Id))};" : "";
-                GUILayout.Label($"{i.Describe()}:{family} {where}, facing {(i.FacingRight ? "right" : "left")}{(i.HasCart ? $", cargo [{string.Join(", ", cargo)}]" : "")}; {i.Overrides.Count} own setting(s); by {i.OwnerId}{(i.Key != null ? $" as '{i.Key}'" : "")}; {(i.Persist ? "kept with saves" : "not kept with saves")}", editing == i ? instanceSet : label);
-                GUILayout.BeginHorizontal();
-                if (GUILayout.Button(editing == i ? "Stop editing" : "Edit its settings", GUILayout.Width(120f)))
+                List<Mount.Instance> mine = list.FindAll(x => x.OwnerId == owner);
+                List<Mount.DormantRecord> sleeping = new List<Mount.DormantRecord>();
+                foreach (Mount.DormantRecord d in Mount.Dormant)
                 {
-                    editing = editing == i ? null : i;
+                    if (d.Owner == owner) sleeping.Add(d);
                 }
-                GUI.enabled = i.HasDonkey && i.Rideable && !i.IsRidden && !Mount.IsMounted && i.Ready;
-                if (GUILayout.Button("Ride", GUILayout.Width(60f)))
+                int keptCount = mine.FindAll(x => x.Persist).Count;
+                GUILayout.Label($"{Mount.OwnerName(owner)} ({owner}){(Mount.OwnerPresent(owner) ? "" : ", NOT INSTALLED")}: {mine.Count} in the world, {keptCount} kept with saves{(sleeping.Count > 0 ? $", {sleeping.Count} dormant" : "")}",
+                    OwnerStyle(ownerHeaderStyles, label, owner));
+                foreach (Mount.DormantRecord d in sleeping)
                 {
-                    pending = () => i.Handle.Ride();
-                }
-                GUI.enabled = !i.IsRidden;
-                if (GUILayout.Button("Move here", GUILayout.Width(90f)) && pd != null)
-                {
-                    pending = () => i.Handle.MoveTo(InFront(pd, 1.8f), pd.Direction.x >= 0f);
-                }
-                GUI.enabled = i.HasDonkey && i.HasCart && i.Ready;
-                if (GUILayout.Button("Unhitch", GUILayout.Width(80f)))
-                {
-                    pending = () => Mounts.Unhitch(i.Handle);
-                }
-                Mount.Instance cart = NearestFreeCart(i);
-                GUI.enabled = i.HasDonkey && i.Rideable && !i.HasCart && cart != null;
-                if (GUILayout.Button(cart != null ? $"Hitch #{cart.Id}" : "Hitch", GUILayout.Width(90f)))
-                {
-                    pending = () =>
+                    // The text above its button, not beside it: a long wrapped label beside a button pushes the
+                    // button off the panel's right edge (seen 2026-10-01).
+                    GUILayout.BeginVertical(GUI.skin.box);
+                    GUILayout.Label($"#{d.Id} {d.Kind}{(d.Key != null ? $" '{d.Key}'" : "")}: dormant ({d.Why}), in {d.Scene}{(d.Cargo > 0 ? $", {d.Cargo} cargo item(s) on the ground there" : "")}. Back with its mod; Forget drops it at the next save.", small);
+                    Mount.DormantRecord forget = d;
+                    if (GUILayout.Button("Forget"))
                     {
-                        MountResult res = Mounts.Hitch(i.Handle, cart.Handle);
-                        spawnNote = res.Ok ? $"{i.Describe()} took cart #{cart.Id}." : "Hitch refused: " + res.Reason;
-                    };
+                        pending = () => Mount.ForgetDormant(forget);
+                    }
+                    GUILayout.EndVertical();
                 }
-                GUI.enabled = true;
-                if (GUILayout.Button(i.Persist ? "Don't keep" : "Keep with saves", GUILayout.Width(110f)))
+                foreach (Mount.Instance i in mine)
                 {
-                    pending = () => i.Handle.Persist = !i.Persist;
-                }
-                if (GUILayout.Button("Remove", GUILayout.Width(80f)))
-                {
-                    pending = () =>
+                    GUILayout.BeginVertical(GUI.skin.box);
+                    // Ridden: under the keeper (a distance to its root would jitter with the ride). Standing: to its body.
+                    string where = i.IsRidden ? "ridden by you"
+                        : pd != null && pd.currentGameSceneId == i.SceneId
+                        ? $"{Vector3.Distance(pd.position.Value, i.BodyPoint()):F1} away"
+                        : $"in {i.SceneId}";
+                    List<string> cargo = i.CargoRig.Ids();
+                    string family = i.Parent != null ? $" foal of {Ref(i, i.Parent)}, size {i.ViewScale:F2};"
+                        : i.Children().Count > 0 ? $" parent of {string.Join(", ", i.Children().ConvertAll(c => Ref(i, c)))};" : "";
+                    GUILayout.Label($"#{i.Id} {i.KindName}{(i.Key != null ? $" '{i.Key}'" : "")}:{family} {where}, facing {(i.FacingRight ? "right" : "left")}{(i.HasCart ? $", cargo [{string.Join(", ", cargo)}]" : "")}; {i.Overrides.Count} own setting(s); {(i.Persist ? "kept with saves" : "not kept with saves")}", editing == i ? instanceSet : label);
+                    GUILayout.BeginHorizontal();
+                    if (GUILayout.Button(editing == i ? "Stop editing" : "Edit its settings", GUILayout.Width(120f)))
                     {
-                        if (editing == i) editing = null;
-                        i.Handle.Remove();
-                    };
-                }
-                GUILayout.EndHorizontal();
-                if (i.HasDonkey && i.Parent == null && i.Rideable)
-                {
-                    if (GUILayout.Button($"Add a foal (size {foalScale:F2})"))
+                        editing = editing == i ? null : i;
+                    }
+                    GUI.enabled = i.HasDonkey && i.Rideable && !i.IsRidden && !Mount.IsMounted && i.Ready;
+                    if (GUILayout.Button("Ride", GUILayout.Width(60f)))
+                    {
+                        pending = () => i.Handle.Ride();
+                    }
+                    GUI.enabled = !i.IsRidden;
+                    if (GUILayout.Button("Move here", GUILayout.Width(90f)) && pd != null)
+                    {
+                        pending = () => i.Handle.MoveTo(InFront(pd, 1.8f), pd.Direction.x >= 0f);
+                    }
+                    GUI.enabled = i.HasDonkey && i.HasCart && i.Ready;
+                    if (GUILayout.Button("Unhitch", GUILayout.Width(80f)))
+                    {
+                        pending = () => Mounts.Unhitch(i.Handle);
+                    }
+                    Mount.Instance cart = NearestFreeCart(i);
+                    GUI.enabled = i.HasDonkey && i.Rideable && !i.HasCart && cart != null;
+                    if (GUILayout.Button(cart != null ? $"Hitch {Ref(i, cart)}" : "Hitch", GUILayout.Width(110f)))
                     {
                         pending = () =>
                         {
-                            MountHandle f = Mounts.SpawnFoal(PanelOwner, i.Handle, foalScale);
-                            spawnNote = f != null ? $"{f.I.Describe()} is a foal of {i.Describe()}." : "Could not add a foal (see the log).";
+                            MountResult res = Mounts.Hitch(i.Handle, cart.Handle);
+                            spawnNote = res.Ok ? $"{i.Describe()} took cart {cart.FullId}." : "Hitch refused: " + res.Reason;
                         };
                     }
-                }
-                if (i.HasDonkey)
-                {
-                    GUILayout.Label("Idle shuffle: " + i.ShuffleStatusText(), small);
-                }
-                if (i.Overrides.Count > 0)
-                {
-                    var parts = new List<string>();
-                    foreach (var kv in i.Overrides)
+                    GUI.enabled = true;
+                    if (GUILayout.Button("Remove", GUILayout.Width(80f)))
                     {
-                        parts.Add($"{kv.Key} = {kv.Value}");
+                        pending = () =>
+                        {
+                            if (editing == i) editing = null;
+                            i.Handle.Remove();
+                        };
                     }
-                    GUILayout.Label("Own settings: " + string.Join("; ", parts), small);
-                    if (GUILayout.Button("Back to everyone's settings (clear its own)"))
+                    GUILayout.EndHorizontal();
+                    // A second row: the first one is full (Keep in it pushed Remove off the edge, seen 2026-10-01).
+                    GUILayout.BeginHorizontal();
+                    if (GUILayout.Button(i.Persist ? "Don't keep with saves" : "Keep with saves"))
                     {
-                        pending = () => i.Handle.Tuning.Reset();
+                        pending = () => i.Handle.SetPersist(PanelOwner, !i.Persist);
                     }
+                    if (i.HasDonkey && i.Parent == null && i.Rideable)
+                    {
+                        if (GUILayout.Button($"Add a foal (size {foalScale:F2})"))
+                        {
+                            pending = () =>
+                            {
+                                MountHandle f = Mounts.SpawnFoal(PanelOwner, i.Handle, foalScale);
+                                spawnNote = f != null ? $"{f.I.Describe()} is a foal of {i.Describe()}." : "Could not add a foal (see the log).";
+                            };
+                        }
+                    }
+                    GUILayout.EndHorizontal();
+                    if (i.HasDonkey)
+                    {
+                        GUILayout.Label("Idle shuffle: " + i.ShuffleStatusText(), small);
+                    }
+                    if (i.Overrides.Count > 0)
+                    {
+                        var parts = new List<string>();
+                        foreach (var kv in i.Overrides)
+                        {
+                            parts.Add($"{kv.Key} = {kv.Value}");
+                        }
+                        GUILayout.Label("Own settings: " + string.Join("; ", parts), small);
+                        if (GUILayout.Button("Back to everyone's settings (clear its own)"))
+                        {
+                            pending = () => i.Handle.Tuning.Reset();
+                        }
+                    }
+                    if (i.Data.Count > 0)
+                    {
+                        var parts = new List<string>();
+                        foreach (var mod in i.Data)
+                        {
+                            foreach (var kv in mod.Value)
+                            {
+                                parts.Add($"{OwnerShort(mod.Key)}.{kv.Key} = {kv.Value}");
+                            }
+                        }
+                        GUILayout.Label("Mods' data: " + string.Join("; ", parts), small);
+                    }
+                    GUILayout.EndVertical();
                 }
-                GUILayout.EndVertical();
             }
             if (pending != null)
             {

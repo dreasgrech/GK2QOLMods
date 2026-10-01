@@ -33,6 +33,7 @@ class GK2Mounts.Api.MountHandle
   property System.Collections.Generic.IReadOnlyList<GK2Mounts.Api.MountHandle> Children { get; }
   property bool Exists { get; }
   property bool FacingRight { get; }
+  property string FullId { get; }
   property bool HasCart { get; }
   property bool HasDonkey { get; }
   property int Id { get; }
@@ -40,20 +41,25 @@ class GK2Mounts.Api.MountHandle
   property bool IsRidden { get; }
   property bool IsRideable { get; }
   property bool IsStepping { get; }
-  property string Key { get; set; }
+  property string Key { get; }
   property string Owner { get; }
   property GK2Mounts.Api.MountHandle Parent { get; }
-  property bool Persist { get; set; }
+  property bool Persist { get; }
   property UnityEngine.Vector3 Position { get; }
   property bool RemoveWithParent { get; }
   property float Scale { get; }
   property string SceneId { get; }
   property GK2Mounts.Api.InstanceTuning Tuning { get; }
   method GK2Mounts.Api.MountResult ComeToKeeper(System.Nullable<bool> facingRight = null)
+  method System.Collections.Generic.IReadOnlyList<string> DataKeys(string ownerId)
+  method string GetData(string ownerId, string key)
   method GK2Mounts.Api.MountResult MoveTo(UnityEngine.Vector3 position, System.Nullable<bool> facingRight = null)
   method void Remove()
   method GK2Mounts.Api.MountResult Ride(bool showMessage = True)
+  method void SetData(string ownerId, string key, string value)
   method int SetDownCargo()
+  method GK2Mounts.Api.MountResult SetKey(string ownerId, string key)
+  method GK2Mounts.Api.MountResult SetPersist(string ownerId, bool keep)
   method string ToString()
 struct GK2Mounts.Api.MountResult
   property bool Ok { get; }
@@ -68,6 +74,7 @@ static class GK2Mounts.Api.Mounts
   property static GK2Mounts.Api.MountTuning Colors { get; }
   property static System.Collections.Generic.IReadOnlyList<GK2Mounts.Api.MountHandle> Instances { get; }
   property static bool IsAvailable { get; }
+  property static bool IsGameReady { get; }
   property static bool IsMounted { get; }
   property static string Owner { get; }
   property static GK2Mounts.Api.MountHandle Riding { get; }
@@ -76,6 +83,7 @@ static class GK2Mounts.Api.Mounts
   event static System.Action<string> CargoLoaded
   event static System.Action<string> CargoUnloaded
   event static System.Action<string> Dismounted
+  event static System.Action GameReady
   event static System.Action<GK2Mounts.Api.MountHandle, GK2Mounts.Api.MountHandle> Hitched
   event static System.Action<GK2Mounts.Api.MountHandle> InstanceRemoved
   event static System.Action<GK2Mounts.Api.MountHandle> InstanceSpawned
@@ -88,7 +96,10 @@ static class GK2Mounts.Api.Mounts
   method static void Bray()
   method static void ClearTuning(string ownerId)
   method static void Dismount(string reason = null)
+  method static GK2Mounts.Api.MountHandle Find(string ownerId, int id)
+  method static GK2Mounts.Api.MountHandle Find(string ownerId, string key)
   method static GK2Mounts.Api.MountResult Hitch(GK2Mounts.Api.MountHandle donkey, GK2Mounts.Api.MountHandle cart)
+  method static System.Collections.Generic.IReadOnlyList<GK2Mounts.Api.MountHandle> InstancesOf(string ownerId)
   method static bool IsFeatureAllowed(GK2Mounts.Api.MountFeature feature)
   method static void RefreshRules()
   method static void RemoveRules(string ownerId)
@@ -96,7 +107,7 @@ static class GK2Mounts.Api.Mounts
   method static GK2Mounts.Api.MountHandle Spawn(string ownerId, GK2Mounts.Api.MountSpawn spec)
   method static GK2Mounts.Api.MountHandle SpawnCart(string ownerId, UnityEngine.Vector3 position, bool facingRight = True)
   method static GK2Mounts.Api.MountHandle SpawnDonkey(string ownerId, UnityEngine.Vector3 position, bool withCart = False, bool facingRight = True)
-  method static GK2Mounts.Api.MountHandle SpawnFoal(string ownerId, GK2Mounts.Api.MountHandle parent, float scale = 0.6)
+  method static GK2Mounts.Api.MountHandle SpawnFoal(string ownerId, GK2Mounts.Api.MountHandle parent, float scale = 0.6, int id = 0, string key = null, System.Nullable<bool> persist = null)
   method static GK2Mounts.Api.MountResult SwitchStyle(GK2Mounts.Api.MountStyle style, bool showMessage = True)
   method static GK2Mounts.Api.MountResult TryMount(string ownerId, GK2Mounts.Api.MountStyle style, bool showMessage = True)
   method static GK2Mounts.Api.MountTuning Tuning(GK2Mounts.Api.MountStyle style)
@@ -105,6 +116,7 @@ static class GK2Mounts.Api.Mounts
 class GK2Mounts.Api.MountSpawn
   field bool Donkey
   field bool FacingRight
+  field int Id
   field string Key
   field GK2Mounts.Api.MountHandle Parent
   field bool Persist

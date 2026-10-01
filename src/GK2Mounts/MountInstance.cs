@@ -49,7 +49,7 @@ namespace GK2Mounts
             internal Instance(int id, string ownerId, bool ephemeral, bool hasDonkey, bool hasCart)
             {
                 Id = id;
-                OwnerId = ownerId;
+                OwnerId = ownerId ?? Plugin.Guid;
                 Ephemeral = ephemeral;
                 HasDonkey = hasDonkey;
                 activeStyle = hasCart ? MountStyle.Cart : MountStyle.Ride;
@@ -60,7 +60,10 @@ namespace GK2Mounts
 
             internal string KindName => !HasDonkey ? "free cart" : HasCart ? "donkey with cart" : !Rideable && ViewScale < 1f ? "foal" : "donkey";
 
-            internal string Describe() => $"#{Id} {KindName}";
+            // The identity: the owner's GUID and its own number (Mount.NextId), e.g. dreas.gk2.showcase#1.
+            internal string FullId => FullIdOf(OwnerId, Id);
+
+            internal string Describe() => $"{FullId} {KindName}";
 
             // ------------------------------------------------------------------ standing in the world
 
@@ -596,6 +599,7 @@ namespace GK2Mounts
                 }
                 List<Item> items = cart.CargoRig.TakeAllForTransfer();
                 MoveCartSettings(cart, this);
+                MergeData(cart, this);
                 Vector3 at = cart.Position;
                 float facing = cart.riderFacingX;
                 Unregister(cart);
@@ -613,7 +617,7 @@ namespace GK2Mounts
                 riderFacingX = facing;
                 CargoRig.SetCarried(items);
                 Restyle(pc, scene, MountStyle.Cart);
-                Plugin.Log.LogInfo($"Mount: {Describe()} hitched cart #{cart.Id} ({items.Count} item(s) on it).");
+                Plugin.Log.LogInfo($"Mount: {Describe()} hitched cart {cart.FullId} ({items.Count} item(s) on it).");
                 Mounts.RaiseHitched(Handle, cart.Handle);
                 return null;
             }
@@ -634,7 +638,7 @@ namespace GK2Mounts
                     why = "Not right now.";
                     return null;
                 }
-                var cart = new Instance(NextId(), OwnerId ?? Plugin.Guid, ephemeral: false, hasDonkey: false, hasCart: true)
+                var cart = new Instance(NextId(OwnerId), OwnerId, ephemeral: false, hasDonkey: false, hasCart: true)
                 {
                     Position = donkey.Data.Position,
                     SceneId = SceneId,

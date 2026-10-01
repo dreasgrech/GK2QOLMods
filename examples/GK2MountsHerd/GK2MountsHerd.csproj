@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Test mod (docs/mounts-persistence-tests.md, part J): a second mod keeping its own donkeys alongside the panel's
+       and the showcase's, to test per-mod ids, keys, data, GameReady and dormant records. Not shipped. -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <AssemblyName>GK2MountsHerd</AssemblyName>
+    <Version>0.1.0</Version>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <GenerateDependencyFile>false</GenerateDependencyFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Your own mod would reference the installed or released GK2Mounts.dll with a HintPath instead. -->
+    <ProjectReference Include="..\..\src\GK2Mounts\GK2Mounts.csproj" Private="false" />
+    <Reference Include="Assembly-CSharp"><HintPath>$(Managed)\Assembly-CSharp.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="LazyBearTechnology"><HintPath>$(Managed)\LazyBearTechnology.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine"><HintPath>$(Managed)\UnityEngine.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.CoreModule"><HintPath>$(Managed)\UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="BepInEx"><HintPath>$(BepInExCore)\BepInEx.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+
+  <!-- Deploys into the game after every build, only while it is closed (-p:Deploy=false skips it). -->
+  <Import Project="$(MSBuildThisFileDirectory)..\..\DeployToGame.targets" />
+
+</Project>

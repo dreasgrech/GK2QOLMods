@@ -643,9 +643,9 @@ namespace GK2Mounts
                             s = $"stepping {(riderFacingX > 0f ? "right" : "left")}, {stepDone:F2} of {stepLength:F2}";
                             break;
                         case ShufflePhase.Following:
-                            s = RoutePlanning ? $"working out a way round to its parent #{Parent?.Id}"
-                                : route != null ? $"trotting round an obstacle to its parent #{Parent?.Id}, corner {routeIndex + 1} of {route.Count}"
-                                : $"trotting after its parent #{Parent?.Id} at {followSpeedNow:F1}/s";
+                            s = RoutePlanning ? $"working out a way round to its parent {Parent?.FullId}"
+                                : route != null ? $"trotting round an obstacle to its parent {Parent?.FullId}, corner {routeIndex + 1} of {route.Count}"
+                                : $"trotting after its parent {Parent?.FullId} at {followSpeedNow:F1}/s";
                             break;
                         default:
                             s = "starting";
@@ -661,7 +661,7 @@ namespace GK2Mounts
                 }
                 if (followLost && Parent != null)
                 {
-                    s += $"; lost its parent #{Parent.Id}, catches up out of sight";
+                    s += $"; lost its parent {Parent.FullId}, catches up out of sight";
                 }
                 if (stepsTaken > 0)
                 {

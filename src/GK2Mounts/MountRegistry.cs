@@ -18,8 +18,60 @@ namespace GK2Mounts
     internal static partial class Mount
     {
         private static readonly List<Instance> instances = new List<Instance>();
-        private static int nextId = 1;
         private static Instance bound;
+
+        // Each owner numbers its own instances (docs/mounts-persistence.md, "Identity"): owner#id is the identity, two
+        // mods can both have a #2. The next number per owner is kept with the save, so a number is never handed out
+        // twice in a save's life (a mod may still ask for one itself, MountSpawn.Id). byFullId: Find(owner, id).
+        private static readonly Dictionary<string, int> nextIds = new Dictionary<string, int>(StringComparer.Ordinal);
+        private static readonly Dictionary<string, Instance> byFullId = new Dictionary<string, Instance>(StringComparer.Ordinal);
+
+        internal static string FullIdOf(string owner, int id) => owner + "#" + id;
+
+        // In use by a live instance, or held by a dormant record of that owner.
+        internal static bool IdTaken(string owner, int id) => byFullId.ContainsKey(FullIdOf(owner, id)) || IsDormant(owner, id);
+
+        internal static int NextId(string owner)
+        {
+            int n = nextIds.TryGetValue(owner, out int v) ? v : 1;
+            while (IdTaken(owner, n))
+            {
+                n++;
+            }
+            nextIds[owner] = n + 1;
+            return n;
+        }
+
+        internal static void NoteIdUsed(string owner, int id)
+        {
+            if (!nextIds.TryGetValue(owner, out int v) || v <= id)
+            {
+                nextIds[owner] = id + 1;
+            }
+        }
+
+        internal static Instance FindInstance(string owner, int id)
+        {
+            return owner != null && byFullId.TryGetValue(FullIdOf(owner, id), out Instance i) ? i : null;
+        }
+
+        internal static Instance FindInstance(string owner, string key)
+        {
+            if (owner == null || string.IsNullOrEmpty(key))
+            {
+                return null;
+            }
+            foreach (Instance i in instances)
+            {
+                if (!i.Ephemeral && i.OwnerId == owner && i.Key == key)
+                {
+                    return i;
+                }
+            }
+            return null;
+        }
+
+        internal static bool KeyTaken(string owner, string key) => FindInstance(owner, key) != null || DormantKeyTaken(owner, key);
 
         // Every instance, the ridden and the ephemeral summon included.
         internal static IReadOnlyList<Instance> All => instances;
@@ -40,8 +92,6 @@ namespace GK2Mounts
         }
 
         internal static Instance Current => bound ?? Ridden;
-
-        internal static int NextId() => nextId++;
 
         internal static bool IsRegistered(Instance i) => i != null && instances.Contains(i);
 
@@ -101,6 +151,7 @@ namespace GK2Mounts
                 i.Handle = new MountHandle(i);
             }
             instances.Add(i);
+            byFullId[i.FullId] = i;
             if (!i.Ephemeral)
             {
                 Mounts.RaiseInstanceSpawned(i.Handle);
@@ -112,6 +163,10 @@ namespace GK2Mounts
             if (!instances.Remove(i))
             {
                 return;
+            }
+            if (byFullId.TryGetValue(i.FullId, out Instance same) && same == i)
+            {
+                byFullId.Remove(i.FullId);
             }
             if (Ridden == i)
             {
@@ -169,6 +224,77 @@ namespace GK2Mounts
 
         private static object lastGameSave;
 
+        // The game ready for mods (Mounts.GameReady): the save whose kept donkeys are back. startedSave: the game said
+        // it has started (MainGame.OnGameStarted, after its scenes loaded). Until both, spawning is refused, so no mod
+        // takes a number a kept donkey of this save has, and nothing is spawned into a world still loading.
+        private static object readySave, startedSave;
+        private static float newSaveSeenAt;
+        private static int newSaveSeenFrame;
+
+        // Without the game's own signal (a game update, a load that failed half-way) the game is ready this long
+        // after its save appeared in a scene. Long: a slow PC can still be loading scenes well after that moment, and
+        // the signal comes once they are loaded.
+        private const float GameReadyFallbackSeconds = 90f;
+
+        internal static bool IsGameReady
+        {
+            get
+            {
+                try
+                {
+                    return readySave != null && MainGame.Instance != null && ReferenceEquals(MainGame.Instance.GameSave, readySave)
+                        && Instance.IsInGame(out _, out _);
+                }
+                catch
+                {
+                    return false;
+                }
+            }
+        }
+
+        // MainGame.OnGameStarted (subscribed by Plugin): fires after the game has loaded its scenes; ours runs first, as
+        // every mod using the API loads after GK2 Mounts (BepInDependency).
+        internal static void OnGameStarted()
+        {
+            try
+            {
+                startedSave = MainGame.Instance != null ? MainGame.Instance.GameSave : null;
+            }
+            catch
+            {
+            }
+        }
+
+        private static void BecomeReady(object save, bool started)
+        {
+            float waited = Time.unscaledTime - newSaveSeenAt;
+            int frames = Time.frameCount - newSaveSeenFrame;
+            if (!started)
+            {
+                Plugin.Log.LogWarning($"Mounts: the game never said it had started (MainGame.OnGameStarted) {waited:F0} s after its save appeared; going ahead.");
+            }
+            nextIds.Clear();
+            ClearDormant();
+            List<MountHandle> restored = null;
+            try
+            {
+                restored = RestoreFromSideFile();
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning("Persistence: restoring the kept donkeys and carts failed: " + e);
+            }
+            readySave = save; // before the events: their handlers may spawn
+            Plugin.Log.LogInfo($"Mounts: game ready ({(started ? "the game started" : "fallback")}, {frames} frame(s) and {waited:F1} s after its save appeared); mods may spawn now.");
+            if (restored != null && restored.Count > 0)
+            {
+                Mounts.RaiseInstancesRestored(restored);
+            }
+            Mounts.RaiseGameReady();
+        }
+
+        internal static void ClearDormant() => dormant.Clear();
+
         public static void Tick()
         {
             if (!Instance.IsInGame(out PlayerController pc, out GameScene scene))
@@ -199,8 +325,9 @@ namespace GK2Mounts
                 }
                 return;
             }
-            // A game was loaded (from the menu, or another save without passing it): the old game's instances go, and
-            // the ones kept with this save come back (Persistence.cs), on this first frame, before the keeper can move.
+            // A game was loaded (from the menu, or another save without passing it): the old game's instances go at
+            // once. Once the game has started, the ones kept with this save come back (Persistence.cs) and mods are
+            // told they may spawn (Mounts.GameReady).
             object save = MainGame.Instance.GameSave;
             if (!ReferenceEquals(save, lastGameSave))
             {
@@ -210,14 +337,17 @@ namespace GK2Mounts
                     ForceCleanup("another game was loaded", setDownCargo: false);
                 }
                 lastGameSave = save;
-                try
+                newSaveSeenAt = Time.unscaledTime;
+                newSaveSeenFrame = Time.frameCount;
+            }
+            if (!ReferenceEquals(save, readySave))
+            {
+                bool started = ReferenceEquals(save, startedSave);
+                if (!started && Time.unscaledTime - newSaveSeenAt < GameReadyFallbackSeconds)
                 {
-                    RestoreFromSideFile();
+                    return; // still loading: nothing of this game exists yet, and nothing may be spawned
                 }
-                catch (Exception e)
-                {
-                    Plugin.Log.LogWarning("Persistence: restoring the kept donkeys and carts failed: " + e);
-                }
+                BecomeReady(save, started);
             }
 
             if (Ridden == null && Time.frameCount <= Instance.gearHideUntilFrame)
@@ -300,7 +430,11 @@ namespace GK2Mounts
             {
                 return "Already mounted.";
             }
-            var i = new Instance(NextId(), null, ephemeral: true, hasDonkey: true, hasCart: style == MountStyle.Cart);
+            if (!IsGameReady)
+            {
+                return "Not yet: the game is still loading.";
+            }
+            var i = new Instance(NextId(Plugin.Guid), Plugin.Guid, ephemeral: true, hasDonkey: true, hasCart: style == MountStyle.Cart);
             Register(i);
             string reason;
             using (Bind(i))
@@ -393,6 +527,7 @@ namespace GK2Mounts
             {
                 instances.Clear();
             }
+            byFullId.Clear();
             lent.Clear();
         }
 
@@ -443,23 +578,59 @@ namespace GK2Mounts
 
         // ------------------------------------------------------------------ spawning (API, panel)
 
-        // A donkey, a donkey with its cart, or a free cart standing at 'position' in the keeper's scene. Null outside a
-        // game (why says so).
-        internal static Instance Spawn(string ownerId, Vector3 position, bool hasDonkey, bool hasCart, bool facingRight, out string why)
+        // What to spawn (Mounts.Spawn, the panel, the restore). The foal properties (Foals.cs): the view's scale, whether
+        // it can be ridden, the parent it stays with and whether it goes when the parent does. SceneId: another scene
+        // than the keeper's (null: his, or a child's parent's). Snap: the height from the ground under the point, only
+        // possible in the keeper's scene (a restore keeps the saved height). Persist and Key: kept with the save
+        // (Persistence.cs). Id: the owner's number asked for (0: its next). Register false: the caller registers it
+        // once it is complete. Restoring: the restore itself, before the game is ready for mods.
+        internal sealed class SpawnArgs
         {
-            return Spawn(ownerId, position, hasDonkey, hasCart, facingRight, 1f, true, null, true, null, true, false, null, out why);
+            internal string Owner;
+            internal Vector3 Position;
+            internal bool HasDonkey = true, HasCart, FacingRight = true, Rideable = true, RemoveWithParent = true;
+            internal bool Snap = true, Persist, Register = true, Restoring;
+            internal float Scale = 1f;
+            internal Instance Parent;
+            internal string SceneId, Key;
+            internal int Id;
         }
 
-        // Also the foal properties (Foals.cs): the view's scale, whether it can be ridden, the parent it stays with and
-        // whether it goes when the parent does. The combinations the ride code can't take are refused here. sceneId:
-        // another scene than the keeper's (null: his; a child: always its parent's). snap: the height from the ground
-        // under the point, only possible in the keeper's scene (a restore keeps the saved height). persist and key:
-        // kept with the save (Persistence.cs). register false: the caller registers it once it is complete.
-        internal static Instance Spawn(string ownerId, Vector3 position, bool hasDonkey, bool hasCart, bool facingRight,
-            float scale, bool rideable, Instance parent, bool removeWithParent, string sceneId, bool snap, bool persist,
-            string key, out string why, bool register = true)
+        // A donkey, a donkey with its cart, or a free cart. Null when refused (why says so). The combinations the ride
+        // code can't take are refused here.
+        internal static Instance Spawn(SpawnArgs a, out string why)
         {
             why = null;
+            string ownerId = a.Owner;
+            Vector3 position = a.Position;
+            bool hasDonkey = a.HasDonkey, hasCart = a.HasCart, rideable = a.Rideable;
+            float scale = a.Scale;
+            Instance parent = a.Parent;
+            if (string.IsNullOrEmpty(ownerId))
+            {
+                why = "An owner id is required.";
+                return null;
+            }
+            if (!a.Restoring && !IsGameReady)
+            {
+                why = "Not until the game is ready (Mounts.GameReady): the save's kept donkeys come back first.";
+                return null;
+            }
+            if (a.Id < 0)
+            {
+                why = "An id is a number from 1 up (0: the next free one).";
+                return null;
+            }
+            if (a.Id > 0 && IdTaken(ownerId, a.Id))
+            {
+                why = $"{ownerId} already has #{a.Id}{(IsDormant(ownerId, a.Id) ? " (kept with the save, dormant)" : "")}.";
+                return null;
+            }
+            if (!string.IsNullOrEmpty(a.Key) && KeyTaken(ownerId, a.Key))
+            {
+                why = $"{ownerId} already has one with the key '{a.Key}'.";
+                return null;
+            }
             if (float.IsNaN(scale) || scale < 0.2f || scale > 2f)
             {
                 why = "Scale must be between 0.2 and 2.";
@@ -507,7 +678,7 @@ namespace GK2Mounts
                 why = "Can't use a " + wgoId + ": " + why;
                 return null;
             }
-            string inScene = parent != null ? parent.SceneId : string.IsNullOrEmpty(sceneId) ? scene.Id : sceneId;
+            string inScene = !string.IsNullOrEmpty(a.SceneId) ? a.SceneId : parent != null ? parent.SceneId : scene.Id;
             if (inScene != scene.Id)
             {
                 GameSceneData sd = null;
@@ -524,27 +695,33 @@ namespace GK2Mounts
                     return null;
                 }
             }
-            bool snapHere = snap && inScene == scene.Id;
-            var i = new Instance(NextId(), ownerId, ephemeral: false, hasDonkey: hasDonkey, hasCart: hasCart)
+            bool snapHere = a.Snap && inScene == scene.Id;
+            int id = a.Id > 0 ? a.Id : NextId(ownerId);
+            NoteIdUsed(ownerId, id);
+            var i = new Instance(id, ownerId, ephemeral: false, hasDonkey: hasDonkey, hasCart: hasCart)
             {
                 Position = snapHere ? SnapToGround(position) : position,
                 SceneId = inScene,
                 ViewScale = scale,
                 Rideable = rideable,
                 Parent = parent,
-                RemoveWithParent = removeWithParent,
-                Persist = persist,
-                Key = key,
+                RemoveWithParent = a.RemoveWithParent,
+                Persist = a.Persist,
+                Key = string.IsNullOrEmpty(a.Key) ? null : a.Key,
             };
             using (Bind(i))
             {
-                i.MoveTo(i.Position, facingRight ? 1f : -1f, snapHere);
+                i.MoveTo(i.Position, a.FacingRight ? 1f : -1f, snapHere);
             }
-            if (register)
+            if (a.Register)
             {
                 Register(i);
             }
-            Plugin.Log.LogInfo($"Mount: spawned {i.Describe()} for {ownerId} at {i.Position:F2} in {i.SceneId}{(scale != 1f ? $", scale {scale:F2}" : "")}{(!rideable ? ", not rideable" : "")}{(parent != null ? $", child of #{parent.Id}" : "")}{(persist ? ", kept with saves" : "")}.");
+            if (!OwnerPresent(ownerId))
+            {
+                Plugin.Log.LogWarning($"Mount: {ownerId} is not a loaded plugin's GUID (a typo?); its donkeys would go dormant after a reload.");
+            }
+            Plugin.Log.LogInfo($"Mount: {(a.Restoring ? "restored" : "spawned")} {i.Describe()}{(i.Key != null ? $" '{i.Key}'" : "")} at {i.Position:F2} in {i.SceneId}{(scale != 1f ? $", scale {scale:F2}" : "")}{(!rideable ? ", not rideable" : "")}{(parent != null ? $", child of {parent.FullId}" : "")}{(a.Persist ? ", kept with saves" : "")}.");
             return i;
         }
 
@@ -574,7 +751,7 @@ namespace GK2Mounts
                 }
                 if (c.RemoveWithParent)
                 {
-                    Remove(c, $"its parent #{i.Id} was removed");
+                    Remove(c, $"its parent {i.FullId} was removed");
                 }
                 else
                 {

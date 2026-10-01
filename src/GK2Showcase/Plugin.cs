@@ -11,9 +11,10 @@ namespace GK2Showcase
     // uses it. GK2 Mounts itself does nothing on its own; this mod gives the player a donkey, the keys and the ride
     // behaviour switches. Placeholder name until the user picks one.
     //
-    // The keeper's donkey is an instance in the world (Mounts.SpawnDonkey), spawned the first time it is called and
-    // kept from then on: a dismount leaves it standing where the keeper got off, with its cart and cargo, and the
-    // interact key next to it rides it again (the core's own control). Its cart is this mod's too: left standing when
+    // The keeper's donkey is an instance in the world (Mounts.Spawn, key "donkey"), spawned the first time it is called
+    // and kept from then on, also with the save (KeepWithSaves): after a load it is found again by its key
+    // (Mounts.GameReady, Mounts.Find), not spawned anew. A dismount leaves it standing where the keeper got off, with its
+    // cart and cargo, and the interact key next to it rides it again (the core's own control). Its cart is this mod's too: left standing when
     // the keeper rides without it (Mounts.Unhitch), brought back and hitched when he wants it (ComeToKeeper, Hitch).
     //   RideKey (H)  on foot: the donkey comes and he rides on its back; riding: get off; in the cart: leave the cart
     //   CartKey (G)  on foot: the donkey comes with its cart and he drives; driving: get off; riding: take the cart
@@ -30,13 +31,16 @@ namespace GK2Showcase
         public const string Guid = "dreas.gk2.showcase";
         public const string Version = "0.1.0";
 
-        // The API this mod is written against: 0.7 added the idle shuffle (Mounts.Behaviour IdleShuffle).
-        private static readonly Version NeedsApi = new Version(0, 7, 0);
+        // The API this mod is written against: 0.10 has per-mod ids, keys, GameReady and Find.
+        private static readonly Version NeedsApi = new Version(0, 10, 0);
+
+        // Its two instances, found again after a load by these keys.
+        private const string DonkeyKey = "donkey", CartKey = "cart";
 
         internal static ManualLogSource Log;
 
         internal ConfigEntry<KeyboardShortcut> rideKey, cartKey, bellKey, sendAwayKey;
-        internal ConfigEntry<bool> stayThroughDoors, dismountIndoors, showMessages, idleShuffle;
+        internal ConfigEntry<bool> stayThroughDoors, dismountIndoors, showMessages, idleShuffle, keepWithSaves;
         private bool ready;
 
         // What the mod is doing, for the Mods menu's status row.
@@ -63,6 +67,8 @@ namespace GK2Showcase
                 "The keeper says in a thought bubble why he cannot mount.");
             idleShuffle = Config.Bind("Behaviour", "IdleShuffle", true,
                 "Your donkey, left standing without its cart, takes a few slow steps now and then instead of standing perfectly still.");
+            keepWithSaves = Config.Bind("Behaviour", "KeepWithSaves", true,
+                "Your donkey and its cart stay in the world across saves: loading the save brings them back where you left them, cargo included. Off: they are gone after a reload (their cargo lies where they stood).");
 
             if (Mounts.ApiVersion < NeedsApi)
             {
@@ -71,7 +77,9 @@ namespace GK2Showcase
                 FrameworkLink.TryRegister(Config);
                 return;
             }
+            Mounts.GameReady += OnGameReady;
             Mounts.InstanceRemoved += OnInstanceRemoved;
+            keepWithSaves.SettingChanged += (_, __) => ApplyKeep();
             Mounts.Hitched += OnHitched;
             Mounts.Unhitched += OnUnhitched;
             foreach (ConfigEntry<bool> e in new[] { stayThroughDoors, dismountIndoors, showMessages, idleShuffle })
@@ -176,13 +184,14 @@ namespace GK2Showcase
             // On foot: the donkey (spawned the first time) comes to the keeper, then the ride starts once it is ready.
             if (donkey == null || !donkey.Exists)
             {
-                donkey = Mounts.SpawnDonkey(Guid, Vector3.zero, withCart: false); // placed by ComeToKeeper right below
+                // Placed by ComeToKeeper right below.
+                donkey = Mounts.Spawn(Guid, new MountSpawn { Position = Vector3.zero, Key = DonkeyKey, Persist = keepWithSaves.Value });
                 if (donkey == null)
                 {
                     Log.LogWarning("Could not spawn the donkey (see the GK2 Mounts log).");
                     return;
                 }
-                Log.LogInfo($"Spawned the keeper's donkey #{donkey.Id}.");
+                Log.LogInfo($"Spawned the keeper's donkey {donkey.FullId}.");
             }
             MountResult come = donkey.ComeToKeeper();
             if (!come.Ok)
@@ -231,7 +240,7 @@ namespace GK2Showcase
         {
             if (cart == null || !cart.Exists)
             {
-                cart = Mounts.SpawnCart(Guid, Vector3.zero);
+                cart = Mounts.Spawn(Guid, new MountSpawn { Position = Vector3.zero, Donkey = false, WithCart = true, Key = CartKey, Persist = keepWithSaves.Value });
                 if (cart == null)
                 {
                     return "could not spawn a cart";
@@ -306,6 +315,30 @@ namespace GK2Showcase
             Log.LogInfo("Sent the donkey away.");
         }
 
+        // A game is ready: this mod's donkey and cart are the ones kept with the save, if any (found by key; their
+        // numbers are this mod's own and stay the same).
+        private void OnGameReady()
+        {
+            pending = null;
+            donkey = Mounts.Find(Guid, DonkeyKey);
+            cart = Mounts.Find(Guid, CartKey);
+            if (donkey != null || cart != null)
+            {
+                Log.LogInfo($"Found the kept {(donkey != null ? "donkey " + donkey.FullId : "")}{(donkey != null && cart != null ? " and " : "")}{(cart != null ? "cart " + cart.FullId : "")}.");
+            }
+        }
+
+        private void ApplyKeep()
+        {
+            foreach (MountHandle h in new[] { donkey, cart })
+            {
+                if (h != null && h.Exists)
+                {
+                    h.SetPersist(Guid, keepWithSaves.Value);
+                }
+            }
+        }
+
         private void OnInstanceRemoved(MountHandle h)
         {
             if (h == donkey) donkey = null;
@@ -319,13 +352,18 @@ namespace GK2Showcase
 
         private void OnUnhitched(MountHandle d, MountHandle c)
         {
-            if (d == donkey) cart = c;
+            if (d == donkey)
+            {
+                cart = c;
+                c.SetKey(Guid, CartKey); // the cart left standing is found by its key after a load
+            }
         }
 
         private void OnDestroy()
         {
             try
             {
+                Mounts.GameReady -= OnGameReady;
                 Mounts.InstanceRemoved -= OnInstanceRemoved;
                 Mounts.Hitched -= OnHitched;
                 Mounts.Unhitched -= OnUnhitched;

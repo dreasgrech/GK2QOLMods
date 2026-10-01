@@ -51,7 +51,7 @@ namespace GK2Mounts.Api
     public static class Mounts
     {
         // The API's own version, separate from the mod version: minor for additions, major for breaking changes.
-        public static readonly Version ApiVersion = new Version(0, 9, 0);
+        public static readonly Version ApiVersion = new Version(0, 10, 0);
 
         // False when the core is switched off (General.Enabled) or disabled itself after a game update.
         public static bool IsAvailable => Plugin.Patched && Plugin.Enabled != null && Plugin.Enabled.Value;
@@ -325,8 +325,22 @@ namespace GK2Mounts.Api
                 Plugin.Log.LogInfo($"API: {ownerId} could not spawn: the parent is gone.");
                 return null;
             }
-            Mount.Instance i = Mount.Spawn(ownerId, spec.Position, spec.Donkey, spec.WithCart, spec.FacingRight, spec.Scale,
-                spec.Rideable, spec.Parent?.I, spec.RemoveWithParent, spec.SceneId, true, spec.Persist, spec.Key, out string why);
+            Mount.Instance i = Mount.Spawn(new Mount.SpawnArgs
+            {
+                Owner = ownerId,
+                Position = spec.Position,
+                HasDonkey = spec.Donkey,
+                HasCart = spec.WithCart,
+                FacingRight = spec.FacingRight,
+                Scale = spec.Scale,
+                Rideable = spec.Rideable,
+                Parent = spec.Parent?.I,
+                RemoveWithParent = spec.RemoveWithParent,
+                SceneId = spec.SceneId,
+                Persist = spec.Persist,
+                Key = spec.Key,
+                Id = spec.Id,
+            }, out string why);
             if (i == null)
             {
                 Plugin.Log.LogInfo($"API: {ownerId} could not spawn: {why}");
@@ -338,7 +352,8 @@ namespace GK2Mounts.Api
         // own idle shuffle switched on and made for a foal (smaller, quicker steps, a wider area around the parent; its
         // own settings, owned by ownerId, changeable through MountHandle.Tuning). It trots after the parent when the
         // parent moves, and goes when the parent is removed. Null when refused (see Mounts.Spawn).
-        public static MountHandle SpawnFoal(string ownerId, MountHandle parent, float scale = 0.6f)
+        // id, key: as MountSpawn. persist: kept with the save; null: as its parent is.
+        public static MountHandle SpawnFoal(string ownerId, MountHandle parent, float scale = 0.6f, int id = 0, string key = null, bool? persist = null)
         {
             if (parent == null)
             {
@@ -357,7 +372,9 @@ namespace GK2Mounts.Api
                 Scale = scale,
                 Rideable = false,
                 Parent = parent,
-                Persist = p.Persist,
+                Persist = persist ?? p.Persist,
+                Id = id,
+                Key = key,
             });
             if (foal == null)
             {
@@ -387,12 +404,79 @@ namespace GK2Mounts.Api
             {
                 return null;
             }
-            Mount.Instance i = Mount.Spawn(ownerId, position, hasDonkey, hasCart, facingRight, out string why);
+            Mount.Instance i = Mount.Spawn(new Mount.SpawnArgs { Owner = ownerId, Position = position, HasDonkey = hasDonkey, HasCart = hasCart, FacingRight = facingRight }, out string why);
             if (i == null)
             {
                 Plugin.Log.LogInfo($"API: {ownerId} could not spawn: {why}");
             }
             return i?.Handle;
+        }
+
+        // ------------------------------------------------------------------ identity and the game being ready
+
+        // The game is loaded and the save's kept donkeys are back (InstancesRestored has come): spawning works from now
+        // on. False in the menu, while a game loads, and for a frame at a door that loads another scene.
+        public static bool IsGameReady => Mount.IsGameReady;
+
+        // Once per loaded game (a save, or a new game), after the save's kept donkeys are back, before anything else can
+        // spawn: the place for a mod's own per-game spawning. Check Find(yourId, id) first; your kept donkeys are
+        // already there. Spawning before it is refused (null, "Not until the game is ready").
+        public static event Action GameReady;
+
+        internal static void RaiseGameReady()
+        {
+            if (GameReady == null)
+            {
+                return;
+            }
+            foreach (Delegate d in GameReady.GetInvocationList())
+            {
+                try
+                {
+                    ((Action)d)();
+                }
+                catch (Exception e)
+                {
+                    Plugin.Log.LogError($"API: a GameReady handler failed: {e}");
+                }
+            }
+        }
+
+        // An owner's instance by its number (MountHandle.Id) or its key (MountHandle.Key), or null.
+        public static MountHandle Find(string ownerId, int id) => Mount.FindInstance(ownerId, id)?.Handle;
+
+        public static MountHandle Find(string ownerId, string key) => Mount.FindInstance(ownerId, key)?.Handle;
+
+        // Every instance of one owner, in spawn order.
+        public static IReadOnlyList<MountHandle> InstancesOf(string ownerId)
+        {
+            var l = new List<MountHandle>();
+            foreach (Mount.Instance i in Mount.All)
+            {
+                if (!i.Ephemeral && i.OwnerId == ownerId && i.Handle != null)
+                {
+                    l.Add(i.Handle);
+                }
+            }
+            return l;
+        }
+
+        // Owner-only changes (MountHandle.SetPersist, SetKey): its owner, or the core and its panel.
+        internal static string WhyNotOwner(MountHandle h, string ownerId)
+        {
+            if (string.IsNullOrEmpty(ownerId))
+            {
+                throw new ArgumentException("An owner id (your plugin GUID) is required.", nameof(ownerId));
+            }
+            if (!h.Exists)
+            {
+                return "It is gone.";
+            }
+            if (ownerId == h.I.OwnerId || Mount.IsCoreOwner(ownerId))
+            {
+                return null;
+            }
+            return $"Only its owner ({h.I.OwnerId}) can change that.";
         }
 
         // Every instance in the world (not the summon of TryMount), in spawn order.

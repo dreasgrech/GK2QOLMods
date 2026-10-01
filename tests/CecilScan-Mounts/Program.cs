@@ -55,6 +55,8 @@ Field("GameSceneData", "droppedItems", "System.Collections.Generic.List`1<DropDa
 Field("GameSceneData", "queuedDrops", "System.Collections.Generic.List`1<DropData>");
 Method("DropSystem", "RemoveDrop", 2);
 Method("WorldData", "GetGameSceneDataById", 1);
+Field("MainGame", "OnGameStarted", "System.Action", true);
+Method("DropData", "get_Position", 0);
 Method("Inventory", "RemoveItemFromInventoryByUID", 2);
 Method("SpecialPhysicsCastUtils", "GetPlayerDropPosition", 3);
 Method("DropSystem", "DropItem", 4);

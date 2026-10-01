@@ -317,38 +317,89 @@ MountHandle big = Mounts.Spawn("you.gk2.mymod", new MountSpawn { Position = at2,
 - **On `MountHandle`:** `Scale`, `IsRideable`, `Parent`, `Children`. `IsStepping` is also true while trotting after
   the parent.
 
-## Kept with the save (0.9.0)
+## Several mods, ids and the save (0.9.0, 0.10.0)
 
 ```csharp
-MountHandle h = Mounts.Spawn("you.gk2.mymod", new MountSpawn { Position = at, Persist = true, Key = "stable-donkey" });
+const string Me = "you.gk2.mymod";               // your plugin GUID: the owner of everything you spawn
 
-Mounts.InstancesRestored += handles =>
+Mounts.GameReady += () =>                        // once per loaded game, after the save's kept donkeys are back
 {
-    foreach (MountHandle r in handles)
-        if (r.Owner == "you.gk2.mymod" && r.Key == "stable-donkey") myDonkey = r;   // ids are new after a load
+    MountHandle d = Mounts.Find(Me, "stable-donkey");          // yours from the save, if any
+    if (d == null)
+    {
+        d = Mounts.Spawn(Me, new MountSpawn { Position = at, Id = 1, Key = "stable-donkey", Persist = true });
+        d?.SetData(Me, "name", "Bella");
+    }
 };
 ```
 
-- **`Persist`** (`MountSpawn.Persist`, or `MountHandle.Persist` at any time): after each save the instance is
-  written to a side file of that slot, and loading that save spawns it again where it stood, in its own scene, with
-  its cargo back on its cart and its own settings (`MountHandle.Tuning`). The game's save itself is never changed.
-  - **Off by default.** A mod that already spawns its donkeys again each session must not also set it, or there are
-    two of each.
-  - Setting it on a parent sets it on its children; `SpawnFoal` gives the foal its parent's.
-  - A cart left by unhitching takes its donkey's; a cart left by the summon of `TryMount` is kept.
-  - Hitching a kept free cart to a donkey that isn't kept: the pair isn't kept (its cargo lies on the ground after
-    a reload).
-- **`Key`**: your own name for it, kept with it. After a load, find yours by `Owner` and `Key`.
-- **`InstancesRestored`**: once per load, with every instance that came back, after each one's `InstanceSpawned`.
-  It comes on the first frame of the loaded game, before the keeper can move.
-- **`MountSpawn.SceneId`**: spawn in another scene than the keeper's (an id as `MountHandle.SceneId` gives). The
-  height is used as given there.
-- **`MountHandle.RemoveWithParent`**: what was set at spawn.
-- **Where:** `<the game's save folder>/<slot>.gk2mounts.dat`, a text file, synced by Steam Cloud with the saves, written only after the game
-  reports the save written. Deleting the slot in the game deletes it.
-- **A stale file is ignored:** it records the slot's save time and day, and a loaded slot with others (saved
-  without the mod, a backup, a cloud copy) restores nothing; the cargo then lies on the ground where the carts
-  stood. Details: [`mounts-persistence.md`](mounts-persistence.md).
+**Identity: each mod numbers its own donkeys.**
+- **An instance is `Owner` plus `Id`:** your GUID and a number counted for you alone. Two mods can both have a #2.
+  `FullId` gives `owner#id`, which is what the logs and the panel show.
+- **Choosing the number:**
+  - `MountSpawn.Id = n` asks for #n. It is refused when you already have #n, also when a dormant record (below)
+    holds it.
+  - With 0, the core gives your next number. Your counter is kept with the save and never hands out a number twice,
+    so a number you stored in your own data never points at another donkey later.
+- **Finding:** `Mounts.Find(owner, id)`, `Mounts.Find(owner, key)` and `Mounts.InstancesOf(owner)`.
+- **`Key`:** your own name for it, unique within your instances. A spawn or `SetKey` with a key you already use is
+  refused.
+
+**`Mounts.GameReady` and `IsGameReady`.**
+- **`IsGameReady`** is false in the menu, while a game loads, and for a frame at a door that loads another scene. In that
+  frame there is no current scene.
+- **When it comes:** once per loaded game (a save, or a new game), after the game's own `MainGame.OnGameStarted` and
+  after the kept donkeys are back. `InstancesRestored`, with the list that came back, comes just before it.
+- **Spawning before it is refused:** `Spawn` returns null, and the log says "Not until the game is ready". Without
+  that, a mod could take a number a kept donkey of the save has.
+- **The place for your per-game spawning:** `Find` first, spawn what's missing.
+
+**`Persist`: kept with the save.**
+- **Setting it:** `MountSpawn.Persist`, or `MountHandle.SetPersist(yourId, bool)`. Only the owner can change it,
+  and the core's panel.
+- **What a kept instance keeps:** after each save it is written to the slot's side file, and loading that save
+  spawns it again with:
+  - the same owner, number and key;
+  - its place and scene;
+  - its cargo, back on its cart;
+  - its own settings (`Tuning`) and every mod's data on it.
+
+  The game's save itself is never changed.
+- **Off by default.** A mod that spawns its donkeys again each session must not also set it, or there are two of
+  each. Use `GameReady` and `Find` instead.
+- **Children:** `SetPersist` on a parent also sets its children of the same owner. `SpawnFoal(..., persist: null)`
+  takes the parent's.
+- **Carts:** a cart left by unhitching takes its donkey's owner and `Persist`. A cart left by the summon of
+  `TryMount` is the core's, and kept.
+- **Hitching a kept free cart to a donkey that isn't kept:** the pair isn't kept, and its cargo lies on the ground
+  after a reload.
+
+**A mod's own data on an instance.**
+- **The calls:** `SetData(yourId, key, value)` (null clears), `GetData(yourId, key)` and `DataKeys(yourId)`. Strings,
+  kept with the save.
+- **Namespaces:** each mod has its own, so two mods can't overwrite each other. Any mod may keep data on any
+  instance, for example a naming mod naming other mods' donkeys.
+- **Hitching** merges the free cart's data into the donkey's, without replacing the donkey's values.
+
+**An owner that isn't installed.** Its kept instances are **dormant** after a load:
+- they aren't spawned, but are written back into the side file unchanged, with their number and key reserved;
+- they come back when the mod does;
+- a foal whose parent is dormant is dormant too;
+- the panel lists them, with "Forget".
+
+Their cargo lies on the ground where the save has it. It is taken back only if it still lies within 3 units of the
+cart. A corpse there is removed by the game's own corpse timer.
+
+**Also:**
+- `MountSpawn.SceneId`: spawn in another scene than the keeper's. The height is used as given there.
+- `MountHandle.RemoveWithParent`: what was set at spawn.
+- **The file:** `<the game's save folder>/<slot>.gk2mounts.dat`, a text file, synced by Steam Cloud with the saves.
+  It is written only after the game reports the save written, holds every mod's instances, and is deleted with the
+  slot.
+- **A stale file is ignored.** It records the slot's save time and day; a loaded slot with others (saved without the
+  mod, a backup, a cloud copy) restores nothing, and the cargo lies on the ground where the carts stood.
+- Details: [`mounts-persistence.md`](mounts-persistence.md). The test mod
+  [`examples/GK2MountsHerd`](../examples/GK2MountsHerd/Plugin.cs) uses all of it.
 
 ## Gating on the game's progress
 
@@ -403,3 +454,4 @@ History:
 - 0.8.0: `Mounts.Spawn(ownerId, MountSpawn)`, `Mounts.SpawnFoal`, `MountSpawn`, `MountHandle.Scale`, `IsRideable`,
   `Parent`, `Children`; the `Mounts.Shuffle` keys `ShuffleFollowSpeed`, `ShuffleFollowMaxDistance`, `ShuffleFollowGap` (how close to the parent it settles, 0.9), `ShuffleFollowAlways` (bool: follow however far, stopping only when blocked), `ShuffleFollowRoutes` (bool, on: a way round obstacles), `ShuffleRouteRange` (8).
 - 0.9.0: kept with the save: `MountSpawn.Persist`, `Key`, `SceneId`; `MountHandle.Persist`, `Key`, `RemoveWithParent`; the event `Mounts.InstancesRestored`.
+- 0.10.0 (breaking, pre-release): per-owner ids (`MountHandle.Id` is the owner's own number, `FullId`, `MountSpawn.Id`); `Mounts.Find(owner, id)`, `Find(owner, key)`, `InstancesOf(owner)`; `Mounts.GameReady`, `IsGameReady` (spawning before it is refused); `MountHandle.SetPersist(ownerId, keep)` and `SetKey(ownerId, key)` replace the setters (owner only); `GetData`, `SetData`, `DataKeys`; `SpawnFoal` gains `id`, `key`, `persist`; dormant records for owners not installed; side file format 2.

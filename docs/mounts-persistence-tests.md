@@ -1,12 +1,20 @@
 # GK2 Mounts persistence: in-game test plan
 
-These are the step-by-step tests for donkeys and carts kept with a save (API 0.9.0, design in
+These are the step-by-step tests for donkeys and carts kept with a save (API 0.10.0, design in
 [`mounts-persistence.md`](mounts-persistence.md)). Written 2026-10-01 against Steam build 25601286.
 
 **Status:**
-- **T1 passed** on 2026-10-01: 5 of 5 back, 2 cargo items back on the cart.
-- **T6 is expected to fail** until the foal scene fix is in.
+- **T1 passed** on 2026-10-01 with API 0.9.0: 5 of 5 back, 2 cargo items back on the cart. Run it again on 0.10.0.
+- **T6:** the fix is in with 0.10.0 (a foal comes back in its own scene).
+- **Part J** (several mods, the herd test mod) is new with 0.10.0.
 - Everything else is open.
+
+**After updating to 0.10.0:** the side file moved to format 2. The first load logs `has format 1, this version reads
+2; nothing restored`, so spawn your test donkeys once more, then sleep. From then on the file is format 2.
+
+**Installed for these tests:** `GK2Mounts.dll`, `GK2Showcase.dll` and the test mod `GK2MountsHerd.dll`, all
+deployed by the build into `BepInEx\plugins`. The herd mod is only for testing; remove it afterwards if you like (that
+is test J5).
 
 ## Before you start
 
@@ -41,6 +49,8 @@ Search the log for `Persistence:`. Each test below lists the lines it should sho
 | `..., K not found on the ground` | Cargo items the restore couldn't find |
 | `... ignored, nothing restored` | Stale file (another save time) |
 | `could not be spawned again: ...` | A record that failed, with the reason |
+| `Mounts: game ready (the game started, N frame(s) and S s after its save appeared)` | The ready step: the restore is done and mods may spawn |
+| `... is dormant (<mod> isn't installed); kept in the file, back when its mod is.` | A kept donkey whose mod is missing |
 | `setting X = Y wasn't restored` | A setting that no longer exists or can't be read |
 
 ### What "a save" means here
@@ -104,15 +114,14 @@ quit to the main menu and load the same save, unless a test says otherwise.
    - **Expected:** the donkey and cart stand where you left them, the cargo is on the cart, and nothing lies on the
      ground beside it.
 
-### T6. A foal left behind in another scene *(expected to fail until fixed)*
+### T6. A foal left behind in another scene *(fixed in 0.10.0)*
 
 1. Spawn a family. Ride the parent through a door to another scene and **sleep straight away**, before the foals
    catch up.
    - **In the side file:** the foal blocks have the **old** scene, the parent the new one.
 2. Reload.
-   - **Today's result:** the foals appear in the parent's scene at coordinates from the old scene. They could be
-     inside a wall or far off.
-   - **Expected after the fix:** they come back in their own scene and catch up with the parent as usual.
+   - **Expected:** the foals come back in their own (old) scene and catch up with the parent as usual. They are not
+     in the parent's scene at the old scene's coordinates, which is what 0.9.0 did.
 
 ---
 
@@ -247,9 +256,9 @@ Reset with git afterwards.
 
 ### T27. The owner mod is gone
 
-1. Through a test mod, or the GK2MountsTechGate example, spawn something with `Persist = true`. Sleep.
-2. Remove that mod and reload.
-   - **Expected:** it comes back. Its panel row says "by <that mod's GUID>", and it can be removed from the panel.
+Covered in detail by J5: the herd mod removed and put back.
+- **Expected since 0.10.0:** the instances are **dormant**, not spawned. The panel lists them under their mod, marked
+  NOT INSTALLED, and they come back when the mod does.
 
 ### T28. Many at once
 
@@ -276,9 +285,130 @@ The game runs there as the Windows build under Proton. BepInEx needs the launch 
 
 ---
 
+---
+
+## J. Several mods at once (the herd test mod)
+
+The test mod `GK2MountsHerd` (GUID `dreas.gk2.mounts.example.herd`) keeps its own herd alongside the panel's and the
+showcase's donkeys. Its log lines start with `Herd:`.
+
+| Key | What it does |
+|---|---|
+| K | Spawns the missing herd donkeys #1–#5 around the keeper (keys `herd-1`…`herd-5`, each with a name). When all are there: calls them to the keeper |
+| Shift+K | Removes the herd and its foals |
+| U | A herd foal for the nearest grown donkey of **another** mod |
+| Shift+U | A report in the log: every instance of every mod with its number, key, kept, and the herd's data |
+
+### J1. The ready gate and the herd's own checks
+
+1. Start the game and load your save.
+   - **Log, in this order:**
+     1. `Herd: a spawn while the game is still loading was refused, as it should be.` It comes before the ready line,
+        with the core's `could not spawn: Not until the game is ready` next to it.
+     2. `Mounts: game ready (the game started, ...)`. The words "the game started", not "fallback": the game's own
+        signal arrived.
+     3. `Herd: game ready: 0 of 5 herd donkeys back [], 0 foal(s). Mods in the world: ...`.
+   - **Write down** the frames and seconds in the ready line, to compare with later loads.
+
+### J2. Same numbers, different mods
+
+1. On the panel, spawn three donkeys. The rows show `#1`, `#2`, `#3` in the **GK2 Mounts panel** group.
+2. Press K. Five herd donkeys appear around the keeper.
+   - **The panel:**
+     - a second group, **GK2 Herd (test)**, with `#1`–`#5`, keys `'herd-1'`…, and "Mods' data: herd.name = Bella" and so on;
+     - both groups have a #1, #2 and #3;
+     - the markers over the donkeys read `Mounts panel #1` and `Herd (test) #1`, each group in its own colour.
+3. Press Shift+U.
+   - **Log:** a report listing both mods' instances, each `owner#id` once.
+
+### J3. Everything comes back with its own number
+
+1. With J2's donkeys, ride one of the herd off a bit and dismount. Put cargo on a panel cart if you have one.
+2. Sleep, then reload.
+   - **Log:**
+     - `Persistence: <slot>: N of N ... back`;
+     - `Herd: InstancesRestored: N back, 5 of them the herd's`;
+     - `Herd: game ready: 5 of 5 herd donkeys back [#1 Bella, #2 Moss, #3 Turnip, #4 Clover, #5 Barley]`, with no
+       KEY MISMATCH;
+     - `Herd: asking for #1 again was refused, as it should be.`
+   - **The panel:** the same numbers in both groups as before the save. The herd's names are kept.
+3. Press K: no new donkeys; the five come to the keeper (`0 spawned, 5 called`).
+
+### J4. A foal across mods
+
+1. Stand near a **panel** donkey without a cart and press U.
+   - **Log:** `Herd: foal ...herd#6 'Pip' for dreas.gk2.mounts.panel#N (another mod's)`.
+   - **The panel:**
+     - the foal is in the herd group, "foal of Mounts panel #N";
+     - the panel donkey's row says "parent of Herd (test) #6".
+2. Sleep, then reload.
+   - **Expected:** the foal is back next to its panel parent, with the same numbers on both. It follows the parent
+     when you ride the parent off.
+3. Remove the panel parent (Remove on its row).
+   - **Expected:** the herd's foal goes with it (it was spawned with `RemoveWithParent`, the default).
+
+### J5. A mod removed: dormant, then back
+
+1. With the herd and a herd foal on a panel donkey, sleep and quit.
+2. Move `GK2MountsHerd.dll` out of `BepInEx\plugins`. Start and load.
+   - **Log:** one line per herd instance, `... is dormant (dreas.gk2.mounts.example.herd isn't installed); kept in
+     the file, back when its mod is.`
+   - **In the world:** no herd donkeys. The panel's donkeys are there.
+   - **The panel:**
+     - a group with the herd's GUID, marked NOT INSTALLED, listing each herd instance as dormant;
+     - the foal on the panel donkey is dormant too: its own mod is missing, though its parent is there.
+3. Sleep, then open `Steam_1.gk2mounts.dat`: the herd's records are still in it, unchanged.
+4. **The panel's herd group header** reads `0 in the world, 0 kept with saves, 6 dormant` (5 donkeys and the foal).
+5. Quit, put the DLL back, start and load.
+   - **Expected:** the herd is back, with its numbers, names and the foal on its panel parent.
+     `Herd: game ready: 5 of 5 ...`.
+
+### J6. Forget a dormant record
+
+1. Repeat J5 up to step 2, then press **Forget** on one dormant herd donkey.
+2. Sleep, put the DLL back, and load.
+   - **Expected:** that one doesn't come back; the other four do. Its cargo, if any, lies where it stood.
+
+### J7. Numbers are never handed out twice
+
+1. Press Shift+K (the herd goes), then K: it is spawned again as #1–#5, because the herd asks for those numbers
+   itself.
+2. On the panel, note the highest number in the panel group (say #3). Remove #3, spawn another donkey.
+   - **Expected:** it is #4, not #3. Sleep, reload, spawn one more: #5. The counter survived the save.
+
+### J8. Only the owner changes "kept"
+
+1. On the panel, press "Don't keep" on a herd donkey.
+   - **Expected:** it works, since the panel is the core's and may change anything. A row then says "not kept with
+     saves".
+2. That is the only way another owner can change it. In code, `SetPersist` from a third mod returns `Refused("Only
+   its owner (...) can change that.")`. There's no key for this in the herd mod; it's covered by the code review.
+
+### J9. The showcase finds its donkey after a load
+
+1. Press H (the showcase): its donkey comes and you ride. Dismount somewhere and press G to drive, then leave the cart
+   standing (J, the hitch key) and ride off.
+2. Sleep, then reload.
+   - **Log:** `Found the kept donkey dreas.gk2.showcase#N and cart dreas.gk2.showcase#M.`
+     - The cart's number can be higher than you'd guess: hitching ends the free cart's instance (its number is
+       retired), and leaving the cart standing makes a new one with the next number and the key `cart`.
+   - **Expected:**
+     - **H** brings the **same** donkey (the same #N as before the save), not a new one;
+     - **G** brings the same cart;
+     - the panel's showcase group never grows past those two.
+
 ## Results
 
 | Test | Result | Date | Notes |
 |---|---|---|---|
 | T1 | passed | 2026-10-01 | 5 of 5, 2 cargo items; foal #5 was saved next to an obstacle (harmless log line) |
 | T2–T29 | open | | |
+| J1 | passed | 2026-10-01 | Early spawn refused twice (main menu and load); "the game started", 28 frames / 3.2 s |
+| J2 | passed | 2026-10-01 | panel #1–#5 and herd #1–#5 side by side |
+| J3 | passed | 2026-10-01 | 13 of 13 back with own numbers and keys, 2 cargo on the cart, herd 5 of 5 with names, #1 clash refused; own colour kept |
+| J4 | passed | 2026-10-01 | herd foals on panel#1 and showcase#1 both came back with their parents |
+| J5 | passed | 2026-10-01 | 7 dormant (5 donkeys, 2 foals), NOT INSTALLED group; all back with the DLL |
+| J6 | passed | 2026-10-01 | herd#3 forgotten: 4 of 5 back |
+| J7 | passed | 2026-10-01 | after removing panel#3 the next was panel#6 |
+| J8, J9 | partly | 2026-10-01 | the showcase found its kept donkey (no new spawn); the cart part and J8 not run |
+| Panel | fixed | 2026-10-01 | Forget and Remove were pushed off the right edge; Forget now under its text, Keep on the second row |

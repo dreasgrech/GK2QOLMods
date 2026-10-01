@@ -301,7 +301,7 @@ namespace GK2Mounts
                             shufflePhase = ShufflePhase.Following;
                             nextAheadCheck = 0f;
                             rejoinedAt = Time.time;
-                            Plugin.Log.LogInfo($"[foal] {Describe()} follows its parent #{p.Id} again ({dHome:F1} away, to {(k == NearSide ? "its near side" : "slot " + k)}).");
+                            Plugin.Log.LogInfo($"[foal] {Describe()} follows its parent {p.FullId} again ({dHome:F1} away, to {(k == NearSide ? "its near side" : "slot " + k)}).");
                             return true;
                         }
                         // No straight way to any place next to it: a route around, when the parent is within the route's
@@ -345,7 +345,7 @@ namespace GK2Mounts
                     if (followsLogged < 5)
                     {
                         followsLogged++;
-                        Plugin.Log.LogInfo($"[foal] {Describe()} follows its parent #{p.Id} ({dHome:F1} away).");
+                        Plugin.Log.LogInfo($"[foal] {Describe()} follows its parent {p.FullId} ({dHome:F1} away).");
                     }
                     return true;
                 }
@@ -475,7 +475,7 @@ namespace GK2Mounts
                 string what = s.Result == FoalRouteSearch.State.Found
                     ? $"found, {s.Corners.Count} corner(s)"
                     : $"none ({s.Why})";
-                Plugin.Log.LogInfo($"[foal] {Describe()} route to its parent #{p.Id}: {what}; {s.Tests} cell tests in {s.Frames} frame(s), {s.TestMs:F1} ms ({us:F0} µs per test).");
+                Plugin.Log.LogInfo($"[foal] {Describe()} route to its parent {p.FullId}: {what}; {s.Tests} cell tests in {s.Frames} frame(s), {s.TestMs:F1} ms ({us:F0} µs per test).");
             }
 
             // One frame of trotting towards the slot: the body moves in a straight line, the root stays half a (scaled)
@@ -550,7 +550,7 @@ namespace GK2Mounts
                 {
                     followLost = true;
                     shuffleHome = body;
-                    Plugin.Log.LogInfo($"[foal] {Describe()} can't follow its parent #{Parent.Id} ({why}{(groundFail != null ? ": " + groundFail : "")}); it waits, follows again when the parent comes back in reach, or catches up out of sight once it stands.");
+                    Plugin.Log.LogInfo($"[foal] {Describe()} can't follow its parent {Parent.FullId} ({why}{(groundFail != null ? ": " + groundFail : "")}); it waits, follows again when the parent comes back in reach, or catches up out of sight once it stands.");
                     groundFail = null;
                 }
             }
@@ -624,7 +624,7 @@ namespace GK2Mounts
                 pickFailsInRow = 0;
                 shufflePhase = ShufflePhase.Waiting;
                 EndStep(firstPause: true);
-                Plugin.Log.LogInfo($"[foal] {Describe()} caught up with its parent #{p.Id} ({why}) at {root:F2} in {SceneId}.");
+                Plugin.Log.LogInfo($"[foal] {Describe()} caught up with its parent {p.FullId} ({why}) at {root:F2} in {SceneId}.");
             }
 
             // StandTick without a view (its scene is not loaded): a foal whose parent stands in another, loaded scene

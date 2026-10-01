@@ -79,6 +79,7 @@ namespace GK2Showcase
                 Toggle(s, p.stayThroughDoors, "Stay mounted through doors to other areas", 1);
                 Toggle(s, p.showMessages, "Say why mounting is refused", 2);
                 Toggle(s, p.idleShuffle, "Donkey shuffles while left standing", 3);
+                Toggle(s, p.keepWithSaves, "Keep the donkey and cart with the save", 4);
             }
 
             private static void Key(Gk2Settings s, ConfigEntry<KeyboardShortcut> entry, string name, int order)
