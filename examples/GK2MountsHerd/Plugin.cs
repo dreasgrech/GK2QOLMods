@@ -98,6 +98,33 @@ namespace GK2MountsHerd
                 Logger.LogInfo(again == null ? "Herd: asking for #1 again was refused, as it should be." : $"Herd: FAIL: asking for #1 again gave {again.FullId}.");
                 again?.Remove();
             }
+
+            // Another mod's donkey: changing whether it is kept, or its key, must be refused (only its owner may);
+            // keeping the herd's own data on it is allowed (every mod has its own namespace on every instance).
+            MountHandle other = null;
+            foreach (MountHandle h in Mounts.Instances)
+            {
+                if (h.Owner != Guid) { other = h; break; }
+            }
+            if (other != null)
+            {
+                MountResult keep = other.SetPersist(Guid, !other.Persist);
+                if (keep.Ok)
+                {
+                    other.SetPersist(other.Owner, !other.Persist); // put it back
+                }
+                MountResult key = other.SetKey(Guid, "taken-by-herd");
+                if (key.Ok)
+                {
+                    other.SetKey(other.Owner, null);
+                }
+                Logger.LogInfo(!keep.Ok && !key.Ok
+                    ? $"Herd: changing {other.FullId}'s keep and key was refused, as it should be ({keep.Reason})."
+                    : $"Herd: FAIL: another mod's donkey {other.FullId} accepted: {(keep.Ok ? "SetPersist " : "")}{(key.Ok ? "SetKey" : "")}.");
+                string seen = other.GetData(Guid, "seen");
+                other.SetData(Guid, "seen", (int.TryParse(seen, out int n) ? n + 1 : 1).ToString());
+                Logger.LogInfo($"Herd: kept its own data on {other.FullId}: herd.seen = {other.GetData(Guid, "seen")} (one more each load; the owner's own data untouched).");
+            }
         }
 
         private void Update()

@@ -331,6 +331,7 @@ namespace GK2Mounts
         {
             internal string Owner, Key, Scene, ParentOwner;
             internal int Id, ParentId;
+            internal bool Complete; // its "end" line was read: a file cut off mid-record leaves the last one without
             internal bool Donkey = true, Cart, FacingRight = true, Rideable = true, RemoveWithParent = true;
             internal Vector3 Position;
             internal float Scale = 1f;
@@ -398,6 +399,7 @@ namespace GK2Mounts
                 cur.Lines.Add(raw);
                 if (f[0] == "end")
                 {
+                    cur.Complete = true;
                     cur = null;
                     continue;
                 }
@@ -479,6 +481,12 @@ namespace GK2Mounts
                 if (string.IsNullOrEmpty(r.Owner) || r.Id <= 0)
                 {
                     Plugin.Log.LogWarning($"Persistence: a record without an owner or number ({r.Owner}#{r.Id}) was skipped.");
+                    continue;
+                }
+                if (!r.Complete || string.IsNullOrEmpty(r.Scene))
+                {
+                    // Spawned from defaults it would stand at 0,0,0 in whatever scene the keeper is in.
+                    Plugin.Log.LogWarning($"Persistence: the record of {r.FullId} is {(!r.Complete ? "cut off (no end line; the file was truncated)" : "without a scene")}; skipped.");
                     continue;
                 }
                 if (byFull.ContainsKey(r.FullId))
@@ -631,6 +639,7 @@ namespace GK2Mounts
                     restored.Add(i.Handle);
                 }
             }
+            total += dropped.Count; // every record that wasn't dormant: back, dropped with its parent, or failed
             string note = $"{restored.Count} of {total} donkey(s)/cart(s) back, {items} cargo item(s) back on their carts"
                 + (missing > 0 ? $", {missing} not found on the ground" : "")
                 + (dormant.Count > 0 ? $", {dormant.Count} dormant" : "")

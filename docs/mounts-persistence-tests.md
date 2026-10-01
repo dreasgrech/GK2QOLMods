@@ -376,13 +376,19 @@ showcase's donkeys. Its log lines start with `Herd:`.
 2. On the panel, note the highest number in the panel group (say #3). Remove #3, spawn another donkey.
    - **Expected:** it is #4, not #3. Sleep, reload, spawn one more: #5. The counter survived the save.
 
-### J8. Only the owner changes "kept"
+### J8. Only the owner changes "kept" and the key; any mod may add its own data
 
-1. On the panel, press "Don't keep" on a herd donkey.
-   - **Expected:** it works, since the panel is the core's and may change anything. A row then says "not kept with
-     saves".
-2. That is the only way another owner can change it. In code, `SetPersist` from a third mod returns `Refused("Only
-   its owner (...) can change that.")`. There's no key for this in the herd mod; it's covered by the code review.
+The herd checks this by itself on every load, on the first instance of another mod.
+1. Load.
+   - **Log:**
+     - `Herd: changing <owner#id>'s keep and key was refused, as it should be (Only its owner (...) can change that.)`;
+     - `Herd: kept its own data on <owner#id>: herd.seen = N`.
+   - **The panel:** that donkey's row shows "Mods' data: Herd (test).seen = N".
+2. Sleep, then reload.
+   - **Expected:** `herd.seen = N+1`. The herd's data on another mod's donkey was kept with the save.
+3. On the panel, press "Don't keep with saves" on a herd donkey.
+   - **Expected:** it works, since the panel is the core's and may change anything. Press it again to keep the
+     donkey.
 
 ### J9. The showcase finds its donkey after a load
 
@@ -402,7 +408,18 @@ showcase's donkeys. Its log lines start with `Herd:`.
 | Test | Result | Date | Notes |
 |---|---|---|---|
 | T1 | passed | 2026-10-01 | 5 of 5, 2 cargo items; foal #5 was saved next to an obstacle (harmless log line) |
-| T2–T29 | open | | |
+| T2 | passed | 2026-10-01 | own colour (CoatColorize FF00FF) kept across loads |
+| T4 | passed | 2026-10-01 | removed panel#2 without sleeping: back after the reload |
+| T5, T6 | not run | 2026-10-01 | no other scene unlocked yet (the house is part of RuinedTemple) |
+| T7, T8 | passed | 2026-10-01 | panel#2 left its cart as panel#7 with 2 wood; panel#1 hitched it; both kept |
+| T9 | passed | 2026-10-01 | panel#6 (not kept) with a hitched kept cart: both gone after the reload |
+| T19–T21, T24, T25 | passed | 2026-10-01 | one load, all faults at once: x read as 0; no scene: skipped; unknown setting: skipped; 1 cargo not found; foals of a deleted parent went with it; a duplicate record skipped |
+| T22 | passed | 2026-10-01 | after a fix: a cut-off record is now skipped (it would have spawned from defaults at 0,0,0) |
+| T23 | passed | 2026-10-01 | format 3: nothing restored |
+| T26 | passed | 2026-10-01 | save time off by 1 s: ignored, nothing restored |
+| T16 | passed | 2026-10-01 | slept without the mods (save 3:55:06 PM), then loaded with them: the side file of 3:19:18 PM ignored, nothing restored; the save restored from a copy afterwards |
+| T12–T14 | open | | need a second save slot (a new game) |
+| T3, T10, T11, T15, T17, T18, T28, T29 | open | | T27 covered by J5 |
 | J1 | passed | 2026-10-01 | Early spawn refused twice (main menu and load); "the game started", 28 frames / 3.2 s |
 | J2 | passed | 2026-10-01 | panel #1–#5 and herd #1–#5 side by side |
 | J3 | passed | 2026-10-01 | 13 of 13 back with own numbers and keys, 2 cargo on the cart, herd 5 of 5 with names, #1 clash refused; own colour kept |
