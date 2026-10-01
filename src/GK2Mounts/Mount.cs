@@ -1809,9 +1809,15 @@ namespace GK2Mounts
                     // under it, where the slope in front then occludes its legs.
                     Vector3 bodyOffset = (bodySprite != null && bodySprite) ? bodySprite.position - donkey.transform.position : right * lateral;
                     bodyOffset.y = 0f;
-                    float gd = GroundHeight(target + bodyOffset, out lastDonkeyGroundSource);
+                    // Both points from one source, as the cart does (GroundHeightPair): the navmesh for both, else the
+                    // raycast for both. Sampled one by one, one point could get the navmesh and the other the raycast,
+                    // two different levels where they lie stacked: at the bridge's ends the navmesh under the deck (6.0)
+                    // and the deck itself (6.3 to 6.5). The mount and the rider's seat then dropped for single frames
+                    // in Ride style only, the one that snaps to the ground (the user's videos and [ground] lines,
+                    // 2026-10-01). The step limit below stays as the backstop.
+                    GroundHeightPair(target + bodyOffset, basePos, basePos.y, out float gd, out float gk, out string pairSource);
+                    lastDonkeyGroundSource = lastKeeperGroundSource = pairSource;
                     lastCartGround = GroundHeight(target + bodyOffset - right * (sign * 1.2f), out lastCartGroundSource);
-                    float gk = GroundHeight(basePos, out lastKeeperGroundSource);
                     if (!float.IsNaN(gd) && !float.IsNaN(gk))
                     {
                         float d = gd - gk;
