@@ -9,8 +9,10 @@ so you can install any subset.
 | [Built Count](#built-count) | 1.0.6 | Build menus show how many of each building you already have in that area. |
 | [Move Building](#move-building) | 1.1.6 | Pick up a built building and put it down somewhere else, contents and all. |
 | [Owned Count](#owned-count) | 1.0.4 | Item tooltips show how many of that item you own across inventory and every chest. |
-| [Showcase](#showcase-and-gk2-mounts) (placeholder name) | 0.1.0 | Ride the donkey (H) or drive its cart (G), with cargo, lantern and sounds. Needs GK2 Mounts. |
-| [GK2 Mounts](#showcase-and-gk2-mounts) | 0.1.0 | The mount library the showcase is built on; other mods can use it too (API for mod authors). |
+
+**Looking for the donkey?** The rideable donkey and cart (GK2 Saddle Up!, and the GK2 Donkey API it's built on) moved
+to their own repo on 2026-10-02, with their history: [GK2DonkeyAPI](https://github.com/dreasgrech/GK2DonkeyAPI). Until
+then they were GK2 Showcase and GK2 Mounts here.
 
 ## Installing
 
@@ -26,7 +28,7 @@ and cannot load code, so it is not used.
 3. **Run the game once** and quit. BepInEx creates `BepInEx\plugins`, `BepInEx\config` and `BepInEx\LogOutput.log`.
    If none appear, BepInEx isn't being loaded (usually a wrong zip, or the files landed in a subfolder).
 4. **Copy the DLLs you want** from [`dist/`](dist/) into `BepInEx\plugins\`. Any combination works; they don't depend
-   on each other, except that the showcase needs `GK2Mounts.dll` next to it.
+   on each other.
 5. **Start the game.** Each mod writes one line to `BepInEx\LogOutput.log` when it loads, for example
    `GK2 Move Building 1.1.6 loaded.` Settings appear in `BepInEx\config\dreas.gk2.<mod>.cfg` after the first run
    and are read at game start.
@@ -125,27 +127,6 @@ from. Graded items (the starred ones, e.g. Bones of different skull grades) also
   (stack sizes, grades) to a CSV.
 - Optional: with [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) installed, its settings
   also appear in the game's Mods menu. The same DLL works without it.
-
-### Showcase and GK2 Mounts
-
-`GK2Showcase.dll` (GUID `dreas.gk2.showcase`, placeholder name) + `GK2Mounts.dll` (GUID `dreas.gk2.mounts`) · install
-both · [showcase README](src/GK2Showcase/) · [GK2 Mounts README](src/GK2Mounts/) · [API for mod authors](docs/mounts-api.md)
-
-**H** summons a donkey under the keeper and you ride it, faster than walking. **G** gives you the donkey pulling its
-cart. The same key gets you off, and the other key switches between the two.
-- **The cart carries two items:**
-  - anything you pick up lands on it;
-  - interact with nothing in front sets the top one down;
-  - piles, tables, graves and quests take from it as if you held the items.
-- **Cargo comes back to you** when you get off and before the game saves. It never enters a save.
-- **The cart has a lantern** that lights at night and hangs straight on slopes.
-- **Sounds:** hoofsteps per ground, wheels, brays, and a bell.
-- **You get off automatically** for work, ladders, building, fishing, fighting and sleep, and at building doors.
-
-GK2 Mounts on its own does nothing; it's a C# library, so other mods can build mounts into the story or gate them on
-the tech tree, quests or story flags. Settings:
-- **The showcase:** keys and behaviour, in the Mods menu with GK2 Mod Framework installed.
-- **GK2 Mounts:** look and sound tuning. A dev panel is available (`Debug.TuningWindow = true`).
 
 ## Safety
 
