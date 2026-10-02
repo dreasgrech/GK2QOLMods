@@ -5,10 +5,10 @@ so you can install any subset.
 
 | Mod | Version | In one line |
 |---|---|---|
-| [Global Storage](#global-storage) | 1.1.4 | Craft and build with materials from chests in every area, not just the one you're standing in. |
-| [Built Count](#built-count) | 1.0.5 | Build menus show how many of each building you already have in that area. |
-| [Move Building](#move-building) | 1.1.5 | Pick up a built building and put it down somewhere else, contents and all. |
-| [Owned Count](#owned-count) | 1.0.3 | Item tooltips show how many of that item you own across inventory and every chest. |
+| [Global Storage](#global-storage) | 1.1.5 | Craft and build with materials from chests in every area, not just the one you're standing in. |
+| [Built Count](#built-count) | 1.0.6 | Build menus show how many of each building you already have in that area. |
+| [Move Building](#move-building) | 1.1.6 | Pick up a built building and put it down somewhere else, contents and all. |
+| [Owned Count](#owned-count) | 1.0.4 | Item tooltips show how many of that item you own across inventory and every chest. |
 | [Showcase](#showcase-and-gk2-mounts) (placeholder name) | 0.1.0 | Ride the donkey (H) or drive its cart (G), with cargo, lantern and sounds. Needs GK2 Mounts. |
 | [GK2 Mounts](#showcase-and-gk2-mounts) | 0.1.0 | The mount library the showcase is built on; other mods can use it too (API for mod authors). |
 
@@ -28,7 +28,7 @@ and cannot load code, so it is not used.
 4. **Copy the DLLs you want** from [`dist/`](dist/) into `BepInEx\plugins\`. Any combination works; they don't depend
    on each other, except that the showcase needs `GK2Mounts.dll` next to it.
 5. **Start the game.** Each mod writes one line to `BepInEx\LogOutput.log` when it loads, for example
-   `GK2 Move Building 1.1.5 loaded.` Settings appear in `BepInEx\config\dreas.gk2.<mod>.cfg` after the first run
+   `GK2 Move Building 1.1.6 loaded.` Settings appear in `BepInEx\config\dreas.gk2.<mod>.cfg` after the first run
    and are read at game start.
 
 To **uninstall** a mod, delete its DLL from `BepInEx\plugins`. To remove BepInEx entirely, delete `winhttp.dll`,
@@ -163,5 +163,5 @@ the tech tree, quests or story flags. Settings:
 
 After a game patch the mods disable themselves (see above) until the game's code has been compared against the
 audited build and the mods rebuilt with the new module version ids (`tests/GameDiff` lists what changed; see
-`tests/README.md`). Until then the game runs exactly as unmodified. Audited build: Steam 25601286.
+`tests/README.md`). Until then the game runs exactly as unmodified. Audited build: Steam 25676698 (game 1.008; `docs/game-update-25676698.md`).
 Don't set `DisableOnGameUpdate=false` unless you accept running unaudited.

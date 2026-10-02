@@ -43,7 +43,9 @@ namespace GK2Showcase
         private sealed class ShowcaseMod : Gk2ModBase
         {
             // The mod has no Enabled switch of its own (GK2 Mounts' General.Enabled is the kill switch), and the
-            // framework adds none: frameworkManagesEnabledState false.
+            // framework adds none: frameworkManagesEnabledState false. requiresKnownBuild makes its list say
+            // "Unknown build" unless OnRegister confirms the build, which it does only while GK2 Mounts runs
+            // (ConfirmBuild below). Without it the list said "Compatible" while GK2 Mounts was off (game 1.008).
             private readonly Gk2ModMetadata metadata = new Gk2ModMetadata(
                 Plugin.Guid,
                 "GK2 Showcase",
@@ -51,7 +53,7 @@ namespace GK2Showcase
                 Plugin.Version,
                 "Ride the donkey (H) or drive its cart (G). Built on GK2 Mounts, which it needs.",
                 supportsRuntimeToggle: false,
-                requiresKnownBuild: false,
+                requiresKnownBuild: true,
                 frameworkManagesEnabledState: false);
 
             private readonly IReadOnlyList<Gk2ModDependency> dependencies = new[]
@@ -63,8 +65,25 @@ namespace GK2Showcase
 
             public override IReadOnlyList<Gk2ModDependency> Dependencies => dependencies;
 
+            private static void ConfirmBuild(Gk2ModContext context)
+            {
+                if (Plugin.Status != "Active")
+                {
+                    return;
+                }
+                try
+                {
+                    context.ConfirmCurrentBuildCompatibility("Its own check of the game code passed (the audited build).");
+                }
+                catch (Exception e)
+                {
+                    Plugin.Log.LogWarning("GK2 Mod Framework didn't take the build confirmation (" + e.Message + "); its Mods menu may show this mod as not compatible. The mod itself works as normal.");
+                }
+            }
+
             public override void OnRegister(Gk2ModContext context)
             {
+                ConfirmBuild(context);
                 Gk2Settings s = context.Settings;
                 Plugin p = Plugin.Instance;
                 s.AddReadOnly("Keys", "Status", "Status", "What the mod is doing right now.", () => Plugin.Status, order: -10);

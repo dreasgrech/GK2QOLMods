@@ -10,8 +10,9 @@ any number of them, and be kept with the save.
 - **For mod authors:** the C# API is in [`docs/mounts-api.md`](../../docs/mounts-api.md). Tie the mount into the
   story, gate it on the tech tree, quests or story flags, spawn herds, keep your own data on each donkey.
 
-Version 0.1.0 (API 0.12.0), built and audited against Steam game build 25601286 (Assembly-CSharp MVID `3ffadd70-…`,
-LazyBearTechnology `8a7a5e04-…`; re-audit in [`docs/steam-move-audit.md`](../../docs/steam-move-audit.md)).
+Version 0.1.0 (API 0.12.0), built and audited against Steam game build 25676698, game 1.008 (Assembly-CSharp MVID
+`f7d46132-…`, LazyBearTechnology `f67c6993-…`; re-audit in
+[`docs/game-update-25676698.md`](../../docs/game-update-25676698.md)).
 
 - **Every setting and how it works inside the game:** [`docs/mounts-reference.md`](../../docs/mounts-reference.md).
 - **Design:** [`docs/mounts-api-design.md`](../../docs/mounts-api-design.md), [`FEASIBILITY.md`](FEASIBILITY.md), and

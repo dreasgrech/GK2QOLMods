@@ -5,8 +5,8 @@ The building is the **same object** afterwards. Its contents, crafts, fuel, upgr
 reference to it (orders, porters, quests) stay as they were. Nothing is paid, nothing is refunded, no build or
 demolition scripts run.
 
-Version 1.1.5, built and audited against Steam game build 25601286 (Assembly-CSharp MVID `3ffadd70-…`,
-LazyBearTechnology `8a7a5e04-…`; re-audit in `docs/steam-move-audit.md`). 1.1.4 was the same move code without the
+Version 1.1.6, built and audited against Steam game build 25676698, game 1.008 (Assembly-CSharp MVID `f7d46132-…`,
+LazyBearTechnology `f67c6993-…`; re-audit in `docs/game-update-25676698.md`). 1.1.5 was the same code for 25601286, 1.1.4 was the same move code without the
 Mods-menu integration, and 1.1.3 the same code for 25533739.
 See `INVESTIGATION.md` for the study of the Nexus mod this was designed against, and why this one works differently.
 

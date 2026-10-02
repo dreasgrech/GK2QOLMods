@@ -76,9 +76,13 @@ The framework documents an **optional bridge**, and it's the only pattern that f
 - The bridge registers the main plugin's own `ConfigFile`. Registering the same Section/Key/type returns the existing
   `ConfigEntry`, so the menu edits the real values. It uses `frameworkManagesEnabledState: false`, so there's no
   second Enabled switch and nothing is added to our cfgs.
-- It uses `requiresKnownBuild: false`, because our main plugin already disables itself through its MVID guard. A
-  read-only row can show our own "active / disabled: game updated" state, so the framework's "Unknown build" isn't
-  the only word the player sees.
+- ~~It uses `requiresKnownBuild: false`~~ **Changed 2026-10-02 (game 1.008):** with `false` the framework never
+  judges the mod, so its list said "Compatible" for all our mods while their own guard had switched them off. Now
+  every bridge uses `requiresKnownBuild: true` and calls `context.ConfirmCurrentBuildCompatibility` in `OnRegister`
+  only when the mod's `Status` is "Active" (the showcase: only while GK2 Mounts runs). On a game update the list then
+  says "Unknown build" (shown as an error), and the read-only Status row in Settings gives our own reason. Settings
+  stay reachable either way. One limit: if the framework ever lists the current build's hash as known, it reports
+  "Compatible" without asking, whatever our guard says.
 - Cost: one small extra project and DLL per mod, plus a dependency on a third party's 0.x API ("preview; breaking
   changes may occur before 1.0").
 

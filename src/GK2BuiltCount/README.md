@@ -12,7 +12,7 @@ Woodworking Workbench I (1)
 It only changes what the menu shows. Build rules, costs and saves are not touched. It is independent of GK2 Global Storage; the two plugins work together or alone.
 
 - GUID: `dreas.gk2.builtcount`
-- Game build audited: Steam build 25601286, Unity 6000.3.9f1 Mono, `Assembly-CSharp` MVID `3ffadd70-169d-402a-bcdf-59c322dfc26d`, `LazyBearTechnology` `8a7a5e04-396d-4525-a779-3f0de1341398`. v1.0.3 was audited against 25533739 (`97f92f0d-a093-49fe-ba4d-74aa62fae81e`); v1.0.2 was audited against 25509347 (`70946fdd-5c76-4d71-95c3-fea95051340d`); v1.0.0 and v1.0.1 were audited against build 25457344 (`dfae7296-aa7e-450f-92b4-4e617878a48d`)
+- Game build audited: Steam build 25676698 (game 1.008), Unity 6000.3.9f1 Mono, `Assembly-CSharp` MVID `f7d46132-dd54-4296-8f19-917330ceadd9`, `LazyBearTechnology` `f67c6993-6db1-4f08-8352-cf7315263736`. v1.0.5 was audited against 25601286 (`3ffadd70-169d-402a-bcdf-59c322dfc26d`); v1.0.3 was audited against 25533739 (`97f92f0d-a093-49fe-ba4d-74aa62fae81e`); v1.0.2 was audited against 25509347 (`70946fdd-5c76-4d71-95c3-fea95051340d`); v1.0.0 and v1.0.1 were audited against build 25457344 (`dfae7296-aa7e-450f-92b4-4e617878a48d`)
 - Needs: BepInEx 5.4.23.5, installed in the game folder (`C:\Program Files (x86)\Steam\steamapps\common\Graveyard Keeper 2`)
 
 ## Optional: GK2 Mod Framework
@@ -120,6 +120,14 @@ Also checked, no issue found:
   - **Run A (framework installed):** registered Compatible, and the Mods menu listed all four mods. "Show built
     counts" was turned off and on, then Reset, with no warnings or errors.
   - **Run B (framework removed):** a clean log; the counts were checked in game by the user.
+
+## Game update 25676698 (game 1.008): re-audit (v1.0.6)
+
+The full comparison is in `docs/game-update-25676698.md`.
+
+**Relevant here:** nothing. `UIBuildingWidget`, `UIBuildingWindow` and `WorldZoneData` are unchanged.
+
+**Verification:** Cecil scan, HarmonyX harness. **Code change:** the MVIDs and the version string.
 
 ## Game update 25601286 (move to the Steam install): re-audit (v1.0.4)
 

@@ -12,7 +12,7 @@ namespace GK2Mounts
         {
             Require(AccessTools.Method(typeof(WgoDataScriptsManager), nameof(WgoDataScriptsManager.CreateScript), new[] { typeof(WgoData), typeof(string) }), "WgoDataScriptsManager.CreateScript");
             Require(AccessTools.Method(typeof(Wgo), nameof(Wgo.Spawn)), "Wgo.Spawn");
-            Require(AccessTools.Method(typeof(Wgo), nameof(Wgo.UpdateChunkVisibility)), "Wgo.UpdateChunkVisibility");
+            Require(AccessTools.Method(typeof(Wgo), nameof(Wgo.UpdateChunkVisibility), new[] { typeof(bool) }), "Wgo.UpdateChunkVisibility(bool)");
             Require(AccessTools.Method(typeof(Wgo), nameof(Wgo.SetInteractableCollidersState)), "Wgo.SetInteractableCollidersState");
             Require(AccessTools.Method(typeof(Wgo), nameof(Wgo.SetLayerToAllColliders)), "Wgo.SetLayerToAllColliders");
             Require(AccessTools.Property(typeof(PlayerPhysicalBody), nameof(PlayerPhysicalBody.SpeedMultiplier)), "PlayerPhysicalBody.SpeedMultiplier");

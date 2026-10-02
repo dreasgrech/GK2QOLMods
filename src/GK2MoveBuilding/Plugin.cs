@@ -13,12 +13,12 @@ namespace GK2MoveBuilding
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "dreas.gk2.movebuilding";
-        public const string Version = "1.1.5";
+        public const string Version = "1.1.6";
 
         // Module version id of the Assembly-CSharp.dll this plugin was audited against (Steam build 25601286).
-        private static readonly System.Guid AuditedGameMvid = new System.Guid("3ffadd70-169d-402a-bcdf-59c322dfc26d");
+        private static readonly System.Guid AuditedGameMvid = new System.Guid("f7d46132-dd54-4296-8f19-917330ceadd9");
         // And of LazyBearTechnology.dll (the engine library the plugin also uses), same build (Steam 25601286).
-        private static readonly System.Guid AuditedLazyBearMvid = new System.Guid("8a7a5e04-396d-4525-a779-3f0de1341398");
+        private static readonly System.Guid AuditedLazyBearMvid = new System.Guid("f67c6993-6db1-4f08-8352-cf7315263736");
 
         internal static ManualLogSource Log;
         internal static ConfigEntry<bool> Enabled;

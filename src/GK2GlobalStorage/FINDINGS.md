@@ -62,7 +62,7 @@ Source: `src\GK2GlobalStorage\Plugin.cs` and `GK2GlobalStorage.csproj` (netstand
 | 2 | `MultiInventory(PlayerData, bool)` constructor (postfix) | Adds storage from all zones for build desks, town buildings, alchemy, pickers, garden seed counts and tooltips. Skipped when `addCurrentPlayerWorldZone` is false or a suppression scope is active |
 | 3 | `MultiInventory.Sort` (prefix) | Only for lists the mod extended: removes duplicate entries, then sorts stably with the game's rule. Local inventories stay first, faraway chests after them |
 | 4 | `UIMultiInventoryWindowData` constructor (prefix + finalizer) | Pickers only show a faraway chest if it holds an item that picker accepts |
-| 5 | `ZombieEquipmentInventoryWidgetData.OnArmorCellPressed2` / `OnInstrumentCellPressed2` (prefix + finalizer) | Unequipping zombie gear behaves like the unmodified game |
+| 5 | `ZombieEquipmentInventoryWidgetData.UnequipToPlayer` (prefix + finalizer; until 1.1.4 `OnArmorCellPressed2` / `OnInstrumentCellPressed2`) | Unequipping zombie gear behaves like the unmodified game |
 | 6 | `PlayerOrderExecutor` constructor (prefix + finalizer) | Hand-delivering zombie orders uses pocket and local zone only, unless enabled in config |
 
 ### What counts as storage
@@ -252,6 +252,30 @@ the framework. The pattern and its reasons are in `docs/gk2-mod-framework.md`.
     menu, "Craft from every area" was unticked and then Reset. The cfg values were unchanged afterwards.
   - **Run B (framework removed):** all five mods loaded, the log had no warnings or errors and nothing mentioning
     the framework, and "Discovered 20 eligible storage inventories" confirmed the mod ran in the save.
+
+## Game update 25676698 (game 1.008): re-audit (v1.1.5)
+
+On 2026-10-02 the game was updated to 1.008. The full comparison is in `docs/game-update-25676698.md`.
+
+**One break, fixed:**
+- **What changed:** the zombie's hand slot was split into a tool slot and a weapon slot.
+  `OnInstrumentCellPressed2` is gone. The new `OnToolCellPressed2`, `OnWeaponCellPressed2` and the old
+  `OnArmorCellPressed2` all call the private `UnequipToPlayer`, which gives the item back with
+  `new MultiInventory(PlayerData).AddItem` as before.
+- **The fix:** patch 5 now targets `UnequipToPlayer` alone. That covers all three cells, and nothing counts twice.
+
+**Near the mod, unchanged in effect:**
+- `ConveyorSystem.AddWorker` and `RemoveWorker` match workers by id.
+- `BodyPocketInventoryWidget` skips the equipped weapon.
+- The `GetCraftableMultiInventory` overrides still don't call the base method (Cecil).
+- The `MultiInventory(PlayerData, bool)` constructor, `Sort`, the `UIMultiInventoryWindowData` constructor and
+  `PlayerOrderExecutor()` keep their shapes.
+
+**Tool caveat:** `StaticScan-GlobalStorage`'s "calls base" lines can't see IL (MetadataLoadContext doesn't support
+`ResolveMethod`) and always print False. The Cecil scan is the real check.
+
+**Verification:** `StaticScan-GlobalStorage` and `CecilScan-GlobalStorage` pass. **In game:** unequip a zombie's
+armour, tool and weapon, and check that each goes to the pocket or the local zone.
 
 ## Game update 25601286, move to the Steam install: re-audit (v1.1.3)
 

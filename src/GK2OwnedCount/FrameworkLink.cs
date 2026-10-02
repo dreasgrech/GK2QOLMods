@@ -43,7 +43,9 @@ namespace GK2OwnedCount
         private sealed class OwnedCountMod : Gk2ModBase
         {
             // Our own switches stay in charge (General.Enabled, the game-update guard): the framework adds no
-            // Enabled entry of its own and doesn't judge the game build for us.
+            // Enabled entry of its own. requiresKnownBuild makes its list say "Unknown build" unless OnRegister
+            // confirms the build, which it does only when our own guard passed (ConfirmBuild below). Without it the
+            // list said "Compatible" while the guard had switched the mod off (game 1.008, 2026-10-02).
             private readonly Gk2ModMetadata metadata = new Gk2ModMetadata(
                 Plugin.Guid,
                 "GK2 Owned Count",
@@ -51,7 +53,7 @@ namespace GK2OwnedCount
                 Plugin.Version,
                 "Item tooltips show how many of that item you own: on you plus every storage chest in every area. Display only.",
                 supportsRuntimeToggle: false,
-                requiresKnownBuild: false,
+                requiresKnownBuild: true,
                 frameworkManagesEnabledState: false);
 
             private readonly IReadOnlyList<Gk2ModDependency> dependencies = new[]
@@ -63,8 +65,25 @@ namespace GK2OwnedCount
 
             public override IReadOnlyList<Gk2ModDependency> Dependencies => dependencies;
 
+            private static void ConfirmBuild(Gk2ModContext context)
+            {
+                if (Plugin.Status != "Active")
+                {
+                    return;
+                }
+                try
+                {
+                    context.ConfirmCurrentBuildCompatibility("Its own check of the game code passed (the audited build).");
+                }
+                catch (Exception e)
+                {
+                    Plugin.Log.LogWarning("GK2 Mod Framework didn't take the build confirmation (" + e.Message + "); its Mods menu may show this mod as not compatible. The mod itself works as normal.");
+                }
+            }
+
             public override void OnRegister(Gk2ModContext context)
             {
+                ConfirmBuild(context);
                 Gk2Settings s = context.Settings;
                 s.AddReadOnly("General", "Status", "Status", "What the mod is doing right now.",
                     () => Plugin.Status == "Active" && !Plugin.Enabled.Value ? "Off (\"Show the owned count\" is unchecked)" : Plugin.Status,

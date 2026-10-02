@@ -5,7 +5,7 @@ Ride the donkey in Graveyard Keeper 2, or drive its cart. This is the playable m
 It uses nothing but the public GK2 Mounts API ([`docs/mounts-api.md`](../../docs/mounts-api.md)), so it's also the
 reference example for mod authors.
 
-Version 0.1.0, for GK2 Mounts 0.1.0 (API 0.7.0 or newer) and Steam game build 25601286.
+Version 0.1.0, for GK2 Mounts 0.1.0 (API 0.11.0 or newer) and Steam game build 25676698 (game 1.008).
 
 ## Playing
 

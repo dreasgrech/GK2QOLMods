@@ -24,7 +24,8 @@ void Method(string type, string name, int pars) { var td = game.GetType(type); v
   bool good = ms != null && ms.Count == 1 && ms[0].Parameters.Count == pars && ms[0].HasBody; Console.WriteLine((good?"PASS":"FAIL") + $" method {type}.{name} overloads={ms?.Count} params={ms?.FirstOrDefault()?.Parameters.Count}"); if (!good) fails++; }
 Method("WgoDataScriptsManager", "CreateScript", 2);
 Method("Wgo", "Spawn", 6);
-Method("Wgo", "UpdateChunkVisibility", 1);
+// 1.008 added UpdateChunkVisibility(bool, bool); the mod calls the (bool) one.
+{ var td = game.GetType("Wgo"); var m = td?.Methods.FirstOrDefault(x => x.Name == "UpdateChunkVisibility" && x.Parameters.Count == 1 && x.Parameters[0].ParameterType.FullName == "System.Boolean"); bool good = m != null && m.HasBody; Console.WriteLine((good?"PASS":"FAIL") + " method Wgo.UpdateChunkVisibility(bool) found=" + (m != null)); if (!good) fails++; }
 Method("Wgo", "SetInteractableCollidersState", 1);
 Method("Wgo", "SetLayerToAllColliders", 1);
 Method("WgoData", "SetStateToAnimator", 1);

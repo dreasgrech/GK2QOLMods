@@ -89,9 +89,19 @@ namespace GK2Showcase
                 ApplyBehaviour(entry);
             }
             ready = true;
-            Status = "Active";
+            // GK2 Mounts loads first (the hard dependency), so by now it has run its own game-update guard.
+            Status = Mounts.IsAvailable
+                ? "Active"
+                : "Off: GK2 Mounts is off (its General.Enabled, or it switched itself off after a game update; see BepInEx/LogOutput.log).";
             FrameworkLink.TryRegister(Config);
-            Log.LogInfo($"GK2 Showcase {Version} loaded (GK2 Mounts API {Mounts.ApiVersion}): ride {rideKey.Value}, cart {cartKey.Value}.");
+            if (Mounts.IsAvailable)
+            {
+                Log.LogInfo($"GK2 Showcase {Version} loaded (GK2 Mounts API {Mounts.ApiVersion}): ride {rideKey.Value}, cart {cartKey.Value}.");
+            }
+            else
+            {
+                Log.LogWarning($"GK2 Showcase {Version} loaded, but GK2 Mounts is off, so the keys do nothing.");
+            }
         }
 
         // The behaviour settings are this mod's; the core runs with them as session overrides.

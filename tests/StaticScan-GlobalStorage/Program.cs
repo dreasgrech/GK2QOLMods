@@ -20,15 +20,19 @@ Check("MultiInventory(PlayerData,bool)", mi.GetConstructors(all).Where(c=>{var p
 Check("MultiInventory.Sort", mi.GetMethods(all).Where(m=>m.Name=="Sort").ToArray(), new string[0]);
 Check("UIMultiInventoryWindowData ctor", T("UIMultiInventoryWindowData").GetConstructors(all).Where(c=>c.GetParameters().Length==6).ToArray(), new[]{"itemsAvailableCondition"});
 var ze = T("ZombieEquipmentInventoryWidgetData");
-Check("ZombieEquip.OnArmorCellPressed2", ze.GetMethods(all).Where(m=>m.Name=="OnArmorCellPressed2").ToArray(), new string[0]);
-Check("ZombieEquip.OnInstrumentCellPressed2", ze.GetMethods(all).Where(m=>m.Name=="OnInstrumentCellPressed2").ToArray(), new string[0]);
+Check("ZombieEquip.UnequipToPlayer", ze.GetMethods(all).Where(m=>m.Name=="UnequipToPlayer").ToArray(), new string[0]);
+// What UnequipToPlayer calls is checked in CecilScan-GlobalStorage (MetadataLoadContext cannot resolve IL tokens).
+// The public cells that reach it (armour, tool, weapon).
+foreach (var n in new[]{"OnArmorCellPressed2","OnToolCellPressed2","OnWeaponCellPressed2"})
+  Console.WriteLine($"{(ze.GetMethods(all).Any(x=>x.Name==n)?"OK  ":"FAIL")} ZombieEquip.{n}");
 Check("PlayerOrderExecutor()", T("PlayerOrderExecutor").GetConstructors(all).Where(c=>c.GetParameters().Length==0).ToArray(), new string[0]);
 // Fields/properties the plugin reads
 foreach (var (t,n) in new[]{("WgoData","IsHidden"),("WgoData","IsInteractable"),("WgoData","Inventory"),("WgoData","Worker"),("WorldZoneData","IsContainer"),("WorldZoneData","IsActive"),("Item","Inventory"),("Item","IsEmpty"),("Item","InventorySize")})
   Console.WriteLine($"{(T(t).GetProperty(n, all)!=null?"OK  ":"FAIL")} property {t}.{n}");
 foreach (var (t,n) in new[]{("MultiInventory","inventoryList"),("WorldZoneData","wgoDataList"),("GameSceneData","worldZones"),("WorldData","gameSceneDataList"),("WGODef","inventorySize"),("WGODef","conveyorType")})
   Console.WriteLine($"{(T(t).GetField(n, all)!=null?"OK  ":"FAIL")} field {t}.{n}");
-// Which overrides of GetCraftableMultiInventory call base? (would make the base patch reach them)
+// Which overrides of GetCraftableMultiInventory call base? Vacuous here: ResolveMethod is not supported by
+// MetadataLoadContext, so this always prints False. CecilScan-GlobalStorage does the real check.
 foreach (var sub in new[]{"ZombieWgoData","ConveyorWgoData"}) {
   var m = T(sub).GetMethods(all).First(x=>x.Name=="GetCraftableMultiInventory");
   var il = m.GetMethodBody()!.GetILAsByteArray()!; bool callsBase=false;

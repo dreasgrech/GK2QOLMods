@@ -12,5 +12,11 @@ void Dump(string typeName, bool nested=true) {
 Console.WriteLine("=== base-call re-check (previous tool was vacuous)");
 Dump("ZombieWgoData", false); Dump("ConveyorWgoData", false);
 Console.WriteLine("(no GetCraftableMultiInventory call listed above = overrides never call base)");
+Console.WriteLine("=== zombie unequip (since game 1.008 one private method for armour, tool and weapon)");
+{ var m = mod.GetType("ZombieEquipmentInventoryWidgetData").Methods.FirstOrDefault(x=>x.Name=="UnequipToPlayer" && x.HasBody);
+  var refs = m?.Body.Instructions.Select(i=>i.Operand).OfType<MethodReference>().ToList() ?? new();
+  bool ctor = refs.Any(r=>r.DeclaringType.Name=="MultiInventory" && r.Name==".ctor" && r.Parameters.Count>=1 && r.Parameters[0].ParameterType.Name=="PlayerData");
+  bool add = refs.Any(r=>r.DeclaringType.Name=="MultiInventory" && r.Name=="AddItem");
+  Console.WriteLine($"{(m!=null&&ctor&&add?"PASS":"FAIL")} ZombieEquipmentInventoryWidgetData.UnequipToPlayer gives back through new MultiInventory(PlayerData).AddItem (found={m!=null} ctor={ctor} add={add})"); }
 Console.WriteLine("=== quest/dialogue item call sites");
 Dump("UIMultiAnswerOption"); Dump("UIMultiAnswerIcon"); Dump("UIQuestInfoWindow"); Dump("QuestFinishCheck");
