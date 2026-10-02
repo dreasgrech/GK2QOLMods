@@ -53,6 +53,7 @@ class GK2Mounts.Api.MountHandle
   method GK2Mounts.Api.MountResult ComeToKeeper(System.Nullable<bool> facingRight = null, bool forRide = True, bool showMessage = True)
   method System.Collections.Generic.IReadOnlyList<string> DataKeys(string ownerId)
   method string GetData(string ownerId, string key)
+  method GK2Mounts.Api.MountResult LoadFromHead(bool showMessage = True)
   method GK2Mounts.Api.MountResult MoveTo(UnityEngine.Vector3 position, System.Nullable<bool> facingRight = null)
   method void Remove()
   method GK2Mounts.Api.MountResult Ride(bool showMessage = True)
@@ -60,6 +61,7 @@ class GK2Mounts.Api.MountHandle
   method int SetDownCargo()
   method GK2Mounts.Api.MountResult SetKey(string ownerId, string key)
   method GK2Mounts.Api.MountResult SetPersist(string ownerId, bool keep)
+  method GK2Mounts.Api.MountResult TakeToHead(bool showMessage = True)
   method string ToString()
 struct GK2Mounts.Api.MountResult
   property bool Ok { get; }

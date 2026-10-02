@@ -273,6 +273,60 @@ namespace GK2Mounts.Api
             return MountResult.Success;
         }
 
+        // On foot at this standing cart: the topmost item the keeper holds that the cart takes goes onto it, one per
+        // call (with the perk for several held items, call again for the next). Refused while the keeper rides, for a
+        // ridden or cart-less one, in another scene, when the cart is full or takes none of what is held, and when a
+        // rule switched Cargo off. showMessage: the refusal in a thought bubble.
+        public MountResult LoadFromHead(bool showMessage = true)
+        {
+            return CargoStep(showMessage, load: true);
+        }
+
+        // On foot at this standing cart: its top item into the keeper's hands. Refused as LoadFromHead, and when the
+        // hands are full or the cart is empty.
+        public MountResult TakeToHead(bool showMessage = true)
+        {
+            return CargoStep(showMessage, load: false);
+        }
+
+        private MountResult CargoStep(bool showMessage, bool load)
+        {
+            string why = null;
+            PlayerData pd = MainGame.PlayerData;
+            if (!Exists)
+            {
+                why = "It is gone.";
+            }
+            else if (!I.HasCart)
+            {
+                why = "It has no cart.";
+            }
+            else if (Mounts.IsMounted)
+            {
+                why = I.IsRidden ? "Ridden: pickups go onto the cart already." : "Not while riding.";
+            }
+            else if (pd == null || I.SceneId != pd.currentGameSceneId || !I.Ready)
+            {
+                why = "The cart is not here.";
+            }
+            if (why == null)
+            {
+                using (Mount.Bind(I))
+                {
+                    why = load ? I.CargoRig.LoadOneFromHead(pd, out _) : I.CargoRig.TakeOneToHead(pd, out _);
+                }
+            }
+            if (why == null)
+            {
+                return MountResult.Success;
+            }
+            if (showMessage)
+            {
+                Mount.Say(why);
+            }
+            return MountResult.Refused(why);
+        }
+
         // Everything on its cart onto the ground at the cart, for good; returns how many. Call it before Remove to keep
         // the cargo in the world. Nothing while ridden (the ride sets items down with the interact key).
         public int SetDownCargo()

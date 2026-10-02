@@ -286,7 +286,16 @@ namespace GK2Mounts
                 }
                 if (Mathf.Abs(requested.x) > 0.05f)
                 {
+                    float was = riderFacingX;
                     riderFacingX = requested.x > 0f ? 1f : -1f;
+                    if (riderFacingX != was && donkey != null && donkey)
+                    {
+                        // The donkey turns in the same moment as the keeper, before this frame's animation runs. Turned
+                        // only in Follow (LateUpdate, after the animators), it showed its old side for a frame or two
+                        // with the keeper already turned: at every turn its head jumped across the rider, read as a
+                        // second donkey flickering next to him (the user's videos, 2026-10-01 and 2026-10-02).
+                        donkey.Data.MovableDirection = new Vector2(riderFacingX, 0f);
+                    }
                 }
                 return new Vector2(riderFacingX, 0f);
             }
@@ -1177,12 +1186,14 @@ namespace GK2Mounts
             // cart body, the back end is the farthest point of the cart body that way (renderer bounds), at the keeper's
             // height. Not the farthest of every cart part: the lantern hangs out past the tailboard (first version,
             // 2026-09-30: items landed well behind the cart). detail names the farthest part of all, for the log.
-            // False when not riding the cart or the cart is not drawn.
+            // False when it has no cart or the cart is not drawn. A standing cart too (a donkey with its cart, a free
+            // cart: its donkey's hidden body is where the donkey would stand), for the zones of the on-foot controls
+            // (docs/mounts-load-on-foot.md).
             internal bool TryCartRear(out Vector3 rear, out Vector3 back, out string detail)
             {
                 rear = back = Vector3.zero;
                 detail = "";
-                if (!mounted || activeStyle != MountStyle.Cart || donkey == null || cartBodyPart == null || cartBodyPart.T == null)
+                if (!HasCart || donkey == null || cartBodyPart == null || cartBodyPart.T == null)
                 {
                     return false;
                 }
@@ -1228,6 +1239,53 @@ namespace GK2Mounts
                 float y = MainGame.PlayerData != null ? MainGame.PlayerData.position.Value.y : donkey.transform.position.y;
                 rear = front + back * reach;
                 rear.y = y;
+                return true;
+            }
+
+            // The cart body's drawn box in the cart's own frame, for the on-foot zones (InstanceControls.ZoneAt): from
+            // the donkey's body (a free cart: where it would stand) along 'back', where the cart body starts and ends;
+            // across it (Cross(back, up), positive to the cart's left as seen from behind), its two sides. Renderer
+            // bounds of the cart body only, as TryCartRear (the lantern hangs out past it).
+            internal bool TryCartBox(out Vector3 origin, out Vector3 back, out float front, out float end, out float left, out float right)
+            {
+                origin = back = Vector3.zero;
+                front = end = left = right = 0f;
+                if (!HasCart || donkey == null || cartBodyPart == null || cartBodyPart.T == null)
+                {
+                    return false;
+                }
+                origin = bodySprite != null && bodySprite ? bodySprite.position : donkey.transform.position;
+                origin.y = 0f;
+                bool any = false;
+                Bounds body = default;
+                foreach (Renderer r in cartBodyPart.T.GetComponentsInChildren<Renderer>())
+                {
+                    if (!r.enabled) continue;
+                    if (!any) { body = r.bounds; any = true; } else body.Encapsulate(r.bounds);
+                }
+                if (!any)
+                {
+                    return false;
+                }
+                back = body.center;
+                back.y = 0f;
+                back -= origin;
+                if (back.sqrMagnitude < 0.01f)
+                {
+                    return false;
+                }
+                back.Normalize();
+                Vector3 side = Vector3.Cross(back, Vector3.up);
+                front = float.PositiveInfinity; end = float.NegativeInfinity;
+                left = float.NegativeInfinity; right = float.PositiveInfinity;
+                for (int i = 0; i < 4; i++)
+                {
+                    Vector3 c = new Vector3((i & 1) == 0 ? body.min.x : body.max.x, 0f, (i & 2) == 0 ? body.min.z : body.max.z) - origin;
+                    float a = Vector3.Dot(c, back), s = Vector3.Dot(c, side);
+                    front = Mathf.Min(front, a); end = Mathf.Max(end, a);
+                    left = Mathf.Max(left, s); right = Mathf.Min(right, s);
+                }
+                origin.y = MainGame.PlayerData != null ? MainGame.PlayerData.position.Value.y : donkey.transform.position.y;
                 return true;
             }
 

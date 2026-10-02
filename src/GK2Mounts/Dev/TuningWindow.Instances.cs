@@ -264,6 +264,29 @@ namespace GK2Mounts
             }
         }
 
+        // For testing several held items without the perk (perk_extra_overhead_1): the game's own resource behind it,
+        // extra_overhead (PlayerData.OverheadStackLimit = 1 + extra_overhead), as its script SetOverheadStackLimit sets
+        // it. It is part of the save, so it is set back before sleeping.
+        private static void HeadLimitRow()
+        {
+            PlayerData pd = MainGame.PlayerData;
+            if (pd == null)
+            {
+                return;
+            }
+            GUILayout.BeginHorizontal();
+            GUILayout.Label($"Head limit {pd.OverheadStackLimit} (extra_overhead {pd.ExtraOverhead}), holding {pd.OverheadCount}. Testing only: it is saved with the game, set it back before sleeping.", small);
+            if (GUILayout.Button("+1", Wd(40)))
+            {
+                pending = () => pd.SetRes("extra_overhead", pd.ExtraOverhead + 1);
+            }
+            if (GUILayout.Button("Back to 1", Wd(90)))
+            {
+                pending = () => pd.SetRes("extra_overhead", 0);
+            }
+            GUILayout.EndHorizontal();
+        }
+
         private static void DrawInstances()
         {
             Header("Donkeys and carts standing in the world");
@@ -271,6 +294,16 @@ namespace GK2Mounts
             GUILayout.Label("Saves: " + Mount.PersistenceNote, small);
             Toggle("Controls in the game (the interact key rides and hitches, the label shows)", Plugin.InstanceControls, null);
             HitchKeyRow();
+
+            Header("Standing cart zones (measuring)");
+            GUILayout.Label("For loading and unloading a standing cart on foot (docs/mounts-load-on-foot.md): the nearest standing cart within 3, drawn on the ground while the panel is open. Orange: the cart's area (Take from cart, Load on cart). Blue: the donkey's area (Ride/Drive). The one the keeper stands in is drawn thicker. Both are as wide as the cart body plus the side margin.", small);
+            InstanceControls.ShowZones = GUILayout.Toggle(InstanceControls.ShowZones, " Draw the areas on the ground");
+            FloatSlider("Beside the cart body (either side)", Plugin.CartZoneSide, 0f, 2f, 2, null);
+            FloatSlider("Behind the cart body's back end", Plugin.CartZoneRear, 0f, 2f, 2, null);
+            FloatSlider("Donkey/cart border, from the cart body's front edge", Plugin.CartZoneFrontShift, -1f, 1f, 2, null);
+            FloatSlider("Ahead of the donkey's body", Plugin.DonkeyZoneAhead, 0.2f, 2.5f, 2, null);
+            GUILayout.Label(InstanceControls.ZoneReadout, small);
+            HeadLimitRow();
 
             Header("Idle shuffle (standing donkeys without a cart)");
             GUILayout.Label($"A few slow steps now and then inside a small box around where it was left, never straight up or down, never with a cart, and not while the keeper is close. Off in GK2 Mounts; mods switch it on (Mounts.Behaviour IdleShuffle, per donkey through MountHandle.Tuning). {(EditingNow ? $"These rows are {editing.Describe()}'s own values." : "These rows are everyone's values: every standing donkey without its own value uses them.")} Each donkey's status is in the list below.", small);

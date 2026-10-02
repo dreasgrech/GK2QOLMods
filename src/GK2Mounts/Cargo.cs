@@ -228,6 +228,103 @@ namespace GK2Mounts
                 }
             }
 
+            // On foot at a standing cart (docs/mounts-load-on-foot.md): the topmost held item the cart takes goes onto it,
+            // one per call, as the game's town pallet takes held items. Added to the cart, then taken off the head by
+            // GUID: the two steps of the game's InsertOverheadItemTo without its PlayerInsertOverheadToWgoAnItem trigger
+            // (quests listen to that trigger by item id alone; the cart is no target of theirs). Null when loaded, else
+            // why not.
+            internal string LoadOneFromHead(PlayerData pd, out string itemId)
+            {
+                itemId = null;
+                if (inv == null || donkey == null)
+                {
+                    return "The cart is not here.";
+                }
+                if (pd == null || !pd.HasOverheadItem)
+                {
+                    return "Nothing in hand.";
+                }
+                if (!MountRules.Allowed(MountFeature.Cargo))
+                {
+                    return "The cart takes nothing now.";
+                }
+                fitInv = inv;
+                if (!pd.TryGetOverheadItem(FitsCart, out Item item))
+                {
+                    return pd.TryGetOverheadItem(AllowedItem, out _) ? "The cart is full." : "The cart can't take that.";
+                }
+                itemId = item.id;
+                if (!inv.AddItemToInventory(item))
+                {
+                    Resync("load failed");
+                    return "The cart is full.";
+                }
+                pd.RemoveOverheadItem(item);
+                MountSounds.CargoLanded();
+                Plugin.Log.LogInfo($"Cargo: {itemId} loaded onto {owner.Describe()} from the hands; cart {inv.Data.Inventory.Count}/{inv.Data.InventorySize}, {pd.OverheadCount} still held.");
+                return null;
+            }
+
+            // The reverse: the cart's top item into the keeper's free hands, with the game's own pickup (its sound and
+            // events). An item the hands refuse goes back onto the cart.
+            internal string TakeOneToHead(PlayerData pd, out string itemId)
+            {
+                itemId = null;
+                if (inv == null || donkey == null)
+                {
+                    return "The cart is not here.";
+                }
+                if (pd == null)
+                {
+                    return "No keeper.";
+                }
+                if (!MountRules.Allowed(MountFeature.Cargo))
+                {
+                    return "The cart gives nothing now.";
+                }
+                List<Item> list = inv.Data.Inventory;
+                if (list.Count == 0)
+                {
+                    return "The cart is empty.";
+                }
+                if (!pd.HasFreeOverheadSlot)
+                {
+                    return "My hands are full.";
+                }
+                Item last = list[list.Count - 1];
+                if (!inv.RemoveItemFromInventoryByUID(last))
+                {
+                    Resync("take failed");
+                    return "It won't come off the cart.";
+                }
+                if (!pd.TryAddOverheadItemNoReplace(last))
+                {
+                    inv.AddItemToInventory(last);
+                    Resync("hands refused");
+                    return "My hands are full.";
+                }
+                itemId = last.id;
+                Plugin.Log.LogInfo($"Cargo: {itemId} taken off {owner.Describe()} into the hands; cart {list.Count}/{inv.Data.InventorySize}, {pd.OverheadCount} held.");
+                return null;
+            }
+
+            // The predicates above, made once (a lambda capturing the cart would be new garbage on every call; the
+            // controls ask every frame while the keeper holds something next to a cart).
+            private static Inventory fitInv;
+            private static readonly Predicate<Item> FitsCart = it => Allowed(it) && fitInv != null && fitInv.CanAddItemToInventory(it);
+            internal static readonly Predicate<Item> AllowedItem = Allowed;
+
+            // Whether the topmost item the cart takes would fit (the controls' label), without moving anything.
+            internal bool HeldItemFits(PlayerData pd)
+            {
+                if (inv == null || pd == null)
+                {
+                    return false;
+                }
+                fitInv = inv;
+                return pd.TryGetOverheadItem(FitsCart, out _);
+            }
+
             // The view is gone (dismount or scene change); the mirror is kept, Unload clears it.
             public void Detach()
             {

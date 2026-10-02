@@ -320,6 +320,7 @@ namespace GK2Mounts
         internal static Tuned<bool> ShowMessages;
         internal static ConfigEntry<bool> InstanceControls;
         internal static ConfigEntry<KeyCode> HitchKey;
+        internal static ConfigEntry<float> CartZoneSide, CartZoneRear, CartZoneFrontShift, DonkeyZoneAhead;
 
         // [Ride] / [Cart]: position, pose, animation, legs, speed
         internal static StyleSettings Ride;
@@ -364,6 +365,15 @@ namespace GK2Mounts
                 "Donkeys and carts a mod left standing in the world (Mounts.SpawnDonkey / SpawnCart): the interact key next to a standing donkey rides it (empty hands), and next to a free cart while riding a donkey without its cart hitches it; a label over it says so. Off: only mods can do that (MountHandle.Ride, Mounts.Hitch).");
             HitchKey = Config.Bind("General", "HitchKey", Defaults.Get("General", "HitchKey", KeyCode.J),
                 "With InstanceControls, while riding: leave the cart standing where it is (a free cart with its cargo and settings), or take the free cart in reach. None: the key is off (the interact key still hitches).");
+            // The on-foot zones of a standing cart (docs/mounts-load-on-foot.md), measured from the cart body's drawn box.
+            CartZoneSide = Config.Bind("General", "CartZoneSide", Defaults.Get("General", "CartZoneSide", 0.6f),
+                new ConfigDescription("On foot next to a standing cart: how far beside the cart body's sides the cart's area reaches (and the donkey's, which is as wide), world units.", new AcceptableValueRange<float>(0f, 2f)));
+            CartZoneRear = Config.Bind("General", "CartZoneRear", Defaults.Get("General", "CartZoneRear", 0.8f),
+                new ConfigDescription("On foot next to a standing cart: how far behind the cart body's back end the cart's area reaches, world units.", new AcceptableValueRange<float>(0f, 2f)));
+            CartZoneFrontShift = Config.Bind("General", "CartZoneFrontShift", Defaults.Get("General", "CartZoneFrontShift", 0f),
+                new ConfigDescription("On foot next to a donkey with its cart: where the donkey's area ends and the cart's begins, relative to the cart body's front edge, world units (positive: further back, so more of the cart's side counts as the donkey; negative: towards the donkey).", new AcceptableValueRange<float>(-1f, 1f)));
+            DonkeyZoneAhead = Config.Bind("General", "DonkeyZoneAhead", Defaults.Get("General", "DonkeyZoneAhead", 1.2f),
+                new ConfigDescription("On foot next to a standing donkey with its cart: how far ahead of the donkey's body its area reaches, world units.", new AcceptableValueRange<float>(0.2f, 2.5f)));
 
 
             Ride = new StyleSettings(Config, "Ride",

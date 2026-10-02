@@ -70,7 +70,8 @@ Each one says why.
   a free cart's shafts. The cart, its cargo and its settings join the donkey, and the ride goes on in Cart style.
 - **Unhitching:** riding a donkey with its cart, press the hitch key. The cart stays where it stands, as a free
   cart with its cargo and settings, and the ride goes on in Ride style.
-- **Pickups** go onto the ridden cart only, as before. A free cart or a standing donkey's cart takes nothing.
+- **Pickups** go onto the ridden cart only, as before. A standing cart is loaded and unloaded on foot with the interact
+  key instead (docs/mounts-load-on-foot.md).
 
 ## Scenes and saves
 
@@ -167,5 +168,4 @@ It costs nothing and holds if the game ever pools temp objects.
 ## Not done (first version)
 
 - Standing donkeys make no sounds (no idle brays or grazing). Sounds play for the ridden one only.
-- A free cart can't be loaded by hand. Only the ridden cart takes pickups.
 - Persistence only for instances with `Persist` (docs/mounts-persistence.md).
