@@ -56,14 +56,11 @@ namespace GK2OwnedCount
                 requiresKnownBuild: true,
                 frameworkManagesEnabledState: false);
 
-            private readonly IReadOnlyList<Gk2ModDependency> dependencies = new[]
-            {
-                new Gk2ModDependency(FrameworkGuid, "0.1.0", "0.2.0")
-            };
-
             public override Gk2ModMetadata Metadata => metadata;
 
-            public override IReadOnlyList<Gk2ModDependency> Dependencies => dependencies;
+            // No Dependencies: the menu printed the framework there with no "(optional)", which read as if the mod
+            // needed it. The mod never does (soft BepInDependency), and a framework whose API changed fails
+            // Register inside TryRegister's catch, so the mod runs on without its menu entry.
 
             private static void ConfirmBuild(Gk2ModContext context)
             {

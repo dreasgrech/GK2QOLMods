@@ -83,6 +83,10 @@ The framework documents an **optional bridge**, and it's the only pattern that f
   says "Unknown build" (shown as an error), and the read-only Status row in Settings gives our own reason. Settings
   stay reachable either way. One limit: if the framework ever lists the current build's hash as known, it reports
   "Compatible" without asking, whatever our guard says.
+- **No framework dependency in the list (2026-10-02):** the bridges used to list the framework as a dependency with
+  the range `[0.1.0, 0.2.0)`. The menu printed it with no "(optional)", which read as if our mods needed the
+  framework. Now they list none, so the menu says "None", like Grave Zoom. A framework whose API changed makes
+  `Register` fail inside `TryRegister`'s catch, and the mod runs on without its menu entry.
 - Cost: one small extra project and DLL per mod, plus a dependency on a third party's 0.x API ("preview; breaking
   changes may occur before 1.0").
 
