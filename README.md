@@ -9,6 +9,7 @@ so you can install any subset.
 | [Built Count](#built-count) | 1.0.6 | Build menus show how many of each building you already have in that area. |
 | [Move Building](#move-building) | 1.1.6 | Pick up a built building and put it down somewhere else, contents and all. |
 | [Owned Count](#owned-count) | 1.0.4 | Item tooltips show how many of that item you own across inventory and every chest. |
+| [Tech Search](#tech-search) | 1.0.0 (in testing, not in `dist/` yet) | A search box on the Tech Tree page: find a tech by name, or by what it unlocks, and jump to it. |
 
 **Looking for the donkey?** The rideable donkey and cart (GK2 Saddle Up!, and the GK2 Donkey API it's built on) moved
 to their own repo on 2026-10-02, with their history: [GK2DonkeyAPI](https://github.com/dreasgrech/GK2DonkeyAPI). Until
@@ -126,6 +127,22 @@ from. Graded items (the starred ones, e.g. Bones of different skull grades) also
   whether fuel containers and conveyor chests count as storage. A debug switch dumps every item definition
   (stack sizes, grades) to a CSV.
 - Optional: with [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) installed, its settings
+  also appear in the game's Mods menu. The same DLL works without it.
+
+### Tech Search
+
+`GK2TechSearch.dll` · GUID `dreas.gk2.techsearch` · [source and README](src/GK2TechSearch/)
+
+A search box at the top right of the Tech Tree page. Type part of a tech's name, or of something it unlocks (an item,
+building or perk on its card), and the matches are listed with their tab; Enter or a click switches to that tab,
+scrolls to the tech and frames its card. Ctrl+F puts the cursor in the box.
+
+- Hidden techs (the "?" cards) and tabs you haven't opened yet are never listed: no spoilers.
+- While you type, the game's keys are paused (the same way the game's own bug report window does it), so letters
+  don't open the map or the inventory.
+- Display only: nothing in the game changes, nothing is written. Jumping is the game's own tab switch.
+- Settings: on/off, search unlocks too, number of results, the key, the box's place and size.
+- Optional: with [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) installed, its main settings
   also appear in the game's Mods menu. The same DLL works without it.
 
 ## Safety
