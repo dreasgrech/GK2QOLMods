@@ -9,7 +9,7 @@ so you can install any subset.
 | [Built Count](#built-count) | 1.0.6 | Build menus show how many of each building you already have in that area. |
 | [Move Building](#move-building) | 1.1.6 | Pick up a built building and put it down somewhere else, contents and all. |
 | [Owned Count](#owned-count) | 1.0.4 | Item tooltips show how many of that item you own across inventory and every chest. |
-| [Tech Search](#tech-search) | 1.0.0 (in testing, not in `dist/` yet) | A search box on the Tech Tree page: find a tech by name, or by what it unlocks, and jump to it. |
+| [Tech Search](#tech-search) | 1.0.0 | A search box on the Tech Tree page: find a tech by name, or by what it unlocks, and jump to it. |
 
 **Looking for the donkey?** The rideable donkey and cart (GK2 Saddle Up!, and the GK2 Donkey API it's built on) moved
 to their own repo on 2026-10-02, with their history: [GK2DonkeyAPI](https://github.com/dreasgrech/GK2DonkeyAPI). Until

@@ -123,6 +123,7 @@ missing one disables the mod): `TechTreePageWidget.scrollRect`, `redSpheresLabel
 - Round 2 in game (2026-10-04): clean log, box fits. Finding: the list (right under the box) covered the lower edge of
   the open sub-tab, which hangs below the box. Fixed: the list now starts under the tab strip, measured live from its
   rectangle (`[measure]` logs the drop).
+- Round 3 in game (2026-10-04): the list clears the open tab; the user signed it off. Released to `dist/`.
 
 ## Build, install, uninstall
 
