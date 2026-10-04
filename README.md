@@ -122,6 +122,8 @@ Every item tooltip gets a line such as `Owned: 120 · on you 4 · in storage 116
 inventory, bags and tool belt; "in storage" is every storage chest in every area, the same set Global Storage draws
 from. Graded items (the starred ones, e.g. Bones of different skull grades) also show `all grades N`.
 
+<img width="2560" height="1440" alt="image" src="https://github.com/user-attachments/assets/5df0f068-7a40-4ae6-8063-4c5e04fd7788" />
+
 - Display only: nothing in the game changes, nothing is written.
 - Settings: own-tooltip only or also embedded items, breakdown on/off, a per-area second line, other grades,
   whether fuel containers and conveyor chests count as storage. A debug switch dumps every item definition
@@ -136,6 +138,8 @@ from. Graded items (the starred ones, e.g. Bones of different skull grades) also
 A search box at the top right of the Tech Tree page. Type part of a tech's name, or of something it unlocks (an item,
 building or perk on its card), and the matches are listed with their tab; Enter or a click switches to that tab,
 scrolls to the tech and frames its card. Ctrl+F puts the cursor in the box.
+
+<img width="2560" height="1440" alt="2049E8~1" src="https://github.com/user-attachments/assets/70e7c156-a87e-4a5b-9d41-81694ab61a9a" />
 
 - Hidden techs (the "?" cards) and tabs you haven't opened yet are never listed: no spoilers.
 - While you type, the game's keys are paused (the same way the game's own bug report window does it), so letters
