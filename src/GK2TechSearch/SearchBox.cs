@@ -15,7 +15,9 @@ namespace GK2TechSearch
     // It's switched back on when the box loses the cursor, when the page hides and when the box is destroyed.
     internal sealed class SearchBox : MonoBehaviour
     {
-        private const string Placeholder = "Search techs…";
+        private const string Placeholder = "Search...";
+        // Researched techs: the green of the game's own tick on a card. tiny_font has no ✓ glyph (measured 2026-10-04).
+        private const string ResearchedColor = "#8BC34A";
         private static readonly Color RowColor = new Color(0f, 0f, 0f, 0f);
         private static readonly Color RowHighlight = new Color(1f, 0.85f, 0.4f, 0.22f);
         private static readonly Color ListColor = new Color(0.1f, 0.1f, 0.12f, 0.94f);
@@ -91,6 +93,7 @@ namespace GK2TechSearch
 
             list = BuildList(rt);
             list.gameObject.SetActive(false);
+            ApplyLayout();
         }
 
         // The game's own styled text box, copied from the bug report window if that window is already loaded.
@@ -169,10 +172,10 @@ namespace GK2TechSearch
             GameObject go = new GameObject("Results", typeof(RectTransform));
             go.transform.SetParent(parent, false);
             RectTransform rt = (RectTransform)go.transform;
-            rt.anchorMin = new Vector2(0f, 0f);
-            rt.anchorMax = new Vector2(1f, 0f);
-            rt.pivot = new Vector2(0.5f, 1f);
-            rt.sizeDelta = Vector2.zero; // as wide as the box; the fitter sets the height
+            // Under the box, right edges aligned, with its own width (Layout.ListWidth): the box is small to fit
+            // beside the tab buttons, the rows need more room. The fitter sets the height.
+            rt.anchorMin = rt.anchorMax = new Vector2(1f, 0f);
+            rt.pivot = new Vector2(1f, 1f);
             rt.anchoredPosition = new Vector2(0f, -2f);
             go.AddComponent<Image>().color = ListColor;
             VerticalLayoutGroup v = go.AddComponent<VerticalLayoutGroup>();
@@ -226,6 +229,10 @@ namespace GK2TechSearch
             RectTransform rt = (RectTransform)transform;
             rt.anchoredPosition = Plugin.BoxOffset.Value;
             rt.sizeDelta = Plugin.BoxSize.Value;
+            if (list != null)
+            {
+                list.sizeDelta = new Vector2(Mathf.Max(Plugin.ListWidth.Value, Plugin.BoxSize.Value.x), list.sizeDelta.y);
+            }
         }
 
         // Called from the page's Redraw: the page is (re)opened.
@@ -388,15 +395,15 @@ namespace GK2TechSearch
             }
             else if (hits.Count > max)
             {
-                rows[shown].Text.text = "<alpha=#99>… " + (hits.Count - max) + " more: type more letters";
+                rows[shown].Text.text = "<alpha=#99>+" + (hits.Count - max) + " more: type more letters";
             }
             Highlight(0);
         }
 
         private static string RowText(Hit h)
         {
-            string tick = h.Def.TechState == TechState.Unlocked ? "✓ " : string.Empty;
-            string line = tick + h.Name + "  <alpha=#99>" + TechIndex.TabName(h.Def.tab);
+            string name = h.Def.TechState == TechState.Unlocked ? "<color=" + ResearchedColor + ">" + h.Name + "</color>" : h.Name;
+            string line = name + "  <alpha=#99>" + TechIndex.TabName(h.Def.tab);
             if (h.Via != null)
             {
                 line += " · " + h.Via;
@@ -514,7 +521,7 @@ namespace GK2TechSearch
             TechTreeTabButton tab = Access.TabButtonPrefab(page);
             RectTransform tabs = tab != null ? tab.transform.parent as RectTransform : null;
             Canvas[] canvases = page.GetComponentsInChildren<Canvas>(true);
-            Plugin.Log.LogInfo($"[measure] page rect {pageRt.rect} pivot {pageRt.pivot}; tab strip {(tabs != null ? tabs.rect.ToString() : "?")} at {(tabs != null ? pageRt.InverseTransformPoint(tabs.position).ToString() : "?")}; box {((RectTransform)transform).rect} at {pageRt.InverseTransformPoint(transform.position)}; nested canvases {canvases.Length}; font {(font != null ? font.name : "none")} {fontSize}");
+            Plugin.Log.LogInfo($"[measure] page rect {pageRt.rect} pivot {pageRt.pivot}; tab strip {(tabs != null ? tabs.rect.ToString() : "?")} at {(tabs != null ? pageRt.InverseTransformPoint(tabs.position).ToString() : "?")}; box {((RectTransform)transform).rect} at {pageRt.InverseTransformPoint(transform.position)}; list width {list.rect.width}; nested canvases {canvases.Length}; font {(font != null ? font.name : "none")} {fontSize}");
         }
     }
 }

@@ -28,7 +28,7 @@ LazyBearTechnology `f67c6993-…`). Design study: [`docs/tech-search.md`](../../
   as usual.
 - While the box has the cursor, the game's keys are paused (letters don't open the map or the inventory), the same
   way the game's own bug report window does it.
-- A tick (✓) marks techs you've already researched. A result that matched through an unlock shows that unlock's name
+- Techs you've already researched are listed in green. A result that matched through an unlock shows that unlock's name
   after the tab name.
 - With a gamepad active the box is hidden (there's no text entry on a pad).
 
@@ -53,8 +53,9 @@ next time the Tech Tree page opens.
 | `General.SearchUnlocks` | true | Also match what a tech unlocks (items, buildings, perks on its card). |
 | `General.MaxResults` | 8 | Rows in the result list (1-20). Further matches are counted in a last row. |
 | `General.FocusKey` | LeftControl + F | Puts the cursor in the box while the Tech Tree page is open. `None`: no key. |
-| `Layout.BoxOffset` | (-24, -20) | Box position from the page's top right corner. |
-| `Layout.BoxSize` | (240, 30) | Box width and height. |
+| `Layout.BoxOffset` | (-8, -13) | Box position from the page's top right corner (in the strip right of the tab buttons). |
+| `Layout.BoxSize` | (130, 22) | Box width and height. |
+| `Layout.ListWidth` | 280 | Width of the result list under the box, right edges aligned. |
 | `Safety.DisableOnGameUpdate` | true | Do nothing if the game's code changed since the audit. |
 
 ## How it works
@@ -101,7 +102,7 @@ missing one disables the mod): `TechTreePageWidget.scrollRect`, `redSpheresLabel
 11. Switch to a gamepad: the box is gone the next time the page opens. Also: a controller plugged in but you play
     with the mouse. The box follows the game's own "gamepad active" state (`LazyInput.IsGamepadActive`), the one
     that shows its gamepad button hints; if the box is missing while you use the mouse, say so.
-12. The ✓ and … in the result list render as characters, not as empty boxes (the game font may lack them).
+12. Researched techs show in green in the list (round 1 showed the game font has no ✓, so 1.0.0 now uses colour).
 13. `Enabled = false`: no box.
 14. With GK2 Mod Framework installed: Status Active, the three settings; untick "Search box on the Tech Tree" and
     reopen the page: no box, Status reads Off. With it removed: a clean log.
@@ -115,7 +116,10 @@ missing one disables the mod): `TechTreePageWidget.scrollRect`, `redSpheresLabel
   single methods with bodies. ALL PASS.
 - `tests/FrameworkScan GK2TechSearch`: the three patch classes are in `PatchClasses`, no Unity message names on
   `Plugin`, `GK2.Framework` only in `FrameworkLink`, `Register` NoInlining, soft dependency. ALL PASS.
-- Not yet run in the game.
+- Round 1 in game (2026-10-04): loads clean, registers Compatible with the framework, the plain box was used (the bug
+  report window wasn't loaded), search and jump work. Findings: the box was far too big for the page (`[measure]`:
+  page 640 x 385 units, tab buttons end about 165 right of centre) and `tiny_font` has no ✓. Fixed: box 130 x 22 in
+  the strip right of the tabs, the list has its own width (280), researched techs are green, no ✓/… glyphs.
 
 ## Build, install, uninstall
 

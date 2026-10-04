@@ -27,6 +27,7 @@ namespace GK2TechSearch
         internal static ConfigEntry<KeyboardShortcut> FocusKey;
         internal static ConfigEntry<Vector2> BoxOffset;
         internal static ConfigEntry<Vector2> BoxSize;
+        internal static ConfigEntry<float> ListWidth;
         internal static ConfigEntry<bool> DisableOnGameUpdate;
 
         // Every Harmony patch class, patched by name. Not PatchAll(assembly): that lists every type in this DLL, and
@@ -62,10 +63,14 @@ namespace GK2TechSearch
                 new ConfigDescription("How many results the list under the box shows at most.", new AcceptableValueRange<int>(1, 20)));
             FocusKey = Config.Bind("General", "FocusKey", new KeyboardShortcut(KeyCode.F, KeyCode.LeftControl),
                 "Puts the cursor in the search box while the Tech Tree page is open. Clicking the box works too. None: no key.");
-            BoxOffset = Config.Bind("Layout", "BoxOffset", new Vector2(-24f, -20f),
+            // Defaults from the measured page (2026-10-04): 640 x 385 units, tab buttons end about 165 right of centre,
+            // tab strip centred 168.5 above it. The box fills the free strip right of the tabs.
+            BoxOffset = Config.Bind("Layout", "BoxOffset", new Vector2(-8f, -13f),
                 "Where the box sits, from the top right corner of the Tech Tree page (x left is negative, y down is negative). Applies the next time the page opens.");
-            BoxSize = Config.Bind("Layout", "BoxSize", new Vector2(240f, 30f),
+            BoxSize = Config.Bind("Layout", "BoxSize", new Vector2(130f, 22f),
                 "Width and height of the box. Applies the next time the page opens.");
+            ListWidth = Config.Bind("Layout", "ListWidth", 280f,
+                "Width of the result list under the box (right edges aligned; never narrower than the box). Applies the next time the page opens.");
             DisableOnGameUpdate = Config.Bind("Safety", "DisableOnGameUpdate", true,
                 "Do not patch anything if the game's code has changed since this mod was audited. Rebuild/re-audit after game updates.");
         }

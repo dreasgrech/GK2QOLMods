@@ -94,7 +94,7 @@ are plain uGUI `Button`s. They have no `GamepadNavigationItem`, so the page's ga
 ## Results and jumping
 
 - Up to `MaxResults` rows under the box: `Tech name · Tab` and, when the match came from an unlock, `→ unlock name`.
-  Techs already researched are marked with a tick.
+  Techs already researched are shown in green (the game's `tiny_font` has no ✓ glyph, seen in round 1).
 - Enter jumps to the highlighted row (the first by default), Up/Down move the highlight, a click on a row jumps too.
 - Jumping: `DisplayTab(def.tab, def.id)`, then the card's `selection` frame is switched on so it stands out until the
   mouse passes over it. `DisplayTab` runs the visibility pass *before* it scrolls, so a card scrolled into view may
