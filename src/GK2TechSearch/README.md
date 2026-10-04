@@ -120,6 +120,9 @@ missing one disables the mod): `TechTreePageWidget.scrollRect`, `redSpheresLabel
   report window wasn't loaded), search and jump work. Findings: the box was far too big for the page (`[measure]`:
   page 640 x 385 units, tab buttons end about 165 right of centre) and `tiny_font` has no ✓. Fixed: box 130 x 22 in
   the strip right of the tabs, the list has its own width (280), researched techs are green, no ✓/… glyphs.
+- Round 2 in game (2026-10-04): clean log, box fits. Finding: the list (right under the box) covered the lower edge of
+  the open sub-tab, which hangs below the box. Fixed: the list now starts under the tab strip, measured live from its
+  rectangle (`[measure]` logs the drop).
 
 ## Build, install, uninstall
 

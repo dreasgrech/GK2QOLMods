@@ -232,7 +232,27 @@ namespace GK2TechSearch
             if (list != null)
             {
                 list.sizeDelta = new Vector2(Mathf.Max(Plugin.ListWidth.Value, Plugin.BoxSize.Value.x), list.sizeDelta.y);
+                list.anchoredPosition = new Vector2(0f, ListDrop());
             }
+        }
+
+        // How far below the box the list starts: under the sub-tab buttons, not just under the box. The box sits
+        // beside the tabs, and the open tab hangs lower than the box (round 2, 2026-10-04: box bottom 157.5, tab strip
+        // bottom 146.5 in page units), so a list right under the box covered the open tab's lower edge.
+        private float ListDrop()
+        {
+            const float gap = 2f;
+            TechTreeTabButton tab = page != null ? Access.TabButtonPrefab(page) : null;
+            RectTransform strip = tab != null ? tab.transform.parent as RectTransform : null;
+            if (strip == null)
+            {
+                return -gap;
+            }
+            Vector3[] corners = new Vector3[4];
+            strip.GetWorldCorners(corners); // 0 = bottom left
+            float stripBottom = transform.InverseTransformPoint(corners[0]).y;  // in the box's space; its pivot is the top
+            float boxBottom = -((RectTransform)transform).rect.height;
+            return Mathf.Min(-gap, stripBottom - boxBottom - gap);
         }
 
         // Called from the page's Redraw: the page is (re)opened.
@@ -313,6 +333,7 @@ namespace GK2TechSearch
                     list.gameObject.SetActive(showList);
                     if (showList)
                     {
+                        list.anchoredPosition = new Vector2(0f, ListDrop());
                         transform.SetAsLastSibling();
                     }
                 }
@@ -521,7 +542,7 @@ namespace GK2TechSearch
             TechTreeTabButton tab = Access.TabButtonPrefab(page);
             RectTransform tabs = tab != null ? tab.transform.parent as RectTransform : null;
             Canvas[] canvases = page.GetComponentsInChildren<Canvas>(true);
-            Plugin.Log.LogInfo($"[measure] page rect {pageRt.rect} pivot {pageRt.pivot}; tab strip {(tabs != null ? tabs.rect.ToString() : "?")} at {(tabs != null ? pageRt.InverseTransformPoint(tabs.position).ToString() : "?")}; box {((RectTransform)transform).rect} at {pageRt.InverseTransformPoint(transform.position)}; list width {list.rect.width}; nested canvases {canvases.Length}; font {(font != null ? font.name : "none")} {fontSize}");
+            Plugin.Log.LogInfo($"[measure] page rect {pageRt.rect} pivot {pageRt.pivot}; tab strip {(tabs != null ? tabs.rect.ToString() : "?")} at {(tabs != null ? pageRt.InverseTransformPoint(tabs.position).ToString() : "?")}; box {((RectTransform)transform).rect} at {pageRt.InverseTransformPoint(transform.position)}; list width {list.rect.width}, drop {ListDrop()}; nested canvases {canvases.Length}; font {(font != null ? font.name : "none")} {fontSize}");
         }
     }
 }
