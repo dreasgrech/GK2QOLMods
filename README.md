@@ -165,5 +165,8 @@ scrolls to the tech and frames its card. Ctrl+F puts the cursor in the box.
 
 After a game patch the mods disable themselves (see above) until the game's code has been compared against the
 audited build and the mods rebuilt with the new module version ids (`tests/GameDiff` lists what changed; see
-`tests/README.md`). Until then the game runs exactly as unmodified. Audited build: Steam 25752683 (game 1.009; `docs/game-update-25676698.md`).
+`tests/README.md`).
+
+Until then the game runs exactly as unmodified. Audited build: Steam 25752683 (game 1.009; `docs/game-update-25731225.md`).
+
 Don't set `DisableOnGameUpdate=false` unless you accept running unaudited.
