@@ -19,9 +19,9 @@ namespace GK2BuiltCount
         public const string Version = "1.0.6"; // one place: the plugin attribute and the log line
 
         // Module version id of the Assembly-CSharp.dll this plugin was audited against (Steam build 25601286).
-        private static readonly System.Guid AuditedGameMvid = new System.Guid("f7d46132-dd54-4296-8f19-917330ceadd9");
+        private static readonly System.Guid AuditedGameMvid = new System.Guid("44edf1a9-b9b5-4276-a731-a680e9e9c44d");
         // And of LazyBearTechnology.dll (the engine library the plugin also uses), same build (Steam 25601286).
-        private static readonly System.Guid AuditedLazyBearMvid = new System.Guid("f67c6993-6db1-4f08-8352-cf7315263736");
+        private static readonly System.Guid AuditedLazyBearMvid = new System.Guid("02955186-b2b7-474c-a6ff-b860ac92b69c");
 
         internal static ManualLogSource Log;
         internal static ConfigEntry<bool> Enabled;
