@@ -10,7 +10,6 @@ so you can install any subset.
 | [Move Building](#move-building) | 1.1.6 | Pick up a built building and put it down somewhere else, contents and all. |
 | [Owned Count](#owned-count) | 1.0.4 | Item tooltips show how many of that item you own across inventory and every chest. |
 | [Tech Search](#tech-search) | 1.0.0 | A search box on the Tech Tree page: find a tech by name, or by what it unlocks, and jump to it. |
-| [Corpse Pickup](#corpse-pickup) | 1.0.0 | The donkey leaves the bodies it brings at the crossroads by the nun; you carry or cart them to the morgue yourself. |
 
 **Looking for the donkey?** The rideable donkey and cart (GK2 Saddle Up!, and the GK2 Donkey API it's built on) moved
 to their own repo on 2026-10-02, with their history: [GK2DonkeyAPI](https://github.com/dreasgrech/GK2DonkeyAPI). Until
@@ -148,26 +147,6 @@ scrolls to the tech and frames its card. Ctrl+F puts the cursor in the box.
 - Display only: nothing in the game changes, nothing is written. Jumping is the game's own tab switch.
 - Settings: on/off, search unlocks too, number of results, the key, the box's place and size.
 - Optional: with [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) installed, its main settings
-  also appear in the game's Mods menu. The same DLL works without it.
-
-### Corpse Pickup
-
-`GK2CorpsePickup.dll` · GUID `dreas.gk2.corpsepickup` · [source and README](src/GK2CorpsePickup/)
-
-In the unmodified game the donkey walks the bodies to the morgue and puts them straight on the pallets. With this
-mod it unloads them **at the crossroads by the nun**, where it appears, and vanishes again; you carry them to the
-morgue yourself, one on your shoulders or several on a cart (Saddle Up!'s cart takes them). A notification says "The donkey left a body at
-the crossroads" with the body's icon.
-
-- The donkey, its schedule, the body count and the quests around it are the game's own; only the last step, "put it
-  on a pallet", becomes "put it on the ground at the crossroads". The bodies are the game's own generated items,
-  dropped by the game's drop system: nothing new in the save.
-- Bodies on the ground count toward the morgue's capacity as the game already counts them (fewer deliveries, then
-  none, until you haul them), and a body left out of
-  sight for about 75 minutes of play turns into a grave mound (the game's rule; a setting switches it off).
-- Settings: on/off, unload at the crossroads or keep the game's walk, the drop spot (three points by the nun), never
-  rot, the notification text, test keys.
-- Optional: with [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) installed, its settings
   also appear in the game's Mods menu. The same DLL works without it.
 
 ## Safety
