@@ -10,7 +10,7 @@ using Mono.Cecil.Cil;
 //     interfaces, attributes, fields, signatures, locals and every IL operand are checked;
 //  4. Register is NoInlining, and Plugin has a soft BepInDependency on the framework.
 // Usage: dotnet run -c Release [ModName ...]   (default: every mod below; each must be built in Release first)
-string[] integrated = { "GK2OwnedCount", "GK2GlobalStorage", "GK2MoveBuilding", "GK2BuiltCount", "GK2TechSearch" };
+string[] integrated = { "GK2OwnedCount", "GK2GlobalStorage", "GK2MoveBuilding", "GK2BuiltCount", "GK2TechSearch", "GK2CorpsePickup" };
 string[] mods = args.Length > 0 ? args : integrated;
 
 var res = new DefaultAssemblyResolver();
