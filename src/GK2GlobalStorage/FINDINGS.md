@@ -147,6 +147,7 @@ None of these lose or duplicate items.
 - Tools that wear down during a craft must be in the player's own inventory. The craft window may show one sitting in a chest as available, as the game already does for same-zone chests.
 - Alchemy flasks must be at the workbench or in its zone.
 - Queued crafts that continue after the player walks away only use that zone's storage, and wait if short.
+- A workstation with a zombie crafter never draws from storage (not from faraway chests, and not from its own zone's chests either, which is the game's rule): the zombie waits for every non-fuel material to be *delivered* into the station and only then crafts. The craft window at such a station counts the zone and the player's pocket only. The player's hand-delivery (`[F] Put`) takes from faraway storage with `IncludeZombieOrderDelivery`. See the 2026-10-10 section below.
 - With a zombie gardener assigned, the garden bed's Plant button can light up but planting does nothing.
 - Cancelling a started craft drops its consumed materials at the workbench, as the game already does for same-zone chests.
 - Fuel indicators and alchemy flask counts use the zone-only list (`excludeWorkerInventory: true`), so they do not count faraway storage.
@@ -599,6 +600,64 @@ Byte pattern used, per `QuestPhraseRequirement` (requirement, entity, itemCount,
 | `139_town_homobonus_16` | Price | `bottle_empty` | 10 |  |
 
 Matches without a recoverable phrase: 378 (other structures with the same byte layout, excluded). Top item IDs: `talent_yellow` ×73, `talent_green` ×39, `talent_blue` ×12, `i_b_carousel` ×2, `i_b_conveyor_furnace_1` ×2, `zperk_factory_operative` ×2, `i_b_conveyor_loader` ×1, `i_b_conveyor_workbench_1` ×1, `i_b_conveyor_workbench_2` ×1, `i_b_conveyor_workbench_3` ×1.
+
+## Zombie-worked stations and storage (investigated 2026-10-10, game 1.009 hotfix 25752683)
+
+**The report:** at a furnace worked by a zombie, the craft window for Bronze Ingot showed copper nugget `21/3`
+(the 21 in the keeper's pocket) while Owned Count's tooltip said `Owned: 243, on you 21, in storage 222 (1 chest)`.
+The station showed `[E] Craft` and `[F] Put`. Question: does the mod fail to use storage when a zombie works the
+station?
+
+**Answer: it is not a malfunction; the mod leaves zombie-worked stations alone on purpose, and the game's zombie
+crafter never takes materials from chests at all.** Two separate things are at work.
+
+1. **The craft window's counts.** The window counts over the station's pool, `WgoData.GetCraftableMultiInventory()`
+   (`UIBaseCraftWidgetData.cs:124`, `UICraftItemCell.cs:127`). With a zombie assigned, the station's `Worker` is the
+   zombie, so `CraftInteractionHandler.cs:49-52` does not set the player as worker (it only does when there is
+   none). The pool is then (`WgoData.cs:1406-1430`): the worker's inventory (for an attached zombie that is the
+   station's own craft inventory, `ZombieWgoData.cs:239-251`), the zone's chests, and the player's pocket when he
+   stands in the zone and is not the worker. No craft slots, and no faraway storage: patch 1 returns early because
+   `__instance.Worker is PlayerController` is false (`Plugin.cs:303`). Hence `21/3`: the pocket, and a zone with no
+   copper. Queueing is not gated by that count (`OnCraftPressed` just adds to the queue), so the 80 could be queued.
+2. **How a zombie crafter gets its materials.** `ZombieWgoData.CrafterTryPlaceOrderForCurrentCraftOrStartIt`
+   (`ZombieWgoData.cs:2034-2063`): for every non-fuel requirement that is not already in the station's craft
+   inventory it places a `DeliveryOrder` in the zone and stops working; it starts the craft only when every such
+   item has been delivered. It never looks in chests, not even the ones beside it. Fuel is the exception: it is
+   taken from the pool (zone fuel containers) when the craft starts. A delivery order is fulfilled by
+   - a **caretaker zombie**, which fetches the item from the zone's own chests
+     (`CaretakerTryExecuteDeliveryOrder`, `ZombieWgoData.cs:2605-2740`, over `WorldZoneData.MultiInventoryWgoDatas`:
+     zone only, unpatched, as the mod's scope says), or
+   - the **player**, with `[F] Put` (`CraftInteractionHandler.cs:173-200`, `PlayerOrderExecutor`): the item is taken
+     from `new MultiInventory(MainGame.PlayerData)` (pocket plus the current zone) and put into the station's craft
+     inventory (`DeliveryOrder.ExecuteOrder`). Patch 2 would extend that pool to every zone, and patch 6 suppresses
+     it unless `Storage.IncludeZombieOrderDelivery` is on (default off, `Plugin.cs:448-466`).
+
+   The `[F] Put` in the screenshot is that pending delivery order (`hint_put`, `DeliveryOrder.GetInteractionHint`):
+   the zombie was waiting for copper. Pressing F hands over one craft's worth (3) from the pocket; with
+   `IncludeZombieOrderDelivery` on it would come out of the faraway chest instead when the pocket has none.
+
+**So in the user's furnace:** the copper sits in a chest in another zone; the furnace's zone has none; the zombie
+ordered copper and waited; nothing in the mod was going to move it, by design (the three `Storage` switches are off
+so zombie automation runs exactly as in the unmodified game).
+
+**What can be done, in order of effort:**
+
+- **Nothing to build:** switch on `IncludeZombieOrderDelivery` (the Mods menu's Storage page) and press F at the
+  station: the delivery comes from storage in every zone. One press per craft's order, as the game asks.
+- **Keep the copper in the furnace's zone** (a chest there) and let a caretaker supply the zombie: the game's own
+  automation, untouched by the mod.
+- **Not worth building: adding storage to a zombie-worked station's pool** (dropping the worker check for
+  `Worker is ZombieWgoData`). It would make the window show `243/3`, but the zombie would still place delivery
+  orders and wait, because its start decision reads the station's craft inventory, not the pool. The number would
+  lie.
+- **A real extension would be caretakers fetching from every zone** (patching the chest search in
+  `CaretakerTryExecuteDeliveryOrder`): that is zombie automation drawing on the whole world, which the mod's
+  summary promises not to touch, and a caretaker walks to the chest it takes from, so a chest in another scene has
+  no path. Out of scope unless the mod's goal changes.
+
+Checked on the way: the mod is active on this build (`LogOutput.log`: "GK2 Global Storage 1.1.5 loaded", the
+framework's build contract passed, 22 eligible storage inventories discovered); the cfg has `Enabled`,
+`IncludeBuildAndAlchemy` on and the three `Storage` switches off. No code was changed.
 
 ## Appendix G: dialogue and scripted item logic in detail
 
