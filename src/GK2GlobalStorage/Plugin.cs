@@ -19,9 +19,9 @@ namespace GK2GlobalStorage
         public const string Version = "1.1.5"; // one place: the plugin attribute and the log line
 
         // Module version id of the Assembly-CSharp.dll this plugin was audited against (Steam build 25601286).
-        private static readonly System.Guid AuditedGameMvid = new System.Guid("44edf1a9-b9b5-4276-a731-a680e9e9c44d");
+        private static readonly System.Guid AuditedGameMvid = new System.Guid("5ec8094e-4c33-4615-9eb8-011501193186");
         // And of LazyBearTechnology.dll (the engine library the plugin also uses), same build (Steam 25601286).
-        private static readonly System.Guid AuditedLazyBearMvid = new System.Guid("02955186-b2b7-474c-a6ff-b860ac92b69c");
+        private static readonly System.Guid AuditedLazyBearMvid = new System.Guid("6cd86a0b-b1ed-40ba-88b0-a9313146514b");
 
         internal static ManualLogSource Log;
         internal static ConfigEntry<bool> Enabled;
@@ -211,6 +211,14 @@ namespace GK2GlobalStorage
                 return false;
             }
             if (!Plugin.IncludeFuelContainers.Value && inventory.Data.HasProperty<FuelContainerSerializedItemProperty>())
+            {
+                return false;
+            }
+            // A take-only container (the crow nest since game 1.010, TakeOnlySerializedItemProperty: where the game puts
+            // small items left lying for two days) is never storage. The game's MultiInventory fills any listed inventory
+            // that has room, and the take-only rule lives only in its chest window and move handler (the 1.010 audit,
+            // docs/game-update-25910882.md), so appending the nest could send crafting results into it.
+            if (inventory.Data.HasProperty<TakeOnlySerializedItemProperty>())
             {
                 return false;
             }

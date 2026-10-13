@@ -14,8 +14,8 @@ it unlocks, and jump straight to it, on whichever tab it is.
 Enter (or a click) switches to the tech's tab, scrolls to it and frames its card. Hidden techs (the "?" cards) and
 tabs you haven't opened yet are never shown, so the search spoils nothing. Display only: nothing in the game changes.
 
-Version 1.0.0, built and audited against Steam game build 25752683, game 1.009 (Assembly-CSharp MVID `f7d46132-…`,
-LazyBearTechnology `f67c6993-…`). Design study: [`docs/tech-search.md`](../../docs/tech-search.md).
+Version 1.0.0, built and audited against Steam game build 25910882, game 1.010 (Assembly-CSharp MVID `5ec8094e-…`,
+LazyBearTechnology `6cd86a0b-…`). Design study: [`docs/tech-search.md`](../../docs/tech-search.md).
 
 - GUID: `dreas.gk2.techsearch`
 - Needs: BepInEx 5.4.23.x, installed in the game folder.

@@ -62,8 +62,10 @@ Rehearse the first start on a clean config, with the game closed:
 Run 2026-10-13 with this dist, without the framework and with a stock `BepInEx.cfg`: all five loaded with their
 versions, a building moved, the Tech Tree search box shown and searching; no warning, error or exception in the log;
 the fresh cfgs at defaults. Second run the same day with the marker lock built: Move Building's fresh cfg has no
-`[Debug]` section and no scratch cfg file was written.
+`[Debug]` section and no scratch cfg file was written. Both runs were on the 1.009-hotfix dist; the 1.010 dist of
+the same evening (new pins, one Global Storage eligibility branch: `docs/game-update-25910882.md`) has not been
+rehearsed.
 
 ## 6. Hand-off
 
-The user commits and tags; the release notes name the game build (`25752683`, 1.009 hotfix as of 2026-10-13).
+The user commits and tags; the release notes name the game build (`25910882`, 1.010 as of 2026-10-13).

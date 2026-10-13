@@ -12,7 +12,7 @@ Woodworking Workbench I (1)
 It only changes what the menu shows. Build rules, costs and saves are not touched. It is independent of GK2 Global Storage; the two plugins work together or alone.
 
 - GUID: `dreas.gk2.builtcount`
-- Game build audited: Steam build 25752683 (game 1.009), Unity 6000.3.9f1 Mono, `Assembly-CSharp` MVID `44edf1a9-b9b5-4276-a731-a680e9e9c44d`, `LazyBearTechnology` `02955186-b2b7-474c-a6ff-b860ac92b69c`. v1.0.5 was audited against 25601286 (`3ffadd70-169d-402a-bcdf-59c322dfc26d`); v1.0.3 was audited against 25533739 (`97f92f0d-a093-49fe-ba4d-74aa62fae81e`); v1.0.2 was audited against 25509347 (`70946fdd-5c76-4d71-95c3-fea95051340d`); v1.0.0 and v1.0.1 were audited against build 25457344 (`dfae7296-aa7e-450f-92b4-4e617878a48d`)
+- Game build audited: Steam build 25910882 (game 1.010), Unity 6000.3.9f1 Mono, `Assembly-CSharp` MVID `5ec8094e-4c33-4615-9eb8-011501193186`, `LazyBearTechnology` `6cd86a0b-b1ed-40ba-88b0-a9313146514b`. v1.0.6 was also audited against 25752683 (`44edf1a9-b9b5-4276-a731-a680e9e9c44d`); v1.0.5 was audited against 25601286 (`3ffadd70-169d-402a-bcdf-59c322dfc26d`); v1.0.3 was audited against 25533739 (`97f92f0d-a093-49fe-ba4d-74aa62fae81e`); v1.0.2 was audited against 25509347 (`70946fdd-5c76-4d71-95c3-fea95051340d`); v1.0.0 and v1.0.1 were audited against build 25457344 (`dfae7296-aa7e-450f-92b4-4e617878a48d`)
 - Needs: BepInEx 5.4.23.5, installed in the game folder (`C:\Program Files (x86)\Steam\steamapps\common\Graveyard Keeper 2`)
 
 ## Optional: GK2 Mod Framework

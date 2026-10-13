@@ -6,11 +6,11 @@ steps are in [`docs/release-checklist.md`](../docs/release-checklist.md). Copy t
 
 | File | Version | Game build |
 |---|---|---|
-| `GK2GlobalStorage.dll` | 1.1.5 | 25752683 (1.009 hotfix), built 2026-10-13 |
-| `GK2BuiltCount.dll` | 1.0.6 | 25752683 (1.009 hotfix), built 2026-10-13 |
-| `GK2MoveBuilding.dll` | 1.1.6 | 25752683 (1.009 hotfix), built 2026-10-13 |
-| `GK2OwnedCount.dll` | 1.0.4 | 25752683 (1.009 hotfix), built 2026-10-13 |
-| `GK2TechSearch.dll` | 1.0.0 | 25752683 (1.009 hotfix), built 2026-10-13 |
+| `GK2GlobalStorage.dll` | 1.1.5 | 25910882 (1.010), built 2026-10-13 |
+| `GK2BuiltCount.dll` | 1.0.6 | 25910882 (1.010), built 2026-10-13 |
+| `GK2MoveBuilding.dll` | 1.1.6 | 25910882 (1.010), built 2026-10-13 |
+| `GK2OwnedCount.dll` | 1.0.4 | 25910882 (1.010), built 2026-10-13 |
+| `GK2TechSearch.dll` | 1.0.0 | 25910882 (1.010), built 2026-10-13 |
 
 - **The donkey mods** (formerly GK2 Mounts and the showcase) are in [GK2DonkeyAPI](https://github.com/dreasgrech/GK2DonkeyAPI).
 - **Game updates:** each plugin disables itself on a different game build until it has been re-audited and rebuilt.

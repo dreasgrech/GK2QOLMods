@@ -11,8 +11,8 @@ on you 4 · in storage 116 (5 chests)
 the same set Global Storage draws from. "All grades" appears for graded items (the ones with a star, e.g. Bones of
 different skull grades) and sums the whole family. Display only: nothing in the game changes.
 
-Version 1.0.4, built and audited against Steam game build 25752683, game 1.009 (Assembly-CSharp MVID `f7d46132-…`,
-LazyBearTechnology `f67c6993-…`; re-audit in `docs/game-update-25676698.md`). 1.0.3 was the same code for 25601286, and 1.0.1 was the same code for 25533739.
+Version 1.0.4, built and audited against Steam game build 25910882, game 1.010 (Assembly-CSharp MVID `5ec8094e-…`,
+LazyBearTechnology `6cd86a0b-…`; re-audit in `docs/game-update-25910882.md`). 1.0.3 was the same code for 25601286, and 1.0.1 was the same code for 25533739.
 Feasibility study: [`docs/owned-count-tooltip.md`](../../docs/owned-count-tooltip.md).
 
 ## Optional: GK2 Mod Framework

@@ -167,6 +167,6 @@ After a game patch the mods disable themselves (see above) until the game's code
 audited build and the mods rebuilt with the new module version ids (`tests/GameDiff` lists what changed; see
 `tests/README.md`).
 
-Until then the game runs exactly as unmodified. Audited build: Steam 25752683 (game 1.009; `docs/game-update-25731225.md`).
+Until then the game runs exactly as unmodified. Audited build: Steam 25910882 (game 1.010; `docs/game-update-25910882.md`).
 
 Don't set `DisableOnGameUpdate=false` unless you accept running unaudited.
