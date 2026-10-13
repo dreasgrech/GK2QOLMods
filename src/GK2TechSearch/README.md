@@ -39,7 +39,7 @@ the mod appears in the game's **Mods** menu (main menu and ESC menu):
 - a Status row: Active, Off, or disabled after a game update;
 - "Search box on the Tech Tree", "Also search what techs unlock" and "Key to start a search".
 
-`MaxResults`, the Layout settings and `Safety.DisableOnGameUpdate` stay in the cfg. Without the framework, the same
+`MaxResults`, the Layout settings and `Safety.StopOnChangedGameCode` stay in the cfg. Without the framework, the same
 DLL works exactly as before. Details: [`docs/gk2-mod-framework.md`](../../docs/gk2-mod-framework.md).
 
 ## Settings (`BepInEx\config\dreas.gk2.techsearch.cfg`)
@@ -56,7 +56,8 @@ next time the Tech Tree page opens.
 | `Layout.BoxOffset` | (-8, -13) | Box position from the page's top right corner (in the strip right of the tab buttons). |
 | `Layout.BoxSize` | (130, 22) | Box width and height. |
 | `Layout.ListWidth` | 280 | Width of the result list under the box, right edges aligned. |
-| `Safety.DisableOnGameUpdate` | true | Do nothing if the game's code changed since the audit. |
+| `Safety.StopOnChangedGameCode` | false | At start the mod compares every game member it uses with the installed game (`docs/dependency-check.md`). A member that is gone always stops the mod; one whose code changed runs it with a warning, or stops it too with true. |
+| `Safety.LastDependencyCheck` | | Written by the mod: the cached result of that comparison for the current game build. |
 
 ## How it works
 
@@ -82,7 +83,7 @@ missing one disables the mod): `TechTreePageWidget.scrollRect`, `redSpheresLabel
   clicking the tab (reputation techs whose price is met unlock themselves, as on any tab switch).
 - Errors are caught and logged once; the Tech Tree then works as vanilla.
 - No per-frame work outside the open Tech Tree page (the box only runs while the page is shown).
-- MVID guard and all-or-nothing patching as in the other mods.
+- Dependency check (`docs/dependency-check.md`) and all-or-nothing patching as in the other mods.
 
 ## In-game test list
 

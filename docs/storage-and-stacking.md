@@ -110,7 +110,7 @@ could be its own plugin if preferred.
   after; a mismatch is logged and the operation stops (items are never lost, at worst a move is left unfinished).
 - Chest filters, bag rules and stack sizes are enforced by the game code the mod calls.
 - Nothing runs unless the player presses the button. No per-frame work.
-- Same MVID guard and all-or-nothing patching as the other mods.
+- Same dependency check (`docs/dependency-check.md`) and all-or-nothing patching as the other mods.
 
 ## 6. The stack-size table
 

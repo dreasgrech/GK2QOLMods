@@ -128,6 +128,12 @@ namespace GK2MoveBuilding
                 reason = "The building is gone.";
                 return false;
             }
+            if (Plugin.ChangedGameCode)
+            {
+                // The move rewrites zone lists and positions through game code that changed since this build was read.
+                reason = "Moving is off: the game changed code this mod uses. Wait for an updated mod.";
+                return false;
+            }
             if (IsCoop())
             {
                 // The game's own remove is replicated to the other player; our zone writes are not.

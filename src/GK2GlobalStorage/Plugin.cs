@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
+using GK2Shared;
 using HarmonyLib;
 using UnityEngine;
 
@@ -18,10 +19,10 @@ namespace GK2GlobalStorage
         public const string Guid = "dreas.gk2.globalstorage";
         public const string Version = "1.1.5"; // one place: the plugin attribute and the log line
 
-        // Module version id of the Assembly-CSharp.dll this plugin was audited against (Steam build 25601286).
-        private static readonly System.Guid AuditedGameMvid = new System.Guid("5ec8094e-4c33-4615-9eb8-011501193186");
-        // And of LazyBearTechnology.dll (the engine library the plugin also uses), same build (Steam 25601286).
-        private static readonly System.Guid AuditedLazyBearMvid = new System.Guid("6cd86a0b-b1ed-40ba-88b0-a9313146514b");
+        // No pinned game build: at start GameDependencies compares every game member this DLL uses (the gk2deps.txt
+        // manifest tools/DepManifest embedded after the build) with the installed game; docs/dependency-check.md.
+        // True when the game changed the code of a member this mod uses: the mod runs, its state-changing path is off.
+        internal static bool ChangedGameCode;
 
         internal static ManualLogSource Log;
         internal static ConfigEntry<bool> Enabled;
@@ -29,7 +30,6 @@ namespace GK2GlobalStorage
         internal static ConfigEntry<bool> IncludeFuelContainers;
         internal static ConfigEntry<bool> IncludeConveyorStorage;
         internal static ConfigEntry<bool> IncludeZombieOrderDelivery;
-        internal static ConfigEntry<bool> DisableOnGameUpdate;
         internal static ConfigEntry<bool> VerboseLogging;
 
         // Every Harmony patch class, patched by name. Not PatchAll(assembly): that lists every type in this DLL, and
@@ -68,27 +68,21 @@ namespace GK2GlobalStorage
                 "Also draw from conveyor chests in OTHER zones. Off by default so remote conveyor automation is not starved.");
             IncludeZombieOrderDelivery = Config.Bind("Storage", "IncludeZombieOrderDelivery", false,
                 "When you hand-deliver items a zombie crafter asked for, also take them from storage in every zone.");
-            DisableOnGameUpdate = Config.Bind("Safety", "DisableOnGameUpdate", true,
-                "Do not patch anything if the game's code has changed since this mod was audited. Rebuild/re-audit after game updates.");
+            GameDependencies.Bind(Config); // Safety.StopOnChangedGameCode, Safety.LastDependencyCheck
             VerboseLogging = Config.Bind("Debug", "VerboseLogging", false,
                 "Log which storage inventories were discovered (useful for troubleshooting).");
         }
 
         private string StartMod()
         {
-            System.Guid gameMvid = typeof(WgoData).Assembly.ManifestModule.ModuleVersionId;
-            System.Guid lazyBearMvid = typeof(LazyBearTechnology.LazyAudio).Assembly.ManifestModule.ModuleVersionId;
-            bool forced = false;
-            if (gameMvid != AuditedGameMvid || lazyBearMvid != AuditedLazyBearMvid)
+            // Identical game members: patch. Changed ones: patch with a warning (or stop, Safety.StopOnChangedGameCode).
+            // A member gone, or a check that could not run: stop; the game runs unmodified.
+            GameDependencies.Result deps = GameDependencies.Check(typeof(Plugin).Assembly, typeof(WgoData).Assembly, typeof(LazyBearTechnology.LazyAudio).Assembly);
+            if (!GameDependencies.Apply(deps, "GK2 Global Storage", Log, "Running with the storage extension off", out string status))
             {
-                if (DisableOnGameUpdate.Value)
-                {
-                    Log.LogError($"Game code changed since this mod was audited (Assembly-CSharp {gameMvid}, expected {AuditedGameMvid}; LazyBearTechnology {lazyBearMvid}, expected {AuditedLazyBearMvid}). Mod is DISABLED; the game runs unmodified. Set Safety.DisableOnGameUpdate=false to force-enable at your own risk.");
-                    return "Disabled: the game was updated since this version was checked. Update the mod, or set Safety.DisableOnGameUpdate=false in its cfg at your own risk.";
-                }
-                Log.LogWarning($"Game code changed since this mod was audited (Assembly-CSharp {gameMvid}, LazyBearTechnology {lazyBearMvid}). Running anyway because DisableOnGameUpdate=false.");
-                forced = true;
+                return status;
             }
+            ChangedGameCode = deps.State == GameDependencies.State.Changed;
 
             // All-or-nothing: a partial patch set could leave the global lookup active without its guards.
             Harmony harmony = new Harmony(Guid);
@@ -106,7 +100,7 @@ namespace GK2GlobalStorage
                 return "Disabled: patching failed (see BepInEx/LogOutput.log).";
             }
             Log.LogInfo($"GK2 Global Storage {Version} loaded.");
-            return forced ? "Active on an unchecked game version (Safety.DisableOnGameUpdate=false)" : "Active";
+            return status;
         }
     }
 
@@ -310,7 +304,7 @@ namespace GK2GlobalStorage
         {
             try
             {
-                if (!Plugin.Enabled.Value || excludeWorkerInventory || !(__instance.Worker is PlayerController))
+                if (!Plugin.Enabled.Value || Plugin.ChangedGameCode || excludeWorkerInventory || !(__instance.Worker is PlayerController))
                 {
                     return;
                 }
@@ -335,7 +329,7 @@ namespace GK2GlobalStorage
         {
             try
             {
-                if (!Plugin.Enabled.Value || !Plugin.IncludeBuildAndAlchemy.Value || !addCurrentPlayerWorldZone
+                if (!Plugin.Enabled.Value || Plugin.ChangedGameCode || !Plugin.IncludeBuildAndAlchemy.Value || !addCurrentPlayerWorldZone
                     || GlobalStorage.SuppressDepth > 0 || playerData == null || playerData != MainGame.PlayerData)
                 {
                     return;

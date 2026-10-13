@@ -41,9 +41,10 @@ namespace GK2TechSearch
 
         private sealed class TechSearchMod : Gk2ModBase
         {
-            // Our own switches stay in charge (General.Enabled, the game-update guard): the framework adds no
+            // Our own switches stay in charge (General.Enabled, the dependency check): the framework adds no
             // Enabled entry of its own. requiresKnownBuild makes its list say "Unknown build" unless OnRegister
-            // confirms the build, which it does only when our own guard passed (ConfirmBuild below).
+            // confirms the build, which it does only when our own check found every game member identical (Status
+            // "Active", ConfirmBuild below; on changed game code the Status row names the members).
             private readonly Gk2ModMetadata metadata = new Gk2ModMetadata(
                 Plugin.Guid,
                 "GK2 Tech Search",
@@ -66,7 +67,7 @@ namespace GK2TechSearch
                 }
                 try
                 {
-                    context.ConfirmCurrentBuildCompatibility("Its own check of the game code passed (the audited build).");
+                    context.ConfirmCurrentBuildCompatibility("Its own check passed: every game member it uses is identical to the audited build.");
                 }
                 catch (Exception e)
                 {
@@ -93,7 +94,7 @@ namespace GK2TechSearch
                     "Puts the cursor in the search box while the Tech Tree page is open. Clicking the box works too. To switch the key off, set FocusKey = None in the cfg.",
                     order: 2);
                 // Not in the menu: General.MaxResults and Layout.* (the framework's controls don't fit them well;
-                // set them in the cfg), and Safety.DisableOnGameUpdate (read once at startup; the Status row says when
+                // set them in the cfg), and Safety.StopOnChangedGameCode (read once at startup; the Status row says when
                 // it applies).
             }
 

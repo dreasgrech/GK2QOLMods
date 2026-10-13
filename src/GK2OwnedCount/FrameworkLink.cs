@@ -42,10 +42,11 @@ namespace GK2OwnedCount
 
         private sealed class OwnedCountMod : Gk2ModBase
         {
-            // Our own switches stay in charge (General.Enabled, the game-update guard): the framework adds no
+            // Our own switches stay in charge (General.Enabled, the dependency check): the framework adds no
             // Enabled entry of its own. requiresKnownBuild makes its list say "Unknown build" unless OnRegister
-            // confirms the build, which it does only when our own guard passed (ConfirmBuild below). Without it the
-            // list said "Compatible" while the guard had switched the mod off (game 1.008, 2026-10-02).
+            // confirms the build, which it does only when our own check found every game member identical (Status
+            // "Active", ConfirmBuild below; on changed game code the Status row names the members). Without it the
+            // list said "Compatible" while the mod had switched itself off (game 1.008, 2026-10-02).
             private readonly Gk2ModMetadata metadata = new Gk2ModMetadata(
                 Plugin.Guid,
                 "GK2 Owned Count",
@@ -70,7 +71,7 @@ namespace GK2OwnedCount
                 }
                 try
                 {
-                    context.ConfirmCurrentBuildCompatibility("Its own check of the game code passed (the audited build).");
+                    context.ConfirmCurrentBuildCompatibility("Its own check passed: every game member it uses is identical to the audited build.");
                 }
                 catch (Exception e)
                 {
@@ -94,7 +95,7 @@ namespace GK2OwnedCount
                 Toggle(s, Plugin.IncludeOtherGrades, "Also total all grades", 4);
                 Toggle(s, Plugin.IncludeFuelContainers, "Count fuel containers", 0);
                 Toggle(s, Plugin.IncludeConveyorStorage, "Count conveyor chests", 1);
-                // Not in the menu: Safety.DisableOnGameUpdate (read once at startup; the Status row says when it
+                // Not in the menu: Safety.StopOnChangedGameCode (read once at startup; the Status row says when it
                 // applies) and Debug.DumpItemDefs. Both stay in the cfg.
             }
 

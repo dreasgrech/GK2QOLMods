@@ -13,7 +13,7 @@ steps are in [`docs/release-checklist.md`](../docs/release-checklist.md). Copy t
 | `GK2TechSearch.dll` | 1.0.0 | 25910882 (1.010), built 2026-10-13 |
 
 - **The donkey mods** (formerly GK2 Mounts and the showcase) are in [GK2DonkeyAPI](https://github.com/dreasgrech/GK2DonkeyAPI).
-- **Game updates:** each plugin disables itself on a different game build until it has been re-audited and rebuilt.
+- **Game updates:** each plugin compares the game members it uses with the installed game at startup: identical, it runs; changed, it runs with a warning in the log (Global Storage without extending storage, Move Building without moving) until a re-audited build; gone, it stops.
 
 **The Mods menu:** Global Storage, Built Count, Move Building, Owned Count and Tech Search also show in the game's
 Mods menu when [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) is installed. The framework

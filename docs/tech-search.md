@@ -127,7 +127,7 @@ Private members (resolved at startup, any missing one disables the mod): `TechTr
 | Keys | low | The game's own pattern for text entry; input is given back on unfocus, on page hide and on destroy. |
 | Spoilers | none by design | Hidden techs and locked tabs are never in the results. |
 | UI | low | The box is a child of the page; a failure to build it is logged once and the page works as vanilla. |
-| Game updates | as the others | MVID guard, all-or-nothing patching, `Access.Verify()`. |
+| Game updates | as the others | the dependency check (`docs/dependency-check.md`), all-or-nothing patching, `Access.Verify()`. |
 | Other mods | none | No other mod of ours patches the tech tree. |
 
 ## Not in v1

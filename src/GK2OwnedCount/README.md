@@ -40,7 +40,8 @@ applies at once.
 | `General.IncludeOtherGrades` | true | "all grades N" for graded items. |
 | `Storage.IncludeFuelContainers` | false | Count fuel containers (furnace wood piles) as storage. |
 | `Storage.IncludeConveyorStorage` | false | Count conveyor chests as storage. |
-| `Safety.DisableOnGameUpdate` | true | Do nothing if the game's code changed since the audit. |
+| `Safety.StopOnChangedGameCode` | false | At start the mod compares every game member it uses with the installed game (`docs/dependency-check.md`). A member that is gone always stops the mod; one whose code changed runs it with a warning, or stops it too with true. |
+| `Safety.LastDependencyCheck` | | Written by the mod: the cached result of that comparison for the current game build. |
 | `Debug.DumpItemDefs` | false | Once the game data is loaded, write every item definition to `BepInEx\GK2-itemdefs.csv` (id, name, type, stack size, grade, star, groups). |
 
 ## How it works
@@ -66,7 +67,7 @@ stock, items lying on the ground.
   lines in a UI list.
 - Errors inside the postfix are caught and logged once; the tooltip then shows as vanilla.
 - No per-frame work (the debug dump polls until the game data exists, then stops).
-- MVID guard and all-or-nothing patching as in the other mods.
+- Dependency check (`docs/dependency-check.md`) and all-or-nothing patching as in the other mods.
 
 ## In-game test list
 

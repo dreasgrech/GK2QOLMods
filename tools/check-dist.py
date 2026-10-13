@@ -1,19 +1,22 @@
 """Checks the release DLLs in dist/ without the game: run `python tools/check-dist.py` from the repo root.
 
-A release build (-p:ForDist=true) must carry no debug directory (its PDB path would hold this machine's user folder),
-no path into this machine, and the audited game MVID the plugin pins (the mod disables itself on any other game build,
-so a stale dist would switch itself off on every player's first start; found 2026-10-13: every dist DLL pinned an
-older build).
+A release build (-p:ForDist=true) must carry no debug directory (its PDB path would hold this machine's user folder)
+and no path into this machine, and its dependency manifest (the gk2deps.txt resource, docs/dependency-check.md) must
+find every game member it names in the installed game, unchanged: a dist whose members changed or vanished needs a
+re-audit and a rebuild before it ships. (Found 2026-10-13, before the manifest: every dist DLL pinned an older game
+build and would have switched itself off on every player's first start.)
 Exit code 1 on any finding."""
-import glob, os, re, sys
+import glob, os, re, subprocess, sys
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-PINNED = {}  # dll name -> the Assembly-CSharp MVID in its Plugin.cs (read below)
-for plugin in glob.glob(os.path.join(REPO, "src", "*", "Plugin.cs")):
-    src = open(plugin, encoding="utf-8").read()
-    m = re.search(r'AuditedGameMvid = new System\.Guid\("([0-9a-f-]{36})"\)', src)
-    name = os.path.basename(os.path.dirname(plugin))
-    PINNED[name + ".dll"] = m.group(1) if m else None
+TOOL = os.path.join(REPO, "tools", "DepManifest", "bin", "Release", "net8.0", "DepManifest.dll")
+
+props = open(os.path.join(REPO, "Directory.Build.props"), encoding="utf-8").read()
+GAME = re.search(r"<GameDir[^>]*>([^<]+)</GameDir>", props).group(1).strip()
+MANAGED = os.path.join(GAME, "GraveyardKeeper2_Data", "Managed")
+
+if not os.path.exists(TOOL):
+    subprocess.run(["dotnet", "build", "-c", "Release", "-nologo", "-v", "q", os.path.join(REPO, "tools", "DepManifest")], check=True)
 
 bad = 0
 for path in sorted(glob.glob(os.path.join(REPO, "dist", "*.dll"))):
@@ -29,11 +32,19 @@ for path in sorted(glob.glob(os.path.join(REPO, "dist", "*.dll"))):
         findings.append("path (utf-16): " + hit.decode("utf-16le", "ignore")[:120])
     if "Documents\\GitHub".encode("utf-16le") in b:
         findings.append("a path into this repo is baked in: not a -p:ForDist=true build")
-    mvid = PINNED.get(name)
-    if mvid and mvid[:8].encode("utf-16le") not in b:
-        findings.append(f"the audited MVID {mvid} of {name[:-4]}/Plugin.cs is not in the DLL: rebuild")
+    # The dependency manifest against the installed game: exit 0 identical, 2 changed, 1 missing or no manifest.
+    v = subprocess.run(["dotnet", TOOL, "verify", path, MANAGED], capture_output=True, text=True)
+    out = (v.stdout.strip() or (v.stderr.strip().splitlines()[0] if v.stderr.strip() else "no output")).splitlines()
+    manifest = out[0].split(": ", 1)[1] if ": " in out[0] else out[0]
+    if v.returncode == 2:
+        findings.append("game members this DLL uses changed since it was built: re-audit and rebuild")
+        findings.extend(l.strip() for l in out[1:])
+    elif v.returncode != 0:
+        findings.append(manifest if out[1:] == [] else manifest + " / " + " / ".join(l.strip() for l in out[1:]))
     status = "ok" if not findings else "FAIL"
-    print(f"{status}  {name}  {len(b):,} bytes  pinned {mvid or '(nothing)'}")
+    print(f"{status}  {name}  {len(b):,} bytes")
+    if v.returncode == 0:
+        print("      " + manifest)
     for f in findings:
         print("      " + f)
     bad += len(findings)

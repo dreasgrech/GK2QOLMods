@@ -55,7 +55,8 @@ file, so direct edits to it apply at the next move.
 | `General.StayInMoveMode` | true | After a move, or after Back during the preview, return to move mode instead of the desk menu. Back in move mode still opens the menu. |
 | `General.HighlightMovable` | true | In move mode, movable buildings lose the red grid patch and are tinted; the one under the cursor is tinted stronger. Unmovable ones keep the game's red. |
 | `General.MovableColor` | light blue | The tint colour. |
-| `Safety.DisableOnGameUpdate` | true | Do nothing if the game's code changed since the audit. |
+| `Safety.StopOnChangedGameCode` | false | At start the mod compares every game member it uses with the installed game (`docs/dependency-check.md`). A member that is gone always stops the mod; one whose code changed runs it with a warning, or stops it too with true. |
+| `Safety.LastDependencyCheck` | | Written by the mod: the cached result of that comparison for the current game build. |
 
 ## What can't be moved (and the message)
 
@@ -137,7 +138,7 @@ Private members used (resolved at startup, any missing one disables the mod): `B
 
 ## Safety
 
-- MVID guard: after a game update the mod disables itself until re-audited.
+- Dependency check (`docs/dependency-check.md`): a game member the mod uses that is gone disables it at start; one whose code changed keeps it running with moving off ("Moving is off: the game changed code this mod uses") until a re-audited build.
 - `Access.Verify()` and the patches (applied class by class from `Plugin.PatchClasses`) run in one try, and a
   failure unpatches everything.
 - No per-frame work unless a move is in progress or the Move row was picked.

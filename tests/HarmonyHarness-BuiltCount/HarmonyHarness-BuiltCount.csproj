@@ -8,4 +8,5 @@
  
  <Reference Include="Assembly-CSharp"><HintPath>$(Managed)\Assembly-CSharp.dll</HintPath></Reference>
  <Reference Include="LazyBearTechnology"><HintPath>$(Managed)\LazyBearTechnology.dll</HintPath></Reference>
+ <Compile Include="$(MSBuildThisFileDirectory)..\..\src\Shared\DependencyManifest.cs" Link="DependencyManifest.cs" />
 </ItemGroup></Project>

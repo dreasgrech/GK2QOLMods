@@ -1,0 +1,26 @@
+<Project>
+  <!-- The dependency check (docs/dependency-check.md), imported by each plugin's .csproj:
+       - links the shared sources (the manifest format and hashing, the start-up check) and references the game's
+         Mono.Cecil (BepInEx/core, never shipped: the game process has it loaded);
+       - after every build runs tools/DepManifest on the built DLL, which lists every game member the mod uses, hashes
+         it and embeds the list as the gk2deps.txt resource. A member the mod names that the game does not have fails
+         the build. Runs before DeployToGame, so the game always gets a DLL with its manifest. -->
+  <PropertyGroup>
+    <DepManifestProject>$(MSBuildThisFileDirectory)tools\DepManifest\DepManifest.csproj</DepManifestProject>
+    <DepManifestDll>$(MSBuildThisFileDirectory)tools\DepManifest\bin\Release\net8.0\DepManifest.dll</DepManifestDll>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)src\Shared\DependencyManifest.cs" Link="Shared\DependencyManifest.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)src\Shared\GameDependencies.cs" Link="Shared\GameDependencies.cs" />
+    <Reference Include="Mono.Cecil"><HintPath>$(BepInExCore)\Mono.Cecil.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+  <Target Name="EmbedDependencyManifest" AfterTargets="Build" BeforeTargets="DeployToGame">
+    <!-- The tool is always a Release build, whatever this project's configuration; MSBuild runs one build of it
+         per invocation even when several plugins build at once. Restore first (a fresh clone has no obj/ for it),
+         with a property of its own so the restore is evaluated apart from the build, as the SDK documents. -->
+    <MSBuild Projects="$(DepManifestProject)" Targets="Restore" Properties="Configuration=Release;RestoreUseStaticGraphEvaluation=false;_DepManifestRestore=$([System.Guid]::NewGuid())" />
+    <MSBuild Projects="$(DepManifestProject)" Targets="Build" Properties="Configuration=Release" />
+    <!-- No trailing backslash on the folders: before a closing quote it would escape the quote. -->
+    <Exec Command="dotnet &quot;$(DepManifestDll)&quot; embed &quot;$(TargetPath)&quot; &quot;$(Managed)&quot; &quot;$(BepInExCore)&quot;" />
+  </Target>
+</Project>

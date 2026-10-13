@@ -24,6 +24,8 @@
   </ItemGroup>
 
   <!-- Deploys into the game after every build, only while it is closed (-p:Deploy=false skips it). -->
+  <!-- The dependency check: shared sources, Mono.Cecil, and the manifest embedded after every build (docs/dependency-check.md). -->
+  <Import Project="$(MSBuildThisFileDirectory)..\..\DependencyManifest.targets" />
   <Import Project="$(MSBuildThisFileDirectory)..\..\DeployToGame.targets" />
 
 </Project>

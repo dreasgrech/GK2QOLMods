@@ -2,6 +2,7 @@ using System;
 using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
+using GK2Shared;
 using HarmonyLib;
 
 namespace GK2OwnedCount
@@ -14,10 +15,8 @@ namespace GK2OwnedCount
         public const string Guid = "dreas.gk2.ownedcount";
         public const string Version = "1.0.4";
 
-        // Module version id of the Assembly-CSharp.dll this plugin was audited against (Steam build 25601286).
-        private static readonly System.Guid AuditedGameMvid = new System.Guid("5ec8094e-4c33-4615-9eb8-011501193186");
-        // And of LazyBearTechnology.dll (the engine library the plugin also uses), same build (Steam 25601286).
-        private static readonly System.Guid AuditedLazyBearMvid = new System.Guid("6cd86a0b-b1ed-40ba-88b0-a9313146514b");
+        // No pinned game build: at start GameDependencies compares every game member this DLL uses (the gk2deps.txt
+        // manifest tools/DepManifest embedded after the build) with the installed game; docs/dependency-check.md.
 
         internal static ManualLogSource Log;
         internal static ConfigEntry<bool> Enabled;
@@ -27,7 +26,6 @@ namespace GK2OwnedCount
         internal static ConfigEntry<bool> IncludeOtherGrades;
         internal static ConfigEntry<bool> IncludeFuelContainers;
         internal static ConfigEntry<bool> IncludeConveyorStorage;
-        internal static ConfigEntry<bool> DisableOnGameUpdate;
         internal static ConfigEntry<bool> DumpItemDefs;
 
         // Every Harmony patch class, patched by name. Not PatchAll(assembly): that lists every type in this DLL, and
@@ -64,26 +62,19 @@ namespace GK2OwnedCount
                 "Count items inside fuel containers (e.g. furnace wood piles) as storage. Same meaning as in Global Storage.");
             IncludeConveyorStorage = Config.Bind("Storage", "IncludeConveyorStorage", false,
                 "Count items inside conveyor chests as storage. Same meaning as in Global Storage.");
-            DisableOnGameUpdate = Config.Bind("Safety", "DisableOnGameUpdate", true,
-                "Do not patch anything if the game's code has changed since this mod was audited. Rebuild/re-audit after game updates.");
+            GameDependencies.Bind(Config); // Safety.StopOnChangedGameCode, Safety.LastDependencyCheck
             DumpItemDefs = Config.Bind("Debug", "DumpItemDefs", false,
                 "Once the game data is loaded, write every item definition (id, name, type, stack size, grade, star) to BepInEx\\GK2-itemdefs.csv. Off by default.");
         }
 
         private string StartMod()
         {
-            System.Guid gameMvid = typeof(WgoData).Assembly.ManifestModule.ModuleVersionId;
-            System.Guid lazyBearMvid = typeof(LazyBearTechnology.LazyAudio).Assembly.ManifestModule.ModuleVersionId;
-            bool forced = false;
-            if (gameMvid != AuditedGameMvid || lazyBearMvid != AuditedLazyBearMvid)
+            // Identical game members: patch. Changed ones: patch with a warning (or stop, Safety.StopOnChangedGameCode).
+            // A member gone, or a check that could not run: stop; the game runs unmodified.
+            GameDependencies.Result deps = GameDependencies.Check(typeof(Plugin).Assembly, typeof(WgoData).Assembly, typeof(LazyBearTechnology.LazyAudio).Assembly);
+            if (!GameDependencies.Apply(deps, "GK2 Owned Count", Log, "Running anyway", out string status))
             {
-                if (DisableOnGameUpdate.Value)
-                {
-                    Log.LogError($"Game code changed since this mod was audited (Assembly-CSharp {gameMvid}, expected {AuditedGameMvid}; LazyBearTechnology {lazyBearMvid}, expected {AuditedLazyBearMvid}). Mod is DISABLED; the game runs unmodified. Set Safety.DisableOnGameUpdate=false to force-enable at your own risk.");
-                    return "Disabled: the game was updated since this version was checked. Update the mod, or set Safety.DisableOnGameUpdate=false in its cfg at your own risk.";
-                }
-                Log.LogWarning($"Game code changed since this mod was audited (Assembly-CSharp {gameMvid}, LazyBearTechnology {lazyBearMvid}). Running anyway because DisableOnGameUpdate=false.");
-                forced = true;
+                return status;
             }
 
             harmony = new Harmony(Guid);
@@ -103,7 +94,7 @@ namespace GK2OwnedCount
                 return "Disabled: patching failed (see BepInEx/LogOutput.log).";
             }
             Log.LogInfo($"GK2 Owned Count {Version} loaded.");
-            return forced ? "Active on an unchecked game version (Safety.DisableOnGameUpdate=false)" : "Active";
+            return status;
         }
 
         // Only used by the debug dump; nothing runs per frame otherwise.

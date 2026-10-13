@@ -74,7 +74,7 @@ Options:
 | Game logic | none | No game method's behaviour changes; the postfix only appends to a UI list. |
 | UI | low | A wrong style reference would show unstyled text; a thrown exception inside the postfix is caught and logged once, and the tooltip shows as vanilla. Tooltip height grows by one line; the game's placement code already handles variable heights. |
 | Performance | negligible | Hover-driven, per-frame cache, integer sums. |
-| Game updates | as the others | MVID guard; `AddItemWidgets` is private, so its name and signature are verified at startup with the same all-or-nothing pattern. |
+| Game updates | as the others | the dependency check (`docs/dependency-check.md`); `AddItemWidgets` is private, so its name and signature are verified at startup with the same all-or-nothing pattern. |
 | Interaction with Global Storage / Built Count / Move Building | none | Different patch targets; Global Storage patches `MultiInventory` and craft pickers, not the tooltip. |
 
 The one design question is *which* inventories count as "owned". The proposal: player + tool belt + the storage set

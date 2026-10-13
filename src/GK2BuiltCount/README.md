@@ -22,7 +22,7 @@ the mod appears in the game's **Mods** menu (main menu and ESC menu):
 - a Status row: Active, Off, or disabled after a game update;
 - "Show built counts" (`General.Enabled`), which applies the next time a build-menu tab is drawn.
 
-`Safety.DisableOnGameUpdate` stays cfg-only. Without the framework, the same DLL works exactly as before. Details:
+`Safety.StopOnChangedGameCode` stays cfg-only. Without the framework, the same DLL works exactly as before. Details:
 [`docs/gk2-mod-framework.md`](../../docs/gk2-mod-framework.md).
 
 ## Settings
@@ -32,7 +32,8 @@ File: `BepInEx\config\dreas.gk2.builtcount.cfg` in the game folder. It is create
 | Setting | Default | Meaning |
 |---|---|---|
 | `General.Enabled` | true | Show counts. `false` makes menus look like vanilla. The value is read each time a row is drawn. BepInEx reads the file only at startup, so a hand edit needs a restart; a change in the Mods menu applies at once |
-| `Safety.DisableOnGameUpdate` | true | If the game's code changed (the MVID differs), patch nothing and log an error |
+| `Safety.StopOnChangedGameCode` | false | At start the mod compares every game member it uses with the installed game (`docs/dependency-check.md`). A member that is gone always stops the mod; one whose code changed runs it with a warning, or stops it too with true. |
+| `Safety.LastDependencyCheck` | | Written by the mod: the cached result of that comparison for the current game build. |
 
 ## How it works
 
@@ -93,7 +94,7 @@ Also checked, no issue found:
 - **Redraw frequency.** Rows are redrawn only when the window opens (`Redraw` → `DrawTab`), when you switch tabs, and on next/prev tab. There is no per-frame redraw, so the count costs one walk of the area per draw.
 - **Freshness.** After you place a building, `BuildManager.Disable` reopens the window. That is a new draw, so counts are rebuilt. The cache is also keyed on the area's object count.
 - **`LazySingleton.Instance`** creates a `BuildManager` if none exists. One always exists while the build window is open, because `BuildManager` opened it.
-- **Errors.** Any exception, including a missing field after a game update, is caught and logged once, and the row shows its normal name. The MVID guard disables the plugin entirely after a game update anyway.
+- **Errors.** Any exception, including a missing field after a game update, is caught and logged once, and the row shows its normal name. A field or method that is gone after a game update disables the plugin at start (the dependency check, `docs/dependency-check.md`).
 - **Isolation.** Nothing is written to game state or saves. Global Storage patches none of these methods. The only change is the text shown on a UI label.
 
 ## v1.0.5: optional GK2 Mod Framework integration

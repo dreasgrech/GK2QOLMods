@@ -6,8 +6,10 @@ it to every test (`GamePaths.cs`). Each is run after every build and after every
 
 **After a game update, first:** `dotnet run -c Release -- "<previous game folder>"` in `GameDiff` lists every
 member of `Assembly-CSharp` and `LazyBearTechnology` that was removed, added or changed (full list in
-`%TEMP%\gamediff.txt`). Check it against every patch target and every game member the mods use, then run the
-scans below, then update the audited MVIDs and version strings.
+`%TEMP%\gamediff.txt`). Check it against every patch target and every game member the mods use (each mod's list
+with hashes: `dotnet tools/DepManifest/bin/Release/net8.0/DepManifest.dll show <mod.dll>`, and `verify <mod.dll>
+<Managed>` says which of them changed), then run the scans below, then rebuild (the build embeds the manifest) and
+update the version strings of the mods whose members changed.
 
 | Project | Mod | What it checks | Run |
 |---|---|---|---|
@@ -15,7 +17,7 @@ scans below, then update the audited MVIDs and version strings.
 | `StaticScan-GlobalStorage` | Global Storage | MetadataLoadContext suite: every game member the mod relies on exists with the expected shape (24 checks). | `dotnet run -c Release` |
 | `CecilScan-GlobalStorage` | Global Storage | Mono.Cecil: the zombie and conveyor code paths still call the base methods the mod distinguishes. | `dotnet run -c Release` |
 | `CecilScan-BuiltCount` | Built Count | Mono.Cecil: `UIBuildingWidget.Redraw`, the `nameLabel`/`data` fields, MVID. | `dotnet run -c Release` |
-| `HarmonyHarness-BuiltCount` | Built Count | .NET Framework 4.8 process that loads the game assemblies and the mod, with `GK2.Framework.dll` deliberately not resolvable (a player without the framework): only the framework-typed class may fail to load; MVID match; `Plugin.PatchClasses` equals the `[HarmonyPatch]` classes; the patch classes construct; patching them one by one succeeds; lists the patched methods. | `dotnet build -c Release` then run `bin\Release\net48\HarmonyHarness-BuiltCount.exe` |
+| `HarmonyHarness-BuiltCount` | Built Count | .NET Framework 4.8 process that loads the game assemblies and the mod, with `GK2.Framework.dll` deliberately not resolvable (a player without the framework): only the framework-typed class may fail to load; the embedded dependency manifest finds every member in the installed game unchanged (`docs/dependency-check.md`); `Plugin.PatchClasses` equals the `[HarmonyPatch]` classes; the patch classes construct; patching them one by one succeeds; lists the patched methods. | `dotnet build -c Release` then run `bin\Release\net48\HarmonyHarness-BuiltCount.exe` |
 | `CecilScan-MoveBuilding` | Move Building | Mono.Cecil: every IL reference into the game assemblies resolves; every by-name reflection target (fields, methods, property setters) exists with the expected type; every patch target is a single non-abstract method. | `dotnet run -c Release` |
 | `CecilScan-OwnedCount` | Owned Count | Mono.Cecil: every IL reference into the game assemblies resolves; `UITooltip.instance`, `smallDescriptionTextStyle` and the `AddItemWidgets` patch target exist. | `dotnet run -c Release` |
 | `CecilScan-TechSearch` | Tech Search | Mono.Cecil: every IL reference into the game assemblies resolves; the private fields `Access` reads (`TechTreePageWidget.scrollRect`, `redSpheresLabel`, `tabButtonPrefab`, `TechTreeElementBaseWidget.selection`, `UIBugReportWindow.titleInput`) exist with the expected types; the patch targets `Init`/`Redraw`/`Hide` and the called `DisplayTab(tab, id)` are single methods with bodies. | `dotnet run -c Release` |

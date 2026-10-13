@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
+using GK2Shared;
 using HarmonyLib;
 using LazyBearTechnology;
 using TMPro;
@@ -18,14 +19,11 @@ namespace GK2BuiltCount
         public const string Guid = "dreas.gk2.builtcount";
         public const string Version = "1.0.6"; // one place: the plugin attribute and the log line
 
-        // Module version id of the Assembly-CSharp.dll this plugin was audited against (Steam build 25601286).
-        private static readonly System.Guid AuditedGameMvid = new System.Guid("5ec8094e-4c33-4615-9eb8-011501193186");
-        // And of LazyBearTechnology.dll (the engine library the plugin also uses), same build (Steam 25601286).
-        private static readonly System.Guid AuditedLazyBearMvid = new System.Guid("6cd86a0b-b1ed-40ba-88b0-a9313146514b");
+        // No pinned game build: at start GameDependencies compares every game member this DLL uses (the gk2deps.txt
+        // manifest tools/DepManifest embedded after the build) with the installed game; docs/dependency-check.md.
 
         internal static ManualLogSource Log;
         internal static ConfigEntry<bool> Enabled;
-        internal static ConfigEntry<bool> DisableOnGameUpdate;
 
         // Every Harmony patch class, patched by name. Not PatchAll(assembly): that lists every type in this DLL, and
         // FrameworkLink's mod class can't be loaded without GK2.Framework.dll, so Harmony would log a warning.
@@ -47,24 +45,17 @@ namespace GK2BuiltCount
         {
             Enabled = Config.Bind("General", "Enabled", true,
                 "Build menus show how many of each building already exist in that area, e.g. \"Sawhorse (2)\". Display only.");
-            DisableOnGameUpdate = Config.Bind("Safety", "DisableOnGameUpdate", true,
-                "Do not patch anything if the game's code has changed since this mod was audited. Rebuild/re-audit after game updates.");
+            GameDependencies.Bind(Config); // Safety.StopOnChangedGameCode, Safety.LastDependencyCheck
         }
 
         private string StartMod()
         {
-            System.Guid gameMvid = typeof(WgoData).Assembly.ManifestModule.ModuleVersionId;
-            System.Guid lazyBearMvid = typeof(LazyBearTechnology.LazyAudio).Assembly.ManifestModule.ModuleVersionId;
-            bool forced = false;
-            if (gameMvid != AuditedGameMvid || lazyBearMvid != AuditedLazyBearMvid)
+            // Identical game members: patch. Changed ones: patch with a warning (or stop, Safety.StopOnChangedGameCode).
+            // A member gone, or a check that could not run: stop; the game runs unmodified.
+            GameDependencies.Result deps = GameDependencies.Check(typeof(Plugin).Assembly, typeof(WgoData).Assembly, typeof(LazyBearTechnology.LazyAudio).Assembly);
+            if (!GameDependencies.Apply(deps, "GK2 Built Count", Log, "Running anyway", out string status))
             {
-                if (DisableOnGameUpdate.Value)
-                {
-                    Log.LogError($"Game code changed since this mod was audited (Assembly-CSharp {gameMvid}, expected {AuditedGameMvid}; LazyBearTechnology {lazyBearMvid}, expected {AuditedLazyBearMvid}). Mod is DISABLED; the game runs unmodified. Set Safety.DisableOnGameUpdate=false to force-enable at your own risk.");
-                    return "Disabled: the game was updated since this version was checked. Update the mod, or set Safety.DisableOnGameUpdate=false in its cfg at your own risk.";
-                }
-                Log.LogWarning($"Game code changed since this mod was audited (Assembly-CSharp {gameMvid}, LazyBearTechnology {lazyBearMvid}). Running anyway because DisableOnGameUpdate=false.");
-                forced = true;
+                return status;
             }
 
             Harmony harmony = new Harmony(Guid);
@@ -82,7 +73,7 @@ namespace GK2BuiltCount
                 return "Disabled: patching failed (see BepInEx/LogOutput.log).";
             }
             Log.LogInfo($"GK2 Built Count {Version} loaded.");
-            return forced ? "Active on an unchecked game version (Safety.DisableOnGameUpdate=false)" : "Active";
+            return status;
         }
     }
 

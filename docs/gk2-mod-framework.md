@@ -49,7 +49,7 @@ matches its docs.
 
 | | Framework | Ours |
 |---|---|---|
-| Game-update safety | SHA-256 of Assembly-CSharp; mods with `requiresKnownBuild` are blocked on unknown builds unless they run their own contract check and call `ConfirmCurrentBuildCompatibility` | MVID guard on Assembly-CSharp **and** LazyBearTechnology, `Safety.DisableOnGameUpdate`, re-audit per update (`tests/GameDiff`) |
+| Game-update safety | SHA-256 of Assembly-CSharp; mods with `requiresKnownBuild` are blocked on unknown builds unless they run their own contract check and call `ConfirmCurrentBuildCompatibility` | the dependency manifest (`docs/dependency-check.md`): every game member the mod uses, hashed, compared at start; `Safety.StopOnChangedGameCode`; re-audit per update (`tests/GameDiff`) |
 | Settings UI | a generated menu inside the game UI, with gamepad support | only the BepInEx cfg (plus Mounts' own IMGUI panel on F8) |
 | Enable/disable | its own Enabled entry, or the mod's (optional mode) | `General.Enabled` in each mod |
 
@@ -57,7 +57,7 @@ The overlap is small. The main thing the framework offers us is an **in-game set
 small mods. Today they have to edit the `.cfg` by hand or use BepInEx ConfigurationManager.
 
 Our settings, and which would fit its controls:
-- **Built Count**: `Enabled` and `DisableOnGameUpdate`. There's almost nothing to show.
+- **Built Count**: `Enabled` and `StopOnChangedGameCode`. There's almost nothing to show.
 - **Global Storage**: 7 bools. All fit.
 - **Owned Count**: 9 bools. All fit.
 - **Move Building**: bools, a string (`MoveLabel`) and a `KeyboardShortcut` all fit. `MovableColor` (a `Color`) has
@@ -79,9 +79,12 @@ The framework documents an **optional bridge**, and it's the only pattern that f
 - ~~It uses `requiresKnownBuild: false`~~ **Changed 2026-10-02 (game 1.008):** with `false` the framework never
   judges the mod, so its list said "Compatible" for all our mods while their own guard had switched them off. Now
   every bridge uses `requiresKnownBuild: true` and calls `context.ConfirmCurrentBuildCompatibility` in `OnRegister`
-  only when the mod's `Status` is "Active" (the showcase: only while GK2 Mounts runs). On a game update the list then
-  says "Unknown build" (shown as an error), and the read-only Status row in Settings gives our own reason. Settings
-  stay reachable either way. One limit: if the framework ever lists the current build's hash as known, it reports
+  only when the mod's `Status` is "Active" (the showcase: only while GK2 Mounts runs). Since the dependency check
+  (2026-10-13, `docs/dependency-check.md`) a QOL mod's Status is "Active" after a game update as long as every game
+  member it uses is identical, so the list says "Compatible" with the confirmation text "every game member it uses
+  is identical to the audited build"; on changed members the mod runs but the list says "Unknown build" (shown as an
+  error) and the read-only Status row in Settings names them; on a missing member or a stopped mod the row gives the
+  reason. Settings stay reachable either way. One limit: if the framework ever lists the current build's hash as known, it reports
   "Compatible" without asking, whatever our guard says.
 - **No framework dependency in the list (2026-10-02):** the bridges used to list the framework as a dependency with
   the range `[0.1.0, 0.2.0)`. The menu printed it with no "(optional)", which read as if our mods needed the

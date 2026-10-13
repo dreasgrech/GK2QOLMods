@@ -152,10 +152,12 @@ scrolls to the tech and frames its card. Ctrl+F puts the cursor in the box.
 ## Safety
 
 - **No save-format changes.** The mods add no serialized types or fields. Saves made with them load without them.
-- **Game-update guard.** Every plugin checks the module version ids of the game's code (`Assembly-CSharp.dll`) and
-  engine library (`LazyBearTechnology.dll`) at startup and disables itself after
-  a game update until it has been re-audited and rebuilt (`Safety.DisableOnGameUpdate`, on by default). You'll see
-  `Game code changed since this mod was audited ... Mod is DISABLED` in the log.
+- **Dependency check.** Every plugin carries a list of the game members it uses (methods, fields, types, with a
+  hash of each) and compares it with the installed game at startup. A member that is gone stops the mod before it
+  patches anything. A member whose code changed keeps the mod running with a warning in the log that names it
+  (Global Storage then stops extending storage, Move Building stops moving) until a re-audited build; set
+  `Safety.StopOnChangedGameCode=true` to stop the mod in that case too. A game update that leaves every member
+  identical changes nothing. Details: `docs/dependency-check.md`.
 - **All-or-nothing patching.** If any patch fails to apply, all of that mod's patches are removed and the game runs
   unmodified.
 - **Move Building** is transactional: an interrupted move puts the building back exactly as it was, verified in-game
@@ -163,10 +165,8 @@ scrolls to the tech and frames its card. Ctrl+F puts the cursor in the box.
 
 ## Game updates
 
-After a game patch the mods disable themselves (see above) until the game's code has been compared against the
-audited build and the mods rebuilt with the new module version ids (`tests/GameDiff` lists what changed; see
-`tests/README.md`).
-
-Until then the game runs exactly as unmodified. Audited build: Steam 25910882 (game 1.010; `docs/game-update-25910882.md`).
-
-Don't set `DisableOnGameUpdate=false` unless you accept running unaudited.
+After a game patch each mod compares the game members it uses with the new game (see above): identical, it runs as
+before; changed, it runs with a warning and its state-changing path off; gone, it stops. Either way the game's code
+is compared against the audited build (`tests/GameDiff` lists what changed; see `tests/README.md`), the mods are
+re-audited and, when something they use changed, rebuilt. Audited build: Steam 25910882 (game 1.010;
+`docs/game-update-25910882.md`). Why the check replaced the old all-or-nothing pin: `docs/update-gate.md`.

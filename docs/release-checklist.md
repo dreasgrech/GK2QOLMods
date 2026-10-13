@@ -10,10 +10,11 @@ What to do before `dist/` goes public, in order. Written 2026-10-13 from the fir
   `BepInEx\config\dreas.gk2.dev` (the same marker unlocks the GK2 Donkey API's dev tools).
 - Each mod's `Version` constant in `Plugin.cs` is the version in `README.md`'s table and in its `.csproj`
   (`<Version>`, the assembly version; four of them lagged on 2026-10-13).
-- The audited game: `AuditedGameMvid` / `AuditedLazyBearMvid` in every `Plugin.cs` are the installed game's
-  (`tests/GameDiff` after any update; the audit notes are `docs/game-update-*.md`). A dist DLL pinned to an older
-  build disables itself on every player's first start ("Game code changed since this mod was audited"); on
-  2026-10-13 all five dist DLLs were in that state.
+- The audited game: the audit notes (`docs/game-update-*.md`, from `tests/GameDiff` after any update) cover the
+  installed game. The build embeds the dependency manifest (`docs/dependency-check.md`); `check-dist.py` verifies
+  each dist DLL's manifest against the installed game, so a dist whose members changed or vanished since it was
+  built fails the check. (Before the manifest, 2026-10-13: all five dist DLLs pinned an older build and would have
+  switched themselves off on every player's first start.)
 
 ## 2. The offline checks (no game launch)
 
@@ -36,8 +37,8 @@ python tools\check-dist.py
 ```
 
 `-p:ForDist=true` leaves out the debug directory: without it the DLL names its PDB with this machine's user folder
-(every dist DLL did, until 2026-10-13). `check-dist.py` fails on any baked path, a `.pdb` reference, or a pinned
-MVID that is not the one in `Plugin.cs`. `--no-incremental` matters: after a dev build, a `ForDist` build of the
+(every dist DLL did, until 2026-10-13). `check-dist.py` fails on any baked path, a `.pdb` reference, a missing
+dependency manifest, or a manifest whose members changed or vanished in the installed game. `--no-incremental` matters: after a dev build, a `ForDist` build of the
 unchanged sources reuses the dev output and the check fails on the PDB path (seen 2026-10-13).
 
 Afterwards build once more without `ForDist` (and with the game closed) so the DLLs in the game are the dev builds

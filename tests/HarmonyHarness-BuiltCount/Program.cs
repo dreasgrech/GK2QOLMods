@@ -26,8 +26,12 @@ class P { static int Main() {
     }
 
     var plugin = asm.GetType("GK2BuiltCount.Plugin", true);
-    var mvid = (Guid)plugin.GetField("AuditedGameMvid", BindingFlags.NonPublic|BindingFlags.Static).GetValue(null);
-    Console.WriteLine((mvid==game.ManifestModule.ModuleVersionId?"PASS":"FAIL")+" audited MVID "+mvid); if (mvid!=game.ManifestModule.ModuleVersionId) fails++;
+    // The dependency manifest (docs/dependency-check.md): every game member the DLL uses must be in the installed game, unchanged.
+    GK2Shared.DepManifest manifest; using (var modDef = Mono.Cecil.ModuleDefinition.ReadModule(path)) manifest = GK2Shared.DepManifest.ReadFrom(modDef);
+    var modules = GK2Shared.DepCompare.ModulesIn(dirs[0], out var handle);
+    GK2Shared.DepVerdict verdict; using (handle) verdict = GK2Shared.DepCompare.Compare(manifest, modules);
+    Console.WriteLine((verdict.Identical?"PASS":"FAIL")+$" dependency manifest: {verdict.Checked} game members (made against game {manifest.GameMvid}{(manifest.GameMvid==game.ManifestModule.ModuleVersionId?"":", the installed game is a different build")}): {verdict.Kind}");
+    if (!verdict.Identical) { fails++; foreach (var s in verdict.Missing) Console.WriteLine("     MISSING "+s); foreach (var s in verdict.Changed) Console.WriteLine("     CHANGED "+s); }
 
     var patchClasses = (Type[])plugin.GetField("PatchClasses", BindingFlags.NonPublic|BindingFlags.Static).GetValue(null);
     var attributed = types.Where(t=>t.GetCustomAttributes(typeof(HarmonyPatch), false).Length>0).ToList();
