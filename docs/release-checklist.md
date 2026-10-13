@@ -61,7 +61,8 @@ Rehearse the first start on a clean config, with the game closed:
 
 Run 2026-10-13 with this dist, without the framework and with a stock `BepInEx.cfg`: all five loaded with their
 versions, a building moved, the Tech Tree search box shown and searching; no warning, error or exception in the log;
-the fresh cfgs at defaults.
+the fresh cfgs at defaults. Second run the same day with the marker lock built: Move Building's fresh cfg has no
+`[Debug]` section and no scratch cfg file was written.
 
 ## 6. Hand-off
 
