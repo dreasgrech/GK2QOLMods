@@ -89,7 +89,8 @@ routine to rescue corpses its earlier release left inside garden beds. None of t
 
 ## Fault-injection test (1.1.3)
 
-`Debug.FaultInjection` in the config throws inside the guarded block at a named step: `AfterLinksCut`,
+`Debug.FaultInjection` in the config (present only with the empty marker file `BepInEx\config\dreas.gk2.dev`, since
+2026-10-13) throws inside the guarded block at a named step: `AfterLinksCut`,
 `AfterZoneRemove`, `AfterPosition`, `AfterZoneAdd`, or `WrongZone` (pretends the landing zone differs). The config is
 re-read at every move, so the value can be changed between moves without restarting. The move is refused ("The move
 failed and was undone.") and the mod logs `Move restore check for <id>: PASS/FAIL` with position, rotation, zone,

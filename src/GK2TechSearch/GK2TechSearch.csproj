@@ -7,6 +7,9 @@
     <LangVersion>latest</LangVersion>
     <Nullable>disable</Nullable>
     <GenerateDependencyFile>false</GenerateDependencyFile>
+    <!-- A release build (-p:ForDist=true) carries no debug directory: the PDB path would bake this machine's user
+         folder into the shipped DLL. -->
+    <DebugType Condition="'$(ForDist)' == 'true'">none</DebugType>
   </PropertyGroup>
 
   <ItemGroup>

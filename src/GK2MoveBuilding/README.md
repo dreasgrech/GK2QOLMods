@@ -37,7 +37,8 @@ Two notes on the modifier key in the menu:
 - **Press a single key.** The mod uses only the main key, so a combination like Shift+K acts as plain K.
 - **The menu can't switch it off**, because Esc cancels the capture. For that, set `MoveModifier = None` in the cfg.
 
-`MovableColor` (the framework has no colour control), `Safety` and `Debug.FaultInjection` stay cfg-only. Without the
+`MovableColor` (the framework has no colour control) and `Safety` stay cfg-only; `Debug.FaultInjection` is in the cfg only
+with the developer marker file `BepInEx\config\dreas.gk2.dev` (2026-10-13). Without the
 framework, the same DLL works exactly as before. Details: [`docs/gk2-mod-framework.md`](../../docs/gk2-mod-framework.md).
 
 ## Settings (`BepInEx\config\dreas.gk2.movebuilding.cfg`)

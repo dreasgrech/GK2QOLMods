@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
@@ -93,7 +94,22 @@ namespace GK2MoveBuilding
                 "In move mode, buildings that can be moved lose the red grid patch and get a colour tint; the one under the cursor is tinted stronger. Buildings that can't be moved keep the game's red.");
             MovableColor = Config.Bind("General", "MovableColor", new Color(0.30f, 0.75f, 1f, 1f),
                 "Tint colour for movable buildings in move mode.");
-            FaultInjection = Config.Bind("Debug", "FaultInjection", "",
+            // Testing only (SAVE-SAFETY.md): in the cfg only with the developer marker file BepInEx\config\dreas.gk2.dev (the
+            // same marker unlocks the GK2 Donkey API's dev tools). Without it the key binds into a scratch config that is
+            // never written, so a player's cfg has no [Debug] section and nothing typed there can make every move roll back
+            // (the release audit of 2026-10-13).
+            ConfigFile debugCfg = Config;
+            try
+            {
+                if (!File.Exists(Path.Combine(Paths.ConfigPath, "dreas.gk2.dev")))
+                {
+                    debugCfg = new ConfigFile(Path.Combine(Paths.ConfigPath, "dreas.gk2.movebuilding.locked-debug.cfg"), false) { SaveOnConfigSet = false };
+                }
+            }
+            catch
+            {
+            }
+            FaultInjection = debugCfg.Bind("Debug", "FaultInjection", "",
                 "Testing only. Throws inside the move at the named step so the restore path can be watched in the log; the move is then refused and the building must be exactly as before. " +
                 "Values: AfterLinksCut, AfterZoneRemove, AfterPosition, AfterZoneAdd, WrongZone. Leave empty for normal use.");
             DisableOnGameUpdate = Config.Bind("Safety", "DisableOnGameUpdate", true,

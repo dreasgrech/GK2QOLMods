@@ -3,10 +3,13 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
     <AssemblyName>GK2OwnedCount</AssemblyName>
-    <Version>1.0.3</Version>
+    <Version>1.0.4</Version>
     <LangVersion>latest</LangVersion>
     <Nullable>disable</Nullable>
     <GenerateDependencyFile>false</GenerateDependencyFile>
+    <!-- A release build (-p:ForDist=true) carries no debug directory: the PDB path would bake this machine's user
+         folder into the shipped DLL. -->
+    <DebugType Condition="'$(ForDist)' == 'true'">none</DebugType>
   </PropertyGroup>
 
   <ItemGroup>
