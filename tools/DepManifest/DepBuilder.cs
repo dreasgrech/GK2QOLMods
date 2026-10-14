@@ -1,6 +1,8 @@
 // Builds a mod's dependency manifest from its IL (docs/dependency-check.md): every member reference into the game
 // assemblies, every type named, every [HarmonyPatch] target and every AccessTools lookup by name. A lookup that
-// resolves to nothing is an error (the mod names a member the game does not have), which fails the build.
+// resolves to nothing is an error (the mod names a member the game does not have), which fails the build. Each entry
+// records the mod's own top-level types that use it (DepEntry.UsedBy).
+// Identical copies live in GK2QOLMods and GK2DonkeyAPI (tools/DepManifest): change both and keep them byte-identical.
 using System.Text;
 using GK2Shared;
 using Mono.Cecil;
@@ -16,10 +18,15 @@ internal static class DepBuilder
             LazyBearMvid = gameModule("LazyBearTechnology").Mvid,
         };
         Dictionary<string, DepEntry> entries = new Dictionary<string, DepEntry>(StringComparer.Ordinal);
+        Dictionary<string, SortedSet<string>> usedBy = new Dictionary<string, SortedSet<string>>(StringComparer.Ordinal);
+        string owner = null;                       // the top-level type being read (nested types count for it)
         void Add(char kind, TypeReference scopeOf, string key, string hash)
         {
             string scope = ScopeName(scopeOf);
-            entries[kind + " " + scope + " " + key] = new DepEntry { Kind = kind, Scope = scope, Key = key, Hash = hash ?? "" };
+            string k = kind + " " + scope + " " + key;
+            entries[k] = new DepEntry { Kind = kind, Scope = scope, Key = key, Hash = hash ?? "" };
+            if (!usedBy.TryGetValue(k, out SortedSet<string> set)) usedBy[k] = set = new SortedSet<string>(StringComparer.Ordinal);
+            if (owner != null) set.Add(owner);
         }
         void AddType(TypeReference t)
         {
@@ -29,23 +36,28 @@ internal static class DepBuilder
         }
         void AddMethod(MethodDefinition d) => Add('M', d.DeclaringType, d.FullName, DepHash.Method(d));
         void AddField(FieldDefinition d) => Add('F', d.DeclaringType, d.FullName, DepHash.Field(d));
-        // Everything declared on T with this name: methods (every overload), fields, properties (their accessors).
-        bool AddNamed(TypeDefinition t, string name, string where)
+        // Everything declared on T with this name: methods (every overload, or those with the given parameter types),
+        // fields, properties (their accessors), nested types (AccessTools.Inner).
+        bool AddNamed(TypeDefinition t, string name, TypeReference[] parameters, string where)
         {
             int n = 0;
-            foreach (MethodDefinition d in t.Methods.Where(x => x.Name == name)) { AddMethod(d); n++; }
+            foreach (TypeDefinition d in t.NestedTypes.Where(x => x.Name == name)) { Add('T', d, d.FullName, ""); n++; }
+            foreach (MethodDefinition d in t.Methods.Where(x => x.Name == name && (parameters == null || SameParameters(x, parameters)))) { AddMethod(d); n++; }
             foreach (FieldDefinition d in t.Fields.Where(x => x.Name == name)) { AddField(d); n++; }
             foreach (PropertyDefinition p in t.Properties.Where(x => x.Name == name))
             {
                 if (p.GetMethod != null) { AddMethod(p.GetMethod); n++; }
                 if (p.SetMethod != null) { AddMethod(p.SetMethod); n++; }
             }
-            if (n == 0) errors.Add($"{where}: {t.FullName} has no member named \"{name}\"");
+            if (n == 0) errors.Add($"{where}: {t.FullName} has no member named \"{name}\"" + (parameters == null ? "" : " with parameters (" + string.Join(", ", parameters.Select(p => p?.FullName)) + ")"));
             return n > 0;
         }
 
         foreach (TypeDefinition t in mod.GetTypes())
         {
+            TypeDefinition top = t;
+            while (top.DeclaringType != null) top = top.DeclaringType;
+            owner = top.FullName;
             // Types named in signatures (fields, locals, parameters) and in IL (ldtoken, casts, newobj's type).
             foreach (FieldDefinition f in t.Fields) AddType(f.FieldType);
             foreach (MethodDefinition me in t.Methods)
@@ -83,7 +95,12 @@ internal static class DepBuilder
             foreach (MethodDefinition me in t.Methods)
                 foreach (CustomAttribute a in me.CustomAttributes) HarmonyTarget(a, me.FullName, AddMethod, errors);
         }
-        m.Entries.AddRange(entries.Values);
+        foreach (KeyValuePair<string, DepEntry> kv in entries)
+        {
+            DepEntry e = kv.Value;
+            e.UsedBy = string.Join(",", usedBy[kv.Key]);
+            m.Entries.Add(e);
+        }
         return m;
     }
 
@@ -118,11 +135,14 @@ internal static class DepBuilder
     }
 
     // The (type, name) of an AccessTools call. Generic form: AccessTools.FieldRefAccess<T, F>("name") takes T from the
-    // call's generic arguments. (Type, string, ...) form: walking back from the call, the first ldstr is the name and
-    // the first ldtoken before it is the type (an argument-types array after the name holds ldtokens too, but they
-    // come after the ldstr, so the walk passes them before it reaches the name).
+    // call's generic arguments. (Type, string, ...) form: the name is the ldstr reached from the call backwards through
+    // nothing but the IL that builds the later arguments (type arrays, nulls, numbers); anything else on the way (a
+    // parameter, a local, a call) means the name is computed, which the manifest cannot follow, so it is an error and
+    // the code names the member in a literal. The type is the typeof(T) right before the name (ldtoken T; call
+    // Type.GetTypeFromHandle); a computed type (x.GetType()) is an error the same way. A lookup the code means to
+    // survive when the member is absent uses System.Type's own reflection, which is not read here.
     private static void ByName(MethodReference call, Mono.Collections.Generic.Collection<Instruction> il, int at, MethodDefinition caller,
-        Func<TypeDefinition, string, string, bool> addNamed, List<string> errors)
+        Func<TypeDefinition, string, TypeReference[], string, bool> addNamed, List<string> errors)
     {
         MethodReference def = call is GenericInstanceMethod g ? g.ElementMethod : call;
         int stringParam = -1;
@@ -137,24 +157,55 @@ internal static class DepBuilder
             type = gi.GenericArguments[0];             // FieldRefAccess<T, F>(string), StructFieldRefAccess<T, F>(string), StaticFieldRefAccess<T, F>(string)
         }
         string name = null;
+        int callAt = at;
         for (int i = at - 1; i >= 0; i--)
         {
             if (il[i].OpCode == OpCodes.Ldstr) { name = (string)il[i].Operand; at = i; break; }
+            if (!BuildsArgument(il[i])) break;
         }
         if (name == null) { errors.Add($"{caller.FullName}: AccessTools.{def.Name} with no string literal (the member name is computed; name it in a literal)"); return; }
         if (type == null)
         {
-            for (int i = at - 1; i >= 0; i--)
+            int j = at - 1;
+            while (j >= 0 && il[j].OpCode == OpCodes.Nop) j--;
+            if (j >= 1 && il[j].OpCode == OpCodes.Call && il[j].Operand is MethodReference gt && gt.Name == "GetTypeFromHandle" && il[j - 1].OpCode == OpCodes.Ldtoken && il[j - 1].Operand is TypeReference tr)
             {
-                if (il[i].OpCode == OpCodes.Ldtoken && il[i].Operand is TypeReference tr) { type = tr; break; }
+                type = tr;
             }
         }
-        if (type == null) { errors.Add($"{caller.FullName}: AccessTools.{def.Name}(…, \"{name}\") with no typeof(T) before it"); return; }
+        if (type == null) { errors.Add($"{caller.FullName}: AccessTools.{def.Name}(…, \"{name}\") with no typeof(T) right before the name (a computed type cannot be followed; write typeof)"); return; }
         TypeDefinition t = null;
         try { t = Element(type)?.Resolve(); } catch { }
         if (t == null) { errors.Add($"{caller.FullName}: AccessTools.{def.Name}(typeof({type.FullName}), \"{name}\"): the type does not resolve"); return; }
         if (!IsGame(t)) return;                        // a lookup into Unity, BepInEx, …: not the game's code
-        addNamed(t, name, $"{caller.FullName}: AccessTools.{def.Name}");
+        // A Type[] after the name (AccessTools.Method's parameters): the first array's typeofs, so only those
+        // overloads are listed. (A second array would be the generics; the lookups here use none.)
+        List<TypeReference> parameters = null;
+        for (int i = at + 1; i < callAt; i++)
+        {
+            if (il[i].OpCode == OpCodes.Newarr) { if (parameters != null) break; parameters = new List<TypeReference>(); }
+            else if (parameters != null && il[i].OpCode == OpCodes.Ldtoken && il[i].Operand is TypeReference pt) parameters.Add(pt);
+        }
+        addNamed(t, name, parameters?.ToArray(), $"{caller.FullName}: AccessTools.{def.Name}");
+    }
+
+    private static bool SameParameters(MethodDefinition m, TypeReference[] parameters)
+    {
+        if (m.Parameters.Count != parameters.Length) return false;
+        for (int i = 0; i < parameters.Length; i++)
+        {
+            if (parameters[i] == null || m.Parameters[i].ParameterType.FullName != parameters[i].FullName) return false;
+        }
+        return true;
+    }
+
+    // IL that only builds the arguments after the name of an AccessTools call: null, a Type[] of typeofs, numbers.
+    private static bool BuildsArgument(Instruction x)
+    {
+        OpCode op = x.OpCode;
+        if (op == OpCodes.Nop || op == OpCodes.Ldnull || op == OpCodes.Dup || op == OpCodes.Newarr || op == OpCodes.Ldtoken || op == OpCodes.Stelem_Ref || op == OpCodes.Stelem_Any) return true;
+        if (op.Code >= Code.Ldc_I4_M1 && op.Code <= Code.Ldc_I4) return true;
+        return op == OpCodes.Call && x.Operand is MethodReference m && m.Name == "GetTypeFromHandle";
     }
 
     // The definition behind a reference: generic instance -> its open type, array/byref/pointer -> the element.

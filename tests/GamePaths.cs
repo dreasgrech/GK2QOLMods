@@ -7,7 +7,8 @@ using System.Reflection;
 internal static class GamePaths
 {
     public static readonly string GameDir = typeof(GamePaths).Assembly
-        .GetCustomAttributes<AssemblyMetadataAttribute>().First(a => a.Key == "GameDir").Value;
+        .GetCustomAttributes<AssemblyMetadataAttribute>().First(a => a.Key == "GameDir").Value
+        ?? throw new InvalidDataException("GameDir was recorded empty: check GameDir in Directory.Build.props.");
 
     public static string Managed => Path.Combine(GameDir, "GraveyardKeeper2_Data", "Managed") + Path.DirectorySeparatorChar;
 

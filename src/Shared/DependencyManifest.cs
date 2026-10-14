@@ -3,6 +3,8 @@
 // tools/DepManifest (writes the manifest after a build, verifies a dist DLL offline) and into the test harness, so
 // every side hashes the same way by construction. Mono.Cecil 0.10.4 from BepInEx/core; APIs limited to what
 // netstandard2.1, net48 and net8 all have. Design: docs/dependency-check.md.
+// Identical copies live in GK2QOLMods and GK2DonkeyAPI (src/Shared): change both and keep them byte-identical.
+#nullable disable // linked into projects with and without nullable annotations
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -17,14 +19,17 @@ namespace GK2Shared
 {
     // One line of the manifest. Kind 'T': a type that must exist (Hash empty); 'M' a method, 'F' a field, each with
     // the hash its body/shape had in the audited game. Scope: the assembly's name (Assembly-CSharp, LazyBearTechnology).
+    // UsedBy: the mod's own top-level types that use the member, comma-separated, after a tab (the Donkey API decides
+    // per feature what a changed member means; the QOL mods ignore the column).
     internal struct DepEntry
     {
         public char Kind;
         public string Scope;
         public string Key;   // Cecil FullName of the type, method or field
         public string Hash;
+        public string UsedBy;
 
-        public override string ToString() => Kind + " " + Scope + " " + (Hash.Length == 0 ? "-" : Hash) + " " + Key;
+        public override string ToString() => Kind + " " + Scope + " " + (Hash.Length == 0 ? "-" : Hash) + " " + Key + (string.IsNullOrEmpty(UsedBy) ? "" : "	" + UsedBy);
     }
 
     internal sealed class DepManifest
@@ -71,7 +76,14 @@ namespace GK2Shared
                     m.LazyBearMvid = new Guid(line.Substring(14).Trim());
                     continue;
                 }
-                // "<kind> <scope> <hash|-> <key with spaces>"
+                // "<kind> <scope> <hash|-> <key with spaces>[<tab><used by>]"
+                string usedBy = "";
+                int tab = line.IndexOf('	');
+                if (tab >= 0)
+                {
+                    usedBy = line.Substring(tab + 1);
+                    line = line.Substring(0, tab);
+                }
                 int s1 = line.IndexOf(' ');
                 int s2 = line.IndexOf(' ', s1 + 1);
                 int s3 = line.IndexOf(' ', s2 + 1);
@@ -85,7 +97,8 @@ namespace GK2Shared
                     Kind = line[0],
                     Scope = line.Substring(2, s2 - 2),
                     Hash = hash == "-" ? "" : hash,
-                    Key = line.Substring(s3 + 1)
+                    Key = line.Substring(s3 + 1),
+                    UsedBy = usedBy
                 });
             }
             if (m.GameMvid == Guid.Empty || m.LazyBearMvid == Guid.Empty)

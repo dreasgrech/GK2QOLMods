@@ -7,7 +7,9 @@
 //     by BepInEx) and every manifest entry is looked up and hashed; the verdict is cached.
 //
 // A check that cannot run disables the mod (fail closed), like a missing member. A changed member runs the mod with a
-// warning unless Safety.StopOnChangedGameCode is set.
+// warning unless Safety.StopOnChangedGameCode is set (the QOL mods; the Donkey API decides per feature, GameCode.cs).
+// Identical copies live in GK2QOLMods and GK2DonkeyAPI (src/Shared): change both and keep them byte-identical.
+#nullable disable // linked into projects with and without nullable annotations
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -33,6 +35,9 @@ namespace GK2Shared
             public Guid GameMvid, LazyBearMvid, AuditedGameMvid, AuditedLazyBearMvid;
             public readonly List<string> Changed = new List<string>();
             public readonly List<string> Missing = new List<string>();
+            // For each item in Changed and Missing: the mod's own top-level types that use it, comma-separated (the
+            // manifest's column; "" when it has none). Filled on the cached path too.
+            public readonly Dictionary<string, string> UsedBy = new Dictionary<string, string>(StringComparer.Ordinal);
             public string Error;                    // State.Failed: why the check could not run
         }
 
@@ -70,12 +75,14 @@ namespace GK2Shared
                 if (ReadCache(r, manifestSha))
                 {
                     r.FromCache = true;
+                    FillUsedBy(m, r);
                     return r;
                 }
                 Stopwatch sw = Stopwatch.StartNew();
                 CompareWithCecil(m, game.Location, lazyBear.Location, r);
                 r.Milliseconds = sw.ElapsedMilliseconds;
                 WriteCache(r, manifestSha);
+                FillUsedBy(m, r);
                 return r;
             }
             catch (Exception e)
@@ -83,6 +90,30 @@ namespace GK2Shared
                 r.State = State.Failed;
                 r.Error = e.GetType().Name + ": " + e.Message;
                 return r;
+            }
+        }
+
+        // The mod's own types behind each changed or missing item, from the manifest (so the cached verdict has them too).
+        // A Missing item carries " (why)" after the key; a Cecil FullName never contains " (".
+        private static void FillUsedBy(DepManifest m, Result r)
+        {
+            Dictionary<string, string> byItem = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (DepEntry e in m.Entries)
+            {
+                byItem[e.Kind + " " + e.Key] = e.UsedBy ?? "";
+            }
+            foreach (List<string> list in new[] { r.Changed, r.Missing })
+            {
+                foreach (string item in list)
+                {
+                    string key = item;
+                    if (!byItem.ContainsKey(key))
+                    {
+                        int p = item.LastIndexOf(" (", StringComparison.Ordinal);
+                        if (p > 0) key = item.Substring(0, p);
+                    }
+                    r.UsedBy[item] = byItem.TryGetValue(key, out string u) ? u : "";
+                }
             }
         }
 

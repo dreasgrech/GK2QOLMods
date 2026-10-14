@@ -1,7 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!-- Writes the dependency manifest into a built mod DLL and verifies one against the installed game (docs/dependency-check.md).
        Run by DependencyManifest.targets after every mod build; `verify` also by tools/check-dist.py and the release scans.
-       Mono.Cecil is the game's own copy (BepInEx/core, 0.10.4): the mods hash with that one at run time. -->
+       Mono.Cecil is the game's own copy (BepInEx/core, 0.10.4): the mods hash with that one at run time.
+       Identical copies live in GK2QOLMods and GK2DonkeyAPI: change both and keep them byte-identical. -->
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>

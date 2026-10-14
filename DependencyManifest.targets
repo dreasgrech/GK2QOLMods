@@ -4,7 +4,8 @@
          Mono.Cecil (BepInEx/core, never shipped: the game process has it loaded);
        - after every build runs tools/DepManifest on the built DLL, which lists every game member the mod uses, hashes
          it and embeds the list as the gk2deps.txt resource. A member the mod names that the game does not have fails
-         the build. Runs before DeployToGame, so the game always gets a DLL with its manifest. -->
+         the build. Runs before DeployToGame, so the game always gets a DLL with its manifest.
+       Identical copies live in GK2QOLMods and GK2DonkeyAPI: change both and keep them byte-identical. -->
   <PropertyGroup>
     <DepManifestProject>$(MSBuildThisFileDirectory)tools\DepManifest\DepManifest.csproj</DepManifestProject>
     <DepManifestDll>$(MSBuildThisFileDirectory)tools\DepManifest\bin\Release\net8.0\DepManifest.dll</DepManifestDll>

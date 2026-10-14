@@ -101,5 +101,6 @@ is no pin to move, no README build number, no dist rebuild and no release for it
 and keep the same-day re-audit for both repos, because the audit is what catches the 1.009 kind of change. Drop the
 LazyBearTechnology pin from the QOL mods as part of option 1 (its members are in the manifest like any other).
 
-Built the same evening for the five QOL mods: `docs/dependency-check.md`. The Donkey API keeps its pin. Tool and data of the investigation: `C:\Users\User\.claude\jobs\5184282a\tmp\RefDump`,
+Built the same evening for the five QOL mods: `docs/dependency-check.md`. The Donkey API got the check the next day,
+decided per feature (`GK2DonkeyAPI/docs/dependency-check.md`). Tool and data of the investigation: `C:\Users\User\.claude\jobs\5184282a\tmp\RefDump`,
 `refs_*.txt`, `diffn_*_*.txt`, `intersect.py`.

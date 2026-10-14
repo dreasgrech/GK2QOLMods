@@ -4,11 +4,14 @@
 //   verify <mod.dll> <Managed\>                   compare the embedded manifest with that game: exit 0 identical,
 //                                                 2 changed, 1 missing or no manifest
 //   show   <mod.dll>                              print the embedded manifest
+//   embed-text <mod.dll> <manifest.txt>           tests only: embed this text as the manifest, whatever it says (a hash
+//                                                 altered by hand makes a deployed DLL take the changed path in game)
+// Identical copies live in GK2QOLMods and GK2DonkeyAPI (tools/DepManifest): change both and keep them byte-identical.
 using System.Text;
 using GK2Shared;
 using Mono.Cecil;
 
-if (args.Length < 2) { Console.Error.WriteLine("usage: embed <mod.dll> <Managed> <BepInExCore> | verify <mod.dll> <Managed> | show <mod.dll>"); return 64; }
+if (args.Length < 2) { Console.Error.WriteLine("usage: embed <mod.dll> <Managed> <BepInExCore> | verify <mod.dll> <Managed> | show <mod.dll> | embed-text <mod.dll> <manifest.txt>"); return 64; }
 string dll = Path.GetFullPath(args[1]);
 switch (args[0])
 {
@@ -33,6 +36,24 @@ switch (args[0])
             foreach (string s in v.Missing) Console.WriteLine("  MISSING " + s);
             foreach (string s in v.Changed) Console.WriteLine("  CHANGED " + s);
             return v.Missing.Count > 0 ? 1 : v.Changed.Count > 0 ? 2 : 0;
+        }
+    }
+    case "embed-text":
+    {
+        string text = File.ReadAllText(args[2]);
+        DepManifest m = DepManifest.Parse(text);
+        string pdb = Path.ChangeExtension(dll, ".pdb");
+        bool symbols = File.Exists(pdb);
+        DefaultAssemblyResolver res = new DefaultAssemblyResolver();
+        res.AddSearchDirectory(Path.GetDirectoryName(dll));
+        using (ModuleDefinition mod = ModuleDefinition.ReadModule(dll, new ReaderParameters { AssemblyResolver = res, ReadSymbols = symbols, ReadWrite = true }))
+        {
+            EmbeddedResource old = mod.Resources.OfType<EmbeddedResource>().FirstOrDefault(r => r.Name == DepManifest.ResourceName);
+            if (old != null) mod.Resources.Remove(old);
+            mod.Resources.Add(new EmbeddedResource(DepManifest.ResourceName, ManifestResourceAttributes.Public, Encoding.UTF8.GetBytes(text)));
+            mod.Write(new WriterParameters { WriteSymbols = symbols });
+            Console.WriteLine($"{Path.GetFileName(dll)}: manifest replaced by {Path.GetFileName(args[2])} ({m.Entries.Count} entries, game {m.GameMvid}); symbols {(symbols ? "kept" : "none")}. TEST BUILD: a normal build restores the real manifest.");
+            return 0;
         }
     }
     case "embed":

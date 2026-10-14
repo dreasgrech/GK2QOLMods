@@ -2,7 +2,9 @@
 
 Built 2026-10-13 after `docs/update-gate.md`: the five QOL mods no longer switch off because the game was recompiled.
 Each DLL carries a manifest of every game member it uses, and at start compares those members with the installed
-game. The Donkey API keeps its strict pin (its own repo, `GK2DonkeyAPI`).
+game. The Donkey API (its own repo, `GK2DonkeyAPI`) got the same check on 2026-10-14, decided per feature; its
+`docs/dependency-check.md` describes what that repo added to the shared code, which is byte-identical in both
+repos (`src/Shared`, `tools/DepManifest`, `DependencyManifest.targets`: change both).
 
 ## The manifest
 
@@ -18,6 +20,9 @@ M <scope> <hash> <method FullName>       a method the mod calls, patches or look
 F <scope> <hash> <field FullName>        a field the mod reads, writes or looks up by name
 ```
 
+Each line ends with a tab and the mod's own top-level types that use the member, comma-separated (the Donkey API
+decides per feature what a changed member means; these mods ignore the column).
+
 `<scope>` is the assembly, `Assembly-CSharp` or `LazyBearTechnology`. The members come from the mod's IL
 (`tools/DepManifest/DepBuilder.cs`):
 
@@ -28,11 +33,15 @@ F <scope> <hash> <field FullName>        a field the mod reads, writes or looks 
   on a class or a method, resolved the way Harmony resolves it (declared on `T`, matching the argument types when
   given); a target that resolves to nothing fails the build;
 - every `AccessTools.*(typeof(T), "name", …)` and `AccessTools.FieldRefAccess<T, F>("name")` /
-  `StructFieldRefAccess<T, F>("name")`: walking back from the call, the first `ldstr` is the name and the first
-  `ldtoken` before it the type (an argument-types array after the name holds `ldtoken`s too, but the walk passes them
-  before it reaches the name); the generic forms take `T` from the call's generic arguments. Every member declared
-  on `T` with that name is listed (all overloads, a property's accessors). A pair that resolves to nothing, or a
-  lookup whose name is not a literal, fails the build.
+  `StructFieldRefAccess<T, F>("name")`: the name is the `ldstr` reached from the call backwards through nothing but
+  the IL that builds the later arguments (a `Type[]` of `typeof`s, nulls, numbers), and the type is the `typeof(T)`
+  right before it (`ldtoken`; `call Type.GetTypeFromHandle`); the generic forms take `T` from the call's generic
+  arguments. Every member declared on `T` with that name is listed (a property's accessors, a nested type for
+  `AccessTools.Inner`; every overload, or only those with the parameter types the call gives). A pair that resolves
+  to nothing, a computed name (a parameter, a loop variable) or a computed type (`x.GetType()`) fails the build: the
+  manifest cannot follow it, so the code names the member in a literal. (Before the strict reading, found in the
+  Donkey API on 2026-10-14, a loop over names passed with one target recorded instead of 24.) A lookup the code
+  means to survive when the member is absent uses `System.Type`'s own reflection, which the tool does not read.
 
 The hash is `tests/GameDiff`'s idea: SHA-1 of the method's attributes and its IL with operands resolved to names
 (not metadata tokens, which shift between builds), branch targets as offsets, locals and parameters as indices.
@@ -84,6 +93,8 @@ build per invocation however many plugins build):
   update: `verify` against the new game says exactly which of a mod's members changed, which is the audit's reading
   list for that mod.
 - `show <mod.dll>`: prints the manifest.
+- `embed-text <mod.dll> <manifest.txt>`: tests only, embeds the text as given (a hash altered by hand makes a
+  deployed DLL take the changed path against the installed game).
 
 `tests/HarmonyHarness-BuiltCount` links the shared file too and PASSes only when the embedded manifest finds every
 member in the installed game unchanged.
