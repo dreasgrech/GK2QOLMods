@@ -90,3 +90,12 @@ craft are committed), vendor stock, and dropped items on the ground. These can b
   each tooltip context (inventory, chest, craft ingredient, vendor, dialogue) and a graded item.
 
 Half a day including the in-game test list. Suggested plugin name: **GK2 Owned Count** (`dreas.gk2.ownedcount`).
+
+## Seen in game: the command post counts buildings, not items (2026-10-14)
+
+In the command post's build window (the fights' barricades) a row can read "1/1" while the tooltip says "Owned: 0,
+on you 0, in storage 0". Both are right: that window gets an extra inventory from `BuildManager.TryEnable(builder,
+MilitaryBaseData.CreateBaseBuildingsInventory)`, a virtual inventory with one item per barricade already **built in
+the base** (`baseBuildings`, by world-object id), so its "n/m" counts built base buildings, not items anywhere. The
+tooltip counts items. If this reads as a contradiction too often, the line could add "in the base N" when the open
+build window has additional inventories (the builder's `getAdditionalInventories`); not built, the user decides.
