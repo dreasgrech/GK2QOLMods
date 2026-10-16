@@ -11,7 +11,7 @@ so you can install any subset.
 | [Owned Count](#owned-count) | 1.0.4 | Item tooltips show how many of that item you own across inventory and every chest. |
 | [Tech Search](#tech-search) | 1.0.0 | A search box on the Tech Tree page: find a tech by name, or by what it unlocks, and jump to it. |
 
-**Looking for the donkey?** The rideable donkey and cart (GK2 Saddle Up!, and the GK2 Donkey API it's built on) moved
+**Looking for the donkey?** The rideable donkey and cart (GK2 Saddle Up, and the GK2 Donkey API it's built on) moved
 to their own repo on 2026-10-02, with their history: [GK2DonkeyAPI](https://github.com/dreasgrech/GK2DonkeyAPI). Until
 then they were GK2 Showcase and GK2 Mounts here.
 
