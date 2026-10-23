@@ -12,3 +12,6 @@ obj/
 # OS
 Thumbs.db
 .DS_Store
+
+# Logs of tools/build-dist.sh and tools/release-scans.sh
+release/

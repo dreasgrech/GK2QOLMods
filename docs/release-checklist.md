@@ -18,10 +18,12 @@ What to do before `dist/` goes public, in order. Written 2026-10-13 from the fir
 
 ## 2. The offline checks (no game launch)
 
-In `tests/`, each with `dotnet run -c Release`: `CecilScan-GlobalStorage`, `StaticScan-GlobalStorage`,
-`CecilScan-BuiltCount`, `CecilScan-MoveBuilding`, `CecilScan-OwnedCount`, `CecilScan-TechSearch`, `FrameworkScan`;
-`HarmonyHarness-BuiltCount` with `dotnet build -c Release` then `bin\Release\net48\HarmonyHarness-BuiltCount.exe`.
-All must end green.
+`bash tools/release-scans.sh` (after the release build of section 3: the manifest checks read its DLLs) runs them
+all and lists each as ok or FAIL, exit 1 on any failure, the output in `release/logs/release-scans.log`: in `tests/`
+`CecilScan-GlobalStorage`, `StaticScan-GlobalStorage`, `CecilScan-BuiltCount`, `CecilScan-MoveBuilding`,
+`CecilScan-OwnedCount`, `CecilScan-TechSearch`, `FrameworkScan`, `HarmonyHarness-BuiltCount` (built, then run), each
+mod's dependency manifest verified against the installed game (`tools/DepManifest`), and `check-dist.py`. All must end
+green.
 
 ## 3. The release build
 
@@ -29,12 +31,13 @@ The game may be running: a build is fine, only the deploy copy into the game nee
 from `bin/`, not from the game folder.
 
 ```
-for %m in (GK2GlobalStorage GK2BuiltCount GK2MoveBuilding GK2OwnedCount GK2TechSearch) do (
-  cd src\%m && dotnet build -c Release --no-incremental -p:ForDist=true -p:Deploy=false && cd ..\..
-  copy src\%m\bin\Release\netstandard2.1\%m.dll dist\
-)
-python tools\check-dist.py
+bash tools/build-dist.sh      # the five DLLs into dist/, then check-dist.py
+bash tools/release-scans.sh   # section 2
 ```
+
+`build-dist.sh` builds each with `dotnet build -c Release --no-incremental -p:ForDist=true -p:Deploy=false`, stops on
+a failed build or any compiler warning, copies the DLLs into `dist/` and runs `check-dist.py` (build output in
+`release/logs/build-dist.log`).
 
 `-p:ForDist=true` leaves out the debug directory: without it the DLL names its PDB with this machine's user folder
 (every dist DLL did, until 2026-10-13). `check-dist.py` fails on any baked path, a `.pdb` reference, a missing
@@ -67,6 +70,11 @@ the fresh cfgs at defaults. Second run the same day with the marker lock built: 
 the same evening (new pins, one Global Storage eligibility branch: `docs/game-update-25910882.md`) has not been
 rehearsed.
 
-## 6. Hand-off
+## 6. Versions, changelog and hand-off
+
+Released versions are never reused: a release with any change gets a new number (major.minor.patch: fixes only the
+patch, new features or settings the minor), in the mod's `Plugin.cs`, its csproj and the README table. Every change
+goes under the mod's **Unreleased** in `CHANGELOG.md` when it is made; at release that heading becomes the version and
+date, and the entry is the Nexus changelog text.
 
 The user commits and tags; the release notes name the game build (`25910882`, 1.010 as of 2026-10-13).
