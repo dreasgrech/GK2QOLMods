@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using BepInEx;
 using BepInEx.Configuration;
@@ -361,7 +360,7 @@ namespace GK2GlobalStorage
                     return true;
                 }
                 List<Inventory> list = __instance.inventoryList;
-                if (list == null || list.Any(inv => inv?.Data == null))
+                if (list == null || list.Exists(inv => inv?.Data == null))
                 {
                     return true;
                 }
@@ -380,15 +379,24 @@ namespace GK2GlobalStorage
                         Plugin.Log.LogInfo("Removed a duplicate inventory from an extended MultiInventory.");
                     }
                 }
-                List<Inventory> sorted = distinct
-                    .OrderBy(e => e.fuel ? 1 : 0)
-                    .ThenBy(e => !e.fuel && appended.Contains(e.inv.Data) ? 1 : 0)
-                    .ThenBy(e => e.fuel ? e.inv.Data.InventorySize : 0)
-                    .ThenBy(e => e.index)
-                    .Select(e => e.inv)
-                    .ToList();
+                distinct.Sort((a, b) =>
+                {
+                    int c = (a.fuel ? 1 : 0).CompareTo(b.fuel ? 1 : 0);
+                    if (c == 0)
+                    {
+                        c = (!a.fuel && appended.Contains(a.inv.Data) ? 1 : 0).CompareTo(!b.fuel && appended.Contains(b.inv.Data) ? 1 : 0);
+                    }
+                    if (c == 0)
+                    {
+                        c = (a.fuel ? a.inv.Data.InventorySize : 0).CompareTo(b.fuel ? b.inv.Data.InventorySize : 0);
+                    }
+                    return c != 0 ? c : a.index.CompareTo(b.index);
+                });
                 list.Clear();
-                list.AddRange(sorted);
+                foreach ((Inventory inv, int index, bool fuel) e in distinct)
+                {
+                    list.Add(e.inv);
+                }
                 return false;
             }
             catch (Exception e)

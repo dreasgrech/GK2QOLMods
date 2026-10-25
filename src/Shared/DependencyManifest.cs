@@ -8,7 +8,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -46,9 +45,28 @@ namespace GK2Shared
             StringBuilder sb = new StringBuilder();
             sb.Append("game-mvid ").Append(GameMvid.ToString()).Append('\n');
             sb.Append("lazybear-mvid ").Append(LazyBearMvid.ToString()).Append('\n');
-            foreach (DepEntry e in Entries.OrderBy(e => e.Kind).ThenBy(e => e.Scope, StringComparer.Ordinal).ThenBy(e => e.Key, StringComparer.Ordinal))
+            int[] order = new int[Entries.Count];
+            for (int i = 0; i < order.Length; i++)
             {
-                sb.Append(e.ToString()).Append('\n');
+                order[i] = i;
+            }
+            Array.Sort(order, (a, b) =>
+            {
+                DepEntry x = Entries[a], y = Entries[b];
+                int c = x.Kind.CompareTo(y.Kind);
+                if (c == 0)
+                {
+                    c = StringComparer.Ordinal.Compare(x.Scope, y.Scope);
+                }
+                if (c == 0)
+                {
+                    c = StringComparer.Ordinal.Compare(x.Key, y.Key);
+                }
+                return c != 0 ? c : a.CompareTo(b);
+            });
+            foreach (int i in order)
+            {
+                sb.Append(Entries[i].ToString()).Append('\n');
             }
             return sb.ToString();
         }
@@ -127,7 +145,15 @@ namespace GK2Shared
         // The manifest embedded in a module read with Cecil (the tool's verify/show, the harness).
         public static DepManifest ReadFrom(ModuleDefinition module)
         {
-            EmbeddedResource res = module.Resources.OfType<EmbeddedResource>().FirstOrDefault(r => r.Name == ResourceName);
+            EmbeddedResource res = null;
+            foreach (Resource r in module.Resources)
+            {
+                if (r is EmbeddedResource er && er.Name == ResourceName)
+                {
+                    res = er;
+                    break;
+                }
+            }
             if (res == null)
             {
                 throw new FileNotFoundException("No " + ResourceName + " resource in " + module.Name + ": the DLL was built without tools/DepManifest.");
@@ -181,7 +207,7 @@ namespace GK2Shared
                 case null: return "";
                 case MemberReference r: return Norm(r.FullName);
                 case Instruction j: return "@" + j.Offset;
-                case Instruction[] js: return string.Join(",", js.Select(x => x.Offset.ToString(System.Globalization.CultureInfo.InvariantCulture)).ToArray());
+                case Instruction[] js: return Offsets(js);
                 case VariableDefinition v: return "v" + v.Index;
                 case ParameterDefinition pd: return "p" + pd.Index;
                 case string s: return "\"" + s + "\"";
@@ -191,6 +217,16 @@ namespace GK2Shared
                 case CallSite cs: return "calli " + cs.FullName;
                 default: return o.GetType().Name + ":" + o;
             }
+        }
+
+        private static string Offsets(Instruction[] js)
+        {
+            string[] offsets = new string[js.Length];
+            for (int k = 0; k < js.Length; k++)
+            {
+                offsets[k] = js[k].Offset.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            }
+            return string.Join(",", offsets);
         }
 
         public static string Field(FieldDefinition f)
@@ -280,23 +316,41 @@ namespace GK2Shared
             }
             if (e.Kind == 'M')
             {
-                MethodDefinition[] found = type.Methods.Where(m => m.FullName == e.Key).ToArray();
-                if (found.Length != 1)
+                MethodDefinition found = null;
+                int count = 0;
+                foreach (MethodDefinition m in type.Methods)
                 {
-                    problem = found.Length == 0 ? "no such method" : "ambiguous";
+                    if (m.FullName == e.Key)
+                    {
+                        found = found ?? m;
+                        count++;
+                    }
+                }
+                if (count != 1)
+                {
+                    problem = count == 0 ? "no such method" : "ambiguous";
                     return null;
                 }
-                return DepHash.Method(found[0]);
+                return DepHash.Method(found);
             }
             if (e.Kind == 'F')
             {
-                FieldDefinition[] found = type.Fields.Where(f => f.FullName == e.Key).ToArray();
-                if (found.Length != 1)
+                FieldDefinition found = null;
+                int count = 0;
+                foreach (FieldDefinition f in type.Fields)
                 {
-                    problem = found.Length == 0 ? "no such field" : "ambiguous";
+                    if (f.FullName == e.Key)
+                    {
+                        found = found ?? f;
+                        count++;
+                    }
+                }
+                if (count != 1)
+                {
+                    problem = count == 0 ? "no such field" : "ambiguous";
                     return null;
                 }
-                return DepHash.Field(found[0]);
+                return DepHash.Field(found);
             }
             problem = "unknown kind " + e.Kind;
             return null;

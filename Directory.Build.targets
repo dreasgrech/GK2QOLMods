@@ -1,0 +1,13 @@
+<Project>
+  <!-- No LINQ in anything that runs in the game (the user, 2026-10-25: "disallow ALL LINQ usage going forward"): every
+       call allocates, and the game pauses for Unity's garbage collections. The banned-API analyzer makes any use of
+       System.Linq a build error (RS0030) in the netstandard2.1 projects: the mods and the in-game dev tools. The .NET
+       console tests and tools (net8.0) may use it. tests/NoLinqScan checks the built DLLs as well. -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.1'">
+    <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="3.3.4" PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive" />
+    <AdditionalFiles Include="$(MSBuildThisFileDirectory)BannedSymbols.txt" />
+  </ItemGroup>
+  <PropertyGroup Condition="'$(TargetFramework)' == 'netstandard2.1'">
+    <WarningsAsErrors>$(WarningsAsErrors);RS0030</WarningsAsErrors>
+  </PropertyGroup>
+</Project>

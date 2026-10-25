@@ -26,7 +26,7 @@ run() { # folder, label, command...
 }
 
 T="$REPO/tests"
-for t in CecilScan-BuiltCount CecilScan-GlobalStorage CecilScan-MoveBuilding CecilScan-OwnedCount CecilScan-TechSearch StaticScan-GlobalStorage FrameworkScan; do
+for t in CecilScan-BuiltCount CecilScan-GlobalStorage CecilScan-MoveBuilding CecilScan-OwnedCount CecilScan-TechSearch StaticScan-GlobalStorage FrameworkScan NoLinqScan; do
   run "$T/$t" "$t" dotnet run -c Release
 done
 run "$T/HarmonyHarness-BuiltCount" "HarmonyHarness build" dotnet build -c Release

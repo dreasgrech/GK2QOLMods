@@ -1,0 +1,3 @@
+T:System.Linq.Enumerable;No LINQ in code that runs in the game: every call allocates garbage. Use loops and the List<T>/Array methods (Exists, Find, FindAll, ConvertAll, IndexOf, Sort with a Comparison).
+T:System.Linq.Queryable;No LINQ in code that runs in the game: every call allocates garbage.
+T:System.Linq.ParallelEnumerable;No LINQ in code that runs in the game: every call allocates garbage.

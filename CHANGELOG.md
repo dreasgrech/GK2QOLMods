@@ -11,28 +11,36 @@ Owned Count 1.0.4, Tech Search 1.0.0. Earlier changes are in git history and eac
 
 ### Unreleased
 
-Nothing yet.
+- No LINQ (it allocates garbage in a Unity game, 2026-10-25): the storages' order (fuel first, then the ones added,
+  then by size) is sorted with a plain comparison, the same order as before; the dependency check at start (shared with every mod here) sorts and looks up without LINQ; the manifest it embeds is unchanged.
 
 ## Built Count
 
 ### Unreleased
 
-Nothing yet.
+- No LINQ (it allocates garbage in a Unity game, 2026-10-25): the dependency check at start (shared with every mod here) sorts and looks up without LINQ; the manifest it embeds is unchanged.
 
 ## Move Building
 
 ### Unreleased
 
-Nothing yet.
+- No LINQ (it allocates garbage in a Unity game, 2026-10-25): the occupied-dock check and the walk through the
+  scene's zones by priority are plain loops, the same results; the dependency check at start (shared with every mod here) sorts and looks up without LINQ; the manifest it embeds is unchanged.
 
 ## Owned Count
 
 ### Unreleased
 
-Nothing yet.
+- No LINQ (it allocates garbage in a Unity game, 2026-10-25): the dependency check at start (shared with every mod here) sorts and looks up without LINQ; the manifest it embeds is unchanged.
 
 ## Tech Search
 
 ### Unreleased
 
-Nothing yet.
+- No LINQ (it allocates garbage in a Unity game, 2026-10-25): the dependency check at start (shared with every mod here) sorts and looks up without LINQ; the manifest it embeds is unchanged.
+
+## Development
+
+- No LINQ in any mod here from now on: `Directory.Build.targets` adds the banned-API analyzer to every netstandard2.1
+  project (`BannedSymbols.txt`: `System.Linq.Enumerable`, `Queryable`, `ParallelEnumerable`), error RS0030 at the
+  line; `tests/NoLinqScan` checks every built DLL and runs with the release scans. The .NET test tools may use it.

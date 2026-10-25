@@ -1,7 +1,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using BepInEx;
 using HarmonyLib;
 using LazyBearTechnology;
@@ -183,7 +182,7 @@ namespace GK2MoveBuilding
                 return false;
             }
             WgoPartData part = data.MainWgoPartData;
-            if (part?.DockPointDataList != null && part.DockPointDataList.Any(p => p != null && p.IsOccupied))
+            if (part?.DockPointDataList != null && part.DockPointDataList.Exists(p => p != null && p.IsOccupied))
             {
                 reason = "Someone is using it right now.";
                 return false;
@@ -744,9 +743,11 @@ namespace GK2MoveBuilding
         {
             if (scene.WorldZonesByProcessingPriority != null)
             {
-                foreach (KeyValuePair<int, List<WorldZoneData>> kv in scene.WorldZonesByProcessingPriority.Reverse())
+                KeyValuePair<int, List<WorldZoneData>>[] byPriority = new KeyValuePair<int, List<WorldZoneData>>[scene.WorldZonesByProcessingPriority.Count];
+                scene.WorldZonesByProcessingPriority.CopyTo(byPriority, 0);
+                for (int i = byPriority.Length - 1; i >= 0; i--)
                 {
-                    foreach (WorldZoneData z in kv.Value)
+                    foreach (WorldZoneData z in byPriority[i].Value)
                     {
                         if (z != null && z.TryAddWgoData(data))
                         {
