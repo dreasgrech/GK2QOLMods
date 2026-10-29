@@ -16,6 +16,8 @@
 [size=4][b]Or by what it unlocks[/b][/size]
 [size=3]Looking for the tech that gives you an item, a building or a perk? Type its name: a tech that matched through something on its card is listed with that thing's name after the tab, so you see why it is there. Name matches come first, then the unlock matches, each in tab order.[/size]
 
+[center][img]https://raw.githubusercontent.com/dreasgrech/GK2QOLMods/main/media/tech-tree-search/unlock-empty-bottle.png?v=1[/img][/center]
+
 [size=4][b]Jump straight to it[/b][/size]
 [size=3][b]Enter[/b] or a click on a row switches to the tech's tab, scrolls to it and frames its card. It is the game's own tab switch, the one a tab button makes.[/size]
 

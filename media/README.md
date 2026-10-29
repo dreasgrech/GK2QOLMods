@@ -20,5 +20,6 @@ row, five of them researched and green), with the 1.0.1 release build.
 |---|---|---|
 | `search-iron.png` | the whole Tech Tree window: the box at the top right of the tab strip, the list under it over the tree | box 634,305-1926,1143 (the window's frame), 560x363 |
 | `search-results.png` | close up: the box with "Iron" and the list: tech name, its tab, researched ones green, the "+4 more" row | box 1280,365-1926,880, 560x446 |
+| `unlock-empty-bottle.png` | "Empt" typed: Glass Blowing listed through its unlock ("Metallurgy · Empty Bottle"), its card framed at the bottom left with the Empty Bottle tooltip open (Steam screenshot of 2026-10-30 00:50:02) | box 634,305-1926,1143 (the window's frame), 560x363 |
 | `settings-mods-menu.png` | the mod's settings page in GK2 Mod Framework's Mods menu: Status Active, the two toggles and the key (Steam screenshot of 2026-10-30 00:45:19, the game's own Mods window, HUD out) | box 570,340-1990,1037, 560x275 |
 | `nexus-header.png` | the Nexus page header (1300x372): the window's title bar, the tab strip, the box and the first rows | box 630,310-1930,682, at its own scale |
