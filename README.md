@@ -9,7 +9,7 @@ so you can install any subset.
 | [Built Count](#built-count) | 1.0.6 | Build menus show how many of each building you already have in that area. |
 | [Move Building](#move-building) | 1.1.6 | Pick up a built building and put it down somewhere else, contents and all. |
 | [Owned Count](#owned-count) | 1.0.4 | Item tooltips show how many of that item you own across inventory and every chest. |
-| [Tech Search](#tech-search) | 1.0.1 | A search box on the Tech Tree page: find a tech by name, or by what it unlocks, and jump to it. |
+| [Tech Tree Search](#tech-tree-search) | 1.0.1 | A search box on the Tech Tree page: find a tech by name, or by what it unlocks, and jump to it. |
 
 **Looking for the donkey?** The rideable donkey and cart (GK2 Saddle Up, and the GK2 Donkey API it's built on) moved
 to their own repo on 2026-10-02, with their history: [GK2DonkeyAPI](https://github.com/dreasgrech/GK2DonkeyAPI). Until
@@ -131,9 +131,9 @@ from. Graded items (the starred ones, e.g. Bones of different skull grades) also
 - Optional: with [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) installed, its settings
   also appear in the game's Mods menu. The same DLL works without it.
 
-### Tech Search
+### Tech Tree Search
 
-`GK2TechSearch.dll` · GUID `dreas.gk2.techsearch` · [source and README](src/GK2TechSearch/)
+`GK2TechTreeSearch.dll` · GUID `dreas.gk2.techtreesearch` · [source and README](src/GK2TechTreeSearch/)
 
 A search box at the top right of the Tech Tree page. Type part of a tech's name, or of something it unlocks (an item,
 building or perk on its card), and the matches are listed with their tab; Enter or a click switches to that tab,

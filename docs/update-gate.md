@@ -35,7 +35,7 @@ of the time (Global Storage's 1.008 target `OnInstrumentCellPressed2`, since rep
 | Global Storage (24) | identical | identical | identical |
 | Move Building (86) | identical | identical | 3 changed bodies (`WorldZoneData.TryAddWgoData`, `Wgo.UpdateWgoPartState`, `WgoData.RefreshCustomNavMeshCutUnit`) |
 | Owned Count (41) | identical | identical | identical |
-| Tech Search (27) | identical | identical | identical |
+| Tech Tree Search (27) | identical | identical | identical |
 | Donkey API (451 + 29 patch targets) | 6 changed bodies | 1 changed body | 9 changed bodies |
 
 Nothing referenced was removed in any step (the one removal, Global Storage 1.008, is the case the caveat names: Harmony
@@ -68,14 +68,14 @@ The breaks and precautions the hand audits found, against what a dependency chec
    a mod uses, each with the signature and the normalised IL hash: its IL references, which Cecil lists, plus its
    string-named lookups, which the tool must find itself by matching the `ldtoken T; ldstr "name"; call AccessTools.*`
    pattern in the mod's IL (CecilScan already reads Harmony attribute strings the same way; today Move Building, Owned
-   Count and Tech Search resolve theirs in a `Verify` at start, Global Storage's one is a Harmony `TargetMethods`,
+   Count and Tech Tree Search resolve theirs in a `Verify` at start, Global Storage's one is a Harmony `TargetMethods`,
    Built Count has none), generated after the build and shipped in the DLL. At start the mod compares:
    - every member present and identical → run, one info line, confirm the build to the Mods menu as "dependencies
      verified" (14 of 15 historical cases);
    - all present, some bodies changed → run, one warning naming the members; a mod whose state-changing path is among
      them declines that path until re-audited: Move Building declines moves (its 1.010 case), Global Storage leaves
      the game's own storage alone and does not extend the multi-inventory (its whole job is routing items, so a
-     changed dependency means no routing, not unaudited routing); Built Count, Owned Count and Tech Search are
+     changed dependency means no routing, not unaudited routing); Built Count, Owned Count and Tech Tree Search are
      read-only UI and run; the Mods menu keeps "Unknown build";
    - a member missing or ambiguous → disable, as now (Harmony and `Verify` already do this).
    Costs: a build step (RefDump + GameDiff's `Index` are the whole tool, ~150 lines; it must run on the built DLL, so

@@ -4,7 +4,7 @@
 # first failure. Build output: release/logs/build-dist.log.
 #
 #   bash tools/build-dist.sh                 # all five
-#   bash tools/build-dist.sh GK2TechSearch   # only these: a release of one mod leaves the others' dist DLLs as released
+#   bash tools/build-dist.sh GK2TechTreeSearch   # only these: a release of one mod leaves the others' dist DLLs as released
 #
 # Afterwards: bash tools/release-scans.sh, then a dev build with the game closed (bin/ holds whichever was built last).
 set -u
@@ -14,7 +14,7 @@ mkdir -p "$REPO/release/logs"
 : > "$LOG"
 
 MODS=("$@")
-[ ${#MODS[@]} -eq 0 ] && MODS=(GK2GlobalStorage GK2BuiltCount GK2MoveBuilding GK2OwnedCount GK2TechSearch)
+[ ${#MODS[@]} -eq 0 ] && MODS=(GK2GlobalStorage GK2BuiltCount GK2MoveBuilding GK2OwnedCount GK2TechTreeSearch)
 for m in "${MODS[@]}"; do
   [ -f "$REPO/src/$m/$m.csproj" ] || { echo "no such mod: src/$m/$m.csproj"; exit 1; }
 done

@@ -33,12 +33,16 @@ Owned Count 1.0.4, Tech Search 1.0.0. Earlier changes are in git history and eac
 
 - No LINQ (it allocates garbage in a Unity game, 2026-10-25): the dependency check at start (shared with every mod here) sorts and looks up without LINQ; the manifest it embeds is unchanged.
 
-## Tech Search
+## Tech Tree Search
 
 ### 1.0.1 (2026-10-29)
 
-The first version on Nexus Mods (the zip extracts into the game folder: `BepInEx\plugins\GK2TechSearch\`).
+The first version on Nexus Mods (the zip extracts into the game folder: `BepInEx\plugins\GK2TechTreeSearch\`).
 Nothing changes for players.
+
+- Renamed from GK2 Tech Search to GK2 Tech Tree Search: the file is `GK2TechTreeSearch.dll`, the ID `dreas.gk2.techtreesearch`.
+  Your settings are copied from the old `dreas.gk2.techsearch.cfg` on the first start. If the old `GK2TechSearch.dll` is
+  still in `BepInEx\plugins`, this one stays off and the log says so: delete the old file.
 
 - No LINQ (it allocates garbage in a Unity game, 2026-10-25): the dependency check at start (shared with every mod here) sorts and looks up without LINQ; the manifest it embeds is unchanged.
 

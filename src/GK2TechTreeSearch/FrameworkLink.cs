@@ -4,12 +4,12 @@ using BepInEx.Bootstrap;
 using BepInEx.Configuration;
 using GK2.Framework;
 
-namespace GK2TechSearch
+namespace GK2TechTreeSearch
 {
     // Optional GK2 Mod Framework integration (SuperMan4eg's, docs/gk2-mod-framework.md): with the framework
     // installed, the mod and its settings show in the game's Mods menu. The same DLL works without it.
     //
-    // Only Register and TechSearchMod touch GK2.Framework types. Mono loads GK2.Framework.dll the first time a method
+    // Only Register and TechTreeSearchMod touch GK2.Framework types. Mono loads GK2.Framework.dll the first time a method
     // using its types is compiled, so as long as nothing calls Register while the framework is absent, the DLL is
     // never needed. tests/FrameworkScan checks that no other code references the framework.
     internal static class FrameworkLink
@@ -36,10 +36,10 @@ namespace GK2TechSearch
         [MethodImpl(MethodImplOptions.NoInlining)]
         private static void Register(ConfigFile config)
         {
-            FrameworkApi.RegisterMod(new TechSearchMod(), config);
+            FrameworkApi.RegisterMod(new TechTreeSearchMod(), config);
         }
 
-        private sealed class TechSearchMod : Gk2ModBase
+        private sealed class TechTreeSearchMod : Gk2ModBase
         {
             // Our own switches stay in charge (General.Enabled, the dependency check): the framework adds no
             // Enabled entry of its own. requiresKnownBuild makes its list say "Unknown build" unless OnRegister
@@ -47,7 +47,7 @@ namespace GK2TechSearch
             // "Active", ConfirmBuild below; on changed game code the Status row names the members).
             private readonly Gk2ModMetadata metadata = new Gk2ModMetadata(
                 Plugin.Guid,
-                "GK2 Tech Search",
+                "GK2 Tech Tree Search",
                 "dreas",
                 Plugin.Version,
                 "A search box on the Tech Tree page: type part of a tech's name, or of something it unlocks, and jump to it. Display only.",

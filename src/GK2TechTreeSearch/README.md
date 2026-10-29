@@ -1,4 +1,4 @@
-# GK2 Tech Search
+# GK2 Tech Tree Search
 
 BepInEx plugin for Graveyard Keeper 2: a search box on the Tech Tree page. Type part of a tech's name, or of something
 it unlocks, and jump straight to it, on whichever tab it is.
@@ -15,9 +15,10 @@ Enter (or a click) switches to the tech's tab, scrolls to it and frames its card
 tabs you haven't opened yet are never shown, so the search spoils nothing. Display only: nothing in the game changes.
 
 Version 1.0.1, built and audited against Steam game build 25910882, game 1.010 (Assembly-CSharp MVID `5ec8094e-…`,
-LazyBearTechnology `6cd86a0b-…`). Design study: [`docs/tech-search.md`](../../docs/tech-search.md).
+LazyBearTechnology `6cd86a0b-…`). Design study: [`docs/tech-tree-search.md`](../../docs/tech-tree-search.md).
 
-- GUID: `dreas.gk2.techsearch`
+- GUID: `dreas.gk2.techtreesearch` (until 1.0.1 the mod was GK2 Tech Search, `dreas.gk2.techsearch`: its settings file
+  is copied to the new name on the first start, and if its `GK2TechSearch.dll` is still installed this one stays off and says so)
 - Needs: BepInEx 5.4.23.x, installed in the game folder.
 
 ## Using it
@@ -42,7 +43,7 @@ the mod appears in the game's **Mods** menu (main menu and ESC menu):
 `MaxResults`, the Layout settings and `Safety.StopOnChangedGameCode` stay in the cfg. Without the framework, the same
 DLL works exactly as before. Details: [`docs/gk2-mod-framework.md`](../../docs/gk2-mod-framework.md).
 
-## Settings (`BepInEx\config\dreas.gk2.techsearch.cfg`)
+## Settings (`BepInEx\config\dreas.gk2.techtreesearch.cfg`)
 
 Read at game start. The General ones are read on every search or page open, so a change in the Mods menu applies the
 next time the Tech Tree page opens.
@@ -87,7 +88,7 @@ missing one disables the mod): `TechTreePageWidget.scrollRect`, `redSpheresLabel
 
 ## In-game test list
 
-1. Log shows `GK2 Tech Search 1.0.1 loaded.` **once**, no warnings or errors.
+1. Log shows `GK2 Tech Tree Search 1.0.1 loaded.` **once**, no warnings or errors.
 2. Open the Tech Tree: the box is there. The log has one `[measure]` line (page and tab-strip rectangles) and one line
    saying which text box was used. If the box sits badly, send the `[measure]` line: the place is set from it.
 3. Click the box and type `oven`: results appear under it; letters don't open the map/inventory/quests; the character
@@ -112,10 +113,10 @@ missing one disables the mod): `TechTreePageWidget.scrollRect`, `redSpheresLabel
 
 - `dotnet build -c Release`: 0 errors; no warnings from this code (only the MSB3277 about the game's newer
   `System.IO.Compression`, which every mod here gets and doesn't use).
-- `tests/CecilScan-TechSearch`: all 27 IL references into the game assemblies resolve; the four private fields (and
+- `tests/CecilScan-TechTreeSearch`: all 27 IL references into the game assemblies resolve; the four private fields (and
   the optional `titleInput`) exist with the expected types; `Init`, `Redraw`, `Hide` and `DisplayTab(tab, id)` are
   single methods with bodies. ALL PASS.
-- `tests/FrameworkScan GK2TechSearch`: the three patch classes are in `PatchClasses`, no Unity message names on
+- `tests/FrameworkScan GK2TechTreeSearch`: the three patch classes are in `PatchClasses`, no Unity message names on
   `Plugin`, `GK2.Framework` only in `FrameworkLink`, `Register` NoInlining, soft dependency. ALL PASS.
 - Round 1 in game (2026-10-04): loads clean, registers Compatible with the framework, the plain box was used (the bug
   report window wasn't loaded), search and jump work. Findings: the box was far too big for the page (`[measure]`:
@@ -130,6 +131,6 @@ missing one disables the mod): `TechTreePageWidget.scrollRect`, `redSpheresLabel
 
 - **Build and deploy** (game closed): `dotnet build -c Release` in this folder.
 - **Build only** (game running): `dotnet build -c Release -p:Deploy=false`.
-- **Uninstall:** delete `BepInEx\plugins\GK2TechSearch.dll` in the game folder (from the Nexus zip it is the folder
-  `BepInEx\plugins\GK2TechSearch\`), and optionally
-  `BepInEx\config\dreas.gk2.techsearch.cfg`.
+- **Uninstall:** delete `BepInEx\plugins\GK2TechTreeSearch.dll` in the game folder (from the Nexus zip it is the folder
+  `BepInEx\plugins\GK2TechTreeSearch\`), and optionally
+  `BepInEx\config\dreas.gk2.techtreesearch.cfg`.

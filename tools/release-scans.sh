@@ -26,13 +26,13 @@ run() { # folder, label, command...
 }
 
 T="$REPO/tests"
-for t in CecilScan-BuiltCount CecilScan-GlobalStorage CecilScan-MoveBuilding CecilScan-OwnedCount CecilScan-TechSearch StaticScan-GlobalStorage FrameworkScan NoLinqScan; do
+for t in CecilScan-BuiltCount CecilScan-GlobalStorage CecilScan-MoveBuilding CecilScan-OwnedCount CecilScan-TechTreeSearch StaticScan-GlobalStorage FrameworkScan NoLinqScan; do
   run "$T/$t" "$t" dotnet run -c Release
 done
 run "$T/HarmonyHarness-BuiltCount" "HarmonyHarness build" dotnet build -c Release
 run "$T/HarmonyHarness-BuiltCount" "HarmonyHarness run" ./bin/Release/net48/HarmonyHarness-BuiltCount.exe
 run "$REPO/tools/DepManifest" "DepManifest build" dotnet build -c Release
-for m in GK2BuiltCount GK2GlobalStorage GK2MoveBuilding GK2OwnedCount GK2TechSearch; do
+for m in GK2BuiltCount GK2GlobalStorage GK2MoveBuilding GK2OwnedCount GK2TechTreeSearch; do
   run "$REPO" "DepManifest verify $m.dll" dotnet tools/DepManifest/bin/Release/net8.0/DepManifest.dll verify "src/$m/bin/Release/netstandard2.1/$m.dll" "$MANAGED"
 done
 run "$REPO" "check-dist" python tools/check-dist.py

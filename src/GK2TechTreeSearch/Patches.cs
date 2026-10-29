@@ -1,7 +1,7 @@
 using System;
 using HarmonyLib;
 
-namespace GK2TechSearch
+namespace GK2TechTreeSearch
 {
     // The page is built once (CharacterWindow.Init → its pages' Init); the box is added to it then.
     [HarmonyPatch(typeof(TechTreePageWidget), nameof(TechTreePageWidget.Init))]

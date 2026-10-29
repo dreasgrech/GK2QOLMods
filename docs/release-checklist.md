@@ -21,7 +21,7 @@ What to do before `dist/` goes public, in order. Written 2026-10-13 from the fir
 `bash tools/release-scans.sh` (after the release build of section 3: the manifest checks read its DLLs) runs them
 all and lists each as ok or FAIL, exit 1 on any failure, the output in `release/logs/release-scans.log`: in `tests/`
 `CecilScan-GlobalStorage`, `StaticScan-GlobalStorage`, `CecilScan-BuiltCount`, `CecilScan-MoveBuilding`,
-`CecilScan-OwnedCount`, `CecilScan-TechSearch`, `FrameworkScan`, `HarmonyHarness-BuiltCount` (built, then run), each
+`CecilScan-OwnedCount`, `CecilScan-TechTreeSearch`, `FrameworkScan`, `HarmonyHarness-BuiltCount` (built, then run), each
 mod's dependency manifest verified against the installed game (`tools/DepManifest`), and `check-dist.py`. All must end
 green.
 
@@ -81,12 +81,12 @@ The user commits and tags; the release notes name the game build (`25910882`, 1.
 
 ## 7. The zip and the Nexus page
 
-A mod released on its own (Tech Search 1.0.1 was the first, 2026-10-29): `bash tools/build-dist.sh <Mod>` builds
+A mod released on its own (Tech Tree Search 1.0.1 was the first, 2026-10-29): `bash tools/build-dist.sh <Mod>` builds
 that one into `dist/` and leaves the others' dist DLLs as released (their Unreleased changes stay unreleased under
 their old numbers), then the scans of section 2, then
 
 ```
-python tools/make-release-zip.py GK2TechSearch   # release/GK2-Tech-Search-<version>.zip
+python tools/make-release-zip.py GK2TechTreeSearch   # release/GK2-Tech-Tree-Search-<version>.zip (named after the mod's title)
 ```
 
 which runs `check-dist.py`, checks the version (Plugin.cs = csproj = the mod's first changelog heading, and present

@@ -1,8 +1,8 @@
 """The release zip of a mod for Nexus Mods (docs/release-checklist.md, section 7).
 
-    python tools/make-release-zip.py GK2TechSearch [GK2OwnedCount ...]
+    python tools/make-release-zip.py GK2TechTreeSearch [GK2OwnedCount ...]
 
-One zip per mod named: release/GK2-<Mod's words dashed>-<version>.zip (GK2-Tech-Search-1.0.1.zip) holding
+One zip per mod, named after the mod's title with its words dashed: release/GK2-Tech-Tree-Search-1.0.1.zip, holding
 BepInEx/plugins/<Mod>/<Mod>.dll from dist/ and nothing else (a folder per mod, as the Saddle Up zips; BepInEx finds
 plugins in subfolders; mod managers see the BepInEx layout), so the zip extracts straight into the game folder. The
 version is the mod's Plugin.cs Version constant; it must be the csproj's <Version>, the first version heading of the
@@ -54,7 +54,7 @@ def changelog_version(mod, title):
 
 
 def title_of(mod):
-    """'GK2 Tech Search': the plugin's name in its BepInPlugin attribute."""
+    """'GK2 Tech Tree Search': the plugin's name in its BepInPlugin attribute (the zip is named after it)."""
     m = re.search(r'\[BepInPlugin\(Guid, "([^"]+)", Version\)\]', read(f"src/{mod}/Plugin.cs"))
     if not m:
         sys.exit(f"{mod}: no BepInPlugin(Guid, \"name\", Version) attribute")
@@ -72,8 +72,7 @@ def write_zip(mod, v):
     data = open(dll, "rb").read()
     if v.encode("utf-8") not in data and v.encode("utf-16le") not in data:
         sys.exit(f"{mod}: dist/{mod}.dll does not carry version {v}: rebuild it (bash tools/build-dist.sh {mod})")
-    short = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", "-", mod[len("GK2"):] if mod.startswith("GK2") else mod)
-    path = os.path.join(OUT, f"GK2-{short}-{v}.zip")
+    path = os.path.join(OUT, "-".join(title_of(mod).split()) + f"-{v}.zip")  # GK2-Tech-Tree-Search-1.0.1.zip
     entries = ["BepInEx/", INNER, INNER + mod + "/", INNER + mod + "/" + mod + ".dll"]
     os.makedirs(OUT, exist_ok=True)
     with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as z:

@@ -71,7 +71,7 @@ DLL), floating-point operands as their bytes. The one source file `src/Shared/De
 |---|---|---|---|
 | identical, same build | nothing | runs | "Compatible": "Its own check passed: every game member it uses is identical to the audited build." |
 | identical, recompiled game | info naming both builds and the member count | runs | the same |
-| changed | warning naming the members and what the mod does | runs: Built Count, Owned Count and Tech Search as before; Global Storage without extending storage (`Plugin.ChangedGameCode` in the two postfixes); Move Building without moving (`Mover.CanMove`: "Moving is off: the game changed code this mod uses. Wait for an updated mod."). `Safety.StopOnChangedGameCode=true` stops the mod instead | "Unknown build"; the Status row: "Running with moving off: the game changed 3 member(s) this mod uses since this build (…). A re-audited build is pending." |
+| changed | warning naming the members and what the mod does | runs: Built Count, Owned Count and Tech Tree Search as before; Global Storage without extending storage (`Plugin.ChangedGameCode` in the two postfixes); Move Building without moving (`Mover.CanMove`: "Moving is off: the game changed code this mod uses. Wait for an updated mod."). `Safety.StopOnChangedGameCode=true` stops the mod instead | "Unknown build"; the Status row: "Running with moving off: the game changed 3 member(s) this mod uses since this build (…). A re-audited build is pending." |
 | missing (gone or ambiguous) | error naming the members | stops; the game runs unmodified | "Unknown build"; the Status row says what is gone |
 | the check failed | error with the cause | stops | "Unknown build"; the Status row says so |
 

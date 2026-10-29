@@ -6,7 +6,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-namespace GK2TechSearch
+namespace GK2TechTreeSearch
 {
     // The search box on the Tech Tree page and the result list under it. One per page (the page is built once).
     //
@@ -46,7 +46,7 @@ namespace GK2TechSearch
             {
                 return;
             }
-            GameObject root = new GameObject("GK2TechSearch", typeof(RectTransform));
+            GameObject root = new GameObject("GK2TechTreeSearch", typeof(RectTransform));
             root.SetActive(false);
             try
             {

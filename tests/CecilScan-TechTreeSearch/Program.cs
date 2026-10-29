@@ -3,7 +3,7 @@ var managed = GamePaths.Managed;
 var res = new DefaultAssemblyResolver(); res.AddSearchDirectory(managed); res.AddSearchDirectory(GamePaths.BepInExCore);
 var rp = new ReaderParameters { AssemblyResolver = res };
 var repo = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..")); // tests/X/bin/Release/net8.0 -> repo root
-var mod = ModuleDefinition.ReadModule(Path.Combine(repo, "src", "GK2TechSearch", "bin", "Release", "netstandard2.1", "GK2TechSearch.dll"), rp);
+var mod = ModuleDefinition.ReadModule(Path.Combine(repo, "src", "GK2TechTreeSearch", "bin", "Release", "netstandard2.1", "GK2TechTreeSearch.dll"), rp);
 var game = ModuleDefinition.ReadModule(managed + "Assembly-CSharp.dll", rp);
 Console.WriteLine("Game MVID " + game.Mvid);
 int fails = 0, ok = 0;

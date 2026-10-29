@@ -11,7 +11,7 @@ without paging through six tabs? Studied 2026-10-04 against game 1.008, Steam bu
 **Verdict: feasible, small, and display-only.** The game already has a public "show this tab and scroll to this
 tech" call, so the mod only adds a text box and a result list. No save data is touched and no game rule changes.
 
-Implemented as **GK2 Tech Search** (`src/GK2TechSearch`, GUID `dreas.gk2.techsearch`).
+Implemented as **GK2 Tech Tree Search** (`src/GK2TechTreeSearch`, GUID `dreas.gk2.techtreesearch`; GK2 Tech Search, `dreas.gk2.techsearch`, until 1.0.1).
 
 ## How the tech tree page works
 

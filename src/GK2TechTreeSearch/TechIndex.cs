@@ -6,7 +6,7 @@ using LazyBearTechnology;
 using TMPro;
 using UnityEngine.UI;
 
-namespace GK2TechSearch
+namespace GK2TechTreeSearch
 {
     // Private game members the mod reads. Resolved once; a missing one throws in Verify() and disables the mod.
     internal static class Access

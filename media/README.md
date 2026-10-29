@@ -9,9 +9,9 @@ same spot is cut the same way.
 
 | File | What |
 |---|---|
-| `GK2_TechSearch_Nexus.txt` | the Nexus Mods page text of GK2 Tech Search (BBCode) |
+| `GK2_TechTreeSearch_Nexus.txt` | the Nexus Mods page text of GK2 Tech Tree Search (BBCode) |
 
-## `tech-search/`
+## `tech-tree-search/`
 
 Steam screenshot of 2026-10-29 (23:52:37; Tech Tree, the Metallurgy tab, "Iron" typed: eight matches and a "+4 more"
 row, five of them researched and green), with the 1.0.1 release build.

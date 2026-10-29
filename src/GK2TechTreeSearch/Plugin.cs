@@ -1,19 +1,25 @@
 using System;
+using System.IO;
 using BepInEx;
+using BepInEx.Bootstrap;
 using BepInEx.Configuration;
 using BepInEx.Logging;
 using GK2Shared;
 using HarmonyLib;
 using UnityEngine;
 
-namespace GK2TechSearch
+namespace GK2TechTreeSearch
 {
-    [BepInPlugin(Guid, "GK2 Tech Search", Version)]
+    [BepInPlugin(Guid, "GK2 Tech Tree Search", Version)]
     // Soft: when GK2 Mod Framework is installed it loads first, so FrameworkLink can register; without it nothing changes.
     [BepInDependency(FrameworkLink.FrameworkGuid, BepInDependency.DependencyFlags.SoftDependency)]
+    // Soft: the old GK2TechSearch.dll (GK2 Tech Search 1.0.0, GitHub), if a player still has it, loads first, so Awake
+    // can see it in Chainloader.PluginInfos and stay off instead of adding a second search box.
+    [BepInDependency(OldGuid, BepInDependency.DependencyFlags.SoftDependency)]
     public class Plugin : BaseUnityPlugin
     {
-        public const string Guid = "dreas.gk2.techsearch";
+        public const string Guid = "dreas.gk2.techtreesearch";
+        internal const string OldGuid = "dreas.gk2.techsearch"; // GK2 Tech Search, the name until 1.0.1 (2026-10-30)
         public const string Version = "1.0.1"; // one place: the plugin attribute and the log line
 
         // No pinned game build: at start GameDependencies compares every game member this DLL uses (the gk2deps.txt
@@ -46,9 +52,41 @@ namespace GK2TechSearch
         private void Awake()
         {
             Log = Logger;
+            CarryOverOldConfig();
             BindConfig();
-            Status = StartMod(); // not "Start": Unity would call that itself on the first frame and patch twice
+            if (Chainloader.PluginInfos.ContainsKey(OldGuid))
+            {
+                // Both would add a search box to the Tech Tree page. The old file is the player's to delete.
+                Status = "Off: the old GK2TechSearch.dll is still in BepInEx\\plugins; delete it, this mod replaces it.";
+                Log.LogWarning("GK2TechSearch.dll (GK2 Tech Search, the old name of this mod) is still in BepInEx\\plugins. Delete it: this mod replaces it and stays off while both are installed.");
+            }
+            else
+            {
+                Status = StartMod(); // not "Start": Unity would call that itself on the first frame and patch twice
+            }
             FrameworkLink.TryRegister(Config);
+        }
+
+        // 1.0.1 renamed the mod (GUID dreas.gk2.techsearch -> dreas.gk2.techtreesearch), and the GUID names the cfg
+        // file. A player's old settings are copied to the new file once, on the first start without one; the old
+        // file stays (harmless, and theirs).
+        private void CarryOverOldConfig()
+        {
+            string oldPath = Path.Combine(Paths.ConfigPath, OldGuid + ".cfg");
+            try
+            {
+                if (File.Exists(Config.ConfigFilePath) || !File.Exists(oldPath))
+                {
+                    return;
+                }
+                File.Copy(oldPath, Config.ConfigFilePath);
+                Config.Reload();
+                Log.LogInfo($"Settings copied from {OldGuid}.cfg (the mod's name until 1.0.1) to {Guid}.cfg; the old file can be deleted.");
+            }
+            catch (Exception e)
+            {
+                Log.LogWarning($"Could not copy the old settings file {oldPath}: {e.GetType().Name}: {e.Message}. Starting with defaults.");
+            }
         }
 
         private void BindConfig()
@@ -77,7 +115,7 @@ namespace GK2TechSearch
             // Identical game members: patch. Changed ones: patch with a warning (or stop, Safety.StopOnChangedGameCode).
             // A member gone, or a check that could not run: stop; the game runs unmodified.
             GameDependencies.Result deps = GameDependencies.Check(typeof(Plugin).Assembly, typeof(WgoData).Assembly, typeof(LazyBearTechnology.LazyAudio).Assembly);
-            if (!GameDependencies.Apply(deps, "GK2 Tech Search", Log, "Running anyway", out string status))
+            if (!GameDependencies.Apply(deps, "GK2 Tech Tree Search", Log, "Running anyway", out string status))
             {
                 return status;
             }
@@ -98,7 +136,7 @@ namespace GK2TechSearch
                 Log.LogError($"Patching failed; all patches removed, game runs unmodified. {e}");
                 return "Disabled: patching failed (see BepInEx/LogOutput.log).";
             }
-            Log.LogInfo($"GK2 Tech Search {Version} loaded.");
+            Log.LogInfo($"GK2 Tech Tree Search {Version} loaded.");
             return status;
         }
 
