@@ -78,3 +78,23 @@ goes under the mod's **Unreleased** in `CHANGELOG.md` when it is made; at releas
 date, and the entry is the Nexus changelog text.
 
 The user commits and tags; the release notes name the game build (`25910882`, 1.010 as of 2026-10-13).
+
+## 7. The zip and the Nexus page
+
+A mod released on its own (Tech Search 1.0.1 was the first, 2026-10-29): `bash tools/build-dist.sh <Mod>` builds
+that one into `dist/` and leaves the others' dist DLLs as released (their Unreleased changes stay unreleased under
+their old numbers), then the scans of section 2, then
+
+```
+python tools/make-release-zip.py GK2TechSearch   # release/GK2-Tech-Search-<version>.zip
+```
+
+which runs `check-dist.py`, checks the version (Plugin.cs = csproj = the mod's first changelog heading, and present
+in the dist DLL) and writes the zip holding `BepInEx/plugins/<Mod>/<Mod>.dll` alone, read back and compared with
+`dist/` byte for byte: the Nexus upload, extracting into the game folder (a folder per mod, as the Saddle Up zips).
+`release/` is not kept in git.
+
+The page text is `media/GK2_<Mod>_Nexus.txt` (BBCode), its pictures in `media/<mod>/` (560 wide; the header
+1300x372; boxes in `media/README.md`, cut with `tools/crop-shot.py`), hotlinked from the raw GitHub URL, so they
+show only once `media/` is pushed. The first run of section 5 is done with the zip extracted into the game folder
+(the loose dev DLL moved out first: two copies of a plugin would load twice).

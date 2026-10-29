@@ -1,0 +1,77 @@
+[center][size=6][b][color=#f0b45a]GK2 Tech Search[/color][/b][/size]
+[size=4]A search box on the Tech Tree page of Graveyard Keeper 2.[/size]
+
+[size=3]Type part of a tech's name, or of something it unlocks, and jump straight to it, on whichever tab it is.[/size][/center]
+[line]
+[size=5][b][color=#f0b45a]What you get[/color][/b][/size]
+
+[size=4][b]Find a tech by name[/b][/size]
+[size=3]The box sits at the top right of the Tech Tree page, in the strip right of the tab buttons. Type, and the matches are listed under it with the tab they are on. Several words narrow it down ([i]garden ii[/i]). Techs you have already researched are listed in green.[/size]
+
+[center][img]https://raw.githubusercontent.com/dreasgrech/GK2QOLMods/main/media/tech-search/search-iron.png?v=1[/img][/center]
+[center][img]https://raw.githubusercontent.com/dreasgrech/GK2QOLMods/main/media/tech-search/search-results.png?v=1[/img][/center]
+
+[size=4][b]Or by what it unlocks[/b][/size]
+[size=3]Looking for the tech that gives you an item, a building or a perk? Type its name: a tech that matched through something on its card is listed with that thing's name after the tab, so you see why it is there. Name matches come first, then the unlock matches, each in tab order.[/size]
+
+[size=4][b]Jump straight to it[/b][/size]
+[size=3][b]Enter[/b] or a click on a row switches to the tech's tab, scrolls to it and frames its card. It is the game's own tab switch, the one a tab button makes.[/size]
+
+[size=4][b]No spoilers[/b][/size]
+[size=3]Hidden techs (the "?" cards) and tabs you have not opened yet are never listed. The search shows you only what the Tech Tree already shows you.[/size]
+
+[size=4][b]Your keys stay yours[/b][/size]
+[size=3]While the box has the cursor, the game's keys are paused, the same way the game's own bug report window does it: letters do not open the map or the inventory, and the keeper does not walk off.[/size]
+
+[size=4][b]Display only[/b][/size]
+[size=3]Nothing in the game changes and nothing is written. Your save is never touched, and a save made with the mod loads fine without it.[/size]
+
+[line]
+[size=5][b][color=#f0b45a]Keys[/color][/b][/size]
+
+[list]
+[*][size=3][b]Ctrl+F[/b] — puts the cursor in the box while the Tech Tree page is open (or click the box).[/size][/*]
+[*][size=3][b]Up / Down[/b] — pick a result.[/size][/*]
+[*][size=3][b]Enter[/b] — jump to the picked tech (a click on a row does the same).[/size][/*]
+[*][size=3][b]Esc[/b] — leave the box; the next Esc closes the window as usual.[/size][/*]
+[/list]
+[size=3]With a gamepad active the box is hidden: there is no text entry on a pad.[/size]
+
+[line]
+[size=5][b][color=#f0b45a]Settings[/color][/b][/size]
+
+[size=3]With [url=https://www.nexusmods.com/graveyardkeeper2/mods/42]GK2 Mod Framework[/url] installed, the mod shows in the game's [b]Mods[/b] menu (main menu and ESC menu): a Status row, "Search box on the Tech Tree", "Also search what techs unlock" and "Key to start a search". The framework is optional; the same file works without it.
+
+Everything, with or without the framework, is in [i]BepInEx\config\dreas.gk2.techsearch.cfg[/i] (written on the first start; change it with the game closed): the box on or off, searching unlocks, the number of rows in the list, the key, and the box's place and size on the page.[/size]
+
+[line]
+[size=5][b][color=#f0b45a]Install[/color][/b][/size]
+
+[list=1]
+[*][size=3]Install the [url=https://www.nexusmods.com/site/mods/115]BepInEx 5 mod[/url] (or download from [url=https://github.com/BepInEx/BepInEx/releases]official repo[/url], v5.4.23 or newer) into the game folder and start the game once.[/size]
+
+[center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/BepInEx-files.png?v=2[/img][/center]
+[/*]
+[*][size=3]Extract the download into the game folder (where [i]GraveyardKeeper2.exe[/i] is). It adds the folder [b]GK2TechSearch[/b] to [i]BepInEx\plugins[/i]. If you had [i]GK2TechSearch.dll[/i] from GitHub lying loose in [i]BepInEx\plugins[/i], delete it first: two copies clash, and BepInEx warns about it.[/size]
+[/*]
+[*][size=3]Start the game and open the Tech Tree (Character window, Tech Tree tab). The box is at the top right.[/size][/*]
+[/list]
+[size=3][b]Safe for your save.[/b] The mod writes nothing: no save data, no game rule. Saves made with it load without it.
+
+[b]Game updates.[/b] Built for Steam game v1.010. After a game update the mod checks the game's code at start: if the game removed something it uses, the mod stops and the log says so; if the game only changed something, it runs and the log warns.
+
+[b]Uninstall.[/b] Delete the folder [b]GK2TechSearch[/b] from [i]BepInEx\plugins[/i].
+
+[b]Found a bug?[/b] Report it in this page's Bugs tab and attach [i]BepInEx\LogOutput.log[/i] from the game folder (it is rewritten each time the game starts, so grab it right after the problem).[/size]
+
+[line]
+[size=5][b][color=#f0b45a]Source and more mods[/color][/b][/size]
+
+[size=3]The source code is on GitHub, with my other quality-of-life mods for the game (Global Storage, Built Count, Move Building, Owned Count): [url=https://github.com/dreasgrech/GK2QOLMods]GK2QOLMods[/url].[/size]
+
+[size=4][b]GK2 Saddle Up[/b][/size]
+[size=3]Your own donkey and cart: call it, ride it, drive the cart, haul logs, stone and corpses on it, leave it standing with its load and find it where you left it.[/size]
+
+[center][youtube]Ww9S6X9hTOU[/youtube][/center]
+
+[center][size=3][url=https://www.nexusmods.com/graveyardkeeper2/mods/391]Download GK2 Saddle Up on Nexus Mods[/url][/size][/center]

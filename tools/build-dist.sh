@@ -3,7 +3,8 @@
 # directory) and -p:Deploy=false (the game may be running), copied into dist/, then tools/check-dist.py. Stops at the
 # first failure. Build output: release/logs/build-dist.log.
 #
-#   bash tools/build-dist.sh
+#   bash tools/build-dist.sh                 # all five
+#   bash tools/build-dist.sh GK2TechSearch   # only these: a release of one mod leaves the others' dist DLLs as released
 #
 # Afterwards: bash tools/release-scans.sh, then a dev build with the game closed (bin/ holds whichever was built last).
 set -u
@@ -12,7 +13,12 @@ LOG="$REPO/release/logs/build-dist.log"
 mkdir -p "$REPO/release/logs"
 : > "$LOG"
 
-for m in GK2GlobalStorage GK2BuiltCount GK2MoveBuilding GK2OwnedCount GK2TechSearch; do
+MODS=("$@")
+[ ${#MODS[@]} -eq 0 ] && MODS=(GK2GlobalStorage GK2BuiltCount GK2MoveBuilding GK2OwnedCount GK2TechSearch)
+for m in "${MODS[@]}"; do
+  [ -f "$REPO/src/$m/$m.csproj" ] || { echo "no such mod: src/$m/$m.csproj"; exit 1; }
+done
+for m in "${MODS[@]}"; do
   echo "== $m"
   echo "===== $m" >> "$LOG"
   # --no-incremental: after a dev build, a ForDist build of unchanged sources would reuse the dev output (seen 2026-10-13)

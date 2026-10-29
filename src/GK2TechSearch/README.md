@@ -14,7 +14,7 @@ it unlocks, and jump straight to it, on whichever tab it is.
 Enter (or a click) switches to the tech's tab, scrolls to it and frames its card. Hidden techs (the "?" cards) and
 tabs you haven't opened yet are never shown, so the search spoils nothing. Display only: nothing in the game changes.
 
-Version 1.0.0, built and audited against Steam game build 25910882, game 1.010 (Assembly-CSharp MVID `5ec8094e-…`,
+Version 1.0.1, built and audited against Steam game build 25910882, game 1.010 (Assembly-CSharp MVID `5ec8094e-…`,
 LazyBearTechnology `6cd86a0b-…`). Design study: [`docs/tech-search.md`](../../docs/tech-search.md).
 
 - GUID: `dreas.gk2.techsearch`
@@ -87,7 +87,7 @@ missing one disables the mod): `TechTreePageWidget.scrollRect`, `redSpheresLabel
 
 ## In-game test list
 
-1. Log shows `GK2 Tech Search 1.0.0 loaded.` **once**, no warnings or errors.
+1. Log shows `GK2 Tech Search 1.0.1 loaded.` **once**, no warnings or errors.
 2. Open the Tech Tree: the box is there. The log has one `[measure]` line (page and tab-strip rectangles) and one line
    saying which text box was used. If the box sits badly, send the `[measure]` line: the place is set from it.
 3. Click the box and type `oven`: results appear under it; letters don't open the map/inventory/quests; the character
@@ -130,5 +130,6 @@ missing one disables the mod): `TechTreePageWidget.scrollRect`, `redSpheresLabel
 
 - **Build and deploy** (game closed): `dotnet build -c Release` in this folder.
 - **Build only** (game running): `dotnet build -c Release -p:Deploy=false`.
-- **Uninstall:** delete `BepInEx\plugins\GK2TechSearch.dll` in the game folder, and optionally
+- **Uninstall:** delete `BepInEx\plugins\GK2TechSearch.dll` in the game folder (from the Nexus zip it is the folder
+  `BepInEx\plugins\GK2TechSearch\`), and optionally
   `BepInEx\config\dreas.gk2.techsearch.cfg`.

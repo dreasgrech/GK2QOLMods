@@ -35,9 +35,16 @@ Owned Count 1.0.4, Tech Search 1.0.0. Earlier changes are in git history and eac
 
 ## Tech Search
 
-### Unreleased
+### 1.0.1 (2026-10-29)
+
+The first version on Nexus Mods (the zip extracts into the game folder: `BepInEx\plugins\GK2TechSearch\`).
+Nothing changes for players.
 
 - No LINQ (it allocates garbage in a Unity game, 2026-10-25): the dependency check at start (shared with every mod here) sorts and looks up without LINQ; the manifest it embeds is unchanged.
+
+### 1.0.0 (2026-10-04)
+
+- First release, on GitHub (`dist/`): the search box, searching what techs unlock, the jump, the Mods-menu rows with GK2 Mod Framework.
 
 ## Development
 
