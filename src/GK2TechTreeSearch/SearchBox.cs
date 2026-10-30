@@ -35,7 +35,6 @@ namespace GK2TechTreeSearch
         private int highlighted;
         private bool inputSuspended;
         private bool inputWasActive = true;
-        private bool measured;
         private bool listHovered;
         private bool errorLogged;
 
@@ -266,11 +265,6 @@ namespace GK2TechTreeSearch
             }
             ApplyLayout();
             transform.SetAsLastSibling(); // drawn after (over) the tree
-            if (!measured)
-            {
-                measured = true;
-                LogMeasurements();
-            }
             Refresh();
         }
 
@@ -535,14 +529,7 @@ namespace GK2TechTreeSearch
             }
         }
 
-        // Once, on the first open: where things are, so the box can be placed from numbers, not guesses.
-        private void LogMeasurements()
-        {
-            RectTransform pageRt = (RectTransform)page.transform;
-            TechTreeTabButton tab = Access.TabButtonPrefab(page);
-            RectTransform tabs = tab != null ? tab.transform.parent as RectTransform : null;
-            Canvas[] canvases = page.GetComponentsInChildren<Canvas>(true);
-            Plugin.Log.LogInfo($"[measure] page rect {pageRt.rect} pivot {pageRt.pivot}; tab strip {(tabs != null ? tabs.rect.ToString() : "?")} at {(tabs != null ? pageRt.InverseTransformPoint(tabs.position).ToString() : "?")}; box {((RectTransform)transform).rect} at {pageRt.InverseTransformPoint(transform.position)}; list width {list.rect.width}, drop {ListDrop()}; nested canvases {canvases.Length}; font {(font != null ? font.name : "none")} {fontSize}");
-        }
+        // (A one-time log line of the page's and box's rectangles stood here: the 2026-10-04 measurement the layout
+        // defaults in Plugin.cs come from. It shipped ungated in 1.0.1 and was removed on 2026-10-30.)
     }
 }

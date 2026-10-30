@@ -50,6 +50,9 @@ Owned Count 1.0.4, Tech Search 1.0.0. Earlier changes are in git history and eac
 
 ### Unreleased
 
+- **No more measurement line in the log** (2026-10-30): the first open of the search box in a session wrote a
+  `[measure]` line with the page's and the box's rectangles to `BepInEx\LogOutput.log`, a developer measurement from
+  2026-10-04 that 1.0.1 shipped ungated. Removed; the box's layout has used fixed defaults since then.
 - Audited against game 1.011 (Steam build 26297960, 2026-10-30; `docs/game-update-26297960.md`): nothing the mod uses
   changed.
 
