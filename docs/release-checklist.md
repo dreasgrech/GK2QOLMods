@@ -6,8 +6,8 @@ What to do before `dist/` goes public, in order. Written 2026-10-13 from the fir
 
 - Every warning in the game's log is fixed (`BepInEx\LogOutput.log` of the last session: no `[Warning` or `[Error`
   lines from our plugins).
-- Move Building's `Debug.FaultInjection` is in a player's cfg only with the developer marker file
-  `BepInEx\config\dreas.gk2.dev` (the same marker unlocks the GK2 Donkey API's dev tools).
+- (Move Building, retired 2026-10-30, had its `Debug.FaultInjection` behind the developer marker file
+  `BepInEx\config\dreas.gk2.dev`, the marker that unlocks the GK2 Donkey API's dev tools.)
 - Each mod's `Version` constant in `Plugin.cs` is the version in `README.md`'s table and in its `.csproj`
   (`<Version>`, the assembly version; four of them lagged on 2026-10-13).
 - The audited game: the audit notes (`docs/game-update-*.md`, from `tests/GameDiff` after any update) cover the
@@ -20,7 +20,7 @@ What to do before `dist/` goes public, in order. Written 2026-10-13 from the fir
 
 `bash tools/release-scans.sh` (after the release build of section 3: the manifest checks read its DLLs) runs them
 all and lists each as ok or FAIL, exit 1 on any failure, the output in `release/logs/release-scans.log`: in `tests/`
-`CecilScan-GlobalStorage`, `StaticScan-GlobalStorage`, `CecilScan-BuiltCount`, `CecilScan-MoveBuilding`,
+`CecilScan-GlobalStorage`, `StaticScan-GlobalStorage`, `CecilScan-BuiltCount`,
 `CecilScan-OwnedCount`, `CecilScan-TechTreeSearch`, `FrameworkScan`, `HarmonyHarness-BuiltCount` (built, then run), each
 mod's dependency manifest verified against the installed game (`tools/DepManifest`), and `check-dist.py`. All must end
 green.
@@ -77,7 +77,7 @@ patch, new features or settings the minor), in the mod's `Plugin.cs`, its csproj
 goes under the mod's **Unreleased** in `CHANGELOG.md` when it is made; at release that heading becomes the version and
 date, and the entry is the Nexus changelog text.
 
-The user commits and tags; the release notes name the game build (`25910882`, 1.010 as of 2026-10-13).
+The user commits and tags; the release notes name the game build (`26297960`, 1.011 as of 2026-10-30).
 
 ## 7. The zip and the Nexus page
 

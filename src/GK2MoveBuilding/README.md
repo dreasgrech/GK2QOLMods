@@ -1,12 +1,14 @@
-# GK2 Move Building
+# GK2 Move Building (retired 2026-10-30)
+
+**Retired:** the game's own Move row since 1.011 (Steam build 26297960, 2026-10-30) does what the mod did, `docs/game-update-26297960.md`. The last build, 1.1.6, stops itself on 1.011 (the remove pointer it patched was rewritten); players delete `BepInEx\plugins\GK2MoveBuilding.dll` and use the game's Move row. The source stays for history and is in no build or scan list; what follows describes the mod as it was.
 
 BepInEx plugin for Graveyard Keeper 2: pick up a built building and put it down elsewhere in the same area.
 The building is the **same object** afterwards. Its contents, crafts, fuel, upgrades, scripts, id and every
 reference to it (orders, porters, quests) stay as they were. Nothing is paid, nothing is refunded, no build or
 demolition scripts run.
 
-Version 1.1.6, built and audited against Steam game build 25910882, game 1.010 (Assembly-CSharp MVID `5ec8094e-…`,
-LazyBearTechnology `6cd86a0b-…`; re-audit in `docs/game-update-25910882.md`). 1.1.5 was the same code for 25601286, 1.1.4 was the same move code without the
+Version 1.1.6, built and audited against Steam game build 25910882, game 1.010; **on 1.011 (Steam 26297960) the mod stops itself: the game rewrote the remove pointer and has a Move row of its own, `docs/game-update-26297960.md`** (1.010: Assembly-CSharp MVID `5ec8094e-…`,
+LazyBearTechnology `6cd86a0b-…`; its re-audit in `docs/game-update-25910882.md`). 1.1.5 was the same code for 25601286, 1.1.4 was the same move code without the
 Mods-menu integration, and 1.1.3 the same code for 25533739.
 See `INVESTIGATION.md` for the study of the Nexus mod this was designed against, and why this one works differently.
 

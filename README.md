@@ -5,9 +5,9 @@ so you can install any subset.
 
 | Mod | Version | In one line |
 |---|---|---|
-| [Global Storage](#global-storage) | 1.1.5 | Craft and build with materials from chests in every area, not just the one you're standing in. |
+| [Global Storage](#global-storage) | 1.1.6 | Craft and build with materials from chests in every area, not just the one you're standing in. |
 | [Built Count](#built-count) | 1.0.6 | Build menus show how many of each building you already have in that area. |
-| [Move Building](#move-building) | 1.1.6 | Pick up a built building and put it down somewhere else, contents and all. |
+| [Move Building](#move-building) | retired | Picked up a built building and put it down elsewhere; the game does it itself since 1.011. |
 | [Owned Count](#owned-count) | 1.0.4 | Item tooltips show how many of that item you own across inventory and every chest. |
 | [Tech Tree Search](#tech-tree-search) | 1.0.1 | A search box on the Tech Tree page: find a tech by name, or by what it unlocks, and jump to it. |
 
@@ -85,6 +85,8 @@ within one area.
 
 ### Move Building
 
+**Retired 2026-10-30:** the game's own Move row since 1.011 (Steam build 26297960, 2026-10-30) does what the mod did, `docs/game-update-26297960.md`, with the same object kept (contents, crafts, references). The last build, 1.1.6, ran on 1.010 and stops itself on 1.011; its source stays in `src/GK2MoveBuilding/` for history and is in no build or scan list. The description that follows is of the mod as it was.
+
 `GK2MoveBuilding.dll`
 
 Adds a **Move** row next to **Remove** in the build desk menu. Pick it and click a building: the game's own build
@@ -133,7 +135,8 @@ from. Graded items (the starred ones, e.g. Bones of different skull grades) also
 
 ### Tech Tree Search
 
-`GK2TechTreeSearch.dll` · GUID `dreas.gk2.techtreesearch` · [source and README](src/GK2TechTreeSearch/)
+`GK2TechTreeSearch.dll` · GUID `dreas.gk2.techtreesearch` · [source and README](src/GK2TechTreeSearch/) ·
+[on Nexus Mods](https://www.nexusmods.com/graveyardkeeper2/mods/421)
 
 A search box at the top right of the Tech Tree page. Type part of a tech's name, or of something it unlocks (an item,
 building or perk on its card), and the matches are listed with their tab; Enter or a click switches to that tab,
@@ -155,18 +158,18 @@ scrolls to the tech and frames its card. Ctrl+F puts the cursor in the box.
 - **Dependency check.** Every plugin carries a list of the game members it uses (methods, fields, types, with a
   hash of each) and compares it with the installed game at startup. A member that is gone stops the mod before it
   patches anything. A member whose code changed keeps the mod running with a warning in the log that names it
-  (Global Storage then stops extending storage, Move Building stops moving) until a re-audited build; set
+  (Global Storage then stops extending storage) until a re-audited build; set
   `Safety.StopOnChangedGameCode=true` to stop the mod in that case too. A game update that leaves every member
   identical changes nothing. Details: `docs/dependency-check.md`.
 - **All-or-nothing patching.** If any patch fails to apply, all of that mod's patches are removed and the game runs
   unmodified.
-- **Move Building** is transactional: an interrupted move puts the building back exactly as it was, verified in-game
-  with fault injection. It refuses to run in co-op.
+- **Move Building** (retired) was transactional: an interrupted move put the building back exactly as it was, verified
+  in-game with fault injection. It refused to run in co-op.
 
 ## Game updates
 
 After a game patch each mod compares the game members it uses with the new game (see above): identical, it runs as
 before; changed, it runs with a warning and its state-changing path off; gone, it stops. Either way the game's code
 is compared against the audited build (`tests/GameDiff` lists what changed; see `tests/README.md`), the mods are
-re-audited and, when something they use changed, rebuilt. Audited build: Steam 25910882 (game 1.010;
+re-audited and, when something they use changed, rebuilt. Audited build: Steam 26297960 (game 1.011; `docs/game-update-26297960.md`; before: 25910882, 1.010,
 `docs/game-update-25910882.md`). Why the check replaced the old all-or-nothing pin: `docs/update-gate.md`.

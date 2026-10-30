@@ -16,7 +16,7 @@ namespace GK2GlobalStorage
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "dreas.gk2.globalstorage";
-        public const string Version = "1.1.5"; // one place: the plugin attribute and the log line
+        public const string Version = "1.1.6"; // one place: the plugin attribute and the log line
 
         // No pinned game build: at start GameDependencies compares every game member this DLL uses (the gk2deps.txt
         // manifest tools/DepManifest embedded after the build) with the installed game; docs/dependency-check.md.

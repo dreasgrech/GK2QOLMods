@@ -9,8 +9,11 @@ Owned Count 1.0.4, Tech Search 1.0.0. Earlier changes are in git history and eac
 
 ## Global Storage
 
-### Unreleased
+### 1.1.6 (2026-10-30)
 
+- Audited against game 1.011 (Steam build 26297960, 2026-10-30; `docs/game-update-26297960.md`): the one game member
+  that changed, `WgoData.GetCraftableMultiInventory` (the zombie assistants' autocrafts), leaves the extension as it
+  was; the mod warned and ran without the extension on 1.011 until this rebuild.
 - No LINQ (it allocates garbage in a Unity game, 2026-10-25): the storages' order (fuel first, then the ones added,
   then by size) is sorted with a plain comparison, the same order as before; the dependency check at start (shared with every mod here) sorts and looks up without LINQ; the manifest it embeds is unchanged.
 
@@ -18,12 +21,20 @@ Owned Count 1.0.4, Tech Search 1.0.0. Earlier changes are in git history and eac
 
 ### Unreleased
 
+- Audited against game 1.011 (Steam build 26297960, 2026-10-30; `docs/game-update-26297960.md`): nothing the mod uses
+  changed; the build desk gained a Move row in every tab.
 - No LINQ (it allocates garbage in a Unity game, 2026-10-25): the dependency check at start (shared with every mod here) sorts and looks up without LINQ; the manifest it embeds is unchanged.
 
 ## Move Building
 
-### Unreleased
+### Retired, 2026-10-30
 
+- **Retired** (the user, 2026-10-30): game 1.011 (Steam build 26297960) rewrote the remove pointer (five members the
+  mod patched or read are gone) and has a Move row of its own in every build desk tab that relocates the same object,
+  contents and references kept, as this mod did (`docs/game-update-26297960.md`). The last build, 1.1.6, stops itself
+  on 1.011 with the members named; its DLL is out of `dist/` and the mod out of the build and scan lists; the source
+  stays in `src/GK2MoveBuilding/` for history. Players on 1.011: delete `BepInEx\plugins\GK2MoveBuilding.dll` and use
+  the game's Move row.
 - No LINQ (it allocates garbage in a Unity game, 2026-10-25): the occupied-dock check and the walk through the
   scene's zones by priority are plain loops, the same results; the dependency check at start (shared with every mod here) sorts and looks up without LINQ; the manifest it embeds is unchanged.
 
@@ -31,9 +42,16 @@ Owned Count 1.0.4, Tech Search 1.0.0. Earlier changes are in git history and eac
 
 ### Unreleased
 
+- Audited against game 1.011 (Steam build 26297960, 2026-10-30; `docs/game-update-26297960.md`): nothing the mod uses
+  changed.
 - No LINQ (it allocates garbage in a Unity game, 2026-10-25): the dependency check at start (shared with every mod here) sorts and looks up without LINQ; the manifest it embeds is unchanged.
 
 ## Tech Tree Search
+
+### Unreleased
+
+- Audited against game 1.011 (Steam build 26297960, 2026-10-30; `docs/game-update-26297960.md`): nothing the mod uses
+  changed.
 
 ### 1.0.1 (2026-10-29)
 

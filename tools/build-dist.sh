@@ -14,7 +14,7 @@ mkdir -p "$REPO/release/logs"
 : > "$LOG"
 
 MODS=("$@")
-[ ${#MODS[@]} -eq 0 ] && MODS=(GK2GlobalStorage GK2BuiltCount GK2MoveBuilding GK2OwnedCount GK2TechTreeSearch)
+[ ${#MODS[@]} -eq 0 ] && MODS=(GK2GlobalStorage GK2BuiltCount GK2OwnedCount GK2TechTreeSearch)  # Move Building retired 2026-10-30 (game 1.011 moves buildings itself)
 for m in "${MODS[@]}"; do
   [ -f "$REPO/src/$m/$m.csproj" ] || { echo "no such mod: src/$m/$m.csproj"; exit 1; }
 done
