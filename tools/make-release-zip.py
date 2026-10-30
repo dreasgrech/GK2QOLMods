@@ -8,7 +8,8 @@ plugins in subfolders; mod managers see the BepInEx layout), so the zip extracts
 version is the mod's Plugin.cs Version constant; it must be the csproj's <Version>, the first version heading of the
 mod in CHANGELOG.md (no Unreleased left) and present in the dist DLL (a dist not rebuilt since the bump is refused).
 Runs tools/check-dist.py first and stops if it fails. Every zip is read back and its DLL compared with dist/ byte for
-byte. release/ is not kept in git.
+byte. The zips in release/ are kept in git, and a zip that exists there is never overwritten (a released version is
+never rebuilt: raise the version; --overwrite only for one that was never uploaded; 2026-10-30).
 """
 import hashlib
 import os
@@ -65,7 +66,7 @@ def sha(data):
     return hashlib.sha256(data).hexdigest()
 
 
-def write_zip(mod, v):
+def write_zip(mod, v, overwrite=False):
     dll = os.path.join(DIST, mod + ".dll")
     if not os.path.isfile(dll):
         sys.exit(f"{mod}: no dist/{mod}.dll (bash tools/build-dist.sh {mod})")
@@ -75,6 +76,8 @@ def write_zip(mod, v):
     path = os.path.join(OUT, "-".join(title_of(mod).split()) + f"-{v}.zip")  # GK2-Tech-Tree-Search-1.0.1.zip
     entries = ["BepInEx/", INNER, INNER + mod + "/", INNER + mod + "/" + mod + ".dll"]
     os.makedirs(OUT, exist_ok=True)
+    if os.path.isfile(path) and not overwrite:
+        sys.exit(f"{path} exists: a released zip is never rebuilt (raise the version), or pass --overwrite for one that was never uploaded")
     with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as z:
         for name in entries[:-1]:  # the folders as entries of their own: some extractors and managers want them
             z.writestr(zipfile.ZipInfo(name), b"")
@@ -92,7 +95,8 @@ def write_zip(mod, v):
 
 
 def main():
-    mods = sys.argv[1:]
+    overwrite = "--overwrite" in sys.argv[1:]
+    mods = [a for a in sys.argv[1:] if a != "--overwrite"]
     if not mods:
         sys.exit(__doc__.strip())
     for mod in mods:
@@ -106,7 +110,7 @@ def main():
         cv = changelog_version(mod, title[len("GK2 "):] if title.startswith("GK2 ") else title)
         if cv != v:
             sys.exit(f"{mod}: version {v} but CHANGELOG.md's first heading for it is {cv}")
-        write_zip(mod, v)
+        write_zip(mod, v, overwrite)
 
 
 if __name__ == "__main__":

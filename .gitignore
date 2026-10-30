@@ -14,4 +14,6 @@ Thumbs.db
 .DS_Store
 
 # Logs of tools/build-dist.sh and tools/release-scans.sh
-release/
+# The release zips in release/ ARE kept in git (2026-10-30: in the GK2DonkeyAPI repo public zips were overwritten
+# and lost while release/ was ignored); only the logs of the build and scan scripts are not
+release/logs/

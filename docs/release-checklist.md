@@ -92,7 +92,8 @@ python tools/make-release-zip.py GK2TechTreeSearch   # release/GK2-Tech-Tree-Sea
 which runs `check-dist.py`, checks the version (Plugin.cs = csproj = the mod's first changelog heading, and present
 in the dist DLL) and writes the zip holding `BepInEx/plugins/<Mod>/<Mod>.dll` alone, read back and compared with
 `dist/` byte for byte: the Nexus upload, extracting into the game folder (a folder per mod, as the Saddle Up zips).
-`release/` is not kept in git.
+The zips in `release/` are kept in git (since 2026-10-30): commit each new zip with its release; only
+`release/logs/` is ignored. The tool refuses to overwrite a zip that exists (`--overwrite` only for one never uploaded).
 
 The page text is `media/GK2_<Mod>_Nexus.txt` (BBCode), its pictures in `media/<mod>/` (560 wide; the header
 1300x372; boxes in `media/README.md`, cut with `tools/crop-shot.py`), hotlinked from the raw GitHub URL, so they
