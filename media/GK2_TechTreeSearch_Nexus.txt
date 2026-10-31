@@ -3,8 +3,7 @@
 
 [size=3]Type part of a tech's name, or of something it unlocks, and jump straight to it, on whichever tab it is.[/size]
 
-[center][img]https://raw.githubusercontent.com/dreasgrech/GK2QOLMods/main/media/tech-tree-search/search-iron.png?v=1[/img][/center]
-[/center]
+[img]https://raw.githubusercontent.com/dreasgrech/GK2QOLMods/main/media/tech-tree-search/search-iron.png?v=1[/img][/center]
 [line]
 [size=5][b][color=#f0b45a]What you get[/color][/b][/size]
 
@@ -54,7 +53,9 @@
 [size=5][b][color=#f0b45a]Install[/color][/b][/size]
 
 [list=1]
-[*][size=3]Install the [url=https://www.nexusmods.com/site/mods/115]BepInEx 5 mod[/url] (or download from [url=https://github.com/BepInEx/BepInEx/releases]official repo[/url], v5.4.23 or newer) into the game folder and start the game once.[/size]
+[*][size=3][b]Game v1.011 or newer ships BepInEx: if your game folder has a [i]BepInEx[/i] folder, there is nothing to install[/b]. 
+
+Otherwise (an older build), install the [url=https://www.nexusmods.com/site/mods/115]BepInEx 5 mod[/url] (or download from [url=https://github.com/BepInEx/BepInEx/releases]official repo[/url], v5.4.23 or newer) into the game folder and start the game once.[/size]
 
 [center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/BepInEx-files.png?v=2[/img][/center]
 [/*]
