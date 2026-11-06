@@ -15,6 +15,7 @@ game always gets a DLL with its manifest, and a `-p:ForDist=true` build gets one
 ```
 game-mvid 5ec8094e-4c33-4615-9eb8-011501193186
 lazybear-mvid 6cd86a0b-b1ed-40ba-88b0-a9313146514b
+module-mvid <assembly> <id>              another scope's module id (only when the entries use one; none here)
 T <scope> - <type FullName>              a type the mod names (signatures, locals, ldtoken, casts): must exist
 M <scope> <hash> <method FullName>       a method the mod calls, patches or looks up by name
 F <scope> <hash> <field FullName>        a field the mod reads, writes or looks up by name
@@ -23,7 +24,11 @@ F <scope> <hash> <field FullName>        a field the mod reads, writes or looks 
 Each line ends with a tab and the mod's own top-level types that use the member, comma-separated (the Donkey API
 decides per feature what a changed member means; these mods ignore the column).
 
-`<scope>` is the assembly, `Assembly-CSharp` or `LazyBearTechnology`. The members come from the mod's IL
+`<scope>` is the assembly, `Assembly-CSharp` or `LazyBearTechnology`, or since game 1.011.1 the A* pathfinding
+(`AstarPathfindingProject`). The Donkey API uses the pathfinding, which that update recompiled; these mods use none
+of it, so their manifests have no `module-mvid` line and read as before. For a scope with entries, the module id
+counts in the fast path and in the cache's key like the two others (GK2DonkeyAPI's `docs/dependency-check.md`,
+"Scopes"). The members come from the mod's IL
 (`tools/DepManifest/DepBuilder.cs`):
 
 - every `MemberReference` into the two game assemblies, resolved to its definition (a call on `LazyWidget<X>` lands

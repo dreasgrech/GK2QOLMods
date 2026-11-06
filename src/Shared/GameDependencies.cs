@@ -5,6 +5,9 @@
 //  2. The cfg cache ([Safety] LastDependencyCheck) holds the verdict for this game build and this manifest: reused.
 //  3. Otherwise Assembly-CSharp.dll and LazyBearTechnology.dll are read with Mono.Cecil (the game's own copy, loaded
 //     by BepInEx) and every manifest entry is looked up and hashed; the verdict is cached.
+// The other assemblies a manifest names (its module-mvid lines: the A* pathfinding for the Donkey API) count in 1 and
+// in the cache's key the same way, found among the loaded assemblies by name; their entries are read in 3 from the
+// game's Managed folder.
 //
 // A check that cannot run disables the mod (fail closed), like a missing member. A changed member runs the mod with a
 // warning unless Safety.StopOnChangedGameCode is set (the QOL mods; the Donkey API decides per feature, GameCode.cs).
@@ -33,6 +36,12 @@ namespace GK2Shared
             public long Milliseconds;
             public int Checked;
             public Guid GameMvid, LazyBearMvid, AuditedGameMvid, AuditedLazyBearMvid;
+            // The manifest's other assemblies (its module-mvid lines), by name: the running one's id (empty when it
+            // could not be found) and the one the mod was built against.
+            public readonly SortedDictionary<string, Guid> ModuleMvids =
+                new SortedDictionary<string, Guid>(StringComparer.Ordinal);
+            public readonly SortedDictionary<string, Guid> AuditedModuleMvids =
+                new SortedDictionary<string, Guid>(StringComparer.Ordinal);
             public readonly List<string> Changed = new List<string>();
             public readonly List<string> Missing = new List<string>();
             // For each item in Changed and Missing: the mod's own top-level types that use it, comma-separated (the
@@ -66,12 +75,25 @@ namespace GK2Shared
                 r.LazyBearMvid = lazyBear.ManifestModule.ModuleVersionId;
                 r.Checked = m.Entries.Count;
                 r.Recompiled = r.GameMvid != m.GameMvid || r.LazyBearMvid != m.LazyBearMvid;
+                foreach (KeyValuePair<string, Guid> kv in m.ModuleMvids)
+                {
+                    Guid now = RunningMvid(kv.Key);
+                    r.AuditedModuleMvids[kv.Key] = kv.Value;
+                    r.ModuleMvids[kv.Key] = now;
+                    if (now != kv.Value) r.Recompiled = true;
+                }
                 if (!r.Recompiled)
                 {
                     r.State = State.Identical;
                     return r;
                 }
+                // The manifest and the other assemblies' running ids: a verdict cached for the same Assembly-CSharp
+                // and LazyBearTechnology is not reused when only one of those changed.
                 string manifestSha = m.Sha1();
+                foreach (KeyValuePair<string, Guid> kv in r.ModuleMvids)
+                {
+                    manifestSha += "+" + kv.Key + "=" + kv.Value;
+                }
                 if (ReadCache(r, manifestSha))
                 {
                     r.FromCache = true;
@@ -91,6 +113,38 @@ namespace GK2Shared
                 r.Error = e.GetType().Name + ": " + e.Message;
                 return r;
             }
+        }
+
+        // A game assembly's module id as the game runs it: among the loaded assemblies by name, else loaded by name
+        // from the game's folder; empty when neither finds it (the comparison then reads the Managed folder, and an
+        // assembly that is not there makes its members missing).
+        private static Guid RunningMvid(string name)
+        {
+            foreach (Assembly a in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                if (a.GetName().Name == name) return a.ManifestModule.ModuleVersionId;
+            }
+            try
+            {
+                return Assembly.Load(name).ManifestModule.ModuleVersionId;
+            }
+            catch (Exception)
+            {
+                return Guid.Empty;
+            }
+        }
+
+        // The builds behind a verdict, for the log lines: each assembly's running id and the one the mod was built
+        // against.
+        internal static string Builds(Result r)
+        {
+            string s = $"Assembly-CSharp {r.GameMvid}, built against {r.AuditedGameMvid}; "
+                + $"LazyBearTechnology {r.LazyBearMvid}, built against {r.AuditedLazyBearMvid}";
+            foreach (KeyValuePair<string, Guid> kv in r.ModuleMvids)
+            {
+                s += $"; {kv.Key} {kv.Value}, built against {r.AuditedModuleMvids[kv.Key]}";
+            }
+            return s;
         }
 
         // The mod's own types behind each changed or missing item, from the manifest (so the cached verdict has them too).
@@ -137,7 +191,8 @@ namespace GK2Shared
             }
         }
 
-        // "<game mvid>|<lazybear mvid>|<manifest sha1>|<identical|changed|missing>|<checked>|<missing list>|<changed list>"
+        // "<game mvid>|<lazybear mvid>|<manifest sha1>[+<assembly>=<running id>...]|<identical|changed|missing>|
+        // <checked>|<missing list>|<changed list>"
         private static bool ReadCache(Result r, string manifestSha)
         {
             string s = cache?.Value;
@@ -187,7 +242,7 @@ namespace GK2Shared
         // as an unknown build there).
         internal static bool Apply(Result r, string modName, ManualLogSource log, string whenChanged, out string status)
         {
-            string builds = $"Assembly-CSharp {r.GameMvid}, built against {r.AuditedGameMvid}; LazyBearTechnology {r.LazyBearMvid}, built against {r.AuditedLazyBearMvid}";
+            string builds = Builds(r);
             switch (r.State)
             {
                 case State.Failed:

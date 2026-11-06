@@ -17,7 +17,8 @@ using Mono.Cecil.Cil;
 namespace GK2Shared
 {
     // One line of the manifest. Kind 'T': a type that must exist (Hash empty); 'M' a method, 'F' a field, each with
-    // the hash its body/shape had in the audited game. Scope: the assembly's name (Assembly-CSharp, LazyBearTechnology).
+    // the hash its body/shape had in the audited game. Scope: the assembly's name (Assembly-CSharp, LazyBearTechnology,
+    // AstarPathfindingProject).
     // UsedBy: the mod's own top-level types that use the member, comma-separated, after a tab (the Donkey API decides
     // per feature what a changed member means; the QOL mods ignore the column).
     internal struct DepEntry
@@ -34,10 +35,20 @@ namespace GK2Shared
     internal sealed class DepManifest
     {
         public const string ResourceName = "gk2deps.txt";
-        public static readonly string[] GameScopes = { "Assembly-CSharp", "LazyBearTechnology" };
+        // The game's assemblies whose members are listed. The A* pathfinding (AstarPathfindingProject) since game
+        // 1.011.1: the Donkey API queries its graphs directly, and that update recompiled it
+        // (GK2DonkeyAPI's docs/game-update-26404424.md).
+        public static readonly string[] GameScopes =
+        {
+            "Assembly-CSharp", "LazyBearTechnology", "AstarPathfindingProject"
+        };
 
         public Guid GameMvid;
         public Guid LazyBearMvid;
+        // The module ids of the other scopes the entries use ("module-mvid <scope> <guid>" lines, after the two above):
+        // none for a mod that uses only Assembly-CSharp and LazyBearTechnology, so its manifest reads as before.
+        public readonly SortedDictionary<string, Guid> ModuleMvids =
+            new SortedDictionary<string, Guid>(StringComparer.Ordinal);
         public readonly List<DepEntry> Entries = new List<DepEntry>();
 
         public string Text()
@@ -45,6 +56,10 @@ namespace GK2Shared
             StringBuilder sb = new StringBuilder();
             sb.Append("game-mvid ").Append(GameMvid.ToString()).Append('\n');
             sb.Append("lazybear-mvid ").Append(LazyBearMvid.ToString()).Append('\n');
+            foreach (KeyValuePair<string, Guid> kv in ModuleMvids)
+            {
+                sb.Append("module-mvid ").Append(kv.Key).Append(' ').Append(kv.Value.ToString()).Append('\n');
+            }
             int[] order = new int[Entries.Count];
             for (int i = 0; i < order.Length; i++)
             {
@@ -92,6 +107,17 @@ namespace GK2Shared
                 if (line.StartsWith("lazybear-mvid ", StringComparison.Ordinal))
                 {
                     m.LazyBearMvid = new Guid(line.Substring(14).Trim());
+                    continue;
+                }
+                if (line.StartsWith("module-mvid ", StringComparison.Ordinal))
+                {
+                    string rest = line.Substring(12).Trim();
+                    int sp = rest.IndexOf(' ');
+                    if (sp <= 0)
+                    {
+                        throw new FormatException("Bad manifest line: " + line);
+                    }
+                    m.ModuleMvids[rest.Substring(0, sp)] = new Guid(rest.Substring(sp + 1).Trim());
                     continue;
                 }
                 // "<kind> <scope> <hash|-> <key with spaces>[<tab><used by>]"

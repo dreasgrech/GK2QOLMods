@@ -7,7 +7,7 @@ var mod = ModuleDefinition.ReadModule(Path.Combine(repo, "src", "GK2OwnedCount",
 var game = ModuleDefinition.ReadModule(managed + "Assembly-CSharp.dll", rp);
 Console.WriteLine("Game MVID " + game.Mvid);
 int fails = 0, ok = 0;
-var gameScopes = new HashSet<string> { "Assembly-CSharp", "LazyBearTechnology" };
+var gameScopes = new HashSet<string> { "Assembly-CSharp", "LazyBearTechnology", "AstarPathfindingProject" };
 var seen = new HashSet<string>();
 foreach (var t in mod.GetTypes()) foreach (var m in t.Methods.Where(m => m.HasBody)) foreach (var ins in m.Body.Instructions) {
   if (ins.Operand is MemberReference mr && !(mr is TypeReference) && mr.DeclaringType != null && !(mr.DeclaringType is ArrayType) && gameScopes.Contains(mr.DeclaringType.Scope.Name)) {

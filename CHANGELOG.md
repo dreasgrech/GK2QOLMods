@@ -9,6 +9,12 @@ Owned Count 1.0.4, Tech Search 1.0.0. Earlier changes are in git history and eac
 
 ## Global Storage
 
+### Unreleased
+
+- Audited against game 1.011.1 (Steam build 26404424, 2026-11-03; `docs/game-update-26404424.md`): nothing the mod uses
+  changed. With `IncludeZombieOrderDelivery` on, `[F] Put` at an assistant-worked autocrafter now takes from
+  storage only what the station still lacks (the game's change: a delivery puts in only the missing count).
+
 ### 1.1.6 (2026-10-30)
 
 - Audited against game 1.011 (Steam build 26297960, 2026-10-30; `docs/game-update-26297960.md`): the one game member
@@ -21,6 +27,8 @@ Owned Count 1.0.4, Tech Search 1.0.0. Earlier changes are in git history and eac
 
 ### Unreleased
 
+- Audited against game 1.011.1 (Steam build 26404424, 2026-11-03; `docs/game-update-26404424.md`): nothing the mod uses
+  changed.
 - Audited against game 1.011 (Steam build 26297960, 2026-10-30; `docs/game-update-26297960.md`): nothing the mod uses
   changed; the build desk gained a Move row in every tab.
 - No LINQ (it allocates garbage in a Unity game, 2026-10-25): the dependency check at start (shared with every mod here) sorts and looks up without LINQ; the manifest it embeds is unchanged.
@@ -42,6 +50,8 @@ Owned Count 1.0.4, Tech Search 1.0.0. Earlier changes are in git history and eac
 
 ### Unreleased
 
+- Audited against game 1.011.1 (Steam build 26404424, 2026-11-03; `docs/game-update-26404424.md`): nothing the mod uses
+  changed.
 - Audited against game 1.011 (Steam build 26297960, 2026-10-30; `docs/game-update-26297960.md`): nothing the mod uses
   changed.
 - No LINQ (it allocates garbage in a Unity game, 2026-10-25): the dependency check at start (shared with every mod here) sorts and looks up without LINQ; the manifest it embeds is unchanged.
@@ -50,6 +60,8 @@ Owned Count 1.0.4, Tech Search 1.0.0. Earlier changes are in git history and eac
 
 ### Unreleased
 
+- Audited against game 1.011.1 (Steam build 26404424, 2026-11-03; `docs/game-update-26404424.md`): nothing the mod uses
+  changed.
 - **No more measurement line in the log** (2026-10-30): the first open of the search box in a session wrote a
   `[measure]` line with the page's and the box's rectangles to `BepInEx\LogOutput.log`, a developer measurement from
   2026-10-04 that 1.0.1 shipped ungated. Removed; the box's layout has used fixed defaults since then.
@@ -73,6 +85,10 @@ Nothing changes for players.
 
 ## Development
 
+- The shared dependency check (`src/Shared`, `tools/DepManifest`, byte-identical with GK2DonkeyAPI's) knows a third
+  scope since game 1.011.1, the A* pathfinding, and reads `module-mvid` lines for scopes other than the two named
+  ones (2026-11-03). These mods use none of it: their manifests are unchanged. `tests/GameDiff` compares every game
+  assembly whose bytes changed; the Owned Count and Tech Tree Search CecilScans resolve pathfinding references too.
 - No LINQ in any mod here from now on: `Directory.Build.targets` adds the banned-API analyzer to every netstandard2.1
   project (`BannedSymbols.txt`: `System.Linq.Enumerable`, `Queryable`, `ParallelEnumerable`), error RS0030 at the
   line; `tests/NoLinqScan` checks every built DLL and runs with the release scans. The .NET test tools may use it.

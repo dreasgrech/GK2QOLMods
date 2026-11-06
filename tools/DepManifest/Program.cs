@@ -31,8 +31,15 @@ switch (args[0])
         {
             Guid gameMvid = game("Assembly-CSharp").Mvid, lbtMvid = game("LazyBearTechnology").Mvid;
             bool recompiled = gameMvid != m.GameMvid || lbtMvid != m.LazyBearMvid;
+            string others = "";   // the manifest's other assemblies (module-mvid): the Donkey API's A* pathfinding
+            foreach (KeyValuePair<string, Guid> kv in m.ModuleMvids)
+            {
+                Guid now = game(kv.Key)?.Mvid ?? Guid.Empty;
+                recompiled |= now != kv.Value;
+                others += $"; {kv.Key} {kv.Value}, installed {now}";
+            }
             DepVerdict v = DepCompare.Compare(m, game);
-            Console.WriteLine($"{Path.GetFileName(dll)}: manifest for game {m.GameMvid} / {m.LazyBearMvid}; installed {gameMvid} / {lbtMvid} ({(recompiled ? "recompiled" : "the same build")}); {v.Checked} entries: {v.Kind}");
+            Console.WriteLine($"{Path.GetFileName(dll)}: manifest for game {m.GameMvid} / {m.LazyBearMvid}; installed {gameMvid} / {lbtMvid}{others} ({(recompiled ? "recompiled" : "the same build")}); {v.Checked} entries: {v.Kind}");
             foreach (string s in v.Missing) Console.WriteLine("  MISSING " + s);
             foreach (string s in v.Changed) Console.WriteLine("  CHANGED " + s);
             return v.Missing.Count > 0 ? 1 : v.Changed.Count > 0 ? 2 : 0;

@@ -77,7 +77,7 @@ patch, new features or settings the minor), in the mod's `Plugin.cs`, its csproj
 goes under the mod's **Unreleased** in `CHANGELOG.md` when it is made; at release that heading becomes the version and
 date, and the entry is the Nexus changelog text.
 
-The user commits and tags; the release notes name the game build (`26297960`, 1.011 as of 2026-10-30).
+The user commits and tags; the release notes name the game build (`26404424`, 1.011.1 as of 2026-11-03).
 
 ## 7. The zip and the Nexus page
 

@@ -14,8 +14,8 @@ it unlocks, and jump straight to it, on whichever tab it is.
 Enter (or a click) switches to the tech's tab, scrolls to it and frames its card. Hidden techs (the "?" cards) and
 tabs you haven't opened yet are never shown, so the search spoils nothing. Display only: nothing in the game changes.
 
-Version 1.0.1, built and audited against Steam game build 26297960, game 1.011 (Assembly-CSharp MVID `36326881-…`,
-LazyBearTechnology `6cd86a0b-…`). Design study: [`docs/tech-tree-search.md`](../../docs/tech-tree-search.md).
+Version 1.0.1, built and audited against Steam game build 26404424, game 1.011.1 (Assembly-CSharp MVID `7274b6c4-…`,
+LazyBearTechnology `46a6f4cd-…`; re-audit in `docs/game-update-26404424.md`). Design study: [`docs/tech-tree-search.md`](../../docs/tech-tree-search.md).
 
 - GUID: `dreas.gk2.techtreesearch` (until 1.0.1 the mod was GK2 Tech Search, `dreas.gk2.techsearch`: its settings file
   is copied to the new name on the first start, and if its `GK2TechSearch.dll` is still installed this one stays off and says so)

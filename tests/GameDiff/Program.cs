@@ -7,7 +7,10 @@ using Mono.Cecil.Cil;
 // two installs. Compares Assembly-CSharp and LazyBearTechnology member by member (fields and properties by
 // type, methods by a hash of their IL with operands resolved to names). Removed members named <...> are
 // compiler-generated (lambdas, closures, state machines) and get renumbered by any rebuild; the rest is what to
-// check against every patch target and every game member the mods use.
+// check against every patch target and every game member the mods use. Every other assembly in Managed whose bytes
+// changed is compared the same way after those two: the mods use some of them too (the API uses the A* pathfinding's
+// graphs and queries, AstarPathfindingProject), and the dependency manifest covers only the two
+// (docs/game-update-26404424.md).
 //
 // dotnet run -c Release -- <old game folder> [new game folder, default: GameDir] [output file, default: %TEMP%\gamediff.txt]
 if (args.Length < 1)
@@ -23,7 +26,13 @@ var sb = new StringBuilder();
 sb.AppendLine("old: " + oldDir);
 sb.AppendLine("new: " + newDir);
 
-foreach (var asm in new[] { "Assembly-CSharp.dll", "LazyBearTechnology.dll" })
+var pinned = new[] { "Assembly-CSharp.dll", "LazyBearTechnology.dll" };
+var others = Directory.GetFiles(oldDir, "*.dll").Select(Path.GetFileName).OfType<string>()
+    .Where(n => !pinned.Contains(n) && File.Exists(newDir + n)
+        && !File.ReadAllBytes(oldDir + n).AsSpan().SequenceEqual(File.ReadAllBytes(newDir + n)))
+    .OrderBy(n => n, StringComparer.Ordinal).ToList();
+sb.AppendLine("other changed assemblies: " + (others.Count == 0 ? "none" : string.Join(", ", others)));
+foreach (var asm in pinned.Concat(others))
 {
     var a = Index(oldDir + asm, out Guid oldMvid);
     var b = Index(newDir + asm, out Guid newMvid);

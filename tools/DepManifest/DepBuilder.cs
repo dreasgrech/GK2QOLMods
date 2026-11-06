@@ -100,6 +100,12 @@ internal static class DepBuilder
             DepEntry e = kv.Value;
             e.UsedBy = string.Join(",", usedBy[kv.Key]);
             m.Entries.Add(e);
+            // A scope other than the two named above: its module id goes into the manifest (module-mvid), so the mods'
+            // fast path and cache see that assembly change too.
+            if (e.Scope != "Assembly-CSharp" && e.Scope != "LazyBearTechnology" && !m.ModuleMvids.ContainsKey(e.Scope))
+            {
+                m.ModuleMvids[e.Scope] = gameModule(e.Scope).Mvid;
+            }
         }
         return m;
     }
