@@ -1,9 +1,9 @@
 #!/bin/bash
-# The release build (docs/release-checklist.md, section 3): the five mods built with -p:ForDist=true (no debug
+# The release build (docs/release-checklist.md, section 3): the mods built with -p:ForDist=true (no debug
 # directory) and -p:Deploy=false (the game may be running), copied into dist/, then tools/check-dist.py. Stops at the
 # first failure. Build output: release/logs/build-dist.log.
 #
-#   bash tools/build-dist.sh                 # all five
+#   bash tools/build-dist.sh                 # all of them
 #   bash tools/build-dist.sh GK2TechTreeSearch   # only these: a release of one mod leaves the others' dist DLLs as released
 #
 # Afterwards: bash tools/release-scans.sh, then a dev build with the game closed (bin/ holds whichever was built last).
@@ -14,7 +14,7 @@ mkdir -p "$REPO/release/logs"
 : > "$LOG"
 
 MODS=("$@")
-[ ${#MODS[@]} -eq 0 ] && MODS=(GK2GlobalStorage GK2BuiltCount GK2OwnedCount GK2TechTreeSearch)  # Move Building retired 2026-10-30 (game 1.011 moves buildings itself)
+[ ${#MODS[@]} -eq 0 ] && MODS=(GK2GlobalStorage GK2BuiltCount GK2OwnedCount GK2TechTreeSearch GK2EventDecorations)  # Move Building retired 2026-10-30 (game 1.011 moves buildings itself)
 for m in "${MODS[@]}"; do
   [ -f "$REPO/src/$m/$m.csproj" ] || { echo "no such mod: src/$m/$m.csproj"; exit 1; }
 done
@@ -34,6 +34,7 @@ for m in "${MODS[@]}"; do
   cp "$REPO/src/$m/bin/Release/netstandard2.1/$m.dll" "$REPO/dist/$m.dll" || exit 1
   echo "   built, 0 warnings, copied to dist/"
 done
-echo "== check-dist"
-python "$REPO/tools/check-dist.py" || { echo "check-dist FAILED"; exit 1; }
+echo "== check-dist ${MODS[*]}"
+# the built mods only: another mod's dist may wait for its re-audit (Owned Count 1.0.4 against game 1.012, 2026-11-13)
+python "$REPO/tools/check-dist.py" "${MODS[@]}" || { echo "check-dist FAILED"; exit 1; }
 echo "DIST BUILT"

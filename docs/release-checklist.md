@@ -21,9 +21,11 @@ What to do before `dist/` goes public, in order. Written 2026-10-13 from the fir
 `bash tools/release-scans.sh` (after the release build of section 3: the manifest checks read its DLLs) runs them
 all and lists each as ok or FAIL, exit 1 on any failure, the output in `release/logs/release-scans.log`: in `tests/`
 `CecilScan-GlobalStorage`, `StaticScan-GlobalStorage`, `CecilScan-BuiltCount`,
-`CecilScan-OwnedCount`, `CecilScan-TechTreeSearch`, `FrameworkScan`, `HarmonyHarness-BuiltCount` (built, then run), each
+`CecilScan-OwnedCount`, `CecilScan-TechTreeSearch`, `CecilScan-EventDecorations`, `FrameworkScan`, `HarmonyHarness-BuiltCount` (built, then run), each
 mod's dependency manifest verified against the installed game (`tools/DepManifest`), and `check-dist.py`. All must end
-green.
+green. `bash tools/release-scans.sh <Mod>` limits the two manifest checks (bin and dist) to that mod, for a release of
+one mod while another's dist waits for its re-audit (the code scans still run over every mod); `check-dist.py` takes
+the same mod list (2026-11-13: Owned Count's 1.0.4 dist fails against 1.012 until its own release).
 
 ## 3. The release build
 
@@ -34,6 +36,8 @@ from `bin/`, not from the game folder.
 bash tools/build-dist.sh      # the five DLLs into dist/, then check-dist.py
 bash tools/release-scans.sh   # section 2
 ```
+
+Both take a mod list (`bash tools/build-dist.sh GK2TechTreeSearch`): `build-dist.sh` then checks only the mods it built.
 
 `build-dist.sh` builds each with `dotnet build -c Release --no-incremental -p:ForDist=true -p:Deploy=false`, stops on
 a failed build or any compiler warning, copies the DLLs into `dist/` and runs `check-dist.py` (build output in
@@ -77,7 +81,7 @@ patch, new features or settings the minor), in the mod's `Plugin.cs`, its csproj
 goes under the mod's **Unreleased** in `CHANGELOG.md` when it is made; at release that heading becomes the version and
 date, and the entry is the Nexus changelog text.
 
-The user commits and tags; the release notes name the game build (`26404424`, 1.011.1 as of 2026-11-03).
+The user commits and tags; the release notes name the game build (`26624074`, 1.012.7 as of 2026-11-13).
 
 ## 7. The zip and the Nexus page
 
@@ -99,3 +103,28 @@ The page text is `media/GK2_<Mod>_Nexus.txt` (BBCode), its pictures in `media/<m
 1300x372; boxes in `media/README.md`, cut with `tools/crop-shot.py`), hotlinked from the raw GitHub URL, so they
 show only once `media/` is pushed. The first run of section 5 is done with the zip extracted into the game folder
 (the loose dev DLL moved out first: two copies of a plugin would load twice).
+
+**The Steam Workshop** (Tech Tree Search 1.0.2 the first, 2026-11-13; the facts in `docs/mods-window-and-workshop.md`).
+The same run of `make-release-zip.py` stages `workshop\<Mod>\` (not in git): the plugin folder as the zip holds it,
+`modinfo.json` (id = the plugin GUID, name, version: the game's Mods window reads them), and the uploader's own files,
+which it never sends: `Thumbnail.jpg` from `media/workshop/<Mod>/` (`tools/workshop-thumbnail.py <shot> <box> <Mod>`:
+a square cut, 1024 wide, under 1 MB), `_description.bbcode` from `media/GK2_<Mod>_Workshop.txt` (Steam's BBCode: h1-h3,
+b, i, url, img, list, olist, hr, code; under 8,000 bytes or the whole upload fails) and `_changenote.txt` from
+`docs/nexus/<name>-<version>-workshop-changenote.txt` (else the Nexus note `docs/nexus/<name>-<version>-changelog.md`;
+the Nexus note never links to Steam, the user 2026-10-30). `--no-zip` stages without a new zip, `--no-workshop` zips
+only. The upload is the user's: the game launched through Steam (otherwise `SteamAPI_Init() failed` and nothing opens),
+`"workshopCreatorMode": true` in `%USERPROFILE%\AppData\LocalLow\Lazy Bear Games\Graveyard Keeper 2\Mods\workshop.json`,
+Shift+F11 in the main menu, "Create new workshop item", Type **Mod**, the linked folder `workshop\<Mod>`; a new item
+starts Unlisted (set public on its Steam page; later uploads keep the visibility); no required items for these mods.
+The gallery pictures (`media/workshop/<Mod>/gallery/`, `tools/workshop-gallery.py <shot> <box> <Mod> <name>`: the box
+at the screenshot's own pixels, under 1 MB) go up by hand on the item's page. The DLL is the same bytes on both
+channels, so a Nexus release and a Workshop upload are one version.
+
+Run 2026-11-13 for Tech Tree Search 1.0.2 (game 1.012.7, the first Workshop item; the Nexus 1.0.1 DLL was identical
+against 1.012, but its source had moved: the ungated `[measure]` log line removed 2026-10-30): versions raised in
+`Plugin.cs`, the csproj and the READMEs, CHANGELOG's Unreleased closed; `build-dist.sh GK2TechTreeSearch` 0 warnings;
+`release-scans.sh GK2TechTreeSearch` 13 of 13 green; `make-release-zip.py GK2TechTreeSearch`:
+`GK2-Tech-Tree-Search-1.0.2.zip` 24,619 bytes (the DLL 54,784 bytes, byte-identical in `dist/`, the zip and
+`workshop\GK2TechTreeSearch\`; a second `build-dist.sh` gave the same bytes; the version and no `[measure]` inside it);
+the preview from the Steam shot of 2026-10-29 23:52 (box 1280,307-1920,947), three gallery cuts; the dist DLL put
+into the game over the dev build for the user's hand check; the uploads the user's.

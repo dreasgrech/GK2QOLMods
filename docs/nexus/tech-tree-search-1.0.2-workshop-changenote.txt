@@ -1,0 +1,6 @@
+GK2 Tech Tree Search 1.0.2
+
+- The first version on the Steam Workshop: subscribe, and the game installs and updates it itself.
+- Built for game 1.012. Nothing changes in how the mod works.
+- No more measurement line in the log: the first search of a session wrote a developer line to BepInEx\LogOutput.log.
+- Installed from Nexus Mods before? Delete the folder GK2TechTreeSearch from BepInEx\plugins before you subscribe. Your settings stay.

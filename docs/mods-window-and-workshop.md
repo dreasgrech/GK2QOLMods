@@ -13,7 +13,8 @@ What applies here:
   on the next launch (also on GOG and Epic). It shows the folder name and no version until the zip carries a
   `modinfo.json` (`schemaVersion` 1, `id` = plugin GUID, `name`, `version` mirroring `Plugin.cs`); that file
   belongs in `tools/make-release-zip.py`, which already checks the version.
-- Workshop items: one per mod (Tech Tree Search, Owned Count, Built Count; Global Storage stays GitHub-only
+- Workshop items (Tech Tree Search 1.0.2 the first, 2026-11-13: `tools/make-release-zip.py` stages `workshop\<Mod>\`,
+  the steps in `docs/release-checklist.md` section 7): one per mod (Tech Tree Search, Owned Count, Built Count; Global Storage stays GitHub-only
   unless the user decides otherwise), same folder layout, uploaded with the game's Shift+F11 creator.
 - Disable in the window deletes the copied DLL; on the dev machine that is the deployed build (a rebuild
   restores it).

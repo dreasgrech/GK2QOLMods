@@ -1,5 +1,9 @@
 """Checks the release DLLs in dist/ without the game: run `python tools/check-dist.py` from the repo root.
 
+    python tools/check-dist.py                     # every DLL in dist/
+    python tools/check-dist.py GK2TechTreeSearch   # only these: a release of one mod while another's dist waits for its
+                                                   # re-audit (Owned Count's 1.0.4 dist against game 1.012, 2026-11-13)
+
 A release build (-p:ForDist=true) must carry no debug directory (its PDB path would hold this machine's user folder)
 and no path into this machine, and its dependency manifest (the gk2deps.txt resource, docs/dependency-check.md) must
 find every game member it names in the installed game, unchanged: a dist whose members changed or vanished needs a
@@ -18,8 +22,15 @@ MANAGED = os.path.join(GAME, "GraveyardKeeper2_Data", "Managed")
 if not os.path.exists(TOOL):
     subprocess.run(["dotnet", "build", "-c", "Release", "-nologo", "-v", "q", os.path.join(REPO, "tools", "DepManifest")], check=True)
 
+only = sys.argv[1:]
+paths = sorted(glob.glob(os.path.join(REPO, "dist", "*.dll")))
+if only:
+    paths = [p for p in paths if os.path.basename(p)[:-4] in only]
+    missing = [m for m in only if os.path.join(REPO, "dist", m + ".dll") not in paths]
+    if missing:
+        sys.exit("no such dist DLL: " + ", ".join(missing))
 bad = 0
-for path in sorted(glob.glob(os.path.join(REPO, "dist", "*.dll"))):
+for path in paths:
     name = os.path.basename(path)
     b = open(path, "rb").read()
     findings = []

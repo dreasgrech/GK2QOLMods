@@ -3,7 +3,10 @@
 # Run after tools/build-dist.sh: the manifest checks read the release DLLs in bin/. Each check's output goes to
 # release/logs/release-scans.log; the summary lists each with its exit code. Exits 1 if any check failed.
 #
-#   bash tools/release-scans.sh
+#   bash tools/release-scans.sh                     # every mod
+#   bash tools/release-scans.sh GK2TechTreeSearch   # the manifest checks (bin/ and dist/) of these mods only: a release of
+#                                                   # one mod while another's dist waits for its re-audit (2026-11-13); the
+#                                                   # code scans still run over every mod
 set -u
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 LOG="$REPO/release/logs/release-scans.log"
@@ -26,15 +29,18 @@ run() { # folder, label, command...
 }
 
 T="$REPO/tests"
-for t in CecilScan-BuiltCount CecilScan-GlobalStorage CecilScan-OwnedCount CecilScan-TechTreeSearch StaticScan-GlobalStorage FrameworkScan NoLinqScan; do
+for t in CecilScan-BuiltCount CecilScan-GlobalStorage CecilScan-OwnedCount CecilScan-TechTreeSearch CecilScan-EventDecorations StaticScan-GlobalStorage FrameworkScan NoLinqScan; do
   run "$T/$t" "$t" dotnet run -c Release
 done
 run "$T/HarmonyHarness-BuiltCount" "HarmonyHarness build" dotnet build -c Release
 run "$T/HarmonyHarness-BuiltCount" "HarmonyHarness run" ./bin/Release/net48/HarmonyHarness-BuiltCount.exe
 run "$REPO/tools/DepManifest" "DepManifest build" dotnet build -c Release
-for m in GK2BuiltCount GK2GlobalStorage GK2OwnedCount GK2TechTreeSearch; do  # Move Building retired 2026-10-30
+MODS=("$@")
+[ ${#MODS[@]} -eq 0 ] && MODS=(GK2BuiltCount GK2GlobalStorage GK2OwnedCount GK2TechTreeSearch GK2EventDecorations)  # Move Building retired 2026-10-30
+for m in "${MODS[@]}"; do
+  [ -f "$REPO/src/$m/$m.csproj" ] || { echo "no such mod: src/$m/$m.csproj"; exit 1; }
   run "$REPO" "DepManifest verify $m.dll" dotnet tools/DepManifest/bin/Release/net8.0/DepManifest.dll verify "src/$m/bin/Release/netstandard2.1/$m.dll" "$MANAGED"
 done
-run "$REPO" "check-dist" python tools/check-dist.py
+run "$REPO" "check-dist ${MODS[*]}" python tools/check-dist.py "${MODS[@]}"
 echo "$((total - fails)) of $total checks green (log: $LOG)"
 [ $fails -eq 0 ] || exit 1

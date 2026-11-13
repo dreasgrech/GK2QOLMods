@@ -11,6 +11,9 @@ Owned Count 1.0.4, Tech Search 1.0.0. Earlier changes are in git history and eac
 
 ### Unreleased
 
+- Audited against game 1.012.7 (Steam build 26624074, 2026-11-13; `docs/game-update-26624074.md`): nothing the mod uses
+  changed.
+
 - Audited against game 1.011.1 (Steam build 26404424, 2026-11-03; `docs/game-update-26404424.md`): nothing the mod uses
   changed. With `IncludeZombieOrderDelivery` on, `[F] Put` at an assistant-worked autocrafter now takes from
   storage only what the station still lacks (the game's change: a delivery puts in only the missing count).
@@ -26,6 +29,9 @@ Owned Count 1.0.4, Tech Search 1.0.0. Earlier changes are in git history and eac
 ## Built Count
 
 ### Unreleased
+
+- Audited against game 1.012.7 (Steam build 26624074, 2026-11-13; `docs/game-update-26624074.md`): nothing the mod uses
+  changed.
 
 - Audited against game 1.011.1 (Steam build 26404424, 2026-11-03; `docs/game-update-26404424.md`): nothing the mod uses
   changed.
@@ -50,6 +56,11 @@ Owned Count 1.0.4, Tech Search 1.0.0. Earlier changes are in git history and eac
 
 ### Unreleased
 
+- Audited against game 1.012.7 (Steam build 26624074, 2026-11-13; `docs/game-update-26624074.md`): the one game member
+  the mod patches, `UITooltip.AddItemWidgets`, has new code (the sermon branch's early return became an `if`, and a line
+  for the PR machine's items is added at the end). The postfix still fits; the mod runs on it with a warning line at
+  start until a build with the new manifest.
+
 - Audited against game 1.011.1 (Steam build 26404424, 2026-11-03; `docs/game-update-26404424.md`): nothing the mod uses
   changed.
 - Audited against game 1.011 (Steam build 26297960, 2026-10-30; `docs/game-update-26297960.md`): nothing the mod uses
@@ -58,7 +69,19 @@ Owned Count 1.0.4, Tech Search 1.0.0. Earlier changes are in git history and eac
 
 ## Tech Tree Search
 
-### Unreleased
+### 1.0.2 (2026-11-13)
+
+Built for game 1.012.7, on Nexus Mods and, for the first time, the Steam Workshop (the same DLL on both: the Workshop
+item adds `modinfo.json` for the game's Mods window). For players: the measurement line is gone; nothing else changes.
+
+- Release tooling for the Workshop (2026-11-13): `tools/make-release-zip.py` also stages `workshop/<Mod>/` (not in git)
+  for the game's Shift+F11 creator (`modinfo.json`, the plugin folder, `Thumbnail.jpg` from `media/workshop/<Mod>/`,
+  `_description.bbcode` from `media/GK2_<Mod>_Workshop.txt`, `_changenote.txt` from `docs/nexus/`); `--no-zip` and
+  `--no-workshop`. `tools/workshop-thumbnail.py` and `tools/workshop-gallery.py` cut the item's pictures from a
+  screenshot. `tools/check-dist.py` and `tools/release-scans.sh` take a mod list, so one mod releases while another's
+  dist waits for its re-audit (Owned Count 1.0.4 against 1.012); `make-release-zip.py` passes its mods on.
+- Audited against game 1.012.7 (Steam build 26624074, 2026-11-13; `docs/game-update-26624074.md`): nothing the mod uses
+  changed.
 
 - Audited against game 1.011.1 (Steam build 26404424, 2026-11-03; `docs/game-update-26404424.md`): nothing the mod uses
   changed.
@@ -83,6 +106,17 @@ Nothing changes for players.
 
 - First release, on GitHub (`dist/`): the search box, searching what techs unlock, the jump, the Mods-menu rows with GK2 Mod Framework.
 
+## Event Decorations
+
+### Unreleased (1.0.0)
+
+- New mod: choose when the game's temporary events show. Halloween gets a mode: Auto (the game's dates, 24 October
+  to 7 November), On (every day) or Off (never). It covers the decorations, the ghost's night walks and the
+  Halloween zombie head. The decorations change from the next save load.
+- With Halloween off, a ghost the game left standing in the village is sent home.
+- An event a later game update adds gets its own Auto / On / Off setting by itself.
+- Optional GK2 Mod Framework integration (the settings in the game's Mods menu).
+
 ## Development
 
 - The shared dependency check (`src/Shared`, `tools/DepManifest`, byte-identical with GK2DonkeyAPI's) knows a third
@@ -92,3 +126,6 @@ Nothing changes for players.
 - No LINQ in any mod here from now on: `Directory.Build.targets` adds the banned-API analyzer to every netstandard2.1
   project (`BannedSymbols.txt`: `System.Linq.Enumerable`, `Queryable`, `ParallelEnumerable`), error RS0030 at the
   line; `tests/NoLinqScan` checks every built DLL and runs with the release scans. The .NET test tools may use it.
+- `tools/game-bundles.py` (2026-11-11): read-only UnityPy reader for the game's addressable bundles and loose data
+  files (container index, word search, visual-script graphs, scene content parts and configs, script classes,
+  GameBalance text). Written for the seasonal-events investigation, `docs/seasonal-events.md`; nothing built yet.

@@ -17,3 +17,6 @@ Thumbs.db
 # The release zips in release/ ARE kept in git (2026-10-30: in the GK2DonkeyAPI repo public zips were overwritten
 # and lost while release/ was ignored); only the logs of the build and scan scripts are not
 release/logs/
+
+# The Steam Workshop staging folders written by tools/make-release-zip.py (the uploader reads them; the zips in release/ are the record)
+/workshop/

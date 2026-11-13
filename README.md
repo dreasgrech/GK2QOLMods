@@ -9,7 +9,8 @@ so you can install any subset.
 | [Built Count](#built-count) | 1.0.6 | Build menus show how many of each building you already have in that area. |
 | [Move Building](#move-building) | retired | Picked up a built building and put it down elsewhere; the game does it itself since 1.011. |
 | [Owned Count](#owned-count) | 1.0.4 | Item tooltips show how many of that item you own across inventory and every chest. |
-| [Tech Tree Search](#tech-tree-search) | 1.0.1 | A search box on the Tech Tree page: find a tech by name, or by what it unlocks, and jump to it. |
+| [Tech Tree Search](#tech-tree-search) | 1.0.2 | A search box on the Tech Tree page: find a tech by name, or by what it unlocks, and jump to it. |
+| [Event Decorations](#event-decorations) | unreleased | Choose when the game's temporary events (Halloween) show: by its dates, every day, or never. |
 
 **Looking for the donkey?** The rideable donkey and cart (GK2 Saddle Up, and the GK2 Donkey API it's built on) moved
 to their own repo on 2026-10-02, with their history: [GK2DonkeyAPI](https://github.com/dreasgrech/GK2DonkeyAPI). Until
@@ -150,6 +151,21 @@ scrolls to the tech and frames its card. Ctrl+F puts the cursor in the box.
 - Display only: nothing in the game changes, nothing is written. Jumping is the game's own tab switch.
 - Settings: on/off, search unlocks too, number of results, the key, the box's place and size.
 - Optional: with [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) installed, its main settings
+  also appear in the game's Mods menu. The same DLL works without it.
+
+### Event Decorations
+
+`GK2EventDecorations.dll` · GUID `dreas.gk2.eventdecorations` · [source and README](src/GK2EventDecorations/)
+
+The game shows its temporary events by the PC's date (Halloween: 24 October to 7 November). Each event gets a mode:
+`Auto` (the game's dates), `On` (every day) or `Off` (never). Halloween's mode covers its decorations, the ghost's
+night walks in the village and the Halloween zombie head.
+
+- The decorations are placed while a save loads: after a change, load your save again.
+- Nothing is written into the save; removing the mod returns every event to its dates.
+- With the event off, a ghost the game left standing in the village is sent home.
+- An event a later game update adds gets the same `Auto` / `On` / `Off` row by itself.
+- Optional: with [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) installed, its settings
   also appear in the game's Mods menu. The same DLL works without it.
 
 ## Safety

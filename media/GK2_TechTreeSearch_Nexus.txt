@@ -65,7 +65,7 @@ Otherwise (an older build), install the [url=https://www.nexusmods.com/site/mods
 [/list]
 [size=3][b]Safe for your save.[/b] The mod writes nothing: no save data, no game rule. Saves made with it load without it.
 
-[b]Game updates.[/b] Built for Steam game v1.010. After a game update the mod checks the game's code at start: if the game removed something it uses, the mod stops and the log says so; if the game only changed something, it runs and the log warns.
+[b]Game updates.[/b] Built for game v1.012.7. After a game update the mod checks the game's code at start: if the game removed something it uses, the mod stops and the log says so; if the game only changed something, it runs and the log warns.
 
 [b]Uninstall.[/b] Delete the folder [b]GK2TechTreeSearch[/b] from [i]BepInEx\plugins[/i].
 

@@ -1,0 +1,73 @@
+[h1]GK2 Tech Tree Search[/h1]
+A search box on the Tech Tree page of Graveyard Keeper 2.
+
+Type part of a tech's name, or of something it unlocks, and jump straight to it, on whichever tab it is.
+
+[img]https://raw.githubusercontent.com/dreasgrech/GK2QOLMods/main/media/tech-tree-search/search-iron.png?v=1[/img]
+
+[hr][/hr]
+[h2]What you get[/h2]
+
+[h3]Find a tech by name[/h3]
+The box sits at the top right of the Tech Tree page, in the strip right of the tab buttons. Type, and the matches are listed under it with the tab they are on. Several words narrow it down ([i]garden ii[/i]). Techs you have already researched are listed in green.
+
+[img]https://raw.githubusercontent.com/dreasgrech/GK2QOLMods/main/media/tech-tree-search/search-results.png?v=1[/img]
+
+[h3]Or by what it unlocks[/h3]
+Looking for the tech that gives you an item, a building or a perk? Type its name: a tech that matched through something on its card is listed with that thing's name after the tab, so you see why it is there. Name matches come first, then the unlock matches, each in tab order.
+
+[img]https://raw.githubusercontent.com/dreasgrech/GK2QOLMods/main/media/tech-tree-search/unlock-empty-bottle.png?v=1[/img]
+
+[h3]Jump straight to it[/h3]
+[b]Enter[/b] or a click on a row switches to the tech's tab, scrolls to it and frames its card. It is the game's own tab switch, the one a tab button makes.
+
+[h3]No spoilers[/h3]
+Hidden techs (the "?" cards) and tabs you have not opened yet are never listed. The search shows you only what the Tech Tree already shows you.
+
+[h3]Your keys stay yours[/h3]
+While the box has the cursor, the game's keys are paused, the same way the game's own bug report window does it: letters do not open the map or the inventory, and the keeper does not walk off.
+
+[h3]Display only[/h3]
+Nothing in the game changes and nothing is written. Your save is never touched, and a save made with the mod loads fine without it.
+
+[hr][/hr]
+[h2]Keys[/h2]
+
+[list]
+[*][b]Ctrl+F[/b]: puts the cursor in the box while the Tech Tree page is open (or click the box).
+[*][b]Up / Down[/b]: pick a result.
+[*][b]Enter[/b]: jump to the picked tech (a click on a row does the same).
+[*][b]Esc[/b]: leave the box; the next Esc closes the window as usual.
+[/list]
+With a gamepad active the box is hidden: there is no text entry on a pad.
+
+[hr][/hr]
+[h2]Settings[/h2]
+
+With [url=https://www.nexusmods.com/graveyardkeeper2/mods/42]GK2 Mod Framework[/url] installed, the mod shows in the game's [b]Mods[/b] menu (main menu and ESC menu): a Status row, "Search box on the Tech Tree", "Also search what techs unlock" and "Key to start a search". The framework is optional; the same file works without it.
+
+[img]https://raw.githubusercontent.com/dreasgrech/GK2QOLMods/main/media/tech-tree-search/settings-mods-menu.png?v=1[/img]
+
+Everything, with or without the framework, is in [i]BepInEx\config\dreas.gk2.techtreesearch.cfg[/i] (written on the first start; change it with the game closed): the box on or off, searching unlocks, the number of rows in the list, the key, and the box's place and size on the page.
+
+[hr][/hr]
+[h2]Install[/h2]
+
+[olist]
+[*]Subscribe. The game installs the mod itself: on the next start the main menu's [b]Mods[/b] window lists GK2 Tech Tree Search. Nothing to copy, no BepInEx to install (the game ships it since 1.011).
+[*]Start the game and open the Tech Tree (Character window, Tech Tree tab). The box is at the top right.
+[/olist]
+[b]Steam Deck and Linux (Proton).[/b] Set the game's launch options to [code]WINEDLLOVERRIDES="winhttp=n,b" %command%[/code] so BepInEx loads.
+
+[b]Installed from Nexus Mods before?[/b] Delete the folder [b]GK2TechTreeSearch[/b] from [i]BepInEx\plugins[/i] before you subscribe (and an older loose [i]GK2TechSearch.dll[/i], the mod's name until 1.0.1): the game must own one copy. Your settings stay.
+
+[b]Safe for your save.[/b] The mod writes nothing: no save data, no game rule. Saves made with it load without it.
+
+[b]Game updates.[/b] Built for game 1.012.7. After a game update the mod checks the game's code at start: if the game removed something it uses, the mod stops and the log says so; if the game only changed something, it runs and the log warns.
+
+[b]Unsubscribe.[/b] The game removes the mod's file on the next start.
+
+[b]Found a bug?[/b] Post it in the Discussions here and attach [i]BepInEx\LogOutput.log[/i] from the game folder right after the problem (each start rewrites it).
+
+[hr][/hr]
+A BepInEx plugin.
