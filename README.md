@@ -137,7 +137,7 @@ from. Graded items (the starred ones, e.g. Bones of different skull grades) also
 ### Tech Tree Search
 
 `GK2TechTreeSearch.dll` · GUID `dreas.gk2.techtreesearch` · [source and README](src/GK2TechTreeSearch/) ·
-[on Nexus Mods](https://www.nexusmods.com/graveyardkeeper2/mods/421)
+[on Nexus Mods](https://www.nexusmods.com/graveyardkeeper2/mods/421) · [on the Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3839100125)
 
 A search box at the top right of the Tech Tree page. Type part of a tech's name, or of something it unlocks (an item,
 building or perk on its card), and the matches are listed with their tab; Enter or a click switches to that tab,

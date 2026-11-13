@@ -17,14 +17,14 @@ same spot is cut the same way.
 The Steam Workshop items' pictures, one folder per mod (`tools/workshop-thumbnail.py`, `tools/workshop-gallery.py`;
 the Workshop steps in `docs/release-checklist.md`, section 7). `Thumbnail.jpg` is the item's preview, square (Steam's
 tiles letterbox anything else), 1024 wide, under 1 MB; `gallery/*.jpg` are the page's cuts at the screenshot's own
-pixels, uploaded by hand on the item's page.
+pixels, uploaded by hand on the item's page. No framework picture on the Workshop: GK2 Mod Framework is a Nexus-only
+mod, so the Workshop texts never mention it (the user, 2026-11-13).
 
 | File | Shows | Source |
 |---|---|---|
 | `GK2TechTreeSearch/Thumbnail.jpg` | the box with "Iron" and the list, the tab icons above (2026-11-13) | the screenshot of 2026-10-29 23:52:37, box 1280,307-1920,947 (640x640), scaled to 1024x1024 |
 | `GK2TechTreeSearch/gallery/search-iron.jpg` | as `search-iron.png`, full size | the same box, 1292x838 |
 | `GK2TechTreeSearch/gallery/unlock-empty-bottle.jpg` | as `unlock-empty-bottle.png`, full size | the same box, 1292x838 |
-| `GK2TechTreeSearch/gallery/settings-mods-menu.jpg` | as `settings-mods-menu.png`, full size | the same box, 1420x697 |
 
 ## `tech-tree-search/`
 

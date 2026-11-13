@@ -44,11 +44,7 @@ With a gamepad active the box is hidden: there is no text entry on a pad.
 [hr][/hr]
 [h2]Settings[/h2]
 
-With [url=https://www.nexusmods.com/graveyardkeeper2/mods/42]GK2 Mod Framework[/url] installed, the mod shows in the game's [b]Mods[/b] menu (main menu and ESC menu): a Status row, "Search box on the Tech Tree", "Also search what techs unlock" and "Key to start a search". The framework is optional; the same file works without it.
-
-[img]https://raw.githubusercontent.com/dreasgrech/GK2QOLMods/main/media/tech-tree-search/settings-mods-menu.png?v=1[/img]
-
-Everything, with or without the framework, is in [i]BepInEx\config\dreas.gk2.techtreesearch.cfg[/i] (written on the first start; change it with the game closed): the box on or off, searching unlocks, the number of rows in the list, the key, and the box's place and size on the page.
+Everything is in [i]BepInEx\config\dreas.gk2.techtreesearch.cfg[/i] in the game folder (written on the first start; change it with the game closed): the box on or off, searching unlocks, the number of rows in the list, the key, and the box's place and size on the page.
 
 [hr][/hr]
 [h2]Install[/h2]

@@ -127,4 +127,7 @@ against 1.012, but its source had moved: the ungated `[measure]` log line remove
 `GK2-Tech-Tree-Search-1.0.2.zip` 24,619 bytes (the DLL 54,784 bytes, byte-identical in `dist/`, the zip and
 `workshop\GK2TechTreeSearch\`; a second `build-dist.sh` gave the same bytes; the version and no `[measure]` inside it);
 the preview from the Steam shot of 2026-10-29 23:52 (box 1280,307-1920,947), three gallery cuts; the dist DLL put
-into the game over the dev build for the user's hand check; the uploads the user's.
+into the game over the dev build for the user's hand check (log clean, no `[measure]` line). Uploaded by the user the same evening:
+the Workshop item 3839100125 ("Upload complete" in Player.log; the page: 54.901 KB = the DLL plus `modinfo.json`, the
+description without the framework section, which Steam players cannot have, the framework being Nexus-only); the Nexus
+1.0.2 upload on 421 done by the user the same evening (the page refuses automated reads; the user's word).
