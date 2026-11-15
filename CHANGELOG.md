@@ -82,6 +82,9 @@ Owned Count 1.0.4, Tech Search 1.0.0. Earlier changes are in git history and eac
   the sound filter, MainGame): under this mod's one policy a game update that changes any of them is a warning at
   start, or a stop with `Safety.StopOnChangedGameCode`. The Mods menu (GK2 Mod Framework) keeps its own rows; the
   framework's Settings button is not pointed at the window (the API does that; a decision for later).
+- The window's key row no longer says Ctrl + F "Clashes with GK2 Donkey API: DescendKey (Left Ctrl)" (seen at the
+  first open, 2026-11-15): the library takes another mod's key on a modifier as held, and the plugin says it reads
+  its key with BepInEx's exact test (`UiOwner.KeysExact`), so only an identical combination elsewhere is a clash.
 
 ### 1.0.2 (2026-11-13)
 

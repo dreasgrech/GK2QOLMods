@@ -64,6 +64,7 @@ namespace GK2TechTreeSearch
             UiOwner.Log = Log;
             UiOwner.InGame = InGame;
             UiOwner.StatusText = StatusShown;
+            UiOwner.KeysExact = true; // the key is read with BepInEx's IsDown (SearchBox): the exact combination, no other key held
             CarryOverOldConfig();
             BindConfig();
             if (Chainloader.PluginInfos.ContainsKey(OldGuid))
