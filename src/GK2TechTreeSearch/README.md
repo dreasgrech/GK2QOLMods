@@ -33,6 +33,14 @@ LazyBearTechnology `53b976b3-…`; re-audit in `docs/game-update-26624074.md`). 
   after the tab name.
 - With a gamepad active the box is hidden (there's no text entry on a pad).
 
+## Settings window
+
+The game's **Settings** window (main menu or ESC) has a **GK2 Tech Tree Search** button: an options window in the
+game's own look with a Status line and the settings below (the search box on or off, searching what techs unlock, the
+number of results, the key, stopping on changed game code), with descriptions and a Defaults button; the gamepad works
+there too. A change is written to the cfg and applies the next time the Tech Tree page opens. The window code is
+shared with GK2 Donkey API (`lib\GK2DreasUI`, a git submodule compiled into this DLL: nothing to install).
+
 ## Optional: GK2 Mod Framework
 
 With [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) (0.1.x, by SuperMan4eg) installed,
@@ -40,13 +48,14 @@ the mod appears in the game's **Mods** menu (main menu and ESC menu):
 - a Status row: Active, Off, or disabled after a game update;
 - "Search box on the Tech Tree", "Also search what techs unlock" and "Key to start a search".
 
-`MaxResults`, the Layout settings and `Safety.StopOnChangedGameCode` stay in the cfg. Without the framework, the same
-DLL works exactly as before. Details: [`docs/gk2-mod-framework.md`](../../docs/gk2-mod-framework.md).
+`MaxResults`, the Layout settings and `Safety.StopOnChangedGameCode` stay in the cfg there (the Settings window above
+has them). Without the framework, the same DLL works exactly as before. Details:
+[`docs/gk2-mod-framework.md`](../../docs/gk2-mod-framework.md).
 
 ## Settings (`BepInEx\config\dreas.gk2.techtreesearch.cfg`)
 
-Read at game start. The General ones are read on every search or page open, so a change in the Mods menu applies the
-next time the Tech Tree page opens.
+Read at game start. The General ones are read on every search or page open, so a change in the Settings window or the
+Mods menu applies the next time the Tech Tree page opens. The Layout ones are the cfg's only.
 
 | Key | Default | Meaning |
 |---|---|---|

@@ -25,12 +25,17 @@
     <Reference Include="UnityEngine.UI"><HintPath>$(Managed)\UnityEngine.UI.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.UIModule"><HintPath>$(Managed)\UnityEngine.UIModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.InputLegacyModule"><HintPath>$(Managed)\UnityEngine.InputLegacyModule.dll</HintPath><Private>false</Private></Reference>
+    <!-- PlayerController (the in-game test the window code is given, Plugin.InGame) derives from a Sirenix serialized behaviour; compile-time only. -->
+    <Reference Include="Sirenix.Serialization"><HintPath>$(Managed)\Sirenix.Serialization.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="BepInEx"><HintPath>$(BepInExCore)\BepInEx.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="0Harmony"><HintPath>$(BepInExCore)\0Harmony.dll</HintPath><Private>false</Private></Reference>
     <!-- Optional at runtime: only FrameworkLink uses it, and only when the framework is installed. -->
     <Reference Include="GK2.Framework"><HintPath>$(FrameworkDll)</HintPath><Private>false</Private></Reference>
   </ItemGroup>
 
+  <!-- The window code (GK2DreasUI, a submodule at lib\GK2DreasUI): the options window under the game's Settings window and
+       the settings page behind it, compiled into this DLL (lib\GK2DreasUI\README.md). -->
+  <Import Project="$(MSBuildThisFileDirectory)..\..\lib\GK2DreasUI\GK2DreasUI.targets" />
   <!-- Deploys into the game after every build, only while it is closed (-p:Deploy=false skips it). -->
   <!-- The dependency check: shared sources, Mono.Cecil, and the manifest embedded after every build (docs/dependency-check.md). -->
   <Import Project="$(MSBuildThisFileDirectory)..\..\DependencyManifest.targets" />

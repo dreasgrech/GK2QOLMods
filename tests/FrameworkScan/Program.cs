@@ -59,12 +59,17 @@ static int Check(ModuleDefinition mod, string ns)
         .Any(i => i.Operand is MethodReference r && r.Name == "PatchAll" && r.Parameters.Count == 1 && r.Parameters[0].ParameterType.FullName == "System.Reflection.Assembly");
     Result(!patchAllAssembly, "Plugin never calls PatchAll(Assembly)");
 
-    // 2. Unity messages
+    // 2. Unity messages. A mod carrying the window code (lib/GK2DreasUI, 2026-11-15) runs its host from LateUpdate and
+    //    OnApplicationQuit on purpose: allowed when the method's body does nothing but call GK2DreasUI.UiHost.
     foreach (var m in new[] { "Start", "OnEnable", "OnDisable", "FixedUpdate", "LateUpdate", "OnApplicationQuit" })
     {
-        if (plugin.Methods.Any(x => x.Name == m))
+        foreach (var x in plugin.Methods.Where(x => x.Name == m))
         {
-            Result(false, $"Plugin has a method named {m} (Unity would call it)");
+            bool hostOnly = (m == "LateUpdate" || m == "OnApplicationQuit") && x.HasBody
+                && x.Body.Instructions.Any(i => i.OpCode.FlowControl == FlowControl.Call)
+                && x.Body.Instructions.Where(i => i.OpCode.FlowControl == FlowControl.Call)
+                    .All(i => i.Operand is MethodReference r && r.DeclaringType.FullName == "GK2DreasUI.UiHost");
+            Result(hostOnly, hostOnly ? $"Plugin.{m} only runs the window code's host (GK2DreasUI.UiHost)" : $"Plugin has a method named {m} (Unity would call it)");
         }
     }
     Result(true, "Plugin has no unintended Unity message methods (Start, OnEnable, OnDisable, ...)");

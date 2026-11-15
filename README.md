@@ -149,7 +149,9 @@ scrolls to the tech and frames its card. Ctrl+F puts the cursor in the box.
 - While you type, the game's keys are paused (the same way the game's own bug report window does it), so letters
   don't open the map or the inventory.
 - Display only: nothing in the game changes, nothing is written. Jumping is the game's own tab switch.
-- Settings: on/off, search unlocks too, number of results, the key, the box's place and size.
+- Settings: on/off, search unlocks too, number of results, the key, the box's place and size. Unreleased: a
+  "GK2 Tech Tree Search" button in the game's Settings window opens an options window with them (the window code is
+  GK2 Donkey API's, the `lib/GK2DreasUI` submodule, compiled in).
 - Optional: with [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) installed, its main settings
   also appear in the game's Mods menu. The same DLL works without it.
 

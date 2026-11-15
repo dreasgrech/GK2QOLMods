@@ -69,6 +69,20 @@ Owned Count 1.0.4, Tech Search 1.0.0. Earlier changes are in git history and eac
 
 ## Tech Tree Search
 
+### Unreleased
+
+- A settings window: the game's Settings window has a "GK2 Tech Tree Search" button opening an options window in the
+  game's look, with the Status line, the search box switch, searching what techs unlock, the number of results, the
+  key and the stop-on-changed-game-code switch (descriptions, Defaults, gamepad). The cfg keeps its sections and keys;
+  the Layout values stay the cfg's. (2026-11-15; the window code is the same as GK2 Donkey API's, `lib/GK2DreasUI`.)
+- Development (2026-11-15): the window code comes from the GK2DreasUI submodule (`lib/GK2DreasUI`, compiled in through
+  its `.targets`; `Plugin` fills `UiOwner`, declares the `SettingsPage` over its own binds with `numberSections: false`,
+  runs `UiHost` each frame and lists the muffle patch). The DLL grew from about 60 KB to about 258 KB. The embedded
+  dependency manifest now holds every game member the window code uses as well (the game's Settings window, LazyUI,
+  the sound filter, MainGame): under this mod's one policy a game update that changes any of them is a warning at
+  start, or a stop with `Safety.StopOnChangedGameCode`. The Mods menu (GK2 Mod Framework) keeps its own rows; the
+  framework's Settings button is not pointed at the window (the API does that; a decision for later).
+
 ### 1.0.2 (2026-11-13)
 
 Built for game 1.012.7, on Nexus Mods and, for the first time, the Steam Workshop (the same DLL on both: the Workshop

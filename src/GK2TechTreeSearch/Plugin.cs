@@ -42,16 +42,28 @@ namespace GK2TechTreeSearch
             typeof(TechTreePageWidget_Init_Patch),
             typeof(TechTreePageWidget_Redraw_Patch),
             typeof(TechTreePageWidget_Hide_Patch),
+            typeof(InWorldSfxFilterController_ShouldEnable_Patch), // the window code's: the world muffled under the options window, as under the game's windows
         };
 
-        // What the mod is doing, for the Mods menu's status row.
+        // What the mod is doing, for the status rows (the options window, the Mods menu).
         internal static string Status = "not started";
 
+        // The status as the rows show it: off by the player's switch is said as such.
+        internal static string StatusShown() => Status == "Active" && Enabled != null && !Enabled.Value ? "Off (\"Search box on the Tech Tree\" is unchecked)" : Status;
+
         private Harmony harmony;
+        private SettingsPage page;
 
         private void Awake()
         {
             Log = Logger;
+            // The window code's owner (lib\GK2DreasUI): the settings page in the options window, opened from a button in
+            // the game's Settings window. First thing after the logger, before anything of the windows runs.
+            UiOwner.Guid = Guid;
+            UiOwner.DisplayName = "GK2 Tech Tree Search";
+            UiOwner.Log = Log;
+            UiOwner.InGame = InGame;
+            UiOwner.StatusText = StatusShown;
             CarryOverOldConfig();
             BindConfig();
             if (Chainloader.PluginInfos.ContainsKey(OldGuid))
@@ -65,7 +77,30 @@ namespace GK2TechTreeSearch
                 Status = StartMod(); // not "Start": Unity would call that itself on the first frame and patch twice
             }
             FrameworkLink.TryRegister(Config);
+            page.Publish(); // the page reaches the windows the frame after, when every plugin's Awake has run
         }
+
+        // In a game with a player (not the main menu, not loading): the window code's test for taking the controls and
+        // for a usable button row. The same test as GK2 Donkey API's (PlayerController threw in the main menu, 2026-10-30).
+        private static bool InGame()
+        {
+            try
+            {
+                if (MainGame.Instance == null || MainGame.PlayerData == null || MainGame.Instance.GameSave == null) return false;
+                PlayerController pc = MainGame.PlayerController;
+                return pc != null && pc.TryGetCurrentGameScene(out GameScene scene) && scene != null;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        // The window code's frame step (a settings page's hand-over to the windows, the options window, the deferred cfg
+        // writes) and its flush at quit.
+        private void LateUpdate() => UiHost.LateUpdate();
+
+        private void OnApplicationQuit() => UiHost.OnQuit();
 
         // 1.0.1 renamed the mod (GUID dreas.gk2.techsearch -> dreas.gk2.techtreesearch), and the GUID names the cfg
         // file. A player's old settings are copied to the new file once, on the first start without one; the old
@@ -89,8 +124,16 @@ namespace GK2TechTreeSearch
             }
         }
 
+        // The settings: each a cfg entry, the General and Safety ones rows of the settings page too (the options window;
+        // the page binds the same section, key and type, so BepInEx hands it the entries bound here and the window edits
+        // the values the mod reads). The sections stay as named (numberSections: false): the cfg had them that way before
+        // the window, and the Mods menu (FrameworkLink) binds them by name too. The Layout ones (a point, a size, a
+        // width) have no row: the cfg's.
         private void BindConfig()
         {
+            page = new SettingsPage(Guid, Config, "GK2 Tech Tree Search", "dreas",
+                "A search box on the Tech Tree page: type part of a tech's name, or of something it unlocks, and jump to it. Display only.",
+                StatusShown, numberSections: false);
             Enabled = Config.Bind("General", "Enabled", true,
                 "A search box on the Tech Tree page: type part of a tech's name (or of something it unlocks) and jump to it. Hidden techs and locked tabs are never shown. Display only.");
             SearchUnlocks = Config.Bind("General", "SearchUnlocks", true,
@@ -108,6 +151,16 @@ namespace GK2TechTreeSearch
             ListWidth = Config.Bind("Layout", "ListWidth", 280f,
                 "Width of the result list under the box (right edges aligned; never narrower than the box). Applies the next time the page opens.");
             GameDependencies.Bind(Config); // Safety.StopOnChangedGameCode, Safety.LastDependencyCheck
+
+            // The rows, in the window's order; the descriptions as the cfg's (a row's description is the entry's). Each
+            // General one is read on every search or page open, so a change applies the next time the page opens.
+            page.Status("General");
+            page.Toggle("General", "Enabled", true, "Search box on the Tech Tree", Enabled.Description.Description);
+            page.Toggle("General", "SearchUnlocks", true, "Also search what techs unlock", SearchUnlocks.Description.Description);
+            page.Steps("General", "MaxResults", 8, 1, 20, 1, "Results shown", MaxResults.Description.Description);
+            page.Key("General", "FocusKey", new KeyboardShortcut(KeyCode.F, KeyCode.LeftControl), "Key to start a search", FocusKey.Description.Description); // the mod reads the key itself (SearchBox)
+            page.Toggle("Safety", "StopOnChangedGameCode", false, "Stop on changed game code",
+                GameDependencies.StopOnChangedGameCode.Description.Description + " Applies at the next start.");
         }
 
         private string StartMod()

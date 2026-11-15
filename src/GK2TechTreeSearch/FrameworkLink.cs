@@ -79,9 +79,7 @@ namespace GK2TechTreeSearch
             {
                 ConfirmBuild(context);
                 Gk2Settings s = context.Settings;
-                s.AddReadOnly("General", "Status", "Status", "What the mod is doing right now.",
-                    () => Plugin.Status == "Active" && !Plugin.Enabled.Value ? "Off (\"Search box on the Tech Tree\" is unchecked)" : Plugin.Status,
-                    order: -10);
+                s.AddReadOnly("General", "Status", "Status", "What the mod is doing right now.", Plugin.StatusShown, order: -10); // the options window's Status row says the same
                 // The same Section/Key/type as Plugin's binds, so BepInEx hands back those entries: the menu edits
                 // the values the mod reads. Each is read when the page opens or on every search, so a change applies
                 // the next time the Tech Tree page is opened.

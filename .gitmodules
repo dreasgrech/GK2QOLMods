@@ -1,0 +1,3 @@
+[submodule "lib/GK2DreasUI"]
+	path = lib/GK2DreasUI
+	url = https://github.com/dreasgrech/GK2DreasUI
