@@ -140,6 +140,17 @@ Nothing changes for players.
   glow on/off, and walk-through decorations.
 - The decorations go up or down at once when a setting changes (can be switched off: then from the next load).
 - A "Today" line in the Mods menu says what is on.
+- A settings window: the game's Settings window has a "GK2 Event Decorations" button opening an options window in the
+  game's look, with the Status and Today lines and every setting (descriptions, Defaults, gamepad); the own dates are
+  greyed unless the mode is Auto, every row but "Use these settings" (and Safety's) while it is off. The cfg keeps its
+  sections and keys. (2026-11-15)
+- With "Use these settings" off, the decorations' areas, kinds, glow and walk-through are as the game made them too
+  (they still applied before; 2026-11-15).
+- Development (2026-11-15): the window code comes from the GK2DreasUI submodule (`lib/GK2DreasUI`, compiled in through
+  its `.targets`, as Tech Tree Search's); `Plugin` fills `UiOwner`, makes the `SettingsPage` (`numberSections: false`)
+  whose rows `OptionsPage` declares over the mod's own binds, runs `UiHost` each frame and lists the muffle patch. The
+  embedded manifest grew from 34 to 124 entries (the window's game members). The Mods menu (GK2 Mod Framework) keeps
+  its own rows; its Status and Today lines are the window's (`Plugin.StatusShown`, `OptionsPage.Today`).
 
 ## Development
 

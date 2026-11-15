@@ -146,6 +146,8 @@ namespace GK2EventDecorations
             {
                 return; // a game version with a different layout: everything as the game made it
             }
+            // the mod switched off (General.Enabled): every group, item, glow and blocker as the game made it
+            bool mod = Plugin.Enabled.Value;
             for (int g = 0; g < root.childCount; g++)
             {
                 Transform group = root.GetChild(g);
@@ -154,12 +156,12 @@ namespace GK2EventDecorations
                 if (groupName == FxGroup)
                 {
                     Halloween.Kind bats = Halloween.KindByKey("Bats");
-                    groupOn = bats == null || bats.Entry.Value;
+                    groupOn = !mod || bats == null || bats.Entry.Value;
                 }
                 else if (groupName.StartsWith(GroupPrefix, StringComparison.Ordinal))
                 {
                     Halloween.Area area = Halloween.AreaByKey(groupName.Substring(GroupPrefix.Length));
-                    groupOn = area == null || area.Entry.Value;
+                    groupOn = !mod || area == null || area.Entry.Value;
                 }
                 SetActive(group.gameObject, groupOn);
                 if (groupName == FxGroup)
@@ -170,14 +172,14 @@ namespace GK2EventDecorations
                 {
                     Transform item = group.GetChild(i);
                     Halloween.Kind kind = Halloween.KindOf(item.name);
-                    SetActive(item.gameObject, kind == null || kind.Entry.Value);
+                    SetActive(item.gameObject, !mod || kind == null || kind.Entry.Value);
                 }
             }
 
             // the glows inside the items (lanterns, candles, lit pumpkins)
             transforms.Clear();
             root.GetComponentsInChildren(true, transforms);
-            bool glow = Halloween.Glow.Value;
+            bool glow = !mod || Halloween.Glow.Value;
             for (int i = 0; i < transforms.Count; i++)
             {
                 string n = transforms[i].name;
@@ -192,7 +194,7 @@ namespace GK2EventDecorations
             // BirdsTriggerZone boxes are plain colliders too (m_IsTrigger false), and must keep working.
             colliders.Clear();
             root.GetComponentsInChildren(true, colliders);
-            bool block = Halloween.BlockWay.Value;
+            bool block = !mod || Halloween.BlockWay.Value;
             for (int i = 0; i < colliders.Count; i++)
             {
                 Collider c = colliders[i];

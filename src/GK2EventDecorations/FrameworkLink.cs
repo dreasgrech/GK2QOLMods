@@ -76,10 +76,8 @@ namespace GK2EventDecorations
             {
                 ConfirmBuild(context);
                 Gk2Settings s = context.Settings;
-                s.AddReadOnly("General", "Status", "Status", "What the mod is doing right now.",
-                    () => Plugin.Status == "Active" && !Plugin.Enabled.Value ? "Off (\"Use these settings\" is unchecked)" : Plugin.Status,
-                    order: -10);
-                s.AddReadOnly("General", "Today", "Today", "What is on today with these settings.", Today, order: -9);
+                s.AddReadOnly("General", "Status", "Status", "What the mod is doing right now.", Plugin.StatusShown, order: -10); // the options window's Status row says the same
+                s.AddReadOnly("General", "Today", "Today", "What is on today with these settings.", OptionsPage.Today, order: -9); // the options window's Today line too
                 // The same Section/Key/type as Plugin's binds, so BepInEx hands back those entries: the menu edits the
                 // values the mod reads. Every change applies at once (the decorations go up or down in game).
                 Toggle(s, Plugin.Enabled, "Use these settings", 0);
@@ -113,23 +111,6 @@ namespace GK2EventDecorations
                 Toggle(s, Halloween.BlockWay, "Decorations block the way", Halloween.Kinds.Count + 1);
                 // Not in the menu: Safety.StopOnChangedGameCode (read once at startup; the Status row says when it
                 // applies). It stays in the cfg.
-            }
-
-            private static string Today()
-            {
-                if (!Plugin.Enabled.Value)
-                {
-                    return "The game's own dates";
-                }
-                string s = "";
-                for (int i = 0; i < Events.All.Count; i++)
-                {
-                    GameEvent e = Events.All[i];
-                    s += (i == 0 ? "" : " · ") + e.Name + (e.IsOn() ? " on" : " off");
-                }
-                return s + " · decorations " + (Halloween.DecorationsOn() ? "on" : "off") +
-                       ", ghost " + (Halloween.PieceOn(Halloween.Ghost) ? "on" : "off") +
-                       ", zombie head " + (Halloween.PieceOn(Halloween.ZombieHead) ? "on" : "off");
             }
 
             private static void Toggle(Gk2Settings s, ConfigEntry<bool> entry, string name, int order)

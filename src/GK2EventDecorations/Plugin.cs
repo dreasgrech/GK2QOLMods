@@ -32,25 +32,67 @@ namespace GK2EventDecorations
             typeof(TemporaryEventDates_IsHalloweenEventDate_Patch),
             typeof(HalloweenConditionalLoadContentPart_ShouldLoad_Patch),
             typeof(HalloweenHeadSkinOverride_Resolve_Patch),
-            typeof(WorldData_AddMissingConditionalContent_Patch)
+            typeof(WorldData_AddMissingConditionalContent_Patch),
+            typeof(InWorldSfxFilterController_ShouldEnable_Patch) // the window code's: the world muffled under the options window, as under the game's windows
         };
 
-        // What the mod is doing, for the Mods menu's status row.
+        // What the mod is doing, for the status rows (the options window, the Mods menu).
         internal static string Status = "not started";
+
+        // The status as the rows show it: off by the player's switch is said as such.
+        internal static string StatusShown() => Status == "Active" && Enabled != null && !Enabled.Value ? "Off (\"Use these settings\" is unchecked)" : Status;
 
         private Harmony harmony;
         private bool listening;
+        private SettingsPage page;
 
         private void Awake()
         {
             Log = Logger;
+            // The window code's owner (lib\GK2DreasUI): the settings page in the options window, opened from a button in
+            // the game's Settings window. First thing after the logger, before anything of the windows runs.
+            UiOwner.Guid = Guid;
+            UiOwner.DisplayName = "GK2 Event Decorations";
+            UiOwner.Log = Log;
+            UiOwner.InGame = InGame;
+            UiOwner.StatusText = StatusShown;
             BindConfig();
             Status = StartMod(); // not "Start": Unity would call that itself on the first frame and patch twice
             FrameworkLink.TryRegister(Config);
+            page.Publish(); // the page reaches the windows the frame after, when every plugin's Awake has run
         }
 
+        // In a game with a player (not the main menu, not loading): the window code's test for taking the controls and
+        // for a usable button row. The same test as GK2 Tech Tree Search's and GK2 Donkey API's.
+        private static bool InGame()
+        {
+            try
+            {
+                if (MainGame.Instance == null || MainGame.PlayerData == null || MainGame.Instance.GameSave == null) return false;
+                PlayerController pc = MainGame.PlayerController;
+                return pc != null && pc.TryGetCurrentGameScene(out GameScene scene) && scene != null;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        // The window code's frame step (a settings page's hand-over to the windows, the options window, the deferred cfg
+        // writes) and its flush at quit.
+        private void LateUpdate() => UiHost.LateUpdate();
+
+        private void OnApplicationQuit() => UiHost.OnQuit();
+
+        // The settings: each a cfg entry, and a row of the settings page (OptionsPage: the options window; the page binds
+        // the same section, key and type, so BepInEx hands it the entries bound here). The sections stay as named
+        // (numberSections: false): the Mods menu (FrameworkLink) binds them by name too.
         private void BindConfig()
         {
+            page = new SettingsPage(Guid, Config, "GK2 Event Decorations", "dreas",
+                "Choose when the game's temporary events show (Halloween): by the game's own dates or yours, every day, or never; and " +
+                "which of Halloween's decorations, ghost and zombie head, where.",
+                StatusShown, numberSections: false);
             Enabled = Config.Bind("General", "Enabled", true,
                 "Off: every event follows the game's own dates, as without the mod.");
             Events.Bind(Config); // one section per event: Mode, Start, End; Halloween and any event a newer game adds
@@ -59,6 +101,7 @@ namespace GK2EventDecorations
                 "While Halloween is off, a ghost left standing in the village is sent home. The game loses the last step of " +
                 "the ghost's morning walk home when the save is made during it, and leaves the ghost in the village after the event.");
             GameDependencies.Bind(Config); // Safety.StopOnChangedGameCode, Safety.LastDependencyCheck
+            OptionsPage.Declare(page); // the rows, in the window's order
         }
 
         private string StartMod()

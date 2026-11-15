@@ -30,8 +30,13 @@ Halloween is three things in the game, each of which can also be set on its own 
   game itself leaves it there when the save was made during its walk home in the morning.
 - **Later events.** If a game update adds another event (game 1.012 already holds Christmas and Easter food items, not obtainable yet), the
   mod finds it and gives it its own `Mode`, `Start` and `End`.
+- **Settings window.** The game's **Settings** window (main menu or ESC) has a **GK2 Event Decorations** button: an
+  options window in the game's own look with a Status line, a "Today" line saying what is on, and every setting below
+  (descriptions, Defaults, gamepad). The own dates are greyed unless the mode is `Auto`, and everything but "Use these
+  settings" is greyed while that is off. A change applies at once, as from the cfg. The window code is shared with GK2
+  Donkey API and GK2 Tech Tree Search (`lib\GK2DreasUI`, a git submodule compiled into this DLL: nothing to install).
 - Optional: with [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) installed, every setting
-  also appears in the game's Mods menu, with a "Today" line saying what is on. The same DLL works without it.
+  also appears in the game's Mods menu, with the same "Today" line. The same DLL works without it.
 
 ## Settings
 
