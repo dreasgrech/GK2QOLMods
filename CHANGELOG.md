@@ -132,25 +132,52 @@ Nothing changes for players.
   Halloween zombie head. The decorations change from the next save load.
 - With Halloween off, a ghost the game left standing in the village is sent home.
 - An event a later game update adds gets its own Auto / On / Off setting by itself.
-- Optional GK2 Mod Framework integration (the settings in the game's Mods menu).
+- Optional GK2 Mod Framework integration: the mod in the game's Mods menu, its Settings button opening the mod's own
+  options window (below).
 - Own dates for Auto (Start / End, month-day, may wrap the new year), for every event.
-- Halloween's decorations, ghost and zombie head can each be set on their own (follow the event, on, off).
+- Halloween's decorations, ghost and zombie head can each be set on their own (follow the event, on, off); Halloween
+  set to Off turns all three off (greyed in the options window), and the areas and kinds are greyed while the
+  decorations can't show.
 - Decorations per area (village, port, your grounds, your house, tavern, restaurant, barracks, astrologer, warehouse,
   dungeons) and per kind (pumpkins, garlands, scarecrows, pies, plants, other props, bats and glowing eyes), candle
   glow on/off, and walk-through decorations.
-- The decorations go up or down at once when a setting changes (can be switched off: then from the next load).
-- A "Today" line in the Mods menu says what is on.
+- The decorations go up or down at once when a setting changes.
+- An "On today" line says what of each event shows today.
+- The window's choices say what they do: an event's mode is By date / Always / Never, a part's With Halloween / Always /
+  Never (the cfg keeps Auto / On / Off and Event / On / Off).
 - A settings window: the game's Settings window has a "GK2 Event Decorations" button opening an options window in the
-  game's look, with the Status and Today lines and every setting (descriptions, Defaults, gamepad); the own dates are
-  greyed unless the mode is Auto, every row but "Use these settings" (and Safety's) while it is off. The cfg keeps its
-  sections and keys. (2026-11-15)
-- With "Use these settings" off, the decorations' areas, kinds, glow and walk-through are as the game made them too
+  game's look: General ("Mod enabled", Status, "On today") and one tab per event, Halloween (mode, own dates, then the
+  headings Parts of the event, Areas, Kinds of decorations); descriptions, Defaults, gamepad. The own dates are greyed
+  unless the mode is Auto, every row but "Mod enabled" while it is off. The GK2 Mod
+  Framework's Settings button opens this window: its Mods menu keeps no rows of its own. (2026-11-15)
+- Settings gone through (2026-11-15): "SwitchWithoutReload" is gone (the decorations always go up or down at once);
+  "SendGhostHome" stays in the cfg only, not in the window (a fix for the game's lost walk home, on by default); the
+  areas' and kinds' keys moved from [Halloween Areas] / [Halloween Decorations] into [Halloween] (unreleased: nothing
+  carried over). Each area and kind checked against the game's decoration data: every group and every item of 1.012
+  is under one of them. The log says what is on after each change (groups, items, glows, blocking colliders).
+- Fixed: a part following Halloween's dates could take the Ghost setting's answer instead. The game's own code for the
+  decorations and the zombie head asks the same gate the ghost's scripts ask, which the mod answers with the Ghost
+  setting: with the ghost set to Always, the decorations (at load) and the zombie head showed out of season too, and with
+  it set to Never they stayed away in season. Those two now get the game's real date check (2026-11-15).
+- The "On today" line says when a part shows only because it is set to Always ("decorations (set to Always)"), and when
+  your own dates don't count (only one of the two, or not month-day like 10-24: the game's dates apply).
+- After a save loads, the mod checks that the decorations are up or down as the settings say; if not, a warning in the
+  log and it puts that right.
+- Safety.StopOnChangedGameCode is on by default in this mod and only in the cfg: after a game update that changed game
+  code the mod uses, it stays off until an updated version (2026-11-15).
+- With "Mod enabled" off, the decorations' areas, kinds, glow and walk-through are as the game made them too
   (they still applied before; 2026-11-15).
+- Development (2026-11-15): `tests/HarmonyHarness-EventDecorations`, the truth table of what the game gets over 2430
+  combinations of the settings, with the game's own date check as today and forced both ways (in the release scans);
+  it fails 45 checks without the gate-bypass fix, in both seasons. The start line
+  in the log names the parts that don't follow the event ("Halloween (Auto; decorations On)").
 - Development (2026-11-15): the window code comes from the GK2DreasUI submodule (`lib/GK2DreasUI`, compiled in through
   its `.targets`, as Tech Tree Search's); `Plugin` fills `UiOwner`, makes the `SettingsPage` (`numberSections: false`)
   whose rows `OptionsPage` declares over the mod's own binds, runs `UiHost` each frame and lists the muffle patch. The
-  embedded manifest grew from 34 to 124 entries (the window's game members). The Mods menu (GK2 Mod Framework) keeps
-  its own rows; its Status and Today lines are the window's (`Plugin.StatusShown`, `OptionsPage.Today`).
+  embedded manifest grew from 34 to 124 entries (the window's game members). `FrameworkLink` registers one button
+  setting and points the framework's Settings button at the window with a prefix on its private
+  `ModsMenuWindow.OpenSettingsPage(RegisteredMod)`, found by exact signature (GK2 Donkey API's way); without the prefix
+  the framework's page shows the one button.
 
 ## Development
 

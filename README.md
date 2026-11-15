@@ -169,11 +169,11 @@ the ghost's night walks in the village and the Halloween zombie head, and each o
 - Nothing is written into the save; removing the mod returns every event to its dates.
 - With the event off, a ghost the game left standing in the village is sent home.
 - An event a later game update adds gets the same `Auto` / `On` / `Off` row by itself.
-- Settings window: a "GK2 Event Decorations" button in the game's Settings window opens an options window with every
-  setting, a Status line and a Today line (the window code is GK2 Donkey API's, the `lib/GK2DreasUI` submodule,
-  compiled in).
-- Optional: with [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) installed, its settings
-  also appear in the game's Mods menu. The same DLL works without it.
+- Settings window: a "GK2 Event Decorations" button in the game's Settings window opens an options window: a General
+  tab (Mod enabled, Status, On today) and one tab per event (the window code is GK2 Donkey API's, the `lib/GK2DreasUI`
+  submodule, compiled in).
+- Optional: with [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) installed, the mod is in the
+  game's Mods menu too, and its Settings button opens the same window. The same DLL works without it.
 
 ## Safety
 

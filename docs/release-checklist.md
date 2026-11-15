@@ -21,7 +21,7 @@ What to do before `dist/` goes public, in order. Written 2026-10-13 from the fir
 `bash tools/release-scans.sh` (after the release build of section 3: the manifest checks read its DLLs) runs them
 all and lists each as ok or FAIL, exit 1 on any failure, the output in `release/logs/release-scans.log`: in `tests/`
 `CecilScan-GlobalStorage`, `StaticScan-GlobalStorage`, `CecilScan-BuiltCount`,
-`CecilScan-OwnedCount`, `CecilScan-TechTreeSearch`, `CecilScan-EventDecorations`, `FrameworkScan`, `HarmonyHarness-BuiltCount` (built, then run), each
+`CecilScan-OwnedCount`, `CecilScan-TechTreeSearch`, `CecilScan-EventDecorations`, `FrameworkScan`, `HarmonyHarness-BuiltCount` and `HarmonyHarness-EventDecorations` (built, then run), each
 mod's dependency manifest verified against the installed game (`tools/DepManifest`), and `check-dist.py`. All must end
 green. `bash tools/release-scans.sh <Mod>` limits the two manifest checks (bin and dist) to that mod, for a release of
 one mod while another's dist waits for its re-audit (the code scans still run over every mod); `check-dist.py` takes

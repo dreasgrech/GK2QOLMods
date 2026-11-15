@@ -38,9 +38,9 @@ namespace GK2EventDecorations
         {
             Mode = config.Bind(Name, "Mode", EventMode.Auto, modeText);
             Start = config.Bind(Name, "Start", "",
-                "Auto only: the first day of the event as month-day, e.g. 10-01. Empty: the game's own dates" + defaultDates + ". Needs End too.");
+                "By date (Auto) only: the first day of the event as month-day, e.g. 10-01. Empty: the game's own dates" + defaultDates + ". Needs the last day too.");
             End = config.Bind(Name, "End", "",
-                "Auto only: the last day of the event as month-day, e.g. 11-30 (it may wrap past the new year, e.g. 12-20 to 01-06). Empty: the game's own dates. Needs Start too.");
+                "By date (Auto) only: the last day of the event as month-day, e.g. 11-30 (it may wrap past the new year, e.g. 12-20 to 01-06). Empty: the game's own dates. Needs the first day too.");
         }
 
         // Is the event on today, by this mod's settings? (With the mod switched off: by the game's own check.)
@@ -76,6 +76,18 @@ namespace GK2EventDecorations
         {
             ParseWindow();
             return windowStart < 0 || windowEnd < 0 ? null : $"{windowStart / 100:D2}-{windowStart % 100:D2} to {windowEnd / 100:D2}-{windowEnd % 100:D2}";
+        }
+
+        // Own dates typed in but not counting (only one of the two, or not month-day), while they would count (By date):
+        // the "On today" line says so, as the window can't (a wrong date was only in the log). Null: nothing to say.
+        internal string DatesNote()
+        {
+            if (Mode.Value != EventMode.Auto || CustomWindow() != null)
+            {
+                return null;
+            }
+            bool s = (Start.Value ?? "").Trim().Length > 0, e = (End.Value ?? "").Trim().Length > 0;
+            return s || e ? "your own dates don't count (both needed, as month-day like 10-24): the game's dates apply" : null;
         }
 
         private void ParseWindow()
@@ -152,8 +164,9 @@ namespace GK2EventDecorations
         {
             Halloween = new GameEvent(HalloweenName, known: true);
             Halloween.Bind(config,
-                "Auto: the game's own dates (24 October to 7 November), or Start/End below. On: Halloween every day. Off: never. " +
-                "The pieces below (decorations, ghost, zombie head) follow this unless set on their own.",
+                "By date (Auto): Halloween on the game's own dates (24 October to 7 November), or on your own dates below. " +
+                "Always (On): every day. Never (Off): no Halloween at all, decorations, ghost and zombie head included, whatever they " +
+                "are set to. Otherwise each of those follows this (With Halloween) or is set to Always or Never on its own.",
                 " (24 October to 7 November)");
             All.Add(Halloween);
 
@@ -170,7 +183,7 @@ namespace GK2EventDecorations
                 {
                     e = new GameEvent(name, known: false);
                     e.Bind(config,
-                        "Auto: the game's own dates, or Start/End below. On: every day. Off: never. A game update added this " +
+                        "By date (Auto): the game's own dates, or your own dates below. Always (On): every day. Never (Off): never. A game update added this " +
                         "event after this version of the mod was written: the mode switches the game's date check for it. " +
                         "Decorations are placed while a save loads: after a change, load your save again.",
                         "");
@@ -248,8 +261,9 @@ namespace GK2EventDecorations
             {
                 GameEvent e = All[i];
                 string window = e.CustomWindow();
+                string overrides = e == Halloween ? GK2EventDecorations.Halloween.Overrides() : "";
                 s += (i == 0 ? "" : ", ") + e.Name + " (" + e.Mode.Value + (window != null && e.Mode.Value == EventMode.Auto ? " " + window : "") +
-                     (e.Known ? "" : ", new in this game version") + ")";
+                     (overrides.Length > 0 ? "; " + overrides : "") + (e.Known ? "" : ", new in this game version") + ")";
             }
             return s;
         }

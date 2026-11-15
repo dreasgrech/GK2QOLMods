@@ -23,6 +23,7 @@ namespace GK2EventDecorations
         private const string ObstacleName = "Obstacle";
 
         private static bool errorLogged;
+        private static string lastShown; // Apply's last line in the log: written again only when what shows changes
         private static readonly List<Collider> colliders = new List<Collider>();
         private static readonly List<Transform> transforms = new List<Transform>();
 
@@ -48,19 +49,21 @@ namespace GK2EventDecorations
             }
         }
 
-        // MainGame.OnGameStarted: once more, in case anything changed during the load.
+        // MainGame.OnGameStarted: once more, in case anything changed during the load; and the check that the decorations
+        // came up or stayed down as the settings say (a mismatch is a warning, then put right: the way the Ghost setting
+        // once leaked into them would have shown here, 2026-11-15).
         internal static void OnGameStarted()
         {
-            Run(sync: false);
+            Run(sync: true, atLoad: true);
         }
 
         // A setting changed (the cfg file, the Mods menu).
         internal static void OnSettingChanged(object sender, EventArgs e)
         {
-            Run(sync: true);
+            Run(sync: true, atLoad: false);
         }
 
-        private static void Run(bool sync)
+        private static void Run(bool sync, bool atLoad)
         {
             try
             {
@@ -71,7 +74,7 @@ namespace GK2EventDecorations
                 }
                 if (sync)
                 {
-                    Sync(game.gameSceneConfigs);
+                    Sync(game.gameSceneConfigs, atLoad);
                 }
                 GameObject instance = Find(game.gameSceneConfigs, out _);
                 if (instance != null)
@@ -104,15 +107,15 @@ namespace GK2EventDecorations
             return null;
         }
 
-        // Make the world match the settings: up when they say on, down when off (SwitchWithoutReload).
-        private static void Sync(List<GameSceneConfig> configs)
+        // Make the world match the settings: up when they say on, down when off.
+        private static void Sync(List<GameSceneConfig> configs, bool atLoad)
         {
-            if (!Halloween.LiveSwitch.Value)
-            {
-                return;
-            }
             bool want = Halloween.DecorationsOn();
             GameObject instance = Find(configs, out GameSceneConfig owner);
+            if (atLoad && want != (instance != null))
+            {
+                Plugin.Log.LogWarning($"After loading, the Halloween decorations were {(instance != null ? "up" : "down")} though the settings say {(want ? "up" : "down")} ({Events.Describe()}); putting that right now.");
+            }
             if (!want && instance != null)
             {
                 if (owner.TryUnloadSceneDataContent(ContentName))
@@ -148,6 +151,7 @@ namespace GK2EventDecorations
             }
             // the mod switched off (General.Enabled): every group, item, glow and blocker as the game made it
             bool mod = Plugin.Enabled.Value;
+            int groups = 0, groupsOn = 0, items = 0, itemsOn = 0, glows = 0, glowsOn = 0, blockers = 0, blockersOn = 0;
             for (int g = 0; g < root.childCount; g++)
             {
                 Transform group = root.GetChild(g);
@@ -164,6 +168,8 @@ namespace GK2EventDecorations
                     groupOn = !mod || area == null || area.Entry.Value;
                 }
                 SetActive(group.gameObject, groupOn);
+                groups++;
+                if (groupOn) groupsOn++;
                 if (groupName == FxGroup)
                 {
                     continue;
@@ -172,7 +178,10 @@ namespace GK2EventDecorations
                 {
                     Transform item = group.GetChild(i);
                     Halloween.Kind kind = Halloween.KindOf(item.name);
-                    SetActive(item.gameObject, !mod || kind == null || kind.Entry.Value);
+                    bool itemOn = !mod || kind == null || kind.Entry.Value;
+                    SetActive(item.gameObject, itemOn);
+                    items++;
+                    if (itemOn && groupOn) itemsOn++;
                 }
             }
 
@@ -186,6 +195,8 @@ namespace GK2EventDecorations
                 if (n.StartsWith("DecorLight", StringComparison.Ordinal) || n.StartsWith("Decor Light", StringComparison.Ordinal))
                 {
                     SetActive(transforms[i].gameObject, glow);
+                    glows++;
+                    if (glow) glowsOn++;
                 }
             }
             transforms.Clear();
@@ -198,12 +209,24 @@ namespace GK2EventDecorations
             for (int i = 0; i < colliders.Count; i++)
             {
                 Collider c = colliders[i];
-                if (c != null && c.enabled != block && c.gameObject.name.StartsWith(ObstacleName, StringComparison.Ordinal))
+                if (c != null && c.gameObject.name.StartsWith(ObstacleName, StringComparison.Ordinal))
                 {
-                    c.enabled = block;
+                    if (c.enabled != block) c.enabled = block;
+                    blockers++;
+                    if (block) blockersOn++;
                 }
             }
             colliders.Clear();
+
+            // What the switches did, in the log once per change (a hand test reads it there): game 1.012 has 12 groups (the
+            // 11 areas and the bats) and 140 items (docs/seasonal-events.md, "The decorations' layout").
+            string shown = $"Halloween decorations: {groupsOn} of {groups} groups, {itemsOn} of {items} items in the shown groups and kinds, " +
+                           $"{glowsOn} of {glows} glows, {blockersOn} of {blockers} blocking colliders on.";
+            if (shown != lastShown)
+            {
+                lastShown = shown;
+                Plugin.Log.LogInfo(shown);
+            }
         }
 
         private static void SetActive(GameObject go, bool on)

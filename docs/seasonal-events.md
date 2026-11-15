@@ -5,8 +5,16 @@ Investigated 2026-11-11 on game 1.011.1 (Steam build 26404424, `Assembly-CSharp`
 by the mod's own setting instead of the PC's date. Built 2026-11-11 as **GK2 Event Decorations**
 (`src/GK2EventDecorations`): design points 1, 3 and 5 below (the gate per event, discovery of new events, the ghost
 home), seen in game on 1.012 (Halloween forced On: the decorations up, 2026-11-13). On 2026-11-13 also points 2 and 4
-(per-piece switches; the live switch, `SwitchWithoutReload`), own dates, areas, kinds, glow and walk-through:
-built and deployed, **not yet seen in game**. The decorations' layout these rely on: section "Game 1.012".
+(per-piece switches; the live switch), own dates, areas, kinds, glow and walk-through: built and deployed; the live
+switch seen in game 2026-11-15 (three take-downs and put-ups from the options window), the rest **not yet seen in game**.
+On 2026-11-15 the settings were gone through: the live switch is always on (its setting gone), SendGhostHome is cfg
+only, and every group and every item of 1.012's decorations is under one of the areas and kinds (layout: section
+"Game 1.012"). The same day a leak was found and fixed: the game's `ShouldLoad` (`return IsHalloweenEvent();`) and
+`Resolve` (`if (!IsHalloweenEvent()) return headId;`) ask the gate the mod answers with the Ghost setting, so a part
+following the game's dates took the ghost's answer; they now run with the gate bypassed (`Events.Bypass`). A recursive
+sweep of the 1.012 decompile (game and LazyBear) finds five files naming the gate: those two, `TemporaryEventDates`
+itself, `LazyExpression` and `Flow_IsHalloweenEvent` (the ghost's rows and graph only). `tests/HarmonyHarness-
+EventDecorations` holds the truth table (2430 combinations, both seasons forced).
 
 ## Verdict
 

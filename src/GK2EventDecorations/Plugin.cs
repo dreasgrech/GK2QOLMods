@@ -40,7 +40,7 @@ namespace GK2EventDecorations
         internal static string Status = "not started";
 
         // The status as the rows show it: off by the player's switch is said as such.
-        internal static string StatusShown() => Status == "Active" && Enabled != null && !Enabled.Value ? "Off (\"Use these settings\" is unchecked)" : Status;
+        internal static string StatusShown() => Status == "Active" && Enabled != null && !Enabled.Value ? "Off: \"Mod enabled\" is unchecked" : Status;
 
         private Harmony harmony;
         private bool listening;
@@ -58,7 +58,7 @@ namespace GK2EventDecorations
             UiOwner.StatusText = StatusShown;
             BindConfig();
             Status = StartMod(); // not "Start": Unity would call that itself on the first frame and patch twice
-            FrameworkLink.TryRegister(Config);
+            FrameworkLink.TryRegister(Config, page); // with the framework: its Settings button opens the options window
             page.Publish(); // the page reaches the windows the frame after, when every plugin's Awake has run
         }
 
@@ -94,13 +94,21 @@ namespace GK2EventDecorations
                 "which of Halloween's decorations, ghost and zombie head, where.",
                 StatusShown, numberSections: false);
             Enabled = Config.Bind("General", "Enabled", true,
-                "Off: every event follows the game's own dates, as without the mod.");
+                "On: the events show as set on their tabs. Off: the game decides by its own dates, as without the mod; your " +
+                "settings are kept for when you switch it back on.");
             Events.Bind(Config); // one section per event: Mode, Start, End; Halloween and any event a newer game adds
             Halloween.Bind(Config); // Halloween's pieces, areas and kinds
             SendGhostHome = Config.Bind(Events.HalloweenName, "SendGhostHome", true,
                 "While Halloween is off, a ghost left standing in the village is sent home. The game loses the last step of " +
-                "the ghost's morning walk home when the save is made during it, and leaves the ghost in the village after the event.");
-            GameDependencies.Bind(Config); // Safety.StopOnChangedGameCode, Safety.LastDependencyCheck
+                "the ghost's morning walk home when the save is made during it, and leaves the ghost in the village after the event. " +
+                "Not in the options window: a fix, not a choice; false here switches it off.");
+            // Safety.StopOnChangedGameCode on by default in this mod, and only in the cfg (no row: the user, 2026-11-15): bound
+            // here first with true, so the shared GameDependencies.Bind (src/Shared, the same in every mod, default false)
+            // gets this entry. After a game update that changed game code this mod uses, it stays off until an updated build.
+            Config.Bind("Safety", "StopOnChangedGameCode", true,
+                "At start the mod compares every game member it uses with the installed game. A member that is gone always stops the mod. " +
+                "True (the default): a member whose code changed stops it too, until an updated build. False: it runs anyway, with a warning in the log.");
+            GameDependencies.Bind(Config); // Safety.StopOnChangedGameCode (the entry above), Safety.LastDependencyCheck
             OptionsPage.Declare(page); // the rows, in the window's order
         }
 

@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net48</TargetFramework><LangVersion>latest</LangVersion></PropertyGroup>
+<!-- The truth table of GK2 Event Decorations' answers (Program.cs): the built mod's real patches on the game's real
+     methods, outside the game. A .NET test tool: LINQ allowed here. -->
+<ItemGroup>
+ <Reference Include="0Harmony"><HintPath>$(BepInExCore)\0Harmony.dll</HintPath></Reference>
+ <Reference Include="MonoMod.RuntimeDetour"><HintPath>$(BepInExCore)\MonoMod.RuntimeDetour.dll</HintPath></Reference>
+ <Reference Include="MonoMod.Utils"><HintPath>$(BepInExCore)\MonoMod.Utils.dll</HintPath></Reference>
+ <Reference Include="Mono.Cecil"><HintPath>$(BepInExCore)\Mono.Cecil.dll</HintPath></Reference>
+ <Reference Include="BepInEx"><HintPath>$(BepInExCore)\BepInEx.dll</HintPath></Reference>
+ <Reference Include="Assembly-CSharp"><HintPath>$(Managed)\Assembly-CSharp.dll</HintPath></Reference>
+ <Reference Include="LazyBearTechnology"><HintPath>$(Managed)\LazyBearTechnology.dll</HintPath></Reference>
+ <Reference Include="UnityEngine"><HintPath>$(Managed)\UnityEngine.dll</HintPath></Reference>
+ <Reference Include="UnityEngine.CoreModule"><HintPath>$(Managed)\UnityEngine.CoreModule.dll</HintPath></Reference>
+</ItemGroup></Project>

@@ -19,13 +19,13 @@ namespace GK2EventDecorations
     // scripts the gate TemporaryEventDates.IsHalloweenEvent itself (its flow node and expression function).
     internal static class Halloween
     {
-        internal const string AreasSection = "Halloween Areas";
-        internal const string KindsSection = "Halloween Decorations";
+        // One cfg section, so one tab of the options window per event: the mode and dates, the pieces, then the areas and
+        // the decorations under their headings (OptionsPage).
+        private const string Section = Events.HalloweenName;
 
         internal static ConfigEntry<PieceMode> Decorations;
         internal static ConfigEntry<PieceMode> Ghost;
         internal static ConfigEntry<PieceMode> ZombieHead;
-        internal static ConfigEntry<bool> LiveSwitch;
 
         // The decorations' groups in the game's content (HalloweenDecorationsStatic/Halloween<Key>), read from game
         // 1.012's bundle with tools/game-bundles.py tree. A group the game adds later is shown, untouched.
@@ -44,14 +44,15 @@ namespace GK2EventDecorations
             new Area("Dungeons", "Dungeons", "The dungeons.")
         };
 
-        // Kinds by the item's object name (prefix, before " (n)"); an item no kind matches is always shown.
+        // Kinds by the item's object name (prefix, before " (n)"); an item no kind matches is always shown. In game 1.012
+        // every item of every group matches one (docs/seasonal-events.md, "The decorations' layout").
         internal static readonly List<Kind> Kinds = new List<Kind>
         {
             new Kind("Pumpkins", "Pumpkins", "Carved pumpkins and jack-o'-lanterns.", "common_hw_pumpkin"),
             new Kind("Garlands", "Garlands", "The flag garlands strung between houses.", "common_hw_flags"),
-            new Kind("Scarecrows", "Scarecrows", "Scarecrows.", "common_hw_scarecrow"),
-            new Kind("Pies", "Pies", "Pies set out on tables.", "common_hw_pie"),
-            new Kind("Plants", "Plants", "Halloween plants.", "common_hw_plants"),
+            new Kind("Scarecrows", "Scarecrows", "The two scarecrows (village, port).", "common_hw_scarecrow"),
+            new Kind("Pies", "Pies", "Pies set out on the tables of the tavern and the restaurant.", "common_hw_pie"),
+            new Kind("Plants", "Plants", "The Halloween plants in the village.", "common_hw_plants"),
             new Kind("OtherProps", "Other props", "The other Halloween props.", "common_hw_0"),
             new Kind("Bats", "Bats and glowing eyes", "Bats flying up as you pass, circling bats and glowing eyes in the dark.", null)
         };
@@ -75,36 +76,43 @@ namespace GK2EventDecorations
 
         internal static void Bind(ConfigFile config)
         {
-            Decorations = config.Bind(Events.HalloweenName, "Decorations", PieceMode.Event,
+            Decorations = config.Bind(Section, "Decorations", PieceMode.Event,
                 "The decorations (pumpkins, garlands, scarecrows, candles, bats) in the village, the port, the dungeons, your " +
-                "grounds and most interiors. Event: when Halloween is on (Mode). On / Off: always / never.");
-            Ghost = config.Bind(Events.HalloweenName, "Ghost", PieceMode.Event,
+                "grounds and most interiors. With Halloween (Event): while Halloween is on. Always (On): every day, whatever the " +
+                "date. Never (Off): not at all. Halloween set to Never turns them off whatever this says.");
+            Ghost = config.Bind(Section, "Ghost", PieceMode.Event,
                 "The ghost that walks through the village at night (and any other script the game runs for Halloween). " +
-                "Event: when Halloween is on (Mode). On / Off: always / never. Takes effect at its next step or evening.");
-            ZombieHead = config.Bind(Events.HalloweenName, "ZombieHead", PieceMode.Event,
-                "Zombies with one particular head get the game's Halloween zombie head instead. Event: when Halloween is on " +
-                "(Mode). On / Off: always / never. Pictures already drawn change when the game redraws them (e.g. the next load).");
-            LiveSwitch = config.Bind(Events.HalloweenName, "SwitchWithoutReload", true,
-                "Put up or take down the decorations at once when a setting turns them on or off in game. Off: only when a save loads.");
+                "With Halloween (Event): while Halloween is on. Always (On): every day. Never (Off): not at all. Halloween set to " +
+                "Never turns it off whatever this says. Takes effect at its next step or evening.");
+            ZombieHead = config.Bind(Section, "ZombieHead", PieceMode.Event,
+                "Zombies with one particular head get the game's Halloween zombie head instead. With Halloween (Event): while " +
+                "Halloween is on. Always (On): every day. Never (Off): not at all. Halloween set to Never turns it off whatever this " +
+                "says. Pictures already drawn change when the game redraws them (e.g. the next load).");
             for (int i = 0; i < Areas.Count; i++)
             {
                 Area a = Areas[i];
-                a.Entry = config.Bind(AreasSection, a.Key, true, "Show the Halloween decorations here: " + a.Text);
+                a.Entry = config.Bind(Section, a.Key, true, "Show the Halloween decorations here: " + a.Text);
             }
             for (int i = 0; i < Kinds.Count; i++)
             {
                 Kind k = Kinds[i];
-                k.Entry = config.Bind(KindsSection, k.Key, true, "Show these Halloween decorations: " + k.Text);
+                k.Entry = config.Bind(Section, k.Key, true, "Show these Halloween decorations: " + k.Text);
             }
-            Glow = config.Bind(KindsSection, "CandleGlow", true,
+            Glow = config.Bind(Section, "CandleGlow", true,
                 "The candles and the glow of lanterns and pumpkins. Off: the decorations stay, unlit.");
-            BlockWay = config.Bind(KindsSection, "BlockTheWay", true,
-                "Decorations block the way like the game's other objects. Off: you walk through them. (Villagers' paths are " +
-                "worked out when a save loads: a change in game reaches them at the next load.)");
+            BlockWay = config.Bind(Section, "BlockTheWay", true,
+                "Decorations block the way like the game's other objects. Off: you walk through them at once; villagers' paths are " +
+                "worked out when a save loads, so they follow at the next load.");
         }
 
+        // A piece's answer: Halloween's mode Off is the whole event off, every piece with it (the options window greys
+        // them, OptionsPage); otherwise the piece's own On / Off, or Event: the mode's answer today.
         internal static bool PieceOn(ConfigEntry<PieceMode> piece)
         {
+            if (EventOff())
+            {
+                return false;
+            }
             switch (piece.Value)
             {
                 case PieceMode.On:
@@ -116,7 +124,24 @@ namespace GK2EventDecorations
             }
         }
 
+        // Halloween's mode is Off (with the mod's settings in use): nothing of the event, whatever the pieces say.
+        internal static bool EventOff() => Plugin.Enabled.Value && Events.Halloween.Mode.Value == EventMode.Off;
+
+        // The decorations can show at some time with these settings (not by today's date): the event isn't Off and the
+        // decorations piece isn't Off. False: their areas and kinds change nothing (greyed in the options window).
+        internal static bool DecorationsCanShow() => !EventOff() && Decorations.Value != PieceMode.Off;
+
         internal static bool DecorationsOn() => Plugin.Enabled.Value ? PieceOn(Decorations) : Events.GameDates(Events.Halloween);
+
+        // The pieces that don't follow the event, for the log line at start: "decorations On, ghost Off"; "" when all do.
+        internal static string Overrides()
+        {
+            string s = "";
+            if (Decorations.Value != PieceMode.Event) s += "decorations " + Decorations.Value;
+            if (Ghost.Value != PieceMode.Event) s += (s.Length > 0 ? ", " : "") + "ghost " + Ghost.Value;
+            if (ZombieHead.Value != PieceMode.Event) s += (s.Length > 0 ? ", " : "") + "zombie head " + ZombieHead.Value;
+            return s;
+        }
 
         // A piece left as the game has it (the mod off, or Mode Auto with the game's dates and the piece on Event): its
         // patch lets the game's own code run, as without the mod.
@@ -211,14 +236,28 @@ namespace GK2EventDecorations
     [HarmonyPatch(typeof(HalloweenConditionalLoadContentPart), nameof(HalloweenConditionalLoadContentPart.ShouldLoad))]
     internal static class HalloweenConditionalLoadContentPart_ShouldLoad_Patch
     {
-        private static bool Prefix(ref bool __result)
+        // Untouched: the game's own ShouldLoad runs, which is only `return TemporaryEventDates.IsHalloweenEvent()` (1.012).
+        // That gate answers with the Ghost setting (the patches above), so it runs bypassed: the game's real date check,
+        // or Ghost "Always" would put the decorations up out of season too (found 2026-11-15).
+        private static bool Prefix(ref bool __result, out bool __state)
         {
+            __state = false;
             if (Halloween.Untouched(Halloween.Decorations))
             {
+                Events.Bypass++;
+                __state = true;
                 return true;
             }
             __result = Halloween.DecorationsOn();
             return false;
+        }
+
+        private static void Finalizer(bool __state)
+        {
+            if (__state)
+            {
+                Events.Bypass--;
+            }
         }
     }
 
@@ -229,10 +268,14 @@ namespace GK2EventDecorations
     {
         private static bool tableMissing;
 
-        private static bool Prefix(int headId, ref int __result)
+        // Untouched: the game's own Resolve runs; it asks the gate first, so bypassed, as ShouldLoad's above.
+        private static bool Prefix(int headId, ref int __result, out bool __state)
         {
+            __state = false;
             if (Halloween.Untouched(Halloween.ZombieHead))
             {
+                Events.Bypass++;
+                __state = true;
                 return true;
             }
             if (!Halloween.PieceOn(Halloween.ZombieHead) || tableMissing)
@@ -252,6 +295,14 @@ namespace GK2EventDecorations
                 __result = headId;
             }
             return false;
+        }
+
+        private static void Finalizer(bool __state)
+        {
+            if (__state)
+            {
+                Events.Bypass--;
+            }
         }
     }
 }

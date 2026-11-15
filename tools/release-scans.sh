@@ -34,6 +34,8 @@ for t in CecilScan-BuiltCount CecilScan-GlobalStorage CecilScan-OwnedCount Cecil
 done
 run "$T/HarmonyHarness-BuiltCount" "HarmonyHarness build" dotnet build -c Release
 run "$T/HarmonyHarness-BuiltCount" "HarmonyHarness run" ./bin/Release/net48/HarmonyHarness-BuiltCount.exe
+run "$T/HarmonyHarness-EventDecorations" "HarmonyHarness-EventDecorations build" dotnet build -c Release
+run "$T/HarmonyHarness-EventDecorations" "HarmonyHarness-EventDecorations run" ./bin/Release/net48/HarmonyHarness-EventDecorations.exe
 run "$REPO/tools/DepManifest" "DepManifest build" dotnet build -c Release
 MODS=("$@")
 [ ${#MODS[@]} -eq 0 ] && MODS=(GK2BuiltCount GK2GlobalStorage GK2OwnedCount GK2TechTreeSearch GK2EventDecorations)  # Move Building retired 2026-10-30
