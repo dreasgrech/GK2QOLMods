@@ -35,6 +35,27 @@ var events = dates?.Methods.Where(x => x.IsStatic && x.IsPublic && x.ReturnType.
 Console.WriteLine("INFO events in the game: " + string.Join(", ", events));
 foreach (var e in events.Where(e => e != "Halloween")) Console.WriteLine("NOTE new event " + e + ": handled generically; look at its content");
 
+// The pieces' own targets: the decorations' condition and the head table.
+var cond = game.GetType("HalloweenConditionalLoadContentPart");
+var shouldLoad = cond?.Methods.Where(x => x.Name == "ShouldLoad").ToList() ?? new List<MethodDefinition>();
+Check(shouldLoad.Count == 1 && shouldLoad[0].Parameters.Count == 0 && shouldLoad[0].ReturnType.FullName == "System.Boolean" && shouldLoad[0].HasBody,
+  "HalloweenConditionalLoadContentPart.ShouldLoad(): one bool method with a body");
+var heads = game.GetType("HalloweenHeadSkinOverride");
+var resolve = heads?.Methods.Where(x => x.Name == "Resolve").ToList() ?? new List<MethodDefinition>();
+Check(resolve.Count == 1 && resolve[0].IsStatic && resolve[0].Parameters.Count == 1 && resolve[0].Parameters[0].ParameterType.FullName == "System.Int32",
+  "HalloweenHeadSkinOverride.Resolve(int): one static method");
+Check(heads?.Methods.Any(x => x.Name == "Replace" && x.IsPublic && !x.IsStatic && x.Parameters.Count == 1) == true, "HalloweenHeadSkinOverride.Replace(int): public instance");
+
+// Taking the decorations down / putting them up: GameSceneConfig's content methods by name (string overloads).
+var config = game.GetType("GameSceneConfig");
+foreach (var (name, pars) in new[] { ("TryLoadSceneDataContentByName", 2), ("TryUnloadSceneDataContent", 1), ("TryGetLoadedContent", 2) })
+{
+  var m = config?.Methods.FirstOrDefault(x => x.Name == name && x.IsPublic && x.Parameters.Count == pars && x.Parameters[0].ParameterType.FullName == "System.String");
+  Check(m != null, $"GameSceneConfig.{name}(string{(pars == 2 ? ", out ..." : "")})");
+}
+var configs = game.GetType("MainGame")?.Fields.FirstOrDefault(x => x.Name == "gameSceneConfigs");
+Check(configs != null && configs.IsPublic && !configs.IsStatic, "MainGame.gameSceneConfigs: public instance field");
+
 // The ghost's check: the load event and the walk flag.
 var mainGame = game.GetType("MainGame");
 var started = mainGame?.Fields.FirstOrDefault(x => x.Name == "OnGameStarted");

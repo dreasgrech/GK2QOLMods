@@ -29,7 +29,10 @@ namespace GK2EventDecorations
         internal static readonly Type[] PatchClasses =
         {
             typeof(TemporaryEventDates_IsHalloweenEvent_Patch),
-            typeof(TemporaryEventDates_IsHalloweenEventDate_Patch)
+            typeof(TemporaryEventDates_IsHalloweenEventDate_Patch),
+            typeof(HalloweenConditionalLoadContentPart_ShouldLoad_Patch),
+            typeof(HalloweenHeadSkinOverride_Resolve_Patch),
+            typeof(WorldData_AddMissingConditionalContent_Patch)
         };
 
         // What the mod is doing, for the Mods menu's status row.
@@ -50,7 +53,8 @@ namespace GK2EventDecorations
         {
             Enabled = Config.Bind("General", "Enabled", true,
                 "Off: every event follows the game's own dates, as without the mod.");
-            Events.Bind(Config); // one section per event: [Halloween] Mode, and any event a newer game adds
+            Events.Bind(Config); // one section per event: Mode, Start, End; Halloween and any event a newer game adds
+            Halloween.Bind(Config); // Halloween's pieces, areas and kinds
             SendGhostHome = Config.Bind(Events.HalloweenName, "SendGhostHome", true,
                 "While Halloween is off, a ghost left standing in the village is sent home. The game loses the last step of " +
                 "the ghost's morning walk home when the save is made during it, and leaves the ghost in the village after the event.");
@@ -84,6 +88,8 @@ namespace GK2EventDecorations
                 return "Disabled: patching failed (see BepInEx/LogOutput.log).";
             }
             MainGame.OnGameStarted = (Action)Delegate.Combine(MainGame.OnGameStarted, (Action)GhostHome.OnGameStarted);
+            MainGame.OnGameStarted = (Action)Delegate.Combine(MainGame.OnGameStarted, (Action)Decorations.OnGameStarted);
+            Config.SettingChanged += Decorations.OnSettingChanged; // any setting: the decorations follow at once
             listening = true;
             Log.LogInfo($"GK2 Event Decorations {Version} loaded. Events: {Events.Describe()}.");
             return status;
@@ -102,6 +108,8 @@ namespace GK2EventDecorations
             if (listening)
             {
                 MainGame.OnGameStarted = (Action)Delegate.Remove(MainGame.OnGameStarted, (Action)GhostHome.OnGameStarted);
+                MainGame.OnGameStarted = (Action)Delegate.Remove(MainGame.OnGameStarted, (Action)Decorations.OnGameStarted);
+                Config.SettingChanged -= Decorations.OnSettingChanged;
                 listening = false;
             }
             harmony?.UnpatchSelf();

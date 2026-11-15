@@ -8,19 +8,25 @@ namespace GK2EventDecorations
 {
     internal enum EventMode
     {
-        Auto, // the game's own dates
+        Auto, // the game's own dates, or the Start/End set here
         On,   // every day
         Off   // never
     }
 
     // One of the game's temporary events. The game asks TemporaryEventDates.Is<Name>Event() whenever it needs to know
-    // whether the event is on (decorations at save load, the event's scripts, display swaps); that one method is all a
-    // mode has to answer (docs/seasonal-events.md).
+    // whether the event is on (decorations at save load, the event's scripts, display swaps); docs/seasonal-events.md.
     internal sealed class GameEvent
     {
         internal readonly string Name;
         internal readonly bool Known; // written for this version (Halloween); else found in a newer game
         internal ConfigEntry<EventMode> Mode;
+        internal ConfigEntry<string> Start;
+        internal ConfigEntry<string> End;
+        internal MethodInfo GameGate;      // the game's own method, for a found event
+        internal bool GameGateTakesDate;   // only the (DateTime) overload exists
+
+        private string parsedStart, parsedEnd;
+        private int windowStart = -1, windowEnd = -1; // month * 100 + day; -1: not set or not valid
 
         internal GameEvent(string name, bool known)
         {
@@ -28,19 +34,99 @@ namespace GK2EventDecorations
             Known = known;
         }
 
-        // A Harmony prefix's body: Auto lets the game's date check run, On and Off answer instead of it.
-        internal bool Answer(ref bool result)
+        internal void Bind(ConfigFile config, string modeText, string defaultDates)
+        {
+            Mode = config.Bind(Name, "Mode", EventMode.Auto, modeText);
+            Start = config.Bind(Name, "Start", "",
+                "Auto only: the first day of the event as month-day, e.g. 10-01. Empty: the game's own dates" + defaultDates + ". Needs End too.");
+            End = config.Bind(Name, "End", "",
+                "Auto only: the last day of the event as month-day, e.g. 11-30 (it may wrap past the new year, e.g. 12-20 to 01-06). Empty: the game's own dates. Needs Start too.");
+        }
+
+        // Is the event on today, by this mod's settings? (With the mod switched off: by the game's own check.)
+        internal bool IsOn()
         {
             if (!Plugin.Enabled.Value)
             {
-                return true;
+                return Events.GameDates(this);
             }
-            EventMode mode = Mode.Value;
-            if (mode == EventMode.Auto)
+            switch (Mode.Value)
             {
-                return true;
+                case EventMode.On:
+                    return true;
+                case EventMode.Off:
+                    return false;
             }
-            result = mode == EventMode.On;
+            ParseWindow();
+            if (windowStart < 0 || windowEnd < 0)
+            {
+                return Events.GameDates(this);
+            }
+            DateTime now = DateTime.Now;
+            int today = now.Month * 100 + now.Day;
+            // the game's own rule (TemporaryEventDates.IsMonthDayInInclusiveRange): inclusive, wrapping the new year
+            return windowStart <= windowEnd ? today >= windowStart && today <= windowEnd : today >= windowStart || today <= windowEnd;
+        }
+
+        // Mode Auto without own dates: the game's own check decides, so our patches can let the game's code run.
+        internal bool UsesGameDates() => Mode.Value == EventMode.Auto && CustomWindow() == null;
+
+        // "Custom dates 10-01 to 11-30" for the status row; null when the game's dates apply.
+        internal string CustomWindow()
+        {
+            ParseWindow();
+            return windowStart < 0 || windowEnd < 0 ? null : $"{windowStart / 100:D2}-{windowStart % 100:D2} to {windowEnd / 100:D2}-{windowEnd % 100:D2}";
+        }
+
+        private void ParseWindow()
+        {
+            string s = Start.Value ?? "", e = End.Value ?? "";
+            if (s == parsedStart && e == parsedEnd)
+            {
+                return;
+            }
+            parsedStart = s;
+            parsedEnd = e;
+            windowStart = windowEnd = -1;
+            bool hasStart = s.Trim().Length > 0, hasEnd = e.Trim().Length > 0;
+            int a = hasStart ? ParseMonthDay(s) : -1, b = hasEnd ? ParseMonthDay(e) : -1;
+            // a value that is there but not a date: say so once per value; only one of the two (still typing the
+            // other): quietly the game's dates
+            if ((hasStart && a < 0) || (hasEnd && b < 0))
+            {
+                Plugin.Log.LogWarning($"[{Name}] Start \"{s}\" / End \"{e}\": dates are month-day like 10-24; using the game's own dates.");
+                return;
+            }
+            if (a < 0 || b < 0)
+            {
+                return;
+            }
+            windowStart = a;
+            windowEnd = b;
+        }
+
+        private static int ParseMonthDay(string text)
+        {
+            string[] parts = (text ?? "").Trim().Split('-', '/', '.');
+            if (parts.Length != 2 || !int.TryParse(parts[0], out int month) || !int.TryParse(parts[1], out int day))
+            {
+                return -1;
+            }
+            if (month < 1 || month > 12 || day < 1 || day > DateTime.DaysInMonth(2024, month)) // 2024: 29 Feb allowed
+            {
+                return -1;
+            }
+            return month * 100 + day;
+        }
+
+        // A Harmony prefix's body for a found event's gate: our answer instead of the game's date check.
+        internal bool Answer(ref bool result)
+        {
+            if (!Plugin.Enabled.Value || Events.Bypass > 0 || UsesGameDates())
+            {
+                return true; // the game's own check, as without the mod
+            }
+            result = IsOn();
             return false;
         }
     }
@@ -52,6 +138,9 @@ namespace GK2EventDecorations
         internal static GameEvent Halloween;
         internal static readonly List<GameEvent> All = new List<GameEvent>();
 
+        // While above zero our gate prefixes let the game's own date check run (GameDates).
+        internal static int Bypass;
+
         // The gates of events a newer game added (not Halloween), by event name; patched with GenericPrefix.
         private static readonly Dictionary<string, GameEvent> discovered = new Dictionary<string, GameEvent>();
         private static readonly List<MethodInfo> discoveredGates = new List<MethodInfo>();
@@ -62,10 +151,10 @@ namespace GK2EventDecorations
         internal static void Bind(ConfigFile config)
         {
             Halloween = new GameEvent(HalloweenName, known: true);
-            Halloween.Mode = config.Bind(HalloweenName, "Mode", EventMode.Auto,
-                "Auto: the game's own dates (24 October to 7 November in game 1.011). On: Halloween every day. Off: never. " +
-                "Covers everything the game ties to the event: the decorations, the ghost's walks through the village at night " +
-                "and the Halloween zombie head. The decorations are placed while a save loads: after a change, load your save again.");
+            Halloween.Bind(config,
+                "Auto: the game's own dates (24 October to 7 November), or Start/End below. On: Halloween every day. Off: never. " +
+                "The pieces below (decorations, ghost, zombie head) follow this unless set on their own.",
+                " (24 October to 7 November)");
             All.Add(Halloween);
 
             MethodInfo[] methods = typeof(TemporaryEventDates).GetMethods(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly);
@@ -73,24 +162,55 @@ namespace GK2EventDecorations
             {
                 MethodInfo m = methods[i];
                 string name = EventName(m);
-                if (name == null)
+                if (name == null || name == HalloweenName)
                 {
                     continue;
                 }
-                if (name != HalloweenName && !discovered.ContainsKey(name))
+                if (!discovered.TryGetValue(name, out GameEvent e))
                 {
-                    GameEvent e = new GameEvent(name, known: false);
-                    e.Mode = config.Bind(name, "Mode", EventMode.Auto,
-                        "Auto: the game's own dates. On: every day. Off: never. A game update added this event after this " +
-                        "version of the mod was written: the mode switches the game's date check for it, which is what " +
-                        "Halloween's decorations use too. Decorations are placed while a save loads: after a change, load your save again.");
+                    e = new GameEvent(name, known: false);
+                    e.Bind(config,
+                        "Auto: the game's own dates, or Start/End below. On: every day. Off: never. A game update added this " +
+                        "event after this version of the mod was written: the mode switches the game's date check for it. " +
+                        "Decorations are placed while a save loads: after a change, load your save again.",
+                        "");
                     discovered.Add(name, e);
                     All.Add(e);
                 }
-                if (name != HalloweenName)
+                if (m.GetParameters().Length == 0)
                 {
-                    discoveredGates.Add(m);
+                    e.GameGate = m;
+                    e.GameGateTakesDate = false;
                 }
+                else if (e.GameGate == null)
+                {
+                    e.GameGate = m;
+                    e.GameGateTakesDate = true;
+                }
+                discoveredGates.Add(m);
+            }
+        }
+
+        // The game's own answer for the event today, past our patches.
+        internal static bool GameDates(GameEvent e)
+        {
+            Bypass++;
+            try
+            {
+                if (e == Halloween)
+                {
+                    return TemporaryEventDates.IsHalloweenEvent();
+                }
+                if (e.GameGate == null)
+                {
+                    return false;
+                }
+                object r = e.GameGate.Invoke(null, e.GameGateTakesDate ? new object[] { DateTime.Now } : null);
+                return r is bool b && b;
+            }
+            finally
+            {
+                Bypass--;
             }
         }
 
@@ -127,7 +247,9 @@ namespace GK2EventDecorations
             for (int i = 0; i < All.Count; i++)
             {
                 GameEvent e = All[i];
-                s += (i == 0 ? "" : ", ") + e.Name + " (" + e.Mode.Value + (e.Known ? "" : ", new in this game version") + ")";
+                string window = e.CustomWindow();
+                s += (i == 0 ? "" : ", ") + e.Name + " (" + e.Mode.Value + (window != null && e.Mode.Value == EventMode.Auto ? " " + window : "") +
+                     (e.Known ? "" : ", new in this game version") + ")";
             }
             return s;
         }
@@ -141,19 +263,5 @@ namespace GK2EventDecorations
             }
             return e.Answer(ref __result);
         }
-    }
-
-    // Both overloads: everything in the game calls the one without a date, which calls the other with DateTime.Now; the
-    // second patch keeps the answer if Mono inlines the first into a caller.
-    [HarmonyPatch(typeof(TemporaryEventDates), nameof(TemporaryEventDates.IsHalloweenEvent), new Type[] { })]
-    internal static class TemporaryEventDates_IsHalloweenEvent_Patch
-    {
-        private static bool Prefix(ref bool __result) => Events.Halloween.Answer(ref __result);
-    }
-
-    [HarmonyPatch(typeof(TemporaryEventDates), nameof(TemporaryEventDates.IsHalloweenEvent), new Type[] { typeof(DateTime) })]
-    internal static class TemporaryEventDates_IsHalloweenEventDate_Patch
-    {
-        private static bool Prefix(ref bool __result) => Events.Halloween.Answer(ref __result);
     }
 }

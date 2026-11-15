@@ -79,20 +79,75 @@ namespace GK2EventDecorations
                 s.AddReadOnly("General", "Status", "Status", "What the mod is doing right now.",
                     () => Plugin.Status == "Active" && !Plugin.Enabled.Value ? "Off (\"Use these settings\" is unchecked)" : Plugin.Status,
                     order: -10);
+                s.AddReadOnly("General", "Today", "Today", "What is on today with these settings.", Today, order: -9);
                 // The same Section/Key/type as Plugin's binds, so BepInEx hands back those entries: the menu edits the
-                // values the mod reads.
-                s.AddToggle(Plugin.Enabled.Definition.Section, Plugin.Enabled.Definition.Key, (bool)Plugin.Enabled.DefaultValue,
-                    "Use these settings", Plugin.Enabled.Description.Description, 0);
+                // values the mod reads. Every change applies at once (the decorations go up or down in game).
+                Toggle(s, Plugin.Enabled, "Use these settings", 0);
+
+                // per event: its mode and its own dates; Halloween first
                 for (int i = 0; i < Events.All.Count; i++)
                 {
-                    ConfigEntry<EventMode> mode = Events.All[i].Mode;
-                    s.AddEnum(mode.Definition.Section, mode.Definition.Key, (EventMode)mode.DefaultValue,
-                        Events.All[i].Name, mode.Description.Description, 0);
+                    GameEvent e = Events.All[i];
+                    Enum(s, e.Mode, e.Known ? "Halloween" : e.Name + " (new event)", 0);
+                    Text(s, e.Start, "Own dates: from (month-day)", 1);
+                    Text(s, e.End, "Own dates: to (month-day)", 2);
                 }
-                s.AddToggle(Plugin.SendGhostHome.Definition.Section, Plugin.SendGhostHome.Definition.Key, (bool)Plugin.SendGhostHome.DefaultValue,
-                    "Send the ghost home when the event is off", Plugin.SendGhostHome.Description.Description, 1);
+
+                // Halloween's pieces
+                Enum(s, Halloween.Decorations, "Decorations", 10);
+                Enum(s, Halloween.Ghost, "Ghost walking at night", 11);
+                Enum(s, Halloween.ZombieHead, "Halloween zombie head", 12);
+                Toggle(s, Halloween.LiveSwitch, "Put up / take down without reloading", 13);
+                Toggle(s, Plugin.SendGhostHome, "Send the ghost home when it's off", 14);
+
+                // where and which decorations
+                for (int i = 0; i < Halloween.Areas.Count; i++)
+                {
+                    Toggle(s, Halloween.Areas[i].Entry, Halloween.Areas[i].Label, i);
+                }
+                for (int i = 0; i < Halloween.Kinds.Count; i++)
+                {
+                    Toggle(s, Halloween.Kinds[i].Entry, Halloween.Kinds[i].Label, i);
+                }
+                Toggle(s, Halloween.Glow, "Candle and lantern glow", Halloween.Kinds.Count);
+                Toggle(s, Halloween.BlockWay, "Decorations block the way", Halloween.Kinds.Count + 1);
                 // Not in the menu: Safety.StopOnChangedGameCode (read once at startup; the Status row says when it
                 // applies). It stays in the cfg.
+            }
+
+            private static string Today()
+            {
+                if (!Plugin.Enabled.Value)
+                {
+                    return "The game's own dates";
+                }
+                string s = "";
+                for (int i = 0; i < Events.All.Count; i++)
+                {
+                    GameEvent e = Events.All[i];
+                    s += (i == 0 ? "" : " · ") + e.Name + (e.IsOn() ? " on" : " off");
+                }
+                return s + " · decorations " + (Halloween.DecorationsOn() ? "on" : "off") +
+                       ", ghost " + (Halloween.PieceOn(Halloween.Ghost) ? "on" : "off") +
+                       ", zombie head " + (Halloween.PieceOn(Halloween.ZombieHead) ? "on" : "off");
+            }
+
+            private static void Toggle(Gk2Settings s, ConfigEntry<bool> entry, string name, int order)
+            {
+                s.AddToggle(entry.Definition.Section, entry.Definition.Key, (bool)entry.DefaultValue, name,
+                    entry.Description.Description, order);
+            }
+
+            private static void Enum<T>(Gk2Settings s, ConfigEntry<T> entry, string name, int order) where T : struct, System.Enum
+            {
+                s.AddEnum(entry.Definition.Section, entry.Definition.Key, (T)entry.DefaultValue, name,
+                    entry.Description.Description, order);
+            }
+
+            private static void Text(Gk2Settings s, ConfigEntry<string> entry, string name, int order)
+            {
+                s.AddText(entry.Definition.Section, entry.Definition.Key, (string)entry.DefaultValue, name,
+                    entry.Description.Description, order);
             }
         }
     }

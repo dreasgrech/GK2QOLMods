@@ -7,6 +7,9 @@ Subcommands:
   part <bundle>                    a SceneWgoContentPart: flags, wgo/wso/zone counts, GameObject names
   sceneconfig <bundle>             a GameSceneConfig: content refs, autoload flags, conditional loads
   scripts <bundle> <script-bundle> MonoBehaviour classes in a bundle, MonoScripts resolved from the second bundle
+  tree <bundle> [depth] [--names]  the GameObject hierarchy of a prefab bundle: per node its name, children, component
+                                   kinds and how many objects/colliders lie below; --names also prints, per subtree,
+                                   the object names below it grouped by prefix (to plan name-based filters)
   loose <file> <word>              a word in a loose data file (relative to GraveyardKeeper2_Data, e.g.
                                    resources.assets = GameBalance; no typetrees there): object, script class, context
 
@@ -183,6 +186,66 @@ def cmd_scripts(env):
         print(f"{v:5d} {k}")
 
 
+def cmd_tree(env, depth, names):
+    gos, tfs = {}, {}
+    for o in env.objects:
+        if o.type.name == "GameObject":
+            gos[o.path_id] = o.read_typetree()
+        elif o.type.name in ("Transform", "RectTransform"):
+            tfs[o.path_id] = o.read_typetree()
+    kind_of = {o.path_id: o.type.name for o in env.objects}
+    tf_of_go = {}
+    for pid, t in tfs.items():
+        tf_of_go[t["m_GameObject"]["m_PathID"]] = pid
+
+    def go_of(tf_pid):
+        return tfs[tf_pid]["m_GameObject"]["m_PathID"]
+
+    def comps(go_pid):
+        c = collections.Counter()
+        for x in gos[go_pid].get("m_Component", []):
+            k = kind_of.get(x["component"]["m_PathID"], "?")
+            if k not in ("Transform", "RectTransform"):
+                c[k] += 1
+        return c
+
+    def below(tf_pid):
+        n, col, nm = 0, 0, collections.Counter()
+        for ch in tfs[tf_pid].get("m_Children", []):
+            cp = ch["m_PathID"]
+            if cp not in tfs:
+                continue
+            g = go_of(cp)
+            n += 1
+            cc = comps(g)
+            col += sum(v for k, v in cc.items() if k.endswith("Collider"))
+            nm[re.sub(r"[ _-]*(\(\d+\)|\d+|pivot|MERGE S_OBJ|_sh\d*|_lt\d*|_ut|_gnd|-blackout)*$", "", gos[g].get("m_Name", ""))] += 1
+            a, b, c2 = below(cp)
+            n, col = n + a, col + b
+            nm.update(c2)
+        return n, col, nm
+
+    roots = [pid for pid, t in tfs.items() if t["m_Father"]["m_PathID"] == 0]
+
+    def show(tf_pid, d):
+        g = go_of(tf_pid)
+        go = gos[g]
+        n, col, nm = below(tf_pid)
+        cc = comps(g)
+        kids = tfs[tf_pid].get("m_Children", [])
+        active = "" if go.get("m_IsActive", True) else " [inactive]"
+        print(f"{'  ' * d}{go.get('m_Name')}{active}: {len(kids)} children, {n} below, {col} colliders below; own {dict(cc)}")
+        if names and d < depth and n:
+            print(f"{'  ' * d}  names below: " + ", ".join(f"{k} {v}" for k, v in nm.most_common(25)))
+        if d < depth:
+            for ch in kids:
+                if ch["m_PathID"] in tfs:
+                    show(ch["m_PathID"], d + 1)
+
+    for r in roots:
+        show(r, 0)
+
+
 def cmd_loose(path, word, before=500, after=500):
     UnityPy = unitypy()
     if not os.path.isfile(path):
@@ -218,7 +281,8 @@ def cmd_loose(path, word, before=500, after=500):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--game")
-    ap.add_argument("cmd", choices=("containers", "words", "graph", "part", "sceneconfig", "scripts", "loose"))
+    ap.add_argument("cmd", choices=("containers", "words", "graph", "part", "sceneconfig", "scripts", "loose", "tree"))
+    ap.add_argument("--names", action="store_true", help="tree: name groups below each node")
     ap.add_argument("args", nargs="*")
     a = ap.parse_args()
     game = game_dir(a.game)
@@ -239,6 +303,9 @@ def main():
         return
     if not a.args:
         sys.exit(f"usage: {a.cmd} <bundle file name>")
+    if a.cmd == "tree":
+        cmd_tree(load(bdir, a.args[0]), int(a.args[1]) if len(a.args) > 1 else 2, a.names)
+        return
     env = load(bdir, *a.args)
     {"graph": cmd_graph, "part": cmd_part, "sceneconfig": cmd_sceneconfig, "scripts": cmd_scripts}[a.cmd](env)
 

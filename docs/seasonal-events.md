@@ -4,7 +4,9 @@ Investigated 2026-11-11 on game 1.011.1 (Steam build 26404424, `Assembly-CSharp`
 `7274b6c4-2447-4669-baff-1ced3407f34e`) for a possible new QOL mod that turns the game's seasonal content on or off
 by the mod's own setting instead of the PC's date. Built 2026-11-11 as **GK2 Event Decorations**
 (`src/GK2EventDecorations`): design points 1, 3 and 5 below (the gate per event, discovery of new events, the ghost
-home); not yet run in game. Points 2 and 4 are options.
+home), seen in game on 1.012 (Halloween forced On: the decorations up, 2026-11-13). On 2026-11-13 also points 2 and 4
+(per-piece switches; the live switch, `SwitchWithoutReload`), own dates, areas, kinds, glow and walk-through:
+built and deployed, **not yet seen in game**. The decorations' layout these rely on: section "Game 1.012".
 
 ## Verdict
 
@@ -113,6 +115,45 @@ The request ("enable/disable seasonal things with script") is read as: **the mod
 and the Mods menu, per event `Auto` / `On` / `Off`), applied at save load, with a live switch as stage 2. The user went
 ahead with that (2026-11-11, "GK2 Event Decorations"); a console command, a key or an API for other mods would only
 change stage 2.
+
+## Game 1.012 (Steam 26624074, checked 2026-11-13)
+
+- The event code is identical (`TemporaryEventDates`, both Halloween classes, the flow node, `ConditionalLoadContentPart`,
+  `SceneWgoContentPart`, `WorldData`, `GameSceneConfig`, `Flow_GoTo`); `MovementComponent` changed (`StartPath`),
+  the mod reads only `IsMoving`. The mod's manifest: 22 entries identical; CecilScan: Halloween still the only gate.
+- Bundle names changed (the decorations are `fb04211b70682a76847719661160c285.bundle` now, the scene config
+  `246733e8bf82936b8fa172c5120b23c7.bundle`); the ghost graph and the two config assets kept theirs.
+- **New: six seasonal food items, with no source** (corrected 2026-11-13; first read as recipes). GameBalance
+  `itemDefs` (sort order 144-149): `cook_halloween_cookie` (icon `i_halloween_pechenie`), `cook_halloween_pie`,
+  `cook_christmas_cookie` (`i_christmas_pechenie`), `cook_christmas_pie`, `cook_easter_egg`, `cook_easter_rabbit`:
+  food (groups `u_bag`, `food_bag`, stack 30, energy `25+3*PPar("food_eng_buff")`, price 0, no tech points). Each
+  id occurs **once** in GameBalance, its own ItemDef (a real dish, `cook_golden_carp`, 9 times: recipe at
+  `kitchen_oven`, survey, tech); `food_bag`/`u_bag` occur nowhere else; no vendor, drop, quest, script or code names
+  them. Icons new in the `Atlases/Icons.spriteatlasv2` (`c95ef5e2…`) and `EasySpritesCollection` (`6c0e0e03…`);
+  names in English, Russian translated ("Новогодний" = New Year's for Christmas), the other nine languages still
+  English. Nothing gates them (no date, event, tech, hidden flag) because nothing gives them: groundwork for events
+  to come, with no Christmas or Easter gate yet. (Subagent report, verified by the hit counts.)
+- **Zombie pictures for the Halloween head are addressable now:** `drops_item_zombie_pose1_t1060` / `pose2_t1060`
+  (`a928b433…`, `4e996cbd…`), picked by `DropViewAtomMesh` through `ResolveDropIconId` at `:214` and in the new pooled
+  path `ActivatePooledZombie` `:494`. (In 1.011.1 the two existed only embedded in `BigItem.prefab`: GK2DonkeyAPI
+  `docs/game-update-26404424.md`.) The mod's ZombieHead switch reaches both paths (it answers `Resolve`).
+- Checked unchanged: the head table, the ghost graph, the condition asset (identical bundles); all six scene configs
+  (only RuinedTemple index 29 is conditional); the GameBalance diff 1.011.1 → 1.012 has no other seasonal token; the
+  1.012 save fixer names nothing of the events. New 1.012 types (BigDropViewPools, MapDayType with the sin days, the
+  PR machine, the rest bench, …) are not event-related.
+- **The decorations' layout** (`tools/game-bundles.py tree fb04211b70682a76847719661160c285.bundle 3 --names`), what
+  the mod's areas, kinds, glow and walk-through switch:
+  `RuinedTemple_ContentPart_6_HalloweenData` → `HalloweenDecorationsStatic` → 12 groups: `HalloweenVillage` (50
+  items), `Port` (16), `PlayerZone` (22), `PlayerInterior` (3), `TavernInterior` (18), `RestaurantInterior` (9),
+  `Barracks` (8), `BarracksInterior` (7), `AstrologerInterior` (1), `WarehouseInterior` (3), `Dungeons` (3), `FX` (14:
+  3 `VFXBats` with `SPBats` + `BirdsTriggerZone`, 9 `glowing_eyes`, 2 `bats_circling_vfx`). Items by name:
+  `common_hw_pumpkin_01..06` (69), `common_hw_flags` (30), `common_hw_01..06` (28), `common_hw_pie_01/02` (8),
+  `common_hw_scarecrow` (2), `common_hw_plants_01/02` (3). Inside an item: the picture, its glow (`DecorLight` or
+  `Decor Light (astrologers_candles_v2)`, 44 in all) and its blockers (`Obstacle`, 104 objects, 107 colliders with the
+  three bat zones). Every collider has `m_IsTrigger` false, the bats' `BirdsTriggerZone` too, so walk-through goes by
+  the `Obstacle` name. Scripts on the objects: RoundPos, ChunkableObjectComponent, Object3D(Mesh), Horizontal/Vertical/
+  DayNightSprite, WorldFxColliderTriggerComponent, ChunkBoundsContributor: none calls SetActive or registers itself
+  (no LightFaker), so the mod's SetActive stays.
 
 ## Evidence
 

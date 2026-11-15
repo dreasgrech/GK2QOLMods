@@ -158,10 +158,12 @@ scrolls to the tech and frames its card. Ctrl+F puts the cursor in the box.
 `GK2EventDecorations.dll` · GUID `dreas.gk2.eventdecorations` · [source and README](src/GK2EventDecorations/)
 
 The game shows its temporary events by the PC's date (Halloween: 24 October to 7 November). Each event gets a mode:
-`Auto` (the game's dates), `On` (every day) or `Off` (never). Halloween's mode covers its decorations, the ghost's
-night walks in the village and the Halloween zombie head.
+`Auto` (the game's dates, or your own), `On` (every day) or `Off` (never). Halloween's mode covers its decorations,
+the ghost's night walks in the village and the Halloween zombie head, and each of the three can also be set on its own.
 
-- The decorations are placed while a save loads: after a change, load your save again.
+- Decorations per area (village, port, your grounds, your house, tavern, ...) and per kind (pumpkins, garlands,
+  scarecrows, pies, bats, ...), the candle glow, and walk-through decorations.
+- Changes apply at once: the decorations go up or down without reloading.
 - Nothing is written into the save; removing the mod returns every event to its dates.
 - With the event off, a ghost the game left standing in the village is sent home.
 - An event a later game update adds gets the same `Auto` / `On` / `Off` row by itself.

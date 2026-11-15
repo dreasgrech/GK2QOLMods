@@ -116,6 +116,13 @@ Nothing changes for players.
 - With Halloween off, a ghost the game left standing in the village is sent home.
 - An event a later game update adds gets its own Auto / On / Off setting by itself.
 - Optional GK2 Mod Framework integration (the settings in the game's Mods menu).
+- Own dates for Auto (Start / End, month-day, may wrap the new year), for every event.
+- Halloween's decorations, ghost and zombie head can each be set on their own (follow the event, on, off).
+- Decorations per area (village, port, your grounds, your house, tavern, restaurant, barracks, astrologer, warehouse,
+  dungeons) and per kind (pumpkins, garlands, scarecrows, pies, plants, other props, bats and glowing eyes), candle
+  glow on/off, and walk-through decorations.
+- The decorations go up or down at once when a setting changes (can be switched off: then from the next load).
+- A "Today" line in the Mods menu says what is on.
 
 ## Development
 
@@ -128,4 +135,5 @@ Nothing changes for players.
   line; `tests/NoLinqScan` checks every built DLL and runs with the release scans. The .NET test tools may use it.
 - `tools/game-bundles.py` (2026-11-11): read-only UnityPy reader for the game's addressable bundles and loose data
   files (container index, word search, visual-script graphs, scene content parts and configs, script classes,
-  GameBalance text). Written for the seasonal-events investigation, `docs/seasonal-events.md`; nothing built yet.
+  GameBalance text, and `tree`: a prefab's GameObject hierarchy with component kinds and name groups, 2026-11-13).
+  Written for the seasonal-events investigation, `docs/seasonal-events.md`, behind GK2 Event Decorations.
