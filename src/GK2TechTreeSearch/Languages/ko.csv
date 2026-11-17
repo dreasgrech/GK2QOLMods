@@ -1,4 +1,17 @@
 ﻿key,value,english,note
+page.title,GK2 Tech Tree Search,GK2 Tech Tree Search,the page's title: the options window's title and the Settings window's button
+section.general,일반,General,a section
+section.safety,안전,Safety,a section
+Enabled.label,기술 개발도 검색창,Search box on the Tech Tree,"General, a switch"
+Enabled.desc,기술 개발도 화면에 검색창을 추가합니다. 기술 이름(또는 그 기술로 해금되는 것)의 일부를 입력하면 해당 기술로 이동합니다. 숨겨진 기술과 잠긴 탭은 표시되지 않습니다. 표시 전용 기능입니다.,A search box on the Tech Tree page: type part of a tech's name (or of something it unlocks) and jump to it. Hidden techs and locked tabs are never shown. Display only.,"General, a switch: its description"
+SearchUnlocks.label,기술로 해금되는 것도 검색,Also search what techs unlock,"General, a switch"
+SearchUnlocks.desc,"기술이 해금하는 것(기술 카드에 표시된 아이템, 건물, 특성)도 검색합니다. 예: '맥주'를 입력하면 양조가 나옵니다.","Also match what a tech unlocks (the items, buildings and perks shown on its card), e.g. ""beer"" finds Brewing.","General, a switch: its description"
+MaxResults.label,표시할 결과 수,Results shown,"General, a slider"
+MaxResults.desc,검색창 아래 목록에 표시되는 결과의 최대 개수입니다.,How many results the list under the box shows at most.,"General, a slider: its description"
+FocusKey.label,검색 시작 키,Key to start a search,"General, a key"
+FocusKey.desc,기술 개발도 화면이 열려 있을 때 커서를 검색창에 놓습니다. 검색창을 클릭해도 됩니다. 없음: 키 없음.,Puts the cursor in the search box while the Tech Tree page is open. Clicking the box works too. None: no key.,"General, a key: its description"
+StopOnChangedGameCode.label,게임 코드가 바뀌면 중지,Stop on changed game code,"Safety, a switch"
+StopOnChangedGameCode.desc,"시작할 때 모드가 사용하는 게임 코드의 모든 부분을 설치된 게임과 비교합니다. 사라진 부분이 있으면 모드는 항상 중지됩니다. 코드가 바뀐 부분이 있으면 로그에 경고를 남기고 모드가 실행되며, 이 옵션을 켜면(true) 이 경우에도 바뀐 게임 코드에 맞춰 확인된 모드의 새 버전이 나올 때까지 모드가 중지됩니다. 다음 시작 시 적용됩니다.","At start the mod compares every game member it uses with the installed game. A member that is gone always stops the mod. A member whose code changed runs the mod with a warning in the log; true stops the mod in that case too, until a re-audited build. Applies at the next start.","Safety, a switch: its description"
 options.done,완료,Done,
 options.defaults,기본값,Defaults,
 options.set_back_ask,{0}의 모든 옵션을 기본값으로 초기화할까요?,Set every option in {0} back to its default?,the Defaults button's question; {0}: a section's name
@@ -20,3 +33,8 @@ row.none,없음,None,a key option with no key; an empty name; no babies
 row.no_choice,(없음),(none),a list with nothing to choose
 key.same_as,{0}의 키와 같음,Same key as {0},"under a key option; {0}: another option, or another mod's setting"
 key.clashes_with,{0}의 키({1})와 충돌,Clashes with {0} ({1}),"under a key option; {0}: another option or mod's setting, {1}: its key"
+search.placeholder,검색...,Search...,the grey text in the empty search box on the Tech Tree page; short: the box is narrow (about 12 letters)
+search.no_match,보이는 기술 중 일치 항목 없음,No visible tech matches,the result list's one line when nothing matches what was typed (hidden techs and locked tabs are never shown)
+search.more,+{0}개 더: 글자를 더 입력하세요,+{0} more: type more letters,the result list's last line when there are more results than it shows; {0}: how many more (a number)
+info.status.label,상태,Status,the Status row a settings page may have (what the mod is doing right now): its label
+info.status.desc,모드가 지금 무엇을 하고 있는지 보여 줍니다.,What the mod is doing right now.,"the Status row: its description, where a mod gives none of its own"

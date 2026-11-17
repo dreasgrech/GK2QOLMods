@@ -39,7 +39,7 @@ namespace GK2EventDecorations
             new Area("RestaurantInterior", "Restaurant", "Inside the restaurant."),
             new Area("Barracks", "Barracks", "Outside at the barracks."),
             new Area("BarracksInterior", "Barracks inside", "Inside the barracks."),
-            new Area("AstrologerInterior", "Astrologer", "Inside the astrologer's house."),
+            new Area("AstrologerInterior", "Astrologer", "Inside the astrologer's tower."), // the game's own name for the place: Astrologer's Tower (wz_astrologer_tower)
             new Area("WarehouseInterior", "Warehouse", "Inside the warehouse."),
             new Area("Dungeons", "Dungeons", "The dungeons.")
         };

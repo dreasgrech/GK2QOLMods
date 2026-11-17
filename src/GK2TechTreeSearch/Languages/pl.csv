@@ -1,4 +1,19 @@
 ﻿key,value,english,note
+page.title,GK2 Tech Tree Search,GK2 Tech Tree Search,the page's title: the options window's title and the Settings window's button
+section.general,Ogólne,General,a section
+section.safety,Bezpieczeństwo,Safety,a section
+info.status.label,Stan,Status,the Status row a settings page may have (what the mod is doing right now): its label
+info.status.desc,Co mod robi w tej chwili.,What the mod is doing right now.,"the Status row: its description, where a mod gives none of its own"
+Enabled.label,Pole wyszukiwania w drzewie technologii,Search box on the Tech Tree,"General, a switch"
+Enabled.desc,"Pole wyszukiwania na stronie drzewa technologii: wpisz część nazwy technologii (lub czegoś, co ona odblokowuje) i przejdź do niej. Ukryte technologie i zablokowane zakładki nigdy nie są pokazywane. Dotyczy tylko wyświetlania.",A search box on the Tech Tree page: type part of a tech's name (or of something it unlocks) and jump to it. Hidden techs and locked tabs are never shown. Display only.,"General, a switch: its description"
+SearchUnlocks.label,"Szukaj też w tym, co odblokowują technologie",Also search what techs unlock,"General, a switch"
+SearchUnlocks.desc,"Dopasowuje też to, co technologia odblokowuje (przedmioty, budynki i atuty widoczne na jej karcie), np. ""piwo"" znajduje Warzelnictwo.","Also match what a tech unlocks (the items, buildings and perks shown on its card), e.g. ""beer"" finds Brewing.","General, a switch: its description"
+MaxResults.label,Liczba wyników,Results shown,"General, a slider"
+MaxResults.desc,Ile wyników co najwyżej pokazuje lista pod polem wyszukiwania.,How many results the list under the box shows at most.,"General, a slider: its description"
+FocusKey.label,Klawisz rozpoczęcia wyszukiwania,Key to start a search,"General, a key"
+FocusKey.desc,"Umieszcza kursor w polu wyszukiwania, gdy strona drzewa technologii jest otwarta. Można też po prostu kliknąć pole. Brak: bez klawisza.",Puts the cursor in the search box while the Tech Tree page is open. Clicking the box works too. None: no key.,"General, a key: its description"
+StopOnChangedGameCode.label,Zatrzymaj przy zmienionym kodzie gry,Stop on changed game code,"Safety, a switch"
+StopOnChangedGameCode.desc,"Przy starcie mod porównuje każdy używany element kodu gry z zainstalowaną grą. Element, którego już nie ma, zawsze zatrzymuje mod. Gdy zmienił się kod elementu, mod działa z ostrzeżeniem w logu; po włączeniu (true) zatrzymuje się także w takim przypadku, aż do wersji moda sprawdzonej ze zmienionym kodem gry. Działa od następnego uruchomienia.","At start the mod compares every game member it uses with the installed game. A member that is gone always stops the mod. A member whose code changed runs the mod with a warning in the log; true stops the mod in that case too, until a re-audited build. Applies at the next start.","Safety, a switch: its description"
 options.done,Gotowe,Done,
 options.defaults,Domyślne,Defaults,
 options.set_back_ask,Przywrócić domyślne wartości wszystkich opcji w sekcji {0}?,Set every option in {0} back to its default?,the Defaults button's question; {0}: a section's name
@@ -20,3 +35,6 @@ row.none,Brak,None,a key option with no key; an empty name; no babies
 row.no_choice,(brak),(none),a list with nothing to choose
 key.same_as,Ten sam klawisz co {0},Same key as {0},"under a key option; {0}: another option, or another mod's setting"
 key.clashes_with,Konflikt: {0} ({1}),Clashes with {0} ({1}),"under a key option; {0}: another option or mod's setting, {1}: its key"
+search.placeholder,Szukaj...,Search...,the grey text in the empty search box on the Tech Tree page; short: the box is narrow (about 12 letters)
+search.no_match,Brak widocznych trafień,No visible tech matches,the result list's one line when nothing matches what was typed (hidden techs and locked tabs are never shown)
+search.more,+{0} więcej: wpisz więcej liter,+{0} more: type more letters,the result list's last line when there are more results than it shows; {0}: how many more (a number)

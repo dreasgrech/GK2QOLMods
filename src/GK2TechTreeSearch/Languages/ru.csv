@@ -1,4 +1,17 @@
 ﻿key,value,english,note
+page.title,GK2 Tech Tree Search,GK2 Tech Tree Search,the page's title: the options window's title and the Settings window's button
+section.general,Общие,General,a section
+section.safety,Безопасность,Safety,a section
+Enabled.label,Строка поиска на древе технологий,Search box on the Tech Tree,"General, a switch"
+Enabled.desc,"Строка поиска на странице древа технологий: введите часть названия технологии (или того, что она открывает) и перейдите к ней. Скрытые технологии и закрытые вкладки никогда не показываются. Влияет только на отображение.",A search box on the Tech Tree page: type part of a tech's name (or of something it unlocks) and jump to it. Hidden techs and locked tabs are never shown. Display only.,"General, a switch: its description"
+SearchUnlocks.label,"Искать и то, что открывают технологии",Also search what techs unlock,"General, a switch"
+SearchUnlocks.desc,"Находить также то, что открывает технология (предметы, постройки и способности на её карточке), например «пиво» найдёт «Пивоварение».","Also match what a tech unlocks (the items, buildings and perks shown on its card), e.g. ""beer"" finds Brewing.","General, a switch: its description"
+MaxResults.label,Число результатов,Results shown,"General, a slider"
+MaxResults.desc,Сколько результатов самое большее показывает список под строкой поиска.,How many results the list under the box shows at most.,"General, a slider: its description"
+FocusKey.label,Клавиша начала поиска,Key to start a search,"General, a key"
+FocusKey.desc,"Ставит курсор в строку поиска, пока открыта страница древа технологий. Можно также щёлкнуть по строке. Нет: без клавиши.",Puts the cursor in the search box while the Tech Tree page is open. Clicking the box works too. None: no key.,"General, a key: its description"
+StopOnChangedGameCode.label,Останавливать при изменённом коде игры,Stop on changed game code,"Safety, a switch"
+StopOnChangedGameCode.desc,"При запуске мод сверяет каждый используемый им элемент кода игры с установленной игрой. Если элемента больше нет, мод всегда останавливается. Если код элемента изменился, мод работает, но пишет предупреждение в лог; если опция включена (true), мод останавливается и в этом случае, пока не выйдет перепроверенная сборка. Применяется при следующем запуске.","At start the mod compares every game member it uses with the installed game. A member that is gone always stops the mod. A member whose code changed runs the mod with a warning in the log; true stops the mod in that case too, until a re-audited build. Applies at the next start.","Safety, a switch: its description"
 options.done,Готово,Done,
 options.defaults,По умолчанию,Defaults,
 options.set_back_ask,Сбросить все опции раздела «{0}» до значений по умолчанию?,Set every option in {0} back to its default?,the Defaults button's question; {0}: a section's name
@@ -20,3 +33,8 @@ row.none,Нет,None,a key option with no key; an empty name; no babies
 row.no_choice,(нет),(none),a list with nothing to choose
 key.same_as,Та же клавиша: {0},Same key as {0},"under a key option; {0}: another option, or another mod's setting"
 key.clashes_with,Конфликт: {0} ({1}),Clashes with {0} ({1}),"under a key option; {0}: another option or mod's setting, {1}: its key"
+search.placeholder,Поиск...,Search...,the grey text in the empty search box on the Tech Tree page; short: the box is narrow (about 12 letters)
+search.no_match,Нет подходящих видимых технологий,No visible tech matches,the result list's one line when nothing matches what was typed (hidden techs and locked tabs are never shown)
+search.more,Ещё {0}: введите больше букв,+{0} more: type more letters,the result list's last line when there are more results than it shows; {0}: how many more (a number)
+info.status.label,Состояние,Status,the Status row a settings page may have (what the mod is doing right now): its label
+info.status.desc,Что мод делает прямо сейчас.,What the mod is doing right now.,"the Status row: its description, where a mod gives none of its own"

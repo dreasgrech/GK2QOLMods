@@ -48,6 +48,7 @@ run "$REPO" "check-dist ${MODS[*]}" python tools/check-dist.py "${MODS[@]}"
 # Languages/en.csv is what its build gives, the window's own words in its Languages/<id>.csv are the library's; then
 # the reader's mistake catalogue and every shipped Languages file read as the game reads it
 run "$REPO" "translations: the sync tool's writing, on scratch files" python -I lib/GK2DreasUI/tests/l10n-sync-merge-test.py
+run "$REPO" "translations: the writer's checks (fonts, room, placeholders), on scratch files" python -I lib/GK2DreasUI/tests/l10n-write-test.py
 run "$REPO" "translations: the English templates match the builds, the window's words the library's" python -I lib/GK2DreasUI/tools/l10n-sync.py --check
 run "$REPO/lib/GK2DreasUI/tests/TranslationScan" "TranslationScan (the mistake catalogue; every shipped Languages file)" dotnet run -c Release -- "$REPO"
 echo "$((total - fails)) of $total checks green (log: $LOG)"

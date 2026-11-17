@@ -1,4 +1,17 @@
 ﻿key,value,english,note
+page.title,GK2 Tech Tree Search,GK2 Tech Tree Search,the page's title: the options window's title and the Settings window's button
+section.general,一般,General,a section
+section.safety,安全,Safety,a section
+Enabled.label,技術開発ツリーの検索ボックス,Search box on the Tech Tree,"General, a switch"
+Enabled.desc,技術開発ツリーの画面に検索ボックスを追加します。技術の名前（またはその技術で開放されるもの）の一部を入力すると、その技術にジャンプできます。非表示の技術やロックされたタブは表示されません。表示のみに影響します。,A search box on the Tech Tree page: type part of a tech's name (or of something it unlocks) and jump to it. Hidden techs and locked tabs are never shown. Display only.,"General, a switch: its description"
+SearchUnlocks.label,技術で開放されるものも検索する,Also search what techs unlock,"General, a switch"
+SearchUnlocks.desc,技術で開放されるもの（カードに表示されるアイテム、建物、パーク）にも一致させます。例：「ビール」で「ビール醸造」が見つかります。,"Also match what a tech unlocks (the items, buildings and perks shown on its card), e.g. ""beer"" finds Brewing.","General, a switch: its description"
+MaxResults.label,表示する結果の数,Results shown,"General, a slider"
+MaxResults.desc,ボックスの下のリストに表示される結果の最大数です。,How many results the list under the box shows at most.,"General, a slider: its description"
+FocusKey.label,検索を始めるキー,Key to start a search,"General, a key"
+FocusKey.desc,技術開発ツリーの画面が開いているときに、検索ボックスにカーソルを移します。ボックスをクリックしても同じです。なし：キーを使いません。,Puts the cursor in the search box while the Tech Tree page is open. Clicking the box works too. None: no key.,"General, a key: its description"
+StopOnChangedGameCode.label,ゲームコードの変更時に停止する,Stop on changed game code,"Safety, a switch"
+StopOnChangedGameCode.desc,起動時に、MOD は使用するゲームコードの各部分を、インストールされているゲームとすべて照合します。なくなった部分がある場合、MOD は必ず停止します。コードが変更された部分がある場合は、ログに警告を出して MOD が動作します。オン (true) にすると、その場合も、変更後のゲームコードで確認済みの MOD の新しいバージョンが出るまで MOD を停止します。次回の起動時に反映されます。,"At start the mod compares every game member it uses with the installed game. A member that is gone always stops the mod. A member whose code changed runs the mod with a warning in the log; true stops the mod in that case too, until a re-audited build. Applies at the next start.","Safety, a switch: its description"
 options.done,完了,Done,
 options.defaults,初期設定に戻す,Defaults,
 options.set_back_ask,{0}のすべてのオプションを初期設定に戻しますか？,Set every option in {0} back to its default?,the Defaults button's question; {0}: a section's name
@@ -20,3 +33,8 @@ row.none,なし,None,a key option with no key; an empty name; no babies
 row.no_choice,（なし）,(none),a list with nothing to choose
 key.same_as,{0}と同じキー,Same key as {0},"under a key option; {0}: another option, or another mod's setting"
 key.clashes_with,{0}（{1}）と競合,Clashes with {0} ({1}),"under a key option; {0}: another option or mod's setting, {1}: its key"
+search.placeholder,検索…,Search...,the grey text in the empty search box on the Tech Tree page; short: the box is narrow (about 12 letters)
+search.no_match,表示可能な技術に該当なし,No visible tech matches,the result list's one line when nothing matches what was typed (hidden techs and locked tabs are never shown)
+search.more,ほか {0} 件：さらに文字を入力,+{0} more: type more letters,the result list's last line when there are more results than it shows; {0}: how many more (a number)
+info.status.label,状態,Status,the Status row a settings page may have (what the mod is doing right now): its label
+info.status.desc,MOD が現在何をしているかを示します。,What the mod is doing right now.,"the Status row: its description, where a mod gives none of its own"

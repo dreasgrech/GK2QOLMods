@@ -2,5 +2,15 @@
   "english": "build",
   "plugins": ["src/GK2TechTreeSearch", "src/GK2EventDecorations"],
   "dll": "{folder}/bin/Release/netstandard2.1/{name}.dll",
-  "method": "BindConfig"
+  "method": "BindConfig",
+  "room": {
+    "search.placeholder": 14,
+    "search.no_match": 34,
+    "search.more": 34
+  },
+  "font": {
+    "search.placeholder": "tiny_font",
+    "search.no_match": "tiny_font",
+    "search.more": "tiny_font"
+  }
 }

@@ -84,7 +84,7 @@ namespace GK2TechTreeSearch
             {
                 Status = StartMod(); // not "Start": Unity would call that itself on the first frame and patch twice
             }
-            FrameworkLink.TryRegister(Config);
+            FrameworkLink.TryRegister(Config, page); // its Mods menu's Settings button opens the same window
             page.Publish(); // the page reaches the windows the frame after, when every plugin's Awake has run
         }
 
@@ -135,10 +135,13 @@ namespace GK2TechTreeSearch
         // The settings: each a cfg entry, the General and Safety ones rows of the settings page too (the options window;
         // the page binds the same section, key and type, so BepInEx hands it the entries bound here and the window edits
         // the values the mod reads). The sections stay as named (numberSections: false): the cfg had them that way before
-        // the window, and the Mods menu (FrameworkLink) binds them by name too. The Layout ones (a point, a size, a
-        // width) have no row: the cfg's.
+        // the window. The Layout ones (a point, a size, a width) have no row: the cfg's.
+        // Everything the mod has to translate is declared here: the page's rows, and the search box's own words
+        // (UiOwner.OwnWords). The window library's tools/EnglishDump runs this method alone, without the game, to write
+        // Languages\en.csv from the build: nothing in it may need a running game.
         private void BindConfig()
         {
+            UiOwner.OwnWords = () => SearchWords.All;
             page = new SettingsPage(Guid, Config, "GK2 Tech Tree Search", "dreas",
                 "A search box on the Tech Tree page: type part of a tech's name, or of something it unlocks, and jump to it. Display only.",
                 StatusShown, numberSections: false);

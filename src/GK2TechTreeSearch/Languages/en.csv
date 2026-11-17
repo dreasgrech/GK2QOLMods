@@ -35,3 +35,6 @@ row.none,None,None,"a key option with no key; an empty name; no babies"
 row.no_choice,(none),(none),a list with nothing to choose
 key.same_as,Same key as {0},Same key as {0},"under a key option; {0}: another option, or another mod's setting"
 key.clashes_with,Clashes with {0} ({1}),Clashes with {0} ({1}),"under a key option; {0}: another option or mod's setting, {1}: its key"
+search.placeholder,Search...,Search...,"the grey text in the empty search box on the Tech Tree page; short: the box is narrow (about 12 letters)"
+search.no_match,No visible tech matches,No visible tech matches,the result list's one line when nothing matches what was typed (hidden techs and locked tabs are never shown)
+search.more,+{0} more: type more letters,+{0} more: type more letters,"the result list's last line when there are more results than it shows; {0}: how many more (a number)"

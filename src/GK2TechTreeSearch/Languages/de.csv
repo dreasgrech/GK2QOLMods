@@ -1,4 +1,17 @@
 ﻿key,value,english,note
+page.title,GK2 Tech Tree Search,GK2 Tech Tree Search,the page's title: the options window's title and the Settings window's button
+section.general,Allgemein,General,a section
+section.safety,Sicherheit,Safety,a section
+Enabled.label,Suchfeld im Technologiebaum,Search box on the Tech Tree,"General, a switch"
+Enabled.desc,"Ein Suchfeld auf der Seite des Technologiebaums: Gib einen Teil des Namens einer Technologie ein (oder von etwas, das sie freischaltet), und spring zu ihr. Versteckte Technologien und gesperrte Tabs werden nie angezeigt. Ändert nur die Anzeige.",A search box on the Tech Tree page: type part of a tech's name (or of something it unlocks) and jump to it. Hidden techs and locked tabs are never shown. Display only.,"General, a switch: its description"
+SearchUnlocks.label,Auch Freischaltungen durchsuchen,Also search what techs unlock,"General, a switch"
+SearchUnlocks.desc,"Findet auch, was eine Technologie freischaltet (die Gegenstände, Gebäude und Perks auf ihrer Karte), z. B. findet ""Bier"" Brauen.","Also match what a tech unlocks (the items, buildings and perks shown on its card), e.g. ""beer"" finds Brewing.","General, a switch: its description"
+MaxResults.label,Angezeigte Ergebnisse,Results shown,"General, a slider"
+MaxResults.desc,Wie viele Ergebnisse die Liste unter dem Feld höchstens anzeigt.,How many results the list under the box shows at most.,"General, a slider: its description"
+FocusKey.label,Taste zum Starten einer Suche,Key to start a search,"General, a key"
+FocusKey.desc,"Setzt den Cursor in das Suchfeld, während die Seite des Technologiebaums offen ist. Ein Klick auf das Feld geht auch. Keine: keine Taste.",Puts the cursor in the search box while the Tech Tree page is open. Clicking the box works too. None: no key.,"General, a key: its description"
+StopOnChangedGameCode.label,Bei geändertem Spielcode anhalten,Stop on changed game code,"Safety, a switch"
+StopOnChangedGameCode.desc,"Beim Start vergleicht die Mod jeden Teil des Spielcodes, den sie nutzt, mit dem installierten Spiel. Fehlt ein Teil, hält die Mod immer an. Hat sich der Code eines Teils geändert, läuft die Mod mit einer Warnung im Log weiter; ist diese Option eingeschaltet (true), hält die Mod auch in diesem Fall an, bis es eine neu geprüfte Version der Mod gibt. Gilt ab dem nächsten Start.","At start the mod compares every game member it uses with the installed game. A member that is gone always stops the mod. A member whose code changed runs the mod with a warning in the log; true stops the mod in that case too, until a re-audited build. Applies at the next start.","Safety, a switch: its description"
 options.done,Fertig,Done,
 options.defaults,Standardwerte,Defaults,
 options.set_back_ask,Alle Optionen im Bereich {0} auf ihre Standardwerte zurücksetzen?,Set every option in {0} back to its default?,the Defaults button's question; {0}: a section's name
@@ -20,3 +33,8 @@ row.none,Keine,None,a key option with no key; an empty name; no babies
 row.no_choice,(keine),(none),a list with nothing to choose
 key.same_as,Gleiche Taste wie {0},Same key as {0},"under a key option; {0}: another option, or another mod's setting"
 key.clashes_with,Konflikt mit {0} ({1}),Clashes with {0} ({1}),"under a key option; {0}: another option or mod's setting, {1}: its key"
+search.placeholder,Suchen ...,Search...,the grey text in the empty search box on the Tech Tree page; short: the box is narrow (about 12 letters)
+search.no_match,Keine sichtbare Technologie passt,No visible tech matches,the result list's one line when nothing matches what was typed (hidden techs and locked tabs are never shown)
+search.more,+{0} weitere: weitertippen,+{0} more: type more letters,the result list's last line when there are more results than it shows; {0}: how many more (a number)
+info.status.label,Status,Status,the Status row a settings page may have (what the mod is doing right now): its label
+info.status.desc,Was die Mod gerade tut.,What the mod is doing right now.,"the Status row: its description, where a mod gives none of its own"

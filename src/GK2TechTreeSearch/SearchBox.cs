@@ -16,7 +16,6 @@ namespace GK2TechTreeSearch
     // It's switched back on when the box loses the cursor, when the page hides and when the box is destroyed.
     internal sealed class SearchBox : MonoBehaviour
     {
-        private const string Placeholder = "Search...";
         // Researched techs: the green of the game's own tick on a card. tiny_font has no ✓ glyph (measured 2026-10-04).
         private const string ResearchedColor = "#8BC34A";
         private static readonly Color RowColor = new Color(0f, 0f, 0f, 0f);
@@ -36,8 +35,6 @@ namespace GK2TechTreeSearch
         private bool fontFailureSaid;
         private string fontSaidFor;           // the language the dev line about the fonts was written for
         private string separator = " · "; // between a result's tab and what the tech unlocks (ReadFont)
-        private const string NoMatch = "No visible tech matches";
-        private const string MoreLead = "+", MoreTail = " more: type more letters";
         private readonly List<TextMeshProUGUI> ownLabels = new List<TextMeshProUGUI>(); // every label Label() made
         private readonly List<(GameObject Go, Image Back, TextMeshProUGUI Text)> rows = new List<(GameObject, Image, TextMeshProUGUI)>();
         private List<Hit> hits = new List<Hit>();
@@ -91,10 +88,7 @@ namespace GK2TechTreeSearch
             input.characterLimit = 40;
             input.restoreOriginalTextOnEscape = false;
             input.text = string.Empty;
-            if (input.placeholder is TMP_Text ph)
-            {
-                ph.text = Placeholder;
-            }
+            ApplyWords();
             input.onValueChanged.AddListener(OnTextChanged);
             input.onSubmit.AddListener(_ => JumpTo(highlighted));
             input.onSelect.AddListener(_ => Refresh());
@@ -203,7 +197,7 @@ namespace GK2TechTreeSearch
             TMP_FontAsset own = fontSource != null ? fontSource.font : null;
             bool rows = Has(font, name, out string rowsMissing);
             bool counter = Has(own, name, out string counterMissing);
-            Has(font, NoMatch + MoreLead + MoreTail + "0123456789", out string oursMissing);
+            Has(font, SearchWords.Placeholder.Text + SearchWords.NoMatch.Text + SearchWords.More.Format("0123456789"), out string oursMissing);
             Plugin.Log.LogInfo($"Tech search [dev]: language \"{fontLanguage}\", first result \"{name.Replace("​", "")}\": the rows wear {font.name} ({(rows ? "has every letter" : "LACKS " + rowsMissing)}); "
                 + $"the page's counter label wears {(own != null ? own.name : "no font")} ({(counter ? "has every letter" : "LACKS " + counterMissing)}); "
                 + $"between a tab and an unlock the rows put \"{separator.Trim()}\""
@@ -261,7 +255,7 @@ namespace GK2TechTreeSearch
             areaRt.offsetMax = new Vector2(-8f, -2f);
             area.AddComponent<RectMask2D>();
 
-            TextMeshProUGUI placeholder = Label(area.transform, "Placeholder", Placeholder);
+            TextMeshProUGUI placeholder = Label(area.transform, "Placeholder", SearchWords.Placeholder.Text);
             placeholder.color = new Color(1f, 1f, 1f, 0.45f);
             placeholder.fontStyle = FontStyles.Italic;
             TextMeshProUGUI text = Label(area.transform, "Text", string.Empty);
@@ -527,11 +521,11 @@ namespace GK2TechTreeSearch
             }
             if (typed && hits.Count == 0)
             {
-                rows[0].Text.text = "<alpha=#99>" + NoMatch;
+                rows[0].Text.text = "<alpha=#99>" + SearchWords.NoMatch.Text;
             }
             else if (hits.Count > max)
             {
-                rows[shown].Text.text = "<alpha=#99>" + MoreLead + (hits.Count - max) + MoreTail;
+                rows[shown].Text.text = "<alpha=#99>" + SearchWords.More.Format(hits.Count - max);
             }
             Highlight(0);
         }
@@ -551,6 +545,16 @@ namespace GK2TechTreeSearch
             if (!string.Equals(lang, fontLanguage, StringComparison.Ordinal))
             {
                 ReadFont();
+                ApplyWords();
+            }
+        }
+
+        // The box's own standing text in the game's language now (the rows' own lines are made at every Refresh).
+        private void ApplyWords()
+        {
+            if (input != null && input.placeholder is TMP_Text ph)
+            {
+                ph.text = SearchWords.Placeholder.Text;
             }
         }
 

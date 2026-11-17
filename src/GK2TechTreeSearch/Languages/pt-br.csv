@@ -1,4 +1,17 @@
 ﻿key,value,english,note
+page.title,GK2 Tech Tree Search,GK2 Tech Tree Search,the page's title: the options window's title and the Settings window's button
+section.general,Geral,General,a section
+section.safety,Segurança,Safety,a section
+Enabled.label,Caixa de busca na Árvore de Tecnologias,Search box on the Tech Tree,"General, a switch"
+Enabled.desc,Uma caixa de busca na página da Árvore de Tecnologias: digite parte do nome de uma tecnologia (ou de algo que ela desbloqueia) e vá direto até ela. Tecnologias escondidas e abas bloqueadas nunca aparecem. Só afeta a exibição.,A search box on the Tech Tree page: type part of a tech's name (or of something it unlocks) and jump to it. Hidden techs and locked tabs are never shown. Display only.,"General, a switch: its description"
+SearchUnlocks.label,Buscar também o que as tecnologias desbloqueiam,Also search what techs unlock,"General, a switch"
+SearchUnlocks.desc,"Também encontra o que uma tecnologia desbloqueia (os itens, construções e vantagens mostrados no cartão dela), por exemplo, ""cerveja"" encontra Poções.","Also match what a tech unlocks (the items, buildings and perks shown on its card), e.g. ""beer"" finds Brewing.","General, a switch: its description"
+MaxResults.label,Resultados exibidos,Results shown,"General, a slider"
+MaxResults.desc,"Quantos resultados, no máximo, a lista abaixo da caixa mostra.",How many results the list under the box shows at most.,"General, a slider: its description"
+FocusKey.label,Tecla para iniciar uma busca,Key to start a search,"General, a key"
+FocusKey.desc,Coloca o cursor na caixa de busca enquanto a página da Árvore de Tecnologias está aberta. Clicar na caixa também funciona. Nenhum: sem tecla.,Puts the cursor in the search box while the Tech Tree page is open. Clicking the box works too. None: no key.,"General, a key: its description"
+StopOnChangedGameCode.label,Parar se o código do jogo mudar,Stop on changed game code,"Safety, a switch"
+StopOnChangedGameCode.desc,"Ao iniciar, o mod compara cada parte do código do jogo que usa com o jogo instalado. Uma parte que sumiu sempre interrompe o mod. Uma parte cujo código mudou deixa o mod rodar com um aviso no log; com esta opção ativada (true), ela também interrompe o mod nesse caso, até sair uma versão revisada. Vale a partir da próxima inicialização.","At start the mod compares every game member it uses with the installed game. A member that is gone always stops the mod. A member whose code changed runs the mod with a warning in the log; true stops the mod in that case too, until a re-audited build. Applies at the next start.","Safety, a switch: its description"
 options.done,Pronto,Done,
 options.defaults,Padrões,Defaults,
 options.set_back_ask,Restaurar todas as opções de {0} para o padrão?,Set every option in {0} back to its default?,the Defaults button's question; {0}: a section's name
@@ -20,3 +33,8 @@ row.none,Nenhum,None,a key option with no key; an empty name; no babies
 row.no_choice,(nenhum),(none),a list with nothing to choose
 key.same_as,Mesma tecla que {0},Same key as {0},"under a key option; {0}: another option, or another mod's setting"
 key.clashes_with,Em conflito com {0} ({1}),Clashes with {0} ({1}),"under a key option; {0}: another option or mod's setting, {1}: its key"
+search.placeholder,Buscar...,Search...,the grey text in the empty search box on the Tech Tree page; short: the box is narrow (about 12 letters)
+search.no_match,Nenhuma tecnologia visível achada,No visible tech matches,the result list's one line when nothing matches what was typed (hidden techs and locked tabs are never shown)
+search.more,+{0} a mais: digite mais letras,+{0} more: type more letters,the result list's last line when there are more results than it shows; {0}: how many more (a number)
+info.status.label,Estado,Status,the Status row a settings page may have (what the mod is doing right now): its label
+info.status.desc,O que o mod está fazendo agora.,What the mod is doing right now.,"the Status row: its description, where a mod gives none of its own"

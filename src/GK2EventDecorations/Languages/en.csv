@@ -51,7 +51,7 @@ Barracks.desc,Show the Halloween decorations here: Outside at the barracks.,Show
 BarracksInterior.label,Barracks inside,Barracks inside,"Halloween, a switch"
 BarracksInterior.desc,Show the Halloween decorations here: Inside the barracks.,Show the Halloween decorations here: Inside the barracks.,"Halloween, a switch: its description"
 AstrologerInterior.label,Astrologer,Astrologer,"Halloween, a switch"
-AstrologerInterior.desc,Show the Halloween decorations here: Inside the astrologer's house.,Show the Halloween decorations here: Inside the astrologer's house.,"Halloween, a switch: its description"
+AstrologerInterior.desc,Show the Halloween decorations here: Inside the astrologer's tower.,Show the Halloween decorations here: Inside the astrologer's tower.,"Halloween, a switch: its description"
 WarehouseInterior.label,Warehouse,Warehouse,"Halloween, a switch"
 WarehouseInterior.desc,Show the Halloween decorations here: Inside the warehouse.,Show the Halloween decorations here: Inside the warehouse.,"Halloween, a switch: its description"
 Dungeons.label,Dungeons,Dungeons,"Halloween, a switch"

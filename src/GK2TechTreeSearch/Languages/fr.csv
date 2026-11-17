@@ -1,4 +1,17 @@
 ﻿key,value,english,note
+page.title,GK2 Tech Tree Search,GK2 Tech Tree Search,the page's title: the options window's title and the Settings window's button
+section.general,Général,General,a section
+section.safety,Sécurité,Safety,a section
+Enabled.label,Champ de recherche dans l'Arbre des Technologies,Search box on the Tech Tree,"General, a switch"
+Enabled.desc,Un champ de recherche sur la page de l'Arbre des Technologies : tapez une partie du nom d'une Tech (ou de quelque chose qu'elle débloque) pour y accéder directement. Les Techs cachées et les onglets verrouillés ne sont jamais affichés. Ne modifie que l'affichage.,A search box on the Tech Tree page: type part of a tech's name (or of something it unlocks) and jump to it. Hidden techs and locked tabs are never shown. Display only.,"General, a switch: its description"
+SearchUnlocks.label,Chercher aussi ce que débloquent les Techs,Also search what techs unlock,"General, a switch"
+SearchUnlocks.desc,"Trouve aussi ce qu'une Tech débloque (les objets, bâtiments et Talents affichés sur sa carte) : par exemple, « bière » trouve Brasserie.","Also match what a tech unlocks (the items, buildings and perks shown on its card), e.g. ""beer"" finds Brewing.","General, a switch: its description"
+MaxResults.label,Résultats affichés,Results shown,"General, a slider"
+MaxResults.desc,Le nombre maximal de résultats affichés dans la liste sous le champ.,How many results the list under the box shows at most.,"General, a slider: its description"
+FocusKey.label,Touche pour lancer une recherche,Key to start a search,"General, a key"
+FocusKey.desc,Place le curseur dans le champ de recherche quand la page de l'Arbre des Technologies est ouverte. Vous pouvez aussi cliquer sur le champ. Aucun : pas de touche.,Puts the cursor in the search box while the Tech Tree page is open. Clicking the box works too. None: no key.,"General, a key: its description"
+StopOnChangedGameCode.label,S'arrêter si le code du jeu a changé,Stop on changed game code,"Safety, a switch"
+StopOnChangedGameCode.desc,"Au démarrage, le mod compare chaque élément du code du jeu qu'il utilise avec le jeu installé. Un élément qui a disparu arrête toujours le mod. Si le code d'un élément a changé, le mod fonctionne avec un avertissement dans le log ; si l'option est activée (true), il s'arrête aussi dans ce cas, jusqu'à une nouvelle version vérifiée. S'applique au prochain démarrage.","At start the mod compares every game member it uses with the installed game. A member that is gone always stops the mod. A member whose code changed runs the mod with a warning in the log; true stops the mod in that case too, until a re-audited build. Applies at the next start.","Safety, a switch: its description"
 options.done,Terminé,Done,
 options.defaults,Par défaut,Defaults,
 options.set_back_ask,Remettre toutes les options de la section {0} à leur valeur par défaut ?,Set every option in {0} back to its default?,the Defaults button's question; {0}: a section's name
@@ -20,3 +33,8 @@ row.none,Aucun,None,a key option with no key; an empty name; no babies
 row.no_choice,(aucun),(none),a list with nothing to choose
 key.same_as,Même touche que {0},Same key as {0},"under a key option; {0}: another option, or another mod's setting"
 key.clashes_with,En conflit avec {0} ({1}),Clashes with {0} ({1}),"under a key option; {0}: another option or mod's setting, {1}: its key"
+search.placeholder,Rechercher...,Search...,the grey text in the empty search box on the Tech Tree page; short: the box is narrow (about 12 letters)
+search.no_match,Aucune Tech visible ne correspond,No visible tech matches,the result list's one line when nothing matches what was typed (hidden techs and locked tabs are never shown)
+search.more,+{0} de plus : continuez à taper,+{0} more: type more letters,the result list's last line when there are more results than it shows; {0}: how many more (a number)
+info.status.label,État,Status,the Status row a settings page may have (what the mod is doing right now): its label
+info.status.desc,Ce que fait le mod en ce moment.,What the mod is doing right now.,"the Status row: its description, where a mod gives none of its own"

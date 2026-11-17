@@ -80,8 +80,13 @@ Owned Count 1.0.4, Tech Search 1.0.0. Earlier changes are in git history and eac
   runs `UiHost` each frame and lists the muffle patch). The DLL grew from about 60 KB to about 258 KB. The embedded
   dependency manifest now holds every game member the window code uses as well (the game's Settings window, LazyUI,
   the sound filter, MainGame): under this mod's one policy a game update that changes any of them is a warning at
-  start, or a stop with `Safety.StopOnChangedGameCode`. The Mods menu (GK2 Mod Framework) keeps its own rows; the
-  framework's Settings button is not pointed at the window (the API does that; a decision for later).
+  start, or a stop with `Safety.StopOnChangedGameCode`.
+- With GK2 Mod Framework installed, the Mods menu's Settings button for this mod opens the mod's own options window
+  (2026-11-17, the user's choice; GK2 Saddle Up and Event Decorations do the same). The Mods menu no longer lists the
+  mod's settings as rows of its own: they were English only and a second place for the same values. Development:
+  `FrameworkLink` registers one button setting ("Options") and points the framework's Settings button at the window
+  with a prefix on its private `ModsMenuWindow.OpenSettingsPage(RegisteredMod)`, found by exact signature; without
+  the prefix the framework's page shows the one button.
 - The window's key row no longer says Ctrl + F "Clashes with GK2 Donkey API: DescendKey (Left Ctrl)" (seen at the
   first open, 2026-11-15): the library takes another mod's key on a modifier as held, and the plugin says it reads
   its key with BepInEx's exact test (`UiOwner.KeysExact`), so only an identical combination elsewhere is a clash.
@@ -89,20 +94,38 @@ Owned Count 1.0.4, Tech Search 1.0.0. Earlier changes are in git history and eac
   point counters, which the game keeps the same in every language (`tiny_font`: no Japanese, Chinese or Korean
   letters), so with the game in one of those three languages the techs' names in the list could not be drawn. Read
   from the game's files (2026-11-15: the counter's text style is marked "always the same font"; every font of the
-  page swaps to the game's Japanese, Chinese or Korean font for a label that isn't), not yet seen in the game. The
+  page swaps to the game's Japanese, Chinese or Korean font for a label that isn't). Seen in the game 2026-11-17 (the
+  user, Japanese, the language switched in the running game with the page alive): eight results for 鍛冶 drawn whole,
+  the box's own text too; the log: "the rows wear japanese (has every letter); the page's counter label wears
+  tiny_font (LACKS 鍛冶場)". German the same day: `tiny_font`, as before. The
   rows now ask that style's font data for the language's font, again when the language changes; any failure keeps
   the old font. The dot between a result's tab and its unlock is a hyphen where the language's font has no such dot
   (the game's own Japanese and Korean text never uses one). With the developers' marker file, one log line a language
   names both fonts and the letters of the first result's name each can't draw (the font test of GK2 Donkey API's
   self-tests).
-- Known, not fixed (found 2026-11-16 in the game's word tables): about half of the game's tech names in Japanese (26
-  of 51 lines) and Simplified Chinese (32 of 51) hold an invisible break mark (U+200B) between their words. The
-  search compares letter for letter, so a query that spans the mark (the whole name typed) finds nothing; a part on
-  one side of it does. The fix would be to drop the marks from the names the search reads; waiting for a yes.
+- The search finds whole names in Japanese and Simplified Chinese (2026-11-17). In those two languages the game puts
+  an invisible break mark (a zero-width space, U+200B) into its texts where a line may break: between the words of a
+  name in Japanese, between single characters in Chinese (7,355 and 8,438 of its 9,474 lines; 26 and 32 of the 51
+  tech lines; no other language has one, measured in the game's word tables). The search compares letter for letter,
+  so a query that spanned a mark found nothing: a whole name typed in Japanese, nearly any two characters in Chinese.
+  The marks are dropped from the names, tab names and unlock names the search reads and shows, and from what is
+  typed or pasted. To see in the game: 鉄の鍛冶 pasted in Japanese finds its tech.
 - The settings window's own words (its buttons, the hints under the rows, the key box, the button in the game's
   Settings window) in the game's 10 other languages (2026-11-16): `Languages\<id>.csv` beside the DLL, the window
-  library's own translations (the ones GK2 Saddle Up's window has). The mod's own rows and descriptions are English
-  still. `Languages\en.csv` is the template a translator copies: every text of the window, 36 lines.
+  library's own translations (the ones GK2 Saddle Up's window has). `Languages\en.csv` is the template a translator
+  copies: every text of the mod, 39 lines.
+- The whole mod in the game's 10 other languages (2026-11-17): German, Spanish, French, Brazilian Portuguese,
+  Russian, Polish, Turkish, Japanese, Simplified Chinese, Korean. The settings window's own texts (13 lines: two
+  tabs, five rows and their descriptions, the title), its Status row, and the search box's own three texts ("Search...", "No visible tech matches", "+3 more:
+  type more letters"), which were fixed English before and now follow the game's language, also when it is switched
+  in the running game. Each language written by one translator and read by a second (both Claude Opus), against the
+  game's own words for the same things (the Tech Tree, techs, tabs, perks, the names in the "beer" example) and the
+  window's shipped words; every language uses only characters the game's font for its text holds (below, under
+  Development). The statuses' own sentences stay English (they change with the mod's state; decided 2026-11-16).
+  Not yet seen in the game.
+- Development (2026-11-17): the search box's texts are `Word`s of the window library (`SearchWords.cs`:
+  `search.placeholder`, `search.no_match`, `search.more`), handed to it with `UiOwner.OwnWords`, so they are in
+  `en.csv` and every language file; `tools/l10n.json` gives them the box's room (14, 34 and 34 characters).
 - Development (2026-11-16): `src/GK2TechTreeSearch/Languages/` is written by the window library's tools
   (`lib/GK2DreasUI/tools/l10n-sync.py`, `tools/l10n.json`): `en.csv` from the built DLL without the game
   (`tools/EnglishDump`), the window's 21 words in each language from the library's `Languages/`. It deploys beside
@@ -154,8 +177,15 @@ Nothing changes for players.
   Halloween zombie head. The decorations change from the next save load.
 - The options window's own words (its buttons, the hints under the rows, the button in the game's Settings window)
   in the game's 10 other languages (2026-11-16): `Languages\<id>.csv` beside the DLL, the window library's own
-  translations. The mod's own rows and descriptions are English still; `Languages\en.csv` is the template a
-  translator copies (97 lines). Written by the window library's tools, as Tech Tree Search's.
+  translations. `Languages\en.csv` is the template a translator copies (97 lines). Written by the window library's
+  tools, as Tech Tree Search's.
+- The whole options window in the game's 10 other languages (2026-11-17): German, Spanish, French, Brazilian
+  Portuguese, Russian, Polish, Turkish, Japanese, Simplified Chinese, Korean: every row, choice, heading and
+  description (75 lines) and the Status row. Written and proofread as Tech Tree Search's (one translator and one
+  second reader a language, the game's own words for its places and things, only characters the language's font
+  holds). The "On today" line's value and the statuses stay English (decided 2026-11-16). Not yet seen in the game.
+- The Astrologer area's description says "Inside the astrologer's tower." (it said "house"; the game's own name of
+  the place is the Astrologer's Tower; found by the translators, 2026-11-17).
 - With Halloween off, a ghost the game left standing in the village is sent home.
 - An event a later game update adds gets its own Auto / On / Off setting by itself.
 - Optional GK2 Mod Framework integration: the mod in the game's Mods menu, its Settings button opening the mod's own
@@ -207,6 +237,26 @@ Nothing changes for players.
 
 ## Development
 
+- Translations, written (2026-11-17; GK2DonkeyAPI's `docs/ui-library.md` section 11.11). Both mods' texts in the
+  game's 10 other languages, 93 lines a language (the window library's Status row 2, Tech Tree Search 16, Event
+  Decorations 75), through the library's new `tools/l10n-write.py` (a translator's JSON checked, then written into
+  the `Languages` folders; `--todo` lists what a language lacks) and `tools/l10n-terms.py` (the game's own words).
+  What the round found and fixed:
+  - The game's fonts decide what a translation may use, and they were read from the game's files
+    (`tools/l10n-fonts.py`, into the folder of the game's word tables, never a repository). Japanese, Chinese and
+    Korean: the fonts hold more than the game's own text uses (4,075 / 3,966 / 1,552 characters), so the ordinary
+    words for a bat and a scarecrow are fine in Chinese. Every other language: the Latin fonts lack more than one
+    expects. None of the four has the low opening quote (U+201E): the Polish example's quotes would have drawn a
+    box and are straight ones now (the game's own Polish opens its quotes with a straight one for the same reason). The bold font (tabs, headings, buttons) and the
+    tiny one (the search box's rows) have no curly quotes or en dash. The writer checks each text against the font
+    that draws it; `tools/l10n.json` names the search box's three texts as the tiny font's (`"font"`), beside
+    their room (`"room"`: 14, 34 and 34 characters).
+  - The writer looked a text's room up under the wrong name, so a tab's, a title's and the search box's own limits
+    were not enforced (the translators kept to the limits their work list gave them; all ten languages pass now
+    that they are).
+  - `tools/release-scans.sh` runs the library's new `tests/l10n-write-test.py` (the writer's checks on a scratch mod
+    with made-up fonts, 13 cases); 19 of 20 green, the one failure the known one (no dist DLL for Event Decorations,
+    which has no release yet).
 - Translations, the pipeline (2026-11-16; the study is GK2DonkeyAPI's `docs/ui-library.md` section 11). The reader
   was in every mod that carries the window code already; what this repository lacked is now here:
   - `tools/l10n.json` names the mods with a settings page (Tech Tree Search, Event Decorations) and says their

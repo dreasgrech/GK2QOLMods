@@ -124,13 +124,35 @@ namespace GK2TechTreeSearch
             }
         }
 
+        // The game's text without its tags and without its invisible break marks. In Japanese and Simplified Chinese the
+        // game puts a zero-width space (U+200B) where a line may break: between the words of a name in Japanese (鉄の|鍛冶),
+        // between single characters in Chinese (打|开), in 7,355 and 8,438 of its 9,474 lines (its word tables, 2026-11-17;
+        // no other language has one, and no other invisible character occurs). The search compares letter for letter,
+        // so with the marks left in, a query that spans one (a whole name typed; in Chinese nearly any two characters)
+        // found nothing.
+        private const char BreakMark = '​';
+
         private static string Plain(string s)
         {
-            return string.IsNullOrEmpty(s) ? s : Tags.Replace(s, "").Trim();
+            if (string.IsNullOrEmpty(s))
+            {
+                return s;
+            }
+            s = Tags.Replace(s, "");
+            if (s.IndexOf(BreakMark) >= 0)
+            {
+                s = s.Replace(BreakMark.ToString(), "");
+            }
+            return s.Trim();
         }
 
+        // The words typed; a break mark pasted with a name from the game counts for nothing.
         private static string[] Words(string query)
         {
+            if (!string.IsNullOrEmpty(query) && query.IndexOf(BreakMark) >= 0)
+            {
+                query = query.Replace(BreakMark.ToString(), "");
+            }
             return string.IsNullOrWhiteSpace(query)
                 ? Array.Empty<string>()
                 : query.Trim().Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
