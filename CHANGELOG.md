@@ -123,6 +123,8 @@ Owned Count 1.0.4, Tech Search 1.0.0. Earlier changes are in git history and eac
   window's shipped words; every language uses only characters the game's font for its text holds (below, under
   Development). The statuses' own sentences stay English (they change with the mod's state; decided 2026-11-16).
   Not yet seen in the game.
+- Development (2026-11-17): the DLL grants the mods' in-game test plugin its internals by name (`TestAccess.cs`,
+  `InternalsVisibleTo("GK2QOLMods.Tests")`; under Development below). Nothing changes for players.
 - Development (2026-11-17): the search box's texts are `Word`s of the window library (`SearchWords.cs`:
   `search.placeholder`, `search.no_match`, `search.more`), handed to it with `UiOwner.OwnWords`, so they are in
   `en.csv` and every language file; `tools/l10n.json` gives them the box's room (14, 34 and 34 characters).
@@ -186,6 +188,9 @@ Nothing changes for players.
   holds). The "On today" line's value and the statuses stay English (decided 2026-11-16). Not yet seen in the game.
 - The Astrologer area's description says "Inside the astrologer's tower." (it said "house"; the game's own name of
   the place is the Astrologer's Tower; found by the translators, 2026-11-17).
+- Development (2026-11-17): the DLL grants the mods' in-game test plugin its internals by name (`TestAccess.cs`,
+  `InternalsVisibleTo("GK2QOLMods.Tests")`; under Development below), and the decorations' content name is internal
+  for it (`Decorations.ContentName`). Nothing changes for players.
 - With Halloween off, a ghost the game left standing in the village is sent home.
 - An event a later game update adds gets its own Auto / On / Off setting by itself.
 - Optional GK2 Mod Framework integration: the mod in the game's Mods menu, its Settings button opening the mod's own
@@ -237,6 +242,27 @@ Nothing changes for players.
 
 ## Development
 
+- In-game tests for the mods here (2026-11-17, the user's ask: only GK2 Saddle Up had automated tests in the game).
+  `tools/GK2QOLMods.Tests` is a developer's plugin, never shipped (no zip, no dist, no release scan; a plain build
+  doesn't deploy it), that adds a suite for each mod to GK2 Mod Test Bench, the shared test runner with its own
+  repository and panel (F4). First suites, read-only but for one setting switched and put back:
+  - GK2 Tech Tree Search, 7 tests: the mod running; every visible tech found by its whole name; a name pasted with
+    the game's break marks found, and no result carrying a mark or a tag; hidden techs and locked tabs never found;
+    the results best first; an empty query; "search what techs unlock" off.
+  - GK2 Event Decorations, 5 tests: the mod running; the game's answer to "is it Halloween" as the settings say; the
+    game's own dates asked past the mod; the decorations up or down in the world as the settings say; every area
+    and kind with its setting.
+  A mod that isn't installed has its tests skipped with that reason. The two mods grant the test plugin their
+  internals by name (`TestAccess.cs` in each: `InternalsVisibleTo("GK2QOLMods.Tests")`), which is in their shipped
+  DLLs from the next release on and does nothing without that plugin. `Directory.Build.props` names the bench's
+  deployed DLL (`TestBenchDll`). The first run in the game (the user, 2026-11-17 20:32, English, a save with 202
+  visible techs): all 12 tests passed (24 checks), with the bench's own 5: 34 passed, 0 failed, 0 warnings. 202 of 202
+  visible techs found by their whole name, 0 of 25 hidden or locked ones found; the game told it isn't Halloween by
+  its own dates, the decorations up as set (On).
+  - What the run turned up: while the whole-name test ran (25 searches a frame), GK2 Donkey API's frame log said
+    frames of about 550 ms, so a search costs somewhere near 22 ms, and the search box runs one a keystroke. The
+    test now times the searches themselves and says the number in an INFO line; nothing is changed in the mod until
+    that number is read.
 - Translations, written (2026-11-17; GK2DonkeyAPI's `docs/ui-library.md` section 11.11). Both mods' texts in the
   game's 10 other languages, 93 lines a language (the window library's Status row 2, Tech Tree Search 16, Event
   Decorations 75), through the library's new `tools/l10n-write.py` (a translator's JSON checked, then written into

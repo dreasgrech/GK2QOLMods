@@ -8,5 +8,9 @@
     <!-- GK2 Mod Framework (third party, MIT, optional at runtime): a compile-time reference only, never shipped.
          A copy in lib/ so builds work with the framework uninstalled and the API we build against is pinned. -->
     <FrameworkDll Condition="'$(FrameworkDll)' == ''">$(MSBuildThisFileDirectory)lib\GK2.Framework\GK2.Framework.dll</FrameworkDll>
+    <!-- GK2 Mod Test Bench (a developer's plugin with a repository of its own, never shipped): the mods' in-game tests
+         (tools\GK2QOLMods.Tests) are compiled against its DLL as deployed in the game. Build and deploy the bench
+         first (in its repository: dotnet build -c Release -p:Deploy=true). -->
+    <TestBenchDll Condition="'$(TestBenchDll)' == ''">$(GameDir)\BepInEx\plugins\GK2ModTestBench\GK2ModTestBench.dll</TestBenchDll>
   </PropertyGroup>
 </Project>

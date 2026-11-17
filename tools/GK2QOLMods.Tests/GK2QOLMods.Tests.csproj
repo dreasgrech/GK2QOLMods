@@ -1,0 +1,44 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Dev-only: the in-game tests of the mods in this repository, run by GK2 Mod Test Bench (a developer's plugin
+       with a repository of its own; its panel lists every mod's tests and runs them). At its start this plugin adds a
+       suite for each mod it has tests for; a mod that isn't installed has its tests skipped with that reason.
+       Never shipped: it is in no release zip, no dist folder and no release scan, and a plain build doesn't deploy it.
+       Build order: the bench deployed (Directory.Build.props, TestBenchDll), the mods built in Release (their bin
+       folders are read here), then: dotnet build tools/GK2QOLMods.Tests -c Release -p:Deploy=true (the game closed). -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <AssemblyName>GK2QOLMods.Tests</AssemblyName>
+    <RootNamespace>GK2QOLMods.Tests</RootNamespace>
+    <Version>0.1.0</Version>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <GenerateDependencyFile>false</GenerateDependencyFile>
+    <!-- MSB3277 (System.IO.Compression 4.1.3.0 against 4.2.0.0) is the game's own, as in the mods' projects. -->
+    <MSBuildWarningsAsMessages>$(MSBuildWarningsAsMessages);MSB3277</MSBuildWarningsAsMessages>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="GK2ModTestBench"><HintPath>$(TestBenchDll)</HintPath><Private>false</Private></Reference>
+    <!-- The mods' own build output, not ProjectReferences: building the tests must never rebuild a mod (the dist copies
+         and the release scans read those folders). Build the mods first. They grant this assembly their internals by
+         name (TestAccess.cs in each). -->
+    <Reference Include="GK2TechTreeSearch"><HintPath>$(MSBuildThisFileDirectory)..\..\src\GK2TechTreeSearch\bin\Release\netstandard2.1\GK2TechTreeSearch.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="GK2EventDecorations"><HintPath>$(MSBuildThisFileDirectory)..\..\src\GK2EventDecorations\bin\Release\netstandard2.1\GK2EventDecorations.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Assembly-CSharp"><HintPath>$(Managed)\Assembly-CSharp.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="LazyBearTechnology"><HintPath>$(Managed)\LazyBearTechnology.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Sirenix.Serialization"><HintPath>$(Managed)\Sirenix.Serialization.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine"><HintPath>$(Managed)\UnityEngine.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.CoreModule"><HintPath>$(Managed)\UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="BepInEx"><HintPath>$(BepInExCore)\BepInEx.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="0Harmony"><HintPath>$(BepInExCore)\0Harmony.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+
+  <!-- Dev-only, so it does NOT deploy by default: a plain build must never put a test plugin into the player's game.
+       -p:Deploy=true puts it into the game, only while the game is closed. -->
+  <PropertyGroup>
+    <Deploy Condition="'$(Deploy)' == ''">false</Deploy>
+  </PropertyGroup>
+  <Import Project="$(MSBuildThisFileDirectory)..\..\DeployToGame.targets" />
+
+</Project>

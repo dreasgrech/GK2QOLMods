@@ -16,7 +16,7 @@ namespace GK2EventDecorations
     //                         glows, "Obstacle" colliders)
     internal static class Decorations
     {
-        private const string ContentName = "RuinedTemple_ContentPart_6_Halloween"; // the game appends "Data"
+        internal const string ContentName = "RuinedTemple_ContentPart_6_Halloween"; // the game appends "Data"; internal: the in-game tests look for it too
         private const string StaticRoot = "HalloweenDecorationsStatic";
         private const string GroupPrefix = "Halloween";
         private const string FxGroup = "HalloweenFX";
