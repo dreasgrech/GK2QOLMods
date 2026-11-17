@@ -263,6 +263,11 @@ Nothing changes for players.
     frames of about 550 ms, so a search costs somewhere near 22 ms, and the search box runs one a keystroke. The
     test now times the searches themselves and says the number in an INFO line; nothing is changed in the mod until
     that number is read.
+  - The number (the second run, 2026-11-17 20:57): **202 searches took 4,810 ms, 23.8 ms a search** (a search by a
+    whole name, unlocks searched, English, 202 visible techs). A frame at the game's 120 fps is 8.3 ms, so every
+    keystroke in the search box costs about three frames. The unlocks test now also says how long a search takes
+    over the names alone and with every unlock's header read (a query nothing matches), to tell which part it is.
+    Nothing is changed in the mod yet.
 - Translations, written (2026-11-17; GK2DonkeyAPI's `docs/ui-library.md` section 11.11). Both mods' texts in the
   game's 10 other languages, 93 lines a language (the window library's Status row 2, Tech Tree Search 16, Event
   Decorations 75), through the library's new `tools/l10n-write.py` (a translator's JSON checked, then written into

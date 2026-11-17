@@ -256,6 +256,22 @@ namespace GK2QOLMods.Tests
                 }
                 Test.Check(viaOff == 0, $"off: {without} result(s) for {queries.Count} one-letter queries, {viaOff} from an unlock");
                 Test.Check(without == withUnlocks - viaOn, $"on: {withUnlocks} result(s), {viaOn} from an unlock; off leaves exactly the other {withUnlocks - viaOn} ({without})");
+
+                // Where a search's time goes (a fact for the log, not a check): a query nothing matches reads every
+                // visible tech's name and, with the unlocks searched, every unlock's header as well. The second run
+                // of 2026-11-17 measured 23.8 ms a search by whole name; this says which part of it the unlocks are.
+                yield return null;
+                const string nothing = "qzxjvk";
+                const int times = 5;
+                var watch = System.Diagnostics.Stopwatch.StartNew();
+                for (int k = 0; k < times; k++) TechIndex.Find(nothing);
+                double namesOnly = watch.Elapsed.TotalMilliseconds / times;
+                GK2TechTreeSearch.Plugin.SearchUnlocks.Value = true;
+                watch.Restart();
+                int hits = 0;
+                for (int k = 0; k < times; k++) hits += TechIndex.Find(nothing).Count;
+                double withHeaders = watch.Elapsed.TotalMilliseconds / times;
+                Test.Info($"a search that matches nothing ({hits} result(s)): {namesOnly:0.0} ms over the names alone, {withHeaders:0.0} ms with every unlock's header read as well");
             }
             finally
             {
