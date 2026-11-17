@@ -1,0 +1,22 @@
+﻿key,value,english,note
+options.done,完了,Done,
+options.defaults,初期設定に戻す,Defaults,
+options.set_back_ask,{0}のすべてのオプションを初期設定に戻しますか？,Set every option in {0} back to its default?,the Defaults button's question; {0}: a section's name
+options.set_back,戻す,Set back,
+options.cancel,キャンセル,Cancel,
+options.hint_pad,オプションにカーソルを合わせると、その説明が表示されます。,Move to an option to see what it does.,"the line under the options, with a gamepad"
+options.hint_mouse,オプションにマウスを合わせると、その説明が表示されます。,Point at an option to see what it does.,"the line under the options, with a mouse"
+options.press_key_for,{0}のキーを押してください。Shift、Ctrl、Alt は単独でも、ほかのキーと組み合わせても使えます。Backspace：キーなし。Esc：キャンセル。,"Press the key for {0}: Shift, Ctrl or Alt on its own, or with another key. Backspace: no key. Esc: cancel.",while a key is being set; {0}: the option's name
+options.key_how_pad,選択してから、キーボードでキーを押してください。,"Select it, then press the key on the keyboard.","after a key option's description, with a gamepad"
+options.key_how_mouse,クリックしてキーを設定します。,Click it to set the key.,"after a key option's description, with a mouse"
+options.only_in_game,ゲームのプレイ中のみ使えます。,Only in a game.,after a greyed button's description
+options.not_now,今は使えません。,Not available right now.,after a greyed option's description
+options.and_then,{0}{1},{0} {1},"the line under the options: {0} the option's description, {1} the sentence after it (the two above)"
+options.page_button,{0} のオプション,{0} options,the button in the game's Settings window; {0}: the mod's name
+row.open,開く,Open,a button that opens the Mounts panel
+row.go,実行,Go,a mod's button
+row.press_a_key,キーを押してください…,Press a key...,a key option while it waits for the key
+row.none,なし,None,a key option with no key; an empty name; no babies
+row.no_choice,（なし）,(none),a list with nothing to choose
+key.same_as,{0}と同じキー,Same key as {0},"under a key option; {0}: another option, or another mod's setting"
+key.clashes_with,{0}（{1}）と競合,Clashes with {0} ({1}),"under a key option; {0}: another option or mod's setting, {1}: its key"

@@ -3,9 +3,14 @@
     python tools/make-release-zip.py GK2TechTreeSearch [GK2OwnedCount ...]
     python tools/make-release-zip.py GK2TechTreeSearch --no-workshop   # the zip only
     python tools/make-release-zip.py GK2TechTreeSearch --no-zip        # the Workshop folder only (a zip already uploaded)
+    python tools/make-release-zip.py GK2TechTreeSearch --dry-run       # every check, then what the zip and the Workshop
+                                                                       # folder would hold; nothing written
 
 One zip per mod, named after the mod's title with its words dashed: release/GK2-Tech-Tree-Search-1.0.2.zip, holding
-BepInEx/plugins/<Mod>/<Mod>.dll from dist/ and nothing else (a folder per mod, as the Saddle Up zips; BepInEx finds
+BepInEx/plugins/<Mod>/<Mod>.dll from dist/ and, for a mod with translations, BepInEx/plugins/<Mod>/Languages/*.csv
+from src/<Mod>/Languages/ (the English template en.csv and each language's file, read beside the DLL by the window
+code; they ship as the working tree has them, so uncommitted ones are refused), nothing else (a folder per mod, as the
+Saddle Up zips; BepInEx finds
 plugins in subfolders; mod managers see the BepInEx layout), so the zip extracts straight into the game folder. No
 modinfo.json in the zip: next to the exe nothing reads it (the GK2DonkeyAPI repo's docs/mods-window-and-workshop.md,
 2026-10-30). The version is the mod's Plugin.cs Version constant; it must be the csproj's <Version>, the first version
@@ -16,7 +21,7 @@ overwritten (a released version is never rebuilt: raise the version; --overwrite
 uploaded; 2026-10-30).
 
 The Workshop folder, workshop/<Mod>/ (not in git), is what the game's Workshop creator (Shift+F11 in the main menu,
-the game launched through Steam) uploads as the item: the same plugin file as the zip, plus modinfo.json (id = the
+the game launched through Steam) uploads as the item: the same plugin folder as the zip, plus modinfo.json (id = the
 plugin GUID, name = the plugin's title, version: the Mods window's tile reads them), and the uploader's own files, which
 it never sends: Thumbnail.jpg|png (the preview, from media/workshop/<Mod>/, tools/workshop-thumbnail.py),
 _description.bbcode (from media/GK2_<Short>_Workshop.txt, Steam's BBCode; over 8,000 bytes Steam refuses the whole
@@ -107,26 +112,61 @@ def dist_dll(mod, v):
     return dll, data
 
 
-def write_zip(mod, v, overwrite=False):
-    dll, data = dist_dll(mod, v)
+def languages_of(mod):
+    """The mod's translation files (src/<Mod>/Languages/*.csv), sorted; [] without any."""
+    folder = os.path.join(SRC, mod, "Languages")
+    if not os.path.isdir(folder):
+        return []
+    return [os.path.join(folder, n) for n in sorted(os.listdir(folder)) if n.lower().endswith(".csv")]
+
+
+def uncommitted_languages(mods):
+    """What git says of the mods' Languages folders: the files ship as the working tree has them (the DLL as dist/ was
+    built), so only committed ones go out. "" when all are."""
+    dirs = [os.path.relpath(os.path.join(SRC, m, "Languages"), ROOT) for m in mods if os.path.isdir(os.path.join(SRC, m, "Languages"))]
+    if not dirs:
+        return ""
+    return subprocess.run(["git", "-C", ROOT, "status", "--porcelain", "--"] + dirs, capture_output=True, text=True).stdout.strip()
+
+
+def plugin_entries(mod, v):
+    """[(source file or None for a folder, the path under BepInEx/plugins/<Mod>/ or the folders above it)], zip order."""
+    dll, _ = dist_dll(mod, v)
+    entries = [(None, "BepInEx/"), (None, INNER), (None, INNER + mod + "/"), (dll, INNER + mod + "/" + mod + ".dll")]
+    langs = languages_of(mod)
+    if langs:  # its translations beside it
+        entries.append((None, INNER + mod + "/Languages/"))
+        entries += [(p, INNER + mod + "/Languages/" + os.path.basename(p)) for p in langs]
+    return entries
+
+
+def write_zip(mod, v, overwrite=False, dry=False):
+    entries = plugin_entries(mod, v)
     path = os.path.join(OUT, "-".join(title_of(mod).split()) + f"-{v}.zip")  # GK2-Tech-Tree-Search-1.0.2.zip
-    entries = ["BepInEx/", INNER, INNER + mod + "/", INNER + mod + "/" + mod + ".dll"]
-    os.makedirs(OUT, exist_ok=True)
     if os.path.isfile(path) and not overwrite:
         sys.exit(f"{path} exists: a released zip is never rebuilt (raise the version), or pass --overwrite for one that was never uploaded")
+    if dry:
+        print(f"{path}: would hold ({title_of(mod)} {v})")
+        for src, name in entries:
+            print("  " + name + (f" ({os.path.getsize(src):,} bytes)" if src else ""))
+        return
+    os.makedirs(OUT, exist_ok=True)
     with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as z:
-        for name in entries[:-1]:  # the folders as entries of their own: some extractors and managers want them
-            z.writestr(zipfile.ZipInfo(name), b"")
-        z.write(dll, entries[-1])
+        for src, name in entries:
+            if src is None:  # the folders as entries of their own: some extractors and managers want them
+                z.writestr(zipfile.ZipInfo(name), b"")
+            else:
+                z.write(src, name)
     with zipfile.ZipFile(path) as z:
         if z.testzip() is not None:
             sys.exit(f"{path} reads back broken")
-        if z.namelist() != entries:
+        if z.namelist() != [name for _, name in entries]:
             sys.exit(f"{path}: unexpected entries {z.namelist()}")
-        if sha(z.read(entries[-1])) != sha(data):
-            sys.exit(f"{mod}.dll in {path} differs from dist/")
+        for src, name in entries:
+            if src is not None and sha(z.read(name)) != sha(open(src, "rb").read()):
+                sys.exit(f"{name} in {path} differs from {os.path.relpath(src, ROOT)}")
     print(f"{path}: {title_of(mod)} {v}, {os.path.getsize(path):,} bytes")
-    for n in entries:
+    for _, n in entries:
         print("  " + n)
 
 
@@ -157,9 +197,9 @@ def changenote(mod, v):
              f"{os.path.relpath(nexus_note, ROOT)}) before staging its Workshop folder")
 
 
-def stage_workshop(mod, v):
+def stage_workshop(mod, v, dry=False):
     """workshop/<Mod>/: the item content as the zip holds it, plus modinfo.json and the uploader's own files."""
-    dll, data = dist_dll(mod, v)
+    entries = plugin_entries(mod, v)
     dest = os.path.join(WORKSHOP, mod)
     text = os.path.join(MEDIA, f"GK2_{mod[len('GK2'):]}_Workshop.txt")  # media/GK2_TechTreeSearch_Workshop.txt
     if os.path.isfile(text):
@@ -168,14 +208,22 @@ def stage_workshop(mod, v):
             sys.exit(f"{os.path.relpath(text, ROOT)} is {size:,} bytes; over {STEAM_DESCRIPTION_MAX:,} Steam fails the whole upload "
                      f"(InvalidParam): shorten it. {dest} left as it was")
     note = changenote(mod, v)  # stops without a player note, before the folder is cleared
+    if dry:
+        print(f"{dest}: would hold ({title_of(mod)} {v}), with modinfo.json, the thumbnail, the description and the change note")
+        for src, name in entries:
+            if src is not None:
+                print(f"  {name} ({os.path.getsize(src):,} bytes)")
+        return
     if os.path.isdir(dest):
         shutil.rmtree(dest)
-    plugin_dir = os.path.join(dest, "BepInEx", "plugins", mod)
-    os.makedirs(plugin_dir)
-    target = os.path.join(plugin_dir, mod + ".dll")
-    shutil.copyfile(dll, target)
-    if sha(open(target, "rb").read()) != sha(data):
-        sys.exit(f"{target} differs from {dll}")
+    for src, name in entries:  # the plugin's folder as the zip holds it: the DLL, its Languages
+        target = os.path.join(dest, *name.split("/"))
+        if src is None:
+            os.makedirs(target, exist_ok=True)
+            continue
+        shutil.copyfile(src, target)
+        if sha(open(target, "rb").read()) != sha(open(src, "rb").read()):
+            sys.exit(f"{target} differs from {src}")
     modinfo = {"schemaVersion": 1, "id": guid_of(mod), "name": title_of(mod), "version": v}
     open(os.path.join(dest, "modinfo.json"), "w", encoding="utf-8", newline="\n").write(json.dumps(modinfo, indent=2) + "\n")
     notes = []
@@ -209,8 +257,9 @@ def stage_workshop(mod, v):
 
 
 def main():
-    flags = {"--overwrite", "--no-workshop", "--no-zip"}
+    flags = {"--overwrite", "--no-workshop", "--no-zip", "--dry-run"}
     overwrite = "--overwrite" in sys.argv[1:]
+    dry = "--dry-run" in sys.argv[1:]
     workshop = "--no-workshop" not in sys.argv[1:]
     zips = "--no-zip" not in sys.argv[1:]
     unknown = [a for a in sys.argv[1:] if a.startswith("--") and a not in flags]
@@ -224,15 +273,18 @@ def main():
             sys.exit(f"no such mod: src/{mod}/{mod}.csproj")
     if subprocess.run([sys.executable, os.path.join(ROOT, "tools", "check-dist.py")] + mods).returncode != 0:
         sys.exit("check-dist.py failed: nothing written")
+    dirty = uncommitted_languages(mods)
+    if dirty:
+        sys.exit("translation files not committed (a zip takes Languages/ from the working tree): commit them first, nothing written\n" + dirty)
     for mod in mods:
         v = version_of(mod)
         cv = changelog_version(mod, short_title(mod))
         if cv != v:
             sys.exit(f"{mod}: version {v} but CHANGELOG.md's first heading for it is {cv}")
         if zips:
-            write_zip(mod, v, overwrite)
+            write_zip(mod, v, overwrite, dry)
         if workshop:
-            stage_workshop(mod, v)
+            stage_workshop(mod, v, dry)
 
 
 if __name__ == "__main__":

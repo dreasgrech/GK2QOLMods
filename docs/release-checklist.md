@@ -27,6 +27,13 @@ green. `bash tools/release-scans.sh <Mod>` limits the two manifest checks (bin a
 one mod while another's dist waits for its re-audit (the code scans still run over every mod); `check-dist.py` takes
 the same mod list (2026-11-13: Owned Count's 1.0.4 dist fails against 1.012 until its own release).
 
+The translations (since 2026-11-16; the mods named in `tools/l10n.json`, the ones with a settings page): the scans
+end with `python -I lib/GK2DreasUI/tools/l10n-sync.py --check` (each mod's `Languages/en.csv` is what its build
+gives; the window's own words in its `Languages/<id>.csv` are the library's; no shipped line the mod would leave
+out) and the window library's `tests/TranslationScan` (the translator mistake catalogue, then every shipped file
+read as the game reads it). After a change of a row, a label or a description, or of the library's pointer: run the
+sync without `--check` and commit `src/<Mod>/Languages/` with the change. A window word is reworded in the library.
+
 ## 3. The release build
 
 The game may be running: a build is fine, only the deploy copy into the game needs it closed, and `dist/` is filled
@@ -61,7 +68,9 @@ again; `bin/` holds whichever was built last.
 Rehearse the first start on a clean config, with the game closed:
 
 1. Move `BepInEx\config\dreas.gk2.*.cfg` of these mods aside (they come back afterwards).
-2. Put the `dist/` DLLs into `BepInEx\plugins` over the dev builds.
+2. Put the `dist/` DLLs over the dev builds: each in its own folder, `BepInEx\plugins\<Mod>\<Mod>.dll` (the dev
+   deploy's layout since 2026-11-16, the zips' from the start; a mod not built since then still lies loose in
+   `plugins\`: one copy only, or the plugin loads twice).
 3. Start the game, load a save, open a build desk, a chest tooltip, the Tech Tree, move a building, quit.
 4. `BepInEx\LogOutput.log`: one `... loaded.` line per mod and no `[Warning` or `[Error` from any of them; the new
    cfg files hold the defaults.
@@ -94,8 +103,10 @@ python tools/make-release-zip.py GK2TechTreeSearch   # release/GK2-Tech-Tree-Sea
 ```
 
 which runs `check-dist.py`, checks the version (Plugin.cs = csproj = the mod's first changelog heading, and present
-in the dist DLL) and writes the zip holding `BepInEx/plugins/<Mod>/<Mod>.dll` alone, read back and compared with
-`dist/` byte for byte: the Nexus upload, extracting into the game folder (a folder per mod, as the Saddle Up zips).
+in the dist DLL) and writes the zip holding `BepInEx/plugins/<Mod>/<Mod>.dll` and, for a mod with translations,
+`BepInEx/plugins/<Mod>/Languages/*.csv` from `src/<Mod>/Languages/` (committed ones only: uncommitted files are
+refused), each read back and compared byte for byte: the Nexus upload, extracting into the game folder (a folder per
+mod, as the Saddle Up zips). `--dry-run` runs every check and lists what would be written, writing nothing.
 The zips in `release/` are kept in git (since 2026-10-30): commit each new zip with its release; only
 `release/logs/` is ignored. The tool refuses to overwrite a zip that exists (`--overwrite` only for one never uploaded).
 

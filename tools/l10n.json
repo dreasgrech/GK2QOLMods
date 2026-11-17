@@ -1,0 +1,6 @@
+{
+  "english": "build",
+  "plugins": ["src/GK2TechTreeSearch", "src/GK2EventDecorations"],
+  "dll": "{folder}/bin/Release/netstandard2.1/{name}.dll",
+  "method": "BindConfig"
+}

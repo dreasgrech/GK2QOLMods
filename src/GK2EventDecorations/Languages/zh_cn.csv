@@ -1,0 +1,22 @@
+﻿key,value,english,note
+options.done,完成,Done,
+options.defaults,恢复默认,Defaults,
+options.set_back_ask,将{0}中的所有选项恢复为默认值？,Set every option in {0} back to its default?,the Defaults button's question; {0}: a section's name
+options.set_back,恢复,Set back,
+options.cancel,取消,Cancel,
+options.hint_pad,移动到某个选项上即可查看它的作用。,Move to an option to see what it does.,"the line under the options, with a gamepad"
+options.hint_mouse,将鼠标指向某个选项即可查看它的作用。,Point at an option to see what it does.,"the line under the options, with a mouse"
+options.press_key_for,请按下{0}的按键：可单独按Shift、Ctrl或Alt，也可与其他键组合。Backspace：不设按键。Esc：取消。,"Press the key for {0}: Shift, Ctrl or Alt on its own, or with another key. Backspace: no key. Esc: cancel.",while a key is being set; {0}: the option's name
+options.key_how_pad,选中后，在键盘上按下按键。,"Select it, then press the key on the keyboard.","after a key option's description, with a gamepad"
+options.key_how_mouse,点击以设置按键。,Click it to set the key.,"after a key option's description, with a mouse"
+options.only_in_game,仅在游戏中可用。,Only in a game.,after a greyed button's description
+options.not_now,当前不可用。,Not available right now.,after a greyed option's description
+options.and_then,{0}{1},{0} {1},"the line under the options: {0} the option's description, {1} the sentence after it (the two above)"
+options.page_button,{0}选项,{0} options,the button in the game's Settings window; {0}: the mod's name
+row.open,打开,Open,a button that opens the Mounts panel
+row.go,执行,Go,a mod's button
+row.press_a_key,请按键……,Press a key...,a key option while it waits for the key
+row.none,无,None,a key option with no key; an empty name; no babies
+row.no_choice,（无）,(none),a list with nothing to choose
+key.same_as,与{0}按键相同,Same key as {0},"under a key option; {0}: another option, or another mod's setting"
+key.clashes_with,与{0}（{1}）冲突,Clashes with {0} ({1}),"under a key option; {0}: another option or mod's setting, {1}: its key"

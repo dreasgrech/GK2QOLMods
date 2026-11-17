@@ -1,0 +1,37 @@
+﻿key,value,english,note
+page.title,GK2 Tech Tree Search,GK2 Tech Tree Search,the page's title: the options window's title and the Settings window's button
+section.general,General,General,a section
+section.safety,Safety,Safety,a section
+info.status.label,Status,Status,"General, an info line"
+info.status.desc,What the mod is doing right now.,What the mod is doing right now.,"General, an info line: its description"
+Enabled.label,Search box on the Tech Tree,Search box on the Tech Tree,"General, a switch"
+Enabled.desc,A search box on the Tech Tree page: type part of a tech's name (or of something it unlocks) and jump to it. Hidden techs and locked tabs are never shown. Display only.,A search box on the Tech Tree page: type part of a tech's name (or of something it unlocks) and jump to it. Hidden techs and locked tabs are never shown. Display only.,"General, a switch: its description"
+SearchUnlocks.label,Also search what techs unlock,Also search what techs unlock,"General, a switch"
+SearchUnlocks.desc,"Also match what a tech unlocks (the items, buildings and perks shown on its card), e.g. ""beer"" finds Brewing.","Also match what a tech unlocks (the items, buildings and perks shown on its card), e.g. ""beer"" finds Brewing.","General, a switch: its description"
+MaxResults.label,Results shown,Results shown,"General, a slider"
+MaxResults.desc,How many results the list under the box shows at most.,How many results the list under the box shows at most.,"General, a slider: its description"
+FocusKey.label,Key to start a search,Key to start a search,"General, a key"
+FocusKey.desc,Puts the cursor in the search box while the Tech Tree page is open. Clicking the box works too. None: no key.,Puts the cursor in the search box while the Tech Tree page is open. Clicking the box works too. None: no key.,"General, a key: its description"
+StopOnChangedGameCode.label,Stop on changed game code,Stop on changed game code,"Safety, a switch"
+StopOnChangedGameCode.desc,"At start the mod compares every game member it uses with the installed game. A member that is gone always stops the mod. A member whose code changed runs the mod with a warning in the log; true stops the mod in that case too, until a re-audited build. Applies at the next start.","At start the mod compares every game member it uses with the installed game. A member that is gone always stops the mod. A member whose code changed runs the mod with a warning in the log; true stops the mod in that case too, until a re-audited build. Applies at the next start.","Safety, a switch: its description"
+options.done,Done,Done,
+options.defaults,Defaults,Defaults,
+options.set_back_ask,Set every option in {0} back to its default?,Set every option in {0} back to its default?,"the Defaults button's question; {0}: a section's name"
+options.set_back,Set back,Set back,
+options.cancel,Cancel,Cancel,
+options.hint_pad,Move to an option to see what it does.,Move to an option to see what it does.,"the line under the options, with a gamepad"
+options.hint_mouse,Point at an option to see what it does.,Point at an option to see what it does.,"the line under the options, with a mouse"
+options.press_key_for,"Press the key for {0}: Shift, Ctrl or Alt on its own, or with another key. Backspace: no key. Esc: cancel.","Press the key for {0}: Shift, Ctrl or Alt on its own, or with another key. Backspace: no key. Esc: cancel.","while a key is being set; {0}: the option's name"
+options.key_how_pad,"Select it, then press the key on the keyboard.","Select it, then press the key on the keyboard.","after a key option's description, with a gamepad"
+options.key_how_mouse,Click it to set the key.,Click it to set the key.,"after a key option's description, with a mouse"
+options.only_in_game,Only in a game.,Only in a game.,after a greyed button's description
+options.not_now,Not available right now.,Not available right now.,after a greyed option's description
+options.and_then,{0} {1},{0} {1},"the line under the options: {0} the option's description, {1} the sentence after it (the two above)"
+options.page_button,{0} options,{0} options,"the button in the game's Settings window; {0}: the mod's name"
+row.open,Open,Open,a button that opens a window of the mod's
+row.go,Go,Go,a mod's button
+row.press_a_key,Press a key...,Press a key...,a key option while it waits for the key
+row.none,None,None,"a key option with no key; an empty name; no babies"
+row.no_choice,(none),(none),a list with nothing to choose
+key.same_as,Same key as {0},Same key as {0},"under a key option; {0}: another option, or another mod's setting"
+key.clashes_with,Clashes with {0} ({1}),Clashes with {0} ({1}),"under a key option; {0}: another option or mod's setting, {1}: its key"

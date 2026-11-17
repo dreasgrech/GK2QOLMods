@@ -85,6 +85,28 @@ Owned Count 1.0.4, Tech Search 1.0.0. Earlier changes are in git history and eac
 - The window's key row no longer says Ctrl + F "Clashes with GK2 Donkey API: DescendKey (Left Ctrl)" (seen at the
   first open, 2026-11-15): the library takes another mod's key on a modifier as held, and the plugin says it reads
   its key with BepInEx's exact test (`UiOwner.KeysExact`), so only an identical combination elsewhere is a clash.
+- The result list uses the game's font for the game's language (2026-11-16). Its rows wore the font of the page's
+  point counters, which the game keeps the same in every language (`tiny_font`: no Japanese, Chinese or Korean
+  letters), so with the game in one of those three languages the techs' names in the list could not be drawn. Read
+  from the game's files (2026-11-15: the counter's text style is marked "always the same font"; every font of the
+  page swaps to the game's Japanese, Chinese or Korean font for a label that isn't), not yet seen in the game. The
+  rows now ask that style's font data for the language's font, again when the language changes; any failure keeps
+  the old font. The dot between a result's tab and its unlock is a hyphen where the language's font has no such dot
+  (the game's own Japanese and Korean text never uses one). With the developers' marker file, one log line a language
+  names both fonts and the letters of the first result's name each can't draw (the font test of GK2 Donkey API's
+  self-tests).
+- Known, not fixed (found 2026-11-16 in the game's word tables): about half of the game's tech names in Japanese (26
+  of 51 lines) and Simplified Chinese (32 of 51) hold an invisible break mark (U+200B) between their words. The
+  search compares letter for letter, so a query that spans the mark (the whole name typed) finds nothing; a part on
+  one side of it does. The fix would be to drop the marks from the names the search reads; waiting for a yes.
+- The settings window's own words (its buttons, the hints under the rows, the key box, the button in the game's
+  Settings window) in the game's 10 other languages (2026-11-16): `Languages\<id>.csv` beside the DLL, the window
+  library's own translations (the ones GK2 Saddle Up's window has). The mod's own rows and descriptions are English
+  still. `Languages\en.csv` is the template a translator copies: every text of the window, 36 lines.
+- Development (2026-11-16): `src/GK2TechTreeSearch/Languages/` is written by the window library's tools
+  (`lib/GK2DreasUI/tools/l10n-sync.py`, `tools/l10n.json`): `en.csv` from the built DLL without the game
+  (`tools/EnglishDump`), the window's 21 words in each language from the library's `Languages/`. It deploys beside
+  the DLL and ships in the zip and the Workshop folder.
 
 ### 1.0.2 (2026-11-13)
 
@@ -130,6 +152,10 @@ Nothing changes for players.
 - New mod: choose when the game's temporary events show. Halloween gets a mode: Auto (the game's dates, 24 October
   to 7 November), On (every day) or Off (never). It covers the decorations, the ghost's night walks and the
   Halloween zombie head. The decorations change from the next save load.
+- The options window's own words (its buttons, the hints under the rows, the button in the game's Settings window)
+  in the game's 10 other languages (2026-11-16): `Languages\<id>.csv` beside the DLL, the window library's own
+  translations. The mod's own rows and descriptions are English still; `Languages\en.csv` is the template a
+  translator copies (97 lines). Written by the window library's tools, as Tech Tree Search's.
 - With Halloween off, a ghost the game left standing in the village is sent home.
 - An event a later game update adds gets its own Auto / On / Off setting by itself.
 - Optional GK2 Mod Framework integration: the mod in the game's Mods menu, its Settings button opening the mod's own
@@ -181,6 +207,21 @@ Nothing changes for players.
 
 ## Development
 
+- Translations, the pipeline (2026-11-16; the study is GK2DonkeyAPI's `docs/ui-library.md` section 11). The reader
+  was in every mod that carries the window code already; what this repository lacked is now here:
+  - `tools/l10n.json` names the mods with a settings page (Tech Tree Search, Event Decorations) and says their
+    English comes from the build. `python -I lib/GK2DreasUI/tools/l10n-sync.py` writes each one's
+    `src/<Mod>/Languages/en.csv` (the window library's `tools/EnglishDump` builds the mod's page from its DLL, no
+    game start) and the window's own 21 words into its `Languages/<id>.csv`, as the library has them; `--check`
+    fails when either would change. A window word is reworded in the library, never here.
+  - `DeployToGame.targets` deploys a mod into a folder of its own, `BepInEx\plugins\<Mod>\` (the zips' layout), with
+    its `Languages\` beside it, and removes the loose copy of the old layout. Loose in `plugins\`, every mod would
+    read one shared `Languages` folder (measured: a warning for the other mod's keys, and the two mods' files have
+    the same names). A mod moves at its next build; the three without a page are loose until then.
+  - `tools/make-release-zip.py` puts `Languages/*.csv` into the zip and the Workshop folder, refuses uncommitted
+    ones, and has `--dry-run` (every check, then what would be written; nothing written).
+  - `tools/release-scans.sh` runs the sync check and the library's `tests/TranslationScan` (the translator mistake
+    catalogue and every shipped file read as the game reads it) after the dist check.
 - The shared dependency check (`src/Shared`, `tools/DepManifest`, byte-identical with GK2DonkeyAPI's) knows a third
   scope since game 1.011.1, the A* pathfinding, and reads `module-mvid` lines for scopes other than the two named
   ones (2026-11-03). These mods use none of it: their manifests are unchanged. `tests/GameDiff` compares every game

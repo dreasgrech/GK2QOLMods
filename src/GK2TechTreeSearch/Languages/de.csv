@@ -1,0 +1,22 @@
+﻿key,value,english,note
+options.done,Fertig,Done,
+options.defaults,Standardwerte,Defaults,
+options.set_back_ask,Alle Optionen im Bereich {0} auf ihre Standardwerte zurücksetzen?,Set every option in {0} back to its default?,the Defaults button's question; {0}: a section's name
+options.set_back,Zurücksetzen,Set back,
+options.cancel,Abbrechen,Cancel,
+options.hint_pad,"Wähle eine Option an, um zu sehen, was sie bewirkt.",Move to an option to see what it does.,"the line under the options, with a gamepad"
+options.hint_mouse,"Zeige auf eine Option, um zu sehen, was sie bewirkt.",Point at an option to see what it does.,"the line under the options, with a mouse"
+options.press_key_for,"Drücke die Taste für {0}: Shift, Ctrl oder Alt allein oder zusammen mit einer anderen Taste. Backspace: keine Taste. Esc: abbrechen.","Press the key for {0}: Shift, Ctrl or Alt on its own, or with another key. Backspace: no key. Esc: cancel.",while a key is being set; {0}: the option's name
+options.key_how_pad,Wähle die Option aus und drücke dann die Taste auf der Tastatur.,"Select it, then press the key on the keyboard.","after a key option's description, with a gamepad"
+options.key_how_mouse,"Klicke darauf, um die Taste festzulegen.",Click it to set the key.,"after a key option's description, with a mouse"
+options.only_in_game,Nur während eines Spiels.,Only in a game.,after a greyed button's description
+options.not_now,Im Moment nicht verfügbar.,Not available right now.,after a greyed option's description
+options.and_then,{0} {1},{0} {1},"the line under the options: {0} the option's description, {1} the sentence after it (the two above)"
+options.page_button,Optionen für {0},{0} options,the button in the game's Settings window; {0}: the mod's name
+row.open,Öffnen,Open,a button that opens the Mounts panel
+row.go,Los,Go,a mod's button
+row.press_a_key,Drücke eine Taste ...,Press a key...,a key option while it waits for the key
+row.none,Keine,None,a key option with no key; an empty name; no babies
+row.no_choice,(keine),(none),a list with nothing to choose
+key.same_as,Gleiche Taste wie {0},Same key as {0},"under a key option; {0}: another option, or another mod's setting"
+key.clashes_with,Konflikt mit {0} ({1}),Clashes with {0} ({1}),"under a key option; {0}: another option or mod's setting, {1}: its key"

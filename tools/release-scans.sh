@@ -44,5 +44,11 @@ for m in "${MODS[@]}"; do
   run "$REPO" "DepManifest verify $m.dll" dotnet tools/DepManifest/bin/Release/net8.0/DepManifest.dll verify "src/$m/bin/Release/netstandard2.1/$m.dll" "$MANAGED"
 done
 run "$REPO" "check-dist ${MODS[*]}" python tools/check-dist.py "${MODS[@]}"
+# the translations (the window library's tools; tools/l10n.json names the mods with a settings page): each mod's
+# Languages/en.csv is what its build gives, the window's own words in its Languages/<id>.csv are the library's; then
+# the reader's mistake catalogue and every shipped Languages file read as the game reads it
+run "$REPO" "translations: the sync tool's writing, on scratch files" python -I lib/GK2DreasUI/tests/l10n-sync-merge-test.py
+run "$REPO" "translations: the English templates match the builds, the window's words the library's" python -I lib/GK2DreasUI/tools/l10n-sync.py --check
+run "$REPO/lib/GK2DreasUI/tests/TranslationScan" "TranslationScan (the mistake catalogue; every shipped Languages file)" dotnet run -c Release -- "$REPO"
 echo "$((total - fails)) of $total checks green (log: $LOG)"
 [ $fails -eq 0 ] || exit 1

@@ -51,12 +51,19 @@ namespace GK2TechTreeSearch
         // The status as the rows show it: off by the player's switch is said as such.
         internal static string StatusShown() => Status == "Active" && Enabled != null && !Enabled.Value ? "Off (\"Search box on the Tech Tree\" is unchecked)" : Status;
 
+        // A developer's machine: the marker file the dev tools of our mods share, in BepInEx\config. With it the search
+        // box writes one line about its fonts a language (SearchBox.SayFonts); a player never has it.
+        private const string DevMarker = "dreas.gk2.dev";
+        internal static bool DevTools;
+
         private Harmony harmony;
         private SettingsPage page;
 
         private void Awake()
         {
             Log = Logger;
+            try { DevTools = File.Exists(Path.Combine(Paths.ConfigPath, DevMarker)); }
+            catch (Exception) { DevTools = false; }
             // The window code's owner (lib\GK2DreasUI): the settings page in the options window, opened from a button in
             // the game's Settings window. First thing after the logger, before anything of the windows runs.
             UiOwner.Guid = Guid;

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using LazyBearTechnology;
 using TMPro;
 using UnityEngine;
@@ -30,6 +31,14 @@ namespace GK2TechTreeSearch
         private RectTransform list;
         private TMP_FontAsset font;
         private float fontSize;
+        private TextMeshProUGUI fontSource;   // the page's label our labels take their font from (ReadFont)
+        private string fontLanguage;          // the game language the font was read for
+        private bool fontFailureSaid;
+        private string fontSaidFor;           // the language the dev line about the fonts was written for
+        private string separator = " · "; // between a result's tab and what the tech unlocks (ReadFont)
+        private const string NoMatch = "No visible tech matches";
+        private const string MoreLead = "+", MoreTail = " more: type more letters";
+        private readonly List<TextMeshProUGUI> ownLabels = new List<TextMeshProUGUI>(); // every label Label() made
         private readonly List<(GameObject Go, Image Back, TextMeshProUGUI Text)> rows = new List<(GameObject, Image, TextMeshProUGUI)>();
         private List<Hit> hits = new List<Hit>();
         private int highlighted;
@@ -66,9 +75,9 @@ namespace GK2TechTreeSearch
         {
             page = owner;
             window = owner.GetComponentInParent<CharacterWindow>(true);
-            TextMeshProUGUI pageLabel = Access.RedSpheresLabel(owner);
-            font = pageLabel != null ? pageLabel.font : null;
-            fontSize = pageLabel != null ? pageLabel.fontSize : 18f;
+            fontSource = Access.RedSpheresLabel(owner);
+            fontSize = fontSource != null ? fontSource.fontSize : 18f;
+            ReadFont();
 
             RectTransform rt = (RectTransform)transform;
             rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(1f, 1f);
@@ -93,6 +102,112 @@ namespace GK2TechTreeSearch
             list = BuildList(rt);
             list.gameObject.SetActive(false);
             ApplyLayout();
+        }
+
+        // The font of our own labels (the result rows; the plain box): the page's point counter's, in the game's language.
+        // That counter's text style is one the game marks "always the same font" (it shows numbers): tiny_font in every
+        // language, which has no Japanese, Chinese or Korean letters, while the rows show the game's own tech names
+        // (read from the game's files, 2026-11-15; up to 1.0.2 the rows wore the counter's font as it was). So the
+        // style's font data is asked for the language's font, as the game asks for a label it hasn't marked. Read again
+        // when the language changed since (Refresh). Any failure: the counter's own font, as before.
+        private void ReadFont()
+        {
+            TMP_FontAsset own = fontSource != null ? fontSource.font : null;
+            string lang = null;
+            TMP_FontAsset forLanguage = null;
+            try
+            {
+                lang = GameLanguage();
+                forLanguage = LanguageFont(fontSource, lang);
+            }
+            catch (Exception e)
+            {
+                if (!fontFailureSaid)
+                {
+                    fontFailureSaid = true;
+                    Plugin.Log.LogWarning($"Tech search: the game's font for its language couldn't be read ({e.GetType().Name}: {e.Message}); the result list keeps the page's counter font, which has no Japanese, Chinese or Korean letters.");
+                }
+            }
+            fontLanguage = lang;
+            font = forLanguage != null ? forLanguage : own;
+            if (font == null)
+            {
+                return;
+            }
+            // the dot between a tab and an unlock: the game's own Japanese and Korean text never uses it, so those fonts may
+            // not have it; a hyphen then, which every font of the game has
+            separator = Has(font, "·", out _) ? " · " : " - ";
+            foreach (TextMeshProUGUI label in ownLabels)
+            {
+                if (label != null && label.font != font)
+                {
+                    label.font = font;
+                }
+            }
+        }
+
+        // The game's own, each in a method of its own: a game update that renamed one fails when its method is compiled,
+        // inside ReadFont's try (the dependency check names them at start as well).
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static string GameLanguage() => LLBase.CurrentLang;
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static TMP_FontAsset LanguageFont(TextMeshProUGUI label, string lang)
+        {
+            TextStyleComponent component = label != null ? label.GetComponent<TextStyleComponent>() : null;
+            TextStyle style = component != null ? component.CurrentTextStyle : null;
+            LazyFontData data = style != null ? style.Font : null;
+            return data != null ? data.GetFontAssetFor(lang, false) : null;
+        }
+
+        // Whether a font can draw every letter of a text, and the letters it can't: its fallback fonts asked, a letter a
+        // font that fills its atlas on demand can still add added (the test GK2 Donkey API's font check uses, proven in
+        // the game in every language). The game's invisible break marks inside a name (U+200B) are no letters.
+        private static bool Has(TMP_FontAsset f, string text, out string missing)
+        {
+            missing = "";
+            if (f == null || string.IsNullOrEmpty(text))
+            {
+                return false;
+            }
+            try
+            {
+                bool all = f.HasCharacters(text.Replace("​", ""), out uint[] codes, true, true);
+                if (codes != null)
+                {
+                    var sb = new System.Text.StringBuilder();
+                    foreach (uint c in codes)
+                    {
+                        sb.Append(char.ConvertFromUtf32((int)c));
+                    }
+                    missing = sb.ToString();
+                }
+                return all;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
+        // With the dev marker (BepInEx\config\dreas.gk2.dev), once a language: the two fonts by name and which letters of
+        // the first result's name each can't draw, so one look at the log tells the counter's font from the language's;
+        // and whether the rows' font has our own separator and words.
+        private void SayFonts(string name)
+        {
+            if (!Plugin.DevTools || font == null || string.IsNullOrEmpty(name) || fontSaidFor == (fontLanguage ?? ""))
+            {
+                return;
+            }
+            fontSaidFor = fontLanguage ?? "";
+            TMP_FontAsset own = fontSource != null ? fontSource.font : null;
+            bool rows = Has(font, name, out string rowsMissing);
+            bool counter = Has(own, name, out string counterMissing);
+            Has(font, NoMatch + MoreLead + MoreTail + "0123456789", out string oursMissing);
+            Plugin.Log.LogInfo($"Tech search [dev]: language \"{fontLanguage}\", first result \"{name.Replace("​", "")}\": the rows wear {font.name} ({(rows ? "has every letter" : "LACKS " + rowsMissing)}); "
+                + $"the page's counter label wears {(own != null ? own.name : "no font")} ({(counter ? "has every letter" : "LACKS " + counterMissing)}); "
+                + $"between a tab and an unlock the rows put \"{separator.Trim()}\""
+                + (oursMissing.Length > 0 ? "; the rows' font LACKS of our own words: " + oursMissing : "") + ".");
         }
 
         // The game's own styled text box, copied from the bug report window if that window is already loaded.
@@ -211,6 +326,7 @@ namespace GK2TechTreeSearch
             t.alignment = TextAlignmentOptions.Left;
             t.raycastTarget = false;
             t.text = text;
+            ownLabels.Add(t);
             return t;
         }
 
@@ -387,6 +503,7 @@ namespace GK2TechTreeSearch
             {
                 return;
             }
+            RefreshFont();
             hits = TechIndex.Find(input.text);
             int max = Mathf.Clamp(Plugin.MaxResults.Value, 1, 20);
             int shown = Mathf.Min(hits.Count, max);
@@ -404,24 +521,46 @@ namespace GK2TechTreeSearch
             {
                 rows[i].Text.text = RowText(hits[i]);
             }
+            if (shown > 0)
+            {
+                SayFonts(hits[0].Name);
+            }
             if (typed && hits.Count == 0)
             {
-                rows[0].Text.text = "<alpha=#99>No visible tech matches";
+                rows[0].Text.text = "<alpha=#99>" + NoMatch;
             }
             else if (hits.Count > max)
             {
-                rows[shown].Text.text = "<alpha=#99>+" + (hits.Count - max) + " more: type more letters";
+                rows[shown].Text.text = "<alpha=#99>" + MoreLead + (hits.Count - max) + MoreTail;
             }
             Highlight(0);
         }
 
-        private static string RowText(Hit h)
+        // The game's language changed since the font was read (the Settings window, with this page alive): read again.
+        private void RefreshFont()
+        {
+            string lang;
+            try
+            {
+                lang = GameLanguage();
+            }
+            catch (Exception)
+            {
+                return; // said by ReadFont
+            }
+            if (!string.Equals(lang, fontLanguage, StringComparison.Ordinal))
+            {
+                ReadFont();
+            }
+        }
+
+        private string RowText(Hit h)
         {
             string name = h.Def.TechState == TechState.Unlocked ? "<color=" + ResearchedColor + ">" + h.Name + "</color>" : h.Name;
             string line = name + "  <alpha=#99>" + TechIndex.TabName(h.Def.tab);
             if (h.Via != null)
             {
-                line += " · " + h.Via;
+                line += separator + h.Via;
             }
             return line;
         }
