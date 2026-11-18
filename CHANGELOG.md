@@ -242,6 +242,13 @@ Nothing changes for players.
 
 ## Development
 
+- **Game update 1.012.9 (Steam build 26734308), re-audited 2026-11-18** (`docs/game-update-26734308.md`): nothing
+  the mods here use changed (Built Count, Global Storage, Tech Tree Search and Event Decorations identical on every
+  member; Owned Count with its one changed member as since 1.012). Everything compiles and was rebuilt and deployed
+  for the new build; scans 22 of 23, the one failure `check-dist` for Event Decorations' missing `dist/` DLL (never
+  released). New in the game: its Mods window marks a Workshop code mod "Failed to start" when the plugin wrote an
+  Error line or threw before the main menu, so an Error line at start is kept for a start that failed. Nothing
+  changes for players; the pins move with the next release.
 - In-game tests for the mods here (2026-11-17, the user's ask: only GK2 Saddle Up had automated tests in the game).
   `tools/GK2QOLMods.Tests` is a developer's plugin, never shipped (no zip, no dist, no release scan; a plain build
   doesn't deploy it), that adds a suite for each mod to GK2 Mod Test Bench, the shared test runner with its own
