@@ -306,6 +306,15 @@ Nothing changes for players.
     running: an area, a kind, the bats, the glow and the blocking off for 3 s, everything on for 2 s, the decorations
     down for 2 s, looked at again each time. **Fourth run (18:54), with it: 46 of 46 tests, 238 checks passed, 0
     failed, 0 warnings, none skipped**; the 73 things switched off were the same 73 after 356 frames.
+- **A row in the game's Settings window, where a button above its OK button was** (2026-11-18, not committed in the
+  window library yet): Tech Tree Search's and Event Decorations' options open from a row each under the game's own
+  rows, the mod's name and a box saying "Open" with the game's arrow, in one strip with every other mod's that uses
+  the window library, in the order of their names; past eight rows the strip scrolls. The investigation and what was
+  built: GK2 Donkey API's `docs/options-window.md`, section 15. `Directory.Build.props` has `GK2DreasUIDir` (the
+  submodule by default) to build against the library's own checkout for a try in the game; the builds deployed for
+  the first look were made so. Seen in the game (the user, 2026-11-18: both mods' rows in the main menu's Settings
+  window, with Saddle Up's between them) and run: every suite in one run, 251 tests, 2475 checks passed, 0 failed, 0
+  warnings, Tech Tree Search's 7 and Event Decorations' 46 tests among them.
 - **The window library with its fonts and sizes put right** (2026-11-18, with the pointer's move): the options
   windows of Tech Tree Search and Event Decorations take their title and bold fonts from the game's own styles (in a
   session where the game's Settings window had not been shown yet, a title was drawn in a small stand-in font and

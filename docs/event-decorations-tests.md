@@ -249,4 +249,9 @@ zones still working; everything on again and nothing off after 2 s (239 frames);
 (240 frames), nothing of them in the world, no warning of the mod's meanwhile. So nothing of the game's undoes a
 switch within seconds.
 
+**2026-11-18 20:32, the user, the same mod built on the window library with its fonts and sizes put right (the pointer
+at `eb42f77`).** Run on the suite's row: **46 of 46 tests, 238 passed, 0 failed, 0 warnings, 0 skipped**
+(`20261118-203222.log`); the mod's log held 16 warnings, the 16 provoked. Tech Tree Search's row a minute before: 7
+tests, 15 passed, 0 failed (`20261118-203148.log`). The user opened the options window by hand after it.
+
 Still not run: the suite without GK2 Mod Framework, and another language set in the game.

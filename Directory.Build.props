@@ -12,5 +12,10 @@
          (tools\GK2QOLMods.Tests) are compiled against its DLL as deployed in the game. Build and deploy the bench
          first (in its repository: dotnet build -c Release -p:Deploy=true). -->
     <TestBenchDll Condition="'$(TestBenchDll)' == ''">$(GameDir)\BepInEx\plugins\GK2ModTestBench\GK2ModTestBench.dll</TestBenchDll>
+    <!-- The window code (GK2DreasUI, compiled in as sources): the submodule at lib\GK2DreasUI, always, for anything
+         that is committed or released. For trying a change of the library in the game before it is committed there,
+         pass -p:GK2DreasUIDir="<the library's own checkout>\" (with the closing backslash): that build is for the
+         game on this machine only, and the next plain build is the submodule's again. -->
+    <GK2DreasUIDir Condition="'$(GK2DreasUIDir)' == ''">$(MSBuildThisFileDirectory)lib\GK2DreasUI\</GK2DreasUIDir>
   </PropertyGroup>
 </Project>

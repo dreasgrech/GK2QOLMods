@@ -35,7 +35,7 @@
 
   <!-- The window code (GK2DreasUI, a submodule at lib\GK2DreasUI): the options window under the game's Settings window and
        the settings page behind it, compiled into this DLL (lib\GK2DreasUI\README.md). -->
-  <Import Project="$(MSBuildThisFileDirectory)..\..\lib\GK2DreasUI\GK2DreasUI.targets" />
+  <Import Project="$(GK2DreasUIDir)GK2DreasUI.targets" />
   <!-- Deploys into the game after every build, only while it is closed (-p:Deploy=false skips it). -->
   <!-- The dependency check: shared sources, Mono.Cecil, and the manifest embedded after every build (docs/dependency-check.md). -->
   <Import Project="$(MSBuildThisFileDirectory)..\..\DependencyManifest.targets" />
