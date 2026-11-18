@@ -242,6 +242,28 @@ Nothing changes for players.
 
 ## Development
 
+- **GK2 Event Decorations: the in-game test suite for its first release** (2026-11-18, the user's ask: "a solid test
+  suite ... which covers everything in it"). The five read-only tests of 2026-11-17 became 45, in
+  `tools/GK2QOLMods.Tests/EventDecorations/` (a file a group; `EdRun` what a run holds, `EdWorld` how the world is
+  read, by the audit's own names and counts, not the mod's lists): the mod's start, patches and settings; the
+  player's own settings as found; the player's own dates (what is a date, inclusive ends, past the new year); what
+  the game is told for every combination of the settings (the offline truth table again, in the game, with the real
+  head table, the game's expression function and the ghost's two balance rows); the decorations put up and taken
+  down live, every area, kind, the bats, the glow and the blockers switched and read from the game's objects, the
+  two moments of a load; the ghost's script told its events, and the mod's send-home fix; the options window
+  (rows, greying, opened, a switch pressed, Defaults, its two lines); the ten languages as the deployed mod reads
+  them, and glyphs in the game's own language; the Mods-menu link; a made-up later event through the mod's own
+  code for found events. A run keeps the player's settings and puts them back, never writes the cfg file, turns
+  the game's own date check both ways with a prefix of its own (so both seasons are tested on any date), and
+  listens to the mod's log (a warning no test provoked fails the run). `docs/event-decorations-tests.md` maps each
+  part of the mod to what checks it and lists what nothing reaches (the finding of a new event at the mod's start,
+  a start that fails, a real save load, how things look). The test project names GK2 Event Decorations under an
+  alias (`EDasm`): both mods carry the window code and grant their internals, so a window type without one would
+  be two types. A test makes the state it starts from and asks nothing of the person running it (the user,
+  2026-11-18: the ghost tests take a ghost that is out home themselves, the window tests wait for a free screen).
+  **First run in the game (the user, 2026-11-18 16:03, game 1.012.9): 45 of 45 tests, 226 checks passed, 0 failed, 0
+  warnings, none skipped**; the mod's send-home fix for the ghost seen working for the first time. Nothing changes
+  for players.
 - **Game update 1.012.9 (Steam build 26734308), re-audited 2026-11-18** (`docs/game-update-26734308.md`): nothing
   the mods here use changed (Built Count, Global Storage, Tech Tree Search and Event Decorations identical on every
   member; Owned Count with its one changed member as since 1.012). Everything compiles and was rebuilt and deployed
