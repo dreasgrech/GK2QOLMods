@@ -27,6 +27,9 @@ Hidden techs (the "?" cards) and tabs you have not opened yet are never listed. 
 [h3]Your keys stay yours[/h3]
 While the box has the cursor, the game's keys are paused, the same way the game's own bug report window does it: letters do not open the map or the inventory, and the keeper does not walk off.
 
+[h3]In your language[/h3]
+The box and the options follow the game's language: English, German, Spanish, French, Brazilian Portuguese, Russian, Polish, Turkish, Japanese, Simplified Chinese and Korean. Searching works on the techs' names as your game shows them.
+
 [h3]Display only[/h3]
 Nothing in the game changes and nothing is written. Your save is never touched, and a save made with the mod loads fine without it.
 
@@ -44,7 +47,13 @@ With a gamepad active the box is hidden: there is no text entry on a pad.
 [hr][/hr]
 [h2]Settings[/h2]
 
-Everything is in [i]BepInEx\config\dreas.gk2.techtreesearch.cfg[/i] in the game folder (written on the first start; change it with the game closed): the box on or off, searching unlocks, the number of rows in the list, the key, and the box's place and size on the page.
+In the game's [b]Settings[/b] window (in the pause menu and the main menu), the [b]GK2 Tech Tree Search[/b] row opens the mod's own options: the search box on or off, searching what techs unlock, the number of results and the key. To set the key, click its box and press the key.
+
+[img]https://raw.githubusercontent.com/dreasgrech/GK2QOLMods/main/media/tech-tree-search/settings-row.png[/img]
+
+[img]https://raw.githubusercontent.com/dreasgrech/GK2QOLMods/main/media/tech-tree-search/options-window.png[/img]
+
+Everything is also in [i]BepInEx\config\dreas.gk2.techtreesearch.cfg[/i] in the game folder (written on the first start; change it with the game closed), and the box's place and size on the page are set there.
 
 [hr][/hr]
 [h2]Install[/h2]
@@ -59,7 +68,7 @@ Everything is in [i]BepInEx\config\dreas.gk2.techtreesearch.cfg[/i] in the game 
 
 [b]Safe for your save.[/b] The mod writes nothing: no save data, no game rule. Saves made with it load without it.
 
-[b]Game updates.[/b] Built for game 1.012.7. After a game update the mod checks the game's code at start: if the game removed something it uses, the mod stops and the log says so; if the game only changed something, it runs and the log warns.
+[b]Game updates.[/b] Built for game 1.012.9. After a game update the mod checks the game's code at start: if the game removed something it uses, the mod stops and the log says so; if the game only changed something, it runs and the log warns.
 
 [b]Unsubscribe.[/b] The game removes the mod's file on the next start.
 

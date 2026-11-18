@@ -14,8 +14,8 @@ it unlocks, and jump straight to it, on whichever tab it is.
 Enter (or a click) switches to the tech's tab, scrolls to it and frames its card. Hidden techs (the "?" cards) and
 tabs you haven't opened yet are never shown, so the search spoils nothing. Display only: nothing in the game changes.
 
-Version 1.0.2, built and audited against Steam game build 26624074, game 1.012.7 (Assembly-CSharp MVID `c69d845c-…`,
-LazyBearTechnology `53b976b3-…`; re-audit in `docs/game-update-26624074.md`). Design study: [`docs/tech-tree-search.md`](../../docs/tech-tree-search.md).
+Version 1.1.0, built and audited against Steam game build 26734308, game 1.012.9 (Assembly-CSharp MVID `ff3601f5-…`,
+LazyBearTechnology `982a437a-…`; re-audit in `docs/game-update-26734308.md`). Design study: [`docs/tech-tree-search.md`](../../docs/tech-tree-search.md).
 
 - GUID: `dreas.gk2.techtreesearch` (until 1.0.1 the mod was GK2 Tech Search, `dreas.gk2.techsearch`: its settings file
   is copied to the new name on the first start, and if its `GK2TechSearch.dll` is still installed this one stays off and says so)
@@ -35,8 +35,8 @@ LazyBearTechnology `53b976b3-…`; re-audit in `docs/game-update-26624074.md`). 
 
 ## Settings window
 
-The game's **Settings** window (main menu or ESC) has a **GK2 Tech Tree Search** button: an options window in the
-game's own look with a Status line and the settings below (the search box on or off, searching what techs unlock, the
+The game's **Settings** window (main menu or ESC) has a **GK2 Tech Tree Search** row under the game's own (since
+1.1.0; press **Open**): an options window in the game's own look with a Status line and the settings below (the search box on or off, searching what techs unlock, the
 number of results, the key, stopping on changed game code), with descriptions and a Defaults button; the gamepad works
 there too. A change is written to the cfg and applies the next time the Tech Tree page opens. The window code is
 shared with GK2 Donkey API (`lib\GK2DreasUI`, a git submodule compiled into this DLL: nothing to install).
@@ -44,18 +44,14 @@ shared with GK2 Donkey API (`lib\GK2DreasUI`, a git submodule compiled into this
 ## Optional: GK2 Mod Framework
 
 With [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) (0.1.x, by SuperMan4eg) installed,
-the mod appears in the game's **Mods** menu (main menu and ESC menu):
-- a Status row: Active, Off, or disabled after a game update;
-- "Search box on the Tech Tree", "Also search what techs unlock" and "Key to start a search".
-
-`MaxResults`, the Layout settings and `Safety.StopOnChangedGameCode` stay in the cfg there (the Settings window above
-has them). Without the framework, the same DLL works exactly as before. Details:
+the mod appears in the game's **Mods** menu (main menu and ESC menu), and its **Settings** button there opens the
+options window above (since 1.1.0; up to 1.0.2 the menu listed a Status row and three of the settings as rows of its
+own, in English only). Without the framework, the same DLL works exactly as before. Details:
 [`docs/gk2-mod-framework.md`](../../docs/gk2-mod-framework.md).
 
 ## Settings (`BepInEx\config\dreas.gk2.techtreesearch.cfg`)
 
-Read at game start. The General ones are read on every search or page open, so a change in the Settings window or the
-Mods menu applies the next time the Tech Tree page opens. The Layout ones are the cfg's only.
+Read at game start. The General ones are read on every search or page open, so a change in the options window applies the next time the Tech Tree page opens. The Layout ones are the cfg's only.
 
 | Key | Default | Meaning |
 |---|---|---|

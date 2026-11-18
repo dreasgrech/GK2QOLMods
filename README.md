@@ -9,7 +9,7 @@ so you can install any subset.
 | [Built Count](#built-count) | 1.0.6 | Build menus show how many of each building you already have in that area. |
 | [Move Building](#move-building) | retired | Picked up a built building and put it down elsewhere; the game does it itself since 1.011. |
 | [Owned Count](#owned-count) | 1.0.4 | Item tooltips show how many of that item you own across inventory and every chest. |
-| [Tech Tree Search](#tech-tree-search) | 1.0.2 | A search box on the Tech Tree page: find a tech by name, or by what it unlocks, and jump to it. |
+| [Tech Tree Search](#tech-tree-search) | 1.1.0 | A search box on the Tech Tree page: find a tech by name, or by what it unlocks, and jump to it. |
 | [Event Decorations](#event-decorations) | unreleased | Choose when the game's temporary events (Halloween) show: by its dates, every day, or never. |
 
 **Looking for the donkey?** The rideable donkey and cart (GK2 Saddle Up, and the GK2 Donkey API it's built on) moved
@@ -149,11 +149,13 @@ scrolls to the tech and frames its card. Ctrl+F puts the cursor in the box.
 - While you type, the game's keys are paused (the same way the game's own bug report window does it), so letters
   don't open the map or the inventory.
 - Display only: nothing in the game changes, nothing is written. Jumping is the game's own tab switch.
-- Settings: on/off, search unlocks too, number of results, the key, the box's place and size. Unreleased: a
+- Settings: on/off, search unlocks too, number of results, the key, the box's place and size. Since 1.1.0 a
   "GK2 Tech Tree Search" row in the game's Settings window opens an options window with them (the window code is
   GK2 Donkey API's, the `lib/GK2DreasUI` submodule, compiled in).
-- Optional: with [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) installed, its main settings
-  also appear in the game's Mods menu. The same DLL works without it.
+- In the game's language since 1.1.0: the box's and the window's texts in the game's 10 other languages
+  (`Languages\<id>.csv` beside the DLL).
+- Optional: with [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) installed, the Settings
+  button of the mod in the game's Mods menu opens the options window. The same DLL works without it.
 
 ### Event Decorations
 

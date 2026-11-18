@@ -76,6 +76,15 @@ Rehearse the first start on a clean config, with the game closed:
    cfg files hold the defaults.
 5. Put the config files and the dev DLLs back (or rebuild without `ForDist`).
 
+For a mod released as a zip (section 7), `tools/rehearsal.sh` does steps 1, 2 and 5 (since 2026-11-18):
+`bash tools/rehearsal.sh stage <Mod>` sets every build of ours, every `dreas.gk2.*` file in `config` and the dev tools
+aside and extracts `release/`'s zip of the mod's version, so the game folder is a player's with that one mod, on no
+cfg; `--cfg <file>` puts a cfg in (an update: the previous release's cfg with values off their defaults),
+`--no-framework` sets GK2 Mod Framework aside too, `--with <zip>` extracts another released zip beside it (a Saddle Up
+zip from the GK2DonkeyAPI repository: two mods' rows in the game's Settings window). `bash tools/rehearsal.sh restore`
+keeps the run's log and cfgs (`BepInEx\qol-rehearsal-aside-<date>-<time>\after`) and puts everything back. Both refuse
+while the game runs. `bash tools/rehearsal-test.sh <Mod> <a second zip>` proves the script on a scratch folder.
+
 Run 2026-10-13 with this dist, without the framework and with a stock `BepInEx.cfg`: all five loaded with their
 versions, a building moved, the Tech Tree search box shown and searching; no warning, error or exception in the log;
 the fresh cfgs at defaults. Second run the same day with the marker lock built: Move Building's fresh cfg has no
@@ -90,7 +99,7 @@ patch, new features or settings the minor), in the mod's `Plugin.cs`, its csproj
 goes under the mod's **Unreleased** in `CHANGELOG.md` when it is made; at release that heading becomes the version and
 date, and the entry is the Nexus changelog text.
 
-The user commits and tags; the release notes name the game build (`26624074`, 1.012.7 as of 2026-11-13).
+The user commits and tags; the release notes name the game build (`26734308`, 1.012.9 as of 2026-11-18).
 
 ## 7. The zip and the Nexus page
 
@@ -142,3 +151,22 @@ into the game over the dev build for the user's hand check (log clean, no `[meas
 the Workshop item 3839100125 ("Upload complete" in Player.log; the page: 54.901 KB = the DLL plus `modinfo.json`, the
 description without the framework section, which Steam players cannot have, the framework being Nexus-only); the Nexus
 1.0.2 upload on 421 done by the user the same evening (the page refuses automated reads; the user's word).
+
+Run 2026-11-18/19 for Tech Tree Search 1.1.0 (game 1.012.9; the options window from a row in the game's Settings
+window, 10 languages, the two Japanese/Chinese/Korean fixes): versions raised, CHANGELOG's Unreleased closed, the two
+notes and both page texts; `build-dist.sh GK2TechTreeSearch` 0 warnings; `release-scans.sh GK2TechTreeSearch` 19 of 19
+green; `make-release-zip.py GK2TechTreeSearch`: `GK2-Tech-Tree-Search-1.1.0.zip` 145,122 bytes (the DLL 282,112 bytes,
+byte-identical in `dist/`, the zip and `workshop\GK2TechTreeSearch\`, and 11 language files). The rehearsal with
+`tools/rehearsal.sh` (section 5), the user playing:
+- **Start 1** (the mod alone, no cfg, no GK2 Mod Framework): 1.1.0 loaded, the row in the Settings window, the options
+  opened, the Tech Tree searched and jumped, Japanese pasted and found; no warning or error; the fresh cfg at the
+  defaults (the 1.0.2 keys, the same binds). **Found there: the row's box empty in Japanese, Chinese and Korean** (a
+  copy of the game's Screen Size row, whose value keeps the Latin font): fixed in the window library the same night,
+  the full bench run 2470 passed, 0 failed, the zip rebuilt (`--overwrite`: the first one was never uploaded), start 1
+  again: the word shown in the three languages, the two page pictures taken.
+- **Start 2** (a cfg shaped as 1.0.2's with Results shown 5, the Framework, GK2 Saddle Up 0.17.3 from its zip): both
+  mods' rows in one strip (Saddle Up's copy keeps it), both options opened, the Framework's Settings button opened the
+  window, the cfg rewritten by 1.1.0 with 5 kept; no warning or error.
+- **Start 3** (beside GK2 Saddle Up 0.17.2, a copy of the window library from before the rows): the mod's row under
+  the game's rows, Saddle Up's red button above OK, the window whole, both opened; no warning or error.
+The saves identical after each start.

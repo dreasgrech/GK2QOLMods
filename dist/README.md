@@ -9,7 +9,7 @@ steps are in [`docs/release-checklist.md`](../docs/release-checklist.md). Copy t
 | `GK2GlobalStorage.dll` | 1.1.6 | 26297960 (1.011), built 2026-10-30 |
 | `GK2BuiltCount.dll` | 1.0.6 | 25910882 (1.010), built 2026-10-13 |
 | `GK2OwnedCount.dll` | 1.0.4 | 25910882 (1.010), built 2026-10-13 |
-| `GK2TechTreeSearch.dll` | 1.0.2 | 26624074 (1.012.7), built 2026-11-13 |
+| `GK2TechTreeSearch.dll` | 1.1.0 | 26734308 (1.012.9), built 2026-11-19; its `Languages\` folder is in the zip (`release/`), not here |
 
 - **The donkey mods** (formerly GK2 Mounts and the showcase) are in [GK2DonkeyAPI](https://github.com/dreasgrech/GK2DonkeyAPI).
 - **Game updates:** each plugin compares the game members it uses with the installed game at startup: identical, it runs; changed, it runs with a warning in the log (Global Storage without extending storage) until a re-audited build; gone, it stops.

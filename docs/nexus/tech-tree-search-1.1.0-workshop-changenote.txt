@@ -1,0 +1,8 @@
+GK2 Tech Tree Search 1.1.0
+
+- Built for game 1.012.9.
+- New: an options window. The game's Settings window has a GK2 Tech Tree Search row: press Open. The search box on or off, searching what techs unlock, the number of results and the key.
+- New: the mod follows the game's language. German, Spanish, French, Brazilian Portuguese, Russian, Polish, Turkish, Japanese, Simplified Chinese and Korean, besides English.
+- Fixed: with the game in Japanese, Chinese or Korean, the result list could not draw the techs' names.
+- Fixed: in Japanese and Chinese, a whole name typed or pasted found nothing.
+- Your settings stay.

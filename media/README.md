@@ -25,6 +25,8 @@ mod, so the Workshop texts never mention it (the user, 2026-11-13).
 | `GK2TechTreeSearch/Thumbnail.jpg` | the box with "Iron" and the list, the tab icons above (2026-11-13) | the screenshot of 2026-10-29 23:52:37, box 1280,307-1920,947 (640x640), scaled to 1024x1024 |
 | `GK2TechTreeSearch/gallery/search-iron.jpg` | as `search-iron.png`, full size | the same box, 1292x838 |
 | `GK2TechTreeSearch/gallery/unlock-empty-bottle.jpg` | as `unlock-empty-bottle.png`, full size | the same box, 1292x838 |
+| `GK2TechTreeSearch/gallery/settings-row.jpg` | as `settings-row.png`, full size (1.1.0) | the same box, 804x802 |
+| `GK2TechTreeSearch/gallery/options-window.jpg` | as `options-window.png`, full size (1.1.0) | the same box, 1828x1226 |
 
 ## `tech-tree-search/`
 
@@ -36,5 +38,7 @@ row, five of them researched and green), with the 1.0.1 release build.
 | `search-iron.png` | the whole Tech Tree window: the box at the top right of the tab strip, the list under it over the tree | box 634,305-1926,1143 (the window's frame), 560x363 |
 | `search-results.png` | close up: the box with "Iron" and the list: tech name, its tab, researched ones green, the "+4 more" row | box 1280,365-1926,880, 560x446 |
 | `unlock-empty-bottle.png` | "Empt" typed: Glass Blowing listed through its unlock ("Metallurgy · Empty Bottle"), its card framed at the bottom left with the Empty Bottle tooltip open (Steam screenshot of 2026-10-30 00:50:02) | box 634,305-1926,1143 (the window's frame), 560x363 |
-| `settings-mods-menu.png` | the mod's settings page in GK2 Mod Framework's Mods menu: Status Active, the two toggles and the key (Steam screenshot of 2026-10-30 00:45:19, the game's own Mods window, HUD out) | box 570,340-1990,1037, 560x275 |
+| `settings-mods-menu.png` | the mod's settings page in GK2 Mod Framework's Mods menu: Status Active, the two toggles and the key (Steam screenshot of 2026-10-30 00:45:19, the game's own Mods window, HUD out). Up to 1.0.2; out of the page text with 1.1.0 (the menu's Settings button opens the options window), the file kept: the live page shows it until its text is pasted again | box 570,340-1990,1037, 560x275 |
+| `settings-row.png` | the game's Settings window in the main menu with the mod's row under the game's own, "Open" in its box (1.1.0; the first rehearsal start, no other mod of ours installed; Steam screenshot of 2026-11-19 00:24:01) | box 878,320-1682,1122 (the window with a margin), 560x559 |
+| `options-window.png` | the mod's options window: General (Status Active, the two switches, Results shown 8, the key Ctrl + F) and the Safety tab, Defaults and Done (1.1.0; Steam screenshot of 2026-11-19 00:24:06, the same start) | box 366,108-2194,1334 (the window with a margin), 560x376 |
 | `nexus-header.png` | the Nexus page header (1300x372): the window's title bar, the tab strip, the box and the first rows | box 630,310-1930,682, at its own scale |

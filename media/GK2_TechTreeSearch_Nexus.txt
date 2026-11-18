@@ -26,6 +26,9 @@
 [size=4][b]Your keys stay yours[/b][/size]
 [size=3]While the box has the cursor, the game's keys are paused, the same way the game's own bug report window does it: letters do not open the map or the inventory, and the keeper does not walk off.[/size]
 
+[size=4][b]In your language[/b][/size]
+[size=3]The box and the options follow the game's language: English, German, Spanish, French, Brazilian Portuguese, Russian, Polish, Turkish, Japanese, Simplified Chinese and Korean. Searching works on the techs' names as your game shows them.[/size]
+
 [size=4][b]Display only[/b][/size]
 [size=3]Nothing in the game changes and nothing is written. Your save is never touched, and a save made with the mod loads fine without it.[/size]
 
@@ -43,11 +46,15 @@
 [line]
 [size=5][b][color=#f0b45a]Settings[/color][/b][/size]
 
-[size=3]With [url=https://www.nexusmods.com/graveyardkeeper2/mods/42]GK2 Mod Framework[/url] installed, the mod shows in the game's [b]Mods[/b] menu (main menu and ESC menu): a Status row, "Search box on the Tech Tree", "Also search what techs unlock" and "Key to start a search". The framework is optional; the same file works without it.[/size]
+[size=3]In the game's [b]Settings[/b] window (in the pause menu and the main menu), the [b]GK2 Tech Tree Search[/b] row opens the mod's own options: the search box on or off, searching what techs unlock, the number of results and the key. To set the key, click its box and press the key.[/size]
 
-[center][img]https://raw.githubusercontent.com/dreasgrech/GK2QOLMods/main/media/tech-tree-search/settings-mods-menu.png?v=1[/img][/center]
+[center][img]https://raw.githubusercontent.com/dreasgrech/GK2QOLMods/main/media/tech-tree-search/settings-row.png[/img][/center]
 
-[size=3]Everything, with or without the framework, is in [i]BepInEx\config\dreas.gk2.techtreesearch.cfg[/i] (written on the first start; change it with the game closed): the box on or off, searching unlocks, the number of rows in the list, the key, and the box's place and size on the page.[/size]
+[center][img]https://raw.githubusercontent.com/dreasgrech/GK2QOLMods/main/media/tech-tree-search/options-window.png[/img][/center]
+
+[size=3]If you have [url=https://www.nexusmods.com/graveyardkeeper2/mods/42]GK2 Mod Framework[/url] installed, the mod's [b]Settings[/b] button in its Mods menu opens these options too. The framework is optional; the same file works without it.[/size]
+
+[size=3]Everything is also in [i]BepInEx\config\dreas.gk2.techtreesearch.cfg[/i] (written on the first start; change it with the game closed), and the box's place and size on the page are set there.[/size]
 
 [line]
 [size=5][b][color=#f0b45a]Install[/color][/b][/size]
@@ -59,13 +66,13 @@ Otherwise (an older build), install the [url=https://www.nexusmods.com/site/mods
 
 [center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/BepInEx-files.png?v=2[/img][/center]
 [/*]
-[*][size=3]Extract the download into the game folder (where [i]GraveyardKeeper2.exe[/i] is). It adds the folder [b]GK2TechTreeSearch[/b] to [i]BepInEx\plugins[/i]. If an older [i]GK2TechSearch.dll[/i] is lying loose in [i]BepInEx\plugins[/i] (the mod's name before this release), delete it: while it is there this mod stays off and the log says so. Your settings are copied over from its file on the first start.[/size]
+[*][size=3]Extract the download into the game folder (where [i]GraveyardKeeper2.exe[/i] is). It adds the folder [b]GK2TechTreeSearch[/b] to [i]BepInEx\plugins[/i] (the mod's file and its [i]Languages[/i] folder); updating from an older version is the same, over the old files. If an older [i]GK2TechSearch.dll[/i] is lying loose in [i]BepInEx\plugins[/i] (the mod's name before 1.0.1), delete it: while it is there this mod stays off and the log says so. Your settings are copied over from its file on the first start.[/size]
 [/*]
 [*][size=3]Start the game and open the Tech Tree (Character window, Tech Tree tab). The box is at the top right.[/size][/*]
 [/list]
 [size=3][b]Safe for your save.[/b] The mod writes nothing: no save data, no game rule. Saves made with it load without it.
 
-[b]Game updates.[/b] Built for game v1.012.7. After a game update the mod checks the game's code at start: if the game removed something it uses, the mod stops and the log says so; if the game only changed something, it runs and the log warns.
+[b]Game updates.[/b] Built for game v1.012.9. After a game update the mod checks the game's code at start: if the game removed something it uses, the mod stops and the log says so; if the game only changed something, it runs and the log warns.
 
 [b]Uninstall.[/b] Delete the folder [b]GK2TechTreeSearch[/b] from [i]BepInEx\plugins[/i].
 

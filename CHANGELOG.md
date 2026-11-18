@@ -69,9 +69,16 @@ Owned Count 1.0.4, Tech Search 1.0.0. Earlier changes are in git history and eac
 
 ## Tech Tree Search
 
-### Unreleased
+### 1.1.0 (2026-11-19)
 
-- A settings window: the game's Settings window has a "GK2 Tech Tree Search" button opening an options window in the
+Built for game 1.012.9 (Steam build 26734308), on Nexus Mods and the Steam Workshop (the same DLL; both now carry a
+`Languages\` folder beside it). For players: an options window opened from a row in the game's Settings window, the
+mod in the game's 10 other languages, and two fixes for Japanese, Chinese and Korean (the result list's font, whole
+names found). Settings carry over: the cfg keeps its sections and keys (`General`, `Layout`, `Safety`, the same
+binds as 1.0.2).
+
+- A settings window: the game's Settings window has a "GK2 Tech Tree Search" row under the game's own (a button above
+  its OK button until 2026-11-18, never released; under Development below), its "Open" opening an options window in the
   game's look, with the Status line, the search box switch, searching what techs unlock, the number of results, the
   key and the stop-on-changed-game-code switch (descriptions, Defaults, gamepad). The cfg keeps its sections and keys;
   the Layout values stay the cfg's. (2026-11-15; the window code is the same as GK2 Donkey API's, `lib/GK2DreasUI`.)
@@ -110,7 +117,7 @@ Owned Count 1.0.4, Tech Search 1.0.0. Earlier changes are in git history and eac
   so a query that spanned a mark found nothing: a whole name typed in Japanese, nearly any two characters in Chinese.
   The marks are dropped from the names, tab names and unlock names the search reads and shows, and from what is
   typed or pasted. To see in the game: 鉄の鍛冶 pasted in Japanese finds its tech.
-- The settings window's own words (its buttons, the hints under the rows, the key box, the button in the game's
+- The settings window's own words (its buttons, the hints under the rows, the key box, the row in the game's
   Settings window) in the game's 10 other languages (2026-11-16): `Languages\<id>.csv` beside the DLL, the window
   library's own translations (the ones GK2 Saddle Up's window has). `Languages\en.csv` is the template a translator
   copies: every text of the mod, 39 lines.
@@ -271,6 +278,22 @@ Nothing changes for players.
 
 ## Development
 
+- **Tech Tree Search 1.1.0: the release prep, and a rehearsal script** (2026-11-18). The versions raised (`Plugin.cs`,
+  the csproj, the READMEs, `dist/README.md`), the mod's Unreleased closed, the two notes (`docs/nexus/`), the two page
+  texts (the Settings section now tells of the row and the options window, with two pictures to come from the
+  rehearsal: `media/tech-tree-search/settings-row.png` and `options-window.png`; a part on the languages; the Mods-menu
+  picture out of the text, its file kept). `build-dist.sh GK2TechTreeSearch` 0 warnings (the DLL 282,112 bytes, its
+  manifest 150 entries, identical with game 1.012.9), `release-scans.sh GK2TechTreeSearch` 19 of 19 green,
+  `make-release-zip.py GK2TechTreeSearch`: `release/GK2-Tech-Tree-Search-1.1.0.zip` 145,122 bytes (rebuilt 2026-11-19 on the library with the row fix below, the first one never uploaded; the DLL and 11
+  language files) and the Workshop folder staged (its description 4,705 bytes).
+  New: `tools/rehearsal.sh` (`stage <Mod> [--cfg <file>] [--no-framework] [--with <zip>]`, `restore`: the game folder
+  as a player has it with the mod's release zip, section 5 of the checklist; every build and cfg of ours aside, a
+  zip refused unless it holds `BepInEx/plugins/<folder>/` only, nothing restored over a folder that is there) and
+  `tools/rehearsal-test.sh`, which proves it on a scratch folder (staged twice and restored, the folder as it was
+  byte for byte: passed). The rehearsal (2026-11-18 23:10 to 2026-11-19 00:31, the user playing; the checklist's
+  section 7 has it start by start): alone on no cfg, on a cfg shaped as 1.0.2's beside GK2 Saddle Up 0.17.3 and the
+  Framework, and beside GK2 Saddle Up 0.17.2 (a button-era copy of the window library next to a rows one): no warning
+  or error in any start, the saves identical. The page pictures are from its first start.
 - **GK2 Event Decorations: the in-game test suite for its first release** (2026-11-18, the user's ask: "a solid test
   suite ... which covers everything in it"). The five read-only tests of 2026-11-17 became 45, in
   `tools/GK2QOLMods.Tests/EventDecorations/` (a file a group; `EdRun` what a run holds, `EdWorld` how the world is
@@ -315,6 +338,13 @@ Nothing changes for players.
   the first look were made so. Seen in the game (the user, 2026-11-18: both mods' rows in the main menu's Settings
   window, with Saddle Up's between them) and run: every suite in one run, 251 tests, 2475 checks passed, 0 failed, 0
   warnings, Tech Tree Search's 7 and Event Decorations' 46 tests among them.
+- **Japanese, Chinese and Korean: the word in a mod's row of the game's Settings window was an empty box** (the user,
+  2026-11-18, at the first rehearsal start of Tech Tree Search 1.1.0: "the three asian languages dont show the word
+  Open"). The row was a copy of the game's Screen Size row, whose value the game keeps in its Latin font in every
+  language (`staticFont` 1 on `ResolutionSwitchBtn/Back/Value`, read from the game's files; 0 on every other row's
+  value), and that font has none of those letters. Fixed in the window library (a row whose value follows the
+  language's font is copied, and the mark is taken off our copy); the mods get it with the library's pointer. The
+  rows were never released from this repository; GK2 Saddle Up 0.17.3 has the fault.
 - **The window library with its fonts and sizes put right** (2026-11-18, with the pointer's move): the options
   windows of Tech Tree Search and Event Decorations take their title and bold fonts from the game's own styles (in a
   session where the game's Settings window had not been shown yet, a title was drawn in a small stand-in font and
