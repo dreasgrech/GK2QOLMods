@@ -58,7 +58,7 @@ namespace GK2QOLMods.Tests
 
             s.Add(Told, "the tests can make the game's own dates say Halloween or not", EdAnswerTests.Force);
             s.Add(Told, "every combination of the settings: the gate, the decorations at a load, the zombie head, the ghost's rows, \"On today\"", EdAnswerTests.Table);
-            s.Add(Told, "no part's own setting leaks into another (the ghost on Always, the decorations on Always, the head on Always)", EdAnswerTests.Leaks);
+            s.Add(Told, "no part's setting reaches another: each of the three on Never while the other two show", EdAnswerTests.Leaks);
             s.Add(Told, "the zombie head is swapped by the game's own table, and only by it", EdAnswerTests.Head);
 
             s.Add(World, "put up and taken down at once by the setting, nothing of them in the save", EdWorldTests.UpAndDown);
@@ -74,6 +74,7 @@ namespace GK2QOLMods.Tests
             s.Add(World, "at a load the game asks the mod, and the areas are switched before the world is built", EdWorldTests.AtALoad);
             s.Add(World, "after a load, decorations that don't match the settings are said and put right", EdWorldTests.AfterALoad);
             s.Add(World, "up and down many times over leaves nothing behind", EdWorldTests.ManyTimes);
+            s.Add(World, "what was switched stays so while the game runs on (seven seconds)", EdWorldTests.Stays);
 
             s.Add(Ghost, "the ghost's script and its two rows in the balance hear what the Ghost setting says", EdGhostTests.Told);
             s.Add(Ghost, "told to start its evening, the ghost goes out only when the mod says Halloween, and its next step without takes it home", EdGhostTests.Walks);

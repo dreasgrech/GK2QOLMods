@@ -202,7 +202,8 @@ Nothing changes for players.
   the log ("The game has N event(s) this version of the mod doesn't know (...)"). `tests/CecilScan-EventDecorations`
   names a new event at every game update; its options come with a version written for it.
 - "On today" and Status in the game's language (2026-11-18, the user's yes; they were English in every language,
-  being built in code and not a row's label or description). 18 words of the mod's own (`EdWords`, through the
+  being built in code and not a row's label or description). 18 words of the mod's own, 17 since a part lost its
+  Always the same day (`EdWords`, through the
   window library's `UiOwner.OwnWords`): the pieces of the "On today" line (the event with what shows, the list's
   items and how they are joined, "set to Always", the remark about dates that don't count, "the game's own dates")
   and the statuses (Active, Off with the switch's name, not started, and the five sentences of a start that
@@ -215,9 +216,18 @@ Nothing changes for players.
 - Optional GK2 Mod Framework integration: the mod in the game's Mods menu, its Settings button opening the mod's own
   options window (below).
 - Own dates for Auto (Start / End, month-day, may wrap the new year), for every event.
-- Halloween's decorations, ghost and zombie head can each be set on their own (follow the event, on, off); Halloween
-  set to Off turns all three off (greyed in the options window), and the areas and kinds are greyed while the
-  decorations can't show.
+- Halloween's decorations, ghost and zombie head can each be switched off on their own: a part is "With Halloween"
+  or "Never"; Halloween set to Never turns all three off (greyed in the options window), and the areas and kinds are
+  greyed while the decorations can't show.
+- A part has no "Always" (taken out 2026-11-18, the user's pick). Until then each part had With Halloween / Always /
+  Never, and a part on Always showed while Halloween itself was off: "Halloween: By date" beside decorations up all
+  year, and an "On today" line reading "decorations (set to Always)", was taken for a bug twice by the mod's own
+  user (2026-11-15 and 2026-11-18). Now Halloween's row alone says when, and a part only whether it takes part.
+  Decorations all year without the ghost: Halloween on Always, the ghost on Never. What is no longer possible:
+  decorations all year with the ghost keeping to the Halloween dates. The cfg values are `Event` and `Off` (`On` is
+  gone; the mod was never released with it). The descriptions of the Halloween row and of the three parts lost
+  their sentences about it, in English and in the ten languages (seven lines each, the proofread texts changed as
+  little as possible, read by a second reader a language); the "On today" line lost "(set to ...)" and its word.
 - Decorations per area (village, port, your grounds, your house, tavern, restaurant, barracks, astrologer, warehouse,
   dungeons) and per kind (pumpkins, garlands, scarecrows, pies, plants, other props, bats and glowing eyes), candle
   glow on/off, and walk-through decorations.
@@ -290,6 +300,19 @@ Nothing changes for players.
     "Always" as the part's own choice, the switch by its label, no sentence left English); every test that reads the
     two lines' English pins English first. **Second run in the game (the user, 2026-11-18 16:59): 45 of 45 tests,
     233 checks passed, 0 failed, 0 warnings, none skipped.**
+  - **Third run (17:56), on the build where a part has no "Always": 45 of 45 tests, 234 checks passed, 0 failed, 0
+    warnings.** The whole suite takes about two seconds, because a setting acts within its frame and the tests look
+    in that frame. What that can't see is the game undoing a switch a moment later, so a 46th test leaves the game
+    running: an area, a kind, the bats, the glow and the blocking off for 3 s, everything on for 2 s, the decorations
+    down for 2 s, looked at again each time. **Fourth run (18:54), with it: 46 of 46 tests, 238 checks passed, 0
+    failed, 0 warnings, none skipped**; the 73 things switched off were the same 73 after 356 frames.
+- **The window library with its fonts and sizes put right** (2026-11-18, with the pointer's move): the options
+  windows of Tech Tree Search and Event Decorations take their title and bold fonts from the game's own styles (in a
+  session where the game's Settings window had not been shown yet, a title was drawn in a small stand-in font and
+  the headings and buttons in a widened regular one), every text is at the size the game's pixel font is made for,
+  and the bottom band holds four lines of a description. Found in GK2 Saddle Up 0.17.2, whose changelog and
+  `docs/ui-library.md` (section 12) have the measurements; neither window of this repository has been released.
+  The translation writer's room for a description is 600 characters (700); the longest shipped here is 377.
   - Found by the offline translation scan on the new lines, and fixed in the window library's own checkout (the
     mods get it when the library's pointer moves): a shipped text that quotes a name with straight quotes and has
     no comma (`status.off`, "Off: "Mod enabled" is unchecked", in four languages) was shown with its doubled quotes

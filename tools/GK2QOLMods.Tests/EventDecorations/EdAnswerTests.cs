@@ -17,7 +17,7 @@ namespace GK2QOLMods.Tests
     // them, under the game's own runtime, and with what the offline table can't reach: the real head table, the
     // game's expression function, and the two rows of the balance that start the ghost and send it home.
     //   the event today = mod off: the game's dates; Always: yes; Never: no; By date: own dates if both are valid, else the game's
-    //   a part         = mod off: the game's dates; event Never: no; part Always: yes; part Never: no; With Halloween: the event today
+    //   a part         = mod off: the game's dates; part Never: no; With Halloween: the event today
     internal static class EdAnswerTests
     {
         // The game's own check, forced: the run's other tests lean on it.
@@ -122,7 +122,7 @@ namespace GK2QOLMods.Tests
                 ("not a date", "13-45", Md(now.AddDays(1)), false, false)
             };
             ED.EventMode[] modes = { ED.EventMode.Auto, ED.EventMode.On, ED.EventMode.Off };
-            ED.PieceMode[] pieces = { ED.PieceMode.Event, ED.PieceMode.On, ED.PieceMode.Off };
+            ED.PieceMode[] pieces = { ED.PieceMode.Event, ED.PieceMode.Off };
             bool?[] seasons = EdRun.ForceWorks ? new bool?[] { null, true, false } : new bool?[] { null };
 
             var gate = new Tally("the gate the ghost's scripts ask (IsHalloweenEvent)");
@@ -165,7 +165,7 @@ namespace GK2QOLMods.Tests
 
                             // the rules
                             bool evToday = !en ? game : m == ED.EventMode.On ? true : m == ED.EventMode.Off ? false : d.Valid ? d.In : game;
-                            bool Piece(ED.PieceMode v) => !en ? game : m == ED.EventMode.Off ? false : v == ED.PieceMode.On ? true : v == ED.PieceMode.Off ? false : evToday;
+                            bool Piece(ED.PieceMode v) => !en ? game : v == ED.PieceMode.Off ? false : evToday;
 
                             // what the game gets
                             bool g = TemporaryEventDates.IsHalloweenEvent();
@@ -189,14 +189,14 @@ namespace GK2QOLMods.Tests
 
                             // what the options window says
                             string line = ED.OptionsPage.Today();
-                            bool decoAlways = en && Piece(dv) && dv == ED.PieceMode.On && !evToday;
                             bool datesNote = en && m == ED.EventMode.Auto && (d.Name == "first day only" || d.Name == "not a date");
+                            bool nothing = !Piece(dv) && !Piece(gv) && !Piece(hv);
                             bool lineOk = line.Contains("decorations") == Piece(dv) && line.Contains("ghost") == Piece(gv) && line.Contains("zombie head") == Piece(hv) &&
-                                          line.Contains("decorations (set to Always)") == decoAlways && line.Contains("don't count") == datesNote &&
+                                          line.StartsWith("Halloween: off", StringComparison.Ordinal) == nothing && line.Contains("don't count") == datesNote &&
                                           line.EndsWith("(the game's own dates)", StringComparison.Ordinal) == !en;
                             today.Take(lineOk, at, $"\"{line}\"");
                         }
-                        // 27 combinations a frame; and no frame passes with the ghost's scripts hearing Halloween (the
+                        // 8 combinations a frame; and no frame passes with the ghost's scripts hearing Halloween (the
                         // game's own evening row could start its walk): the ghost is on Never here, so the mod on
                         ED.Plugin.Enabled.Value = true;
                         yield return null;
@@ -206,16 +206,15 @@ namespace GK2QOLMods.Tests
             }
             finally
             {
-                // while the ear is still off: back to where every test starts, then the mod told once
+                // while the ear is still off: the parts off, so nothing goes up on the way; then where every test
+                // starts, with the mod listening again and told once
                 EdRun.Season(null);
                 ED.Halloween.Decorations.Value = ED.PieceMode.Off;
                 ED.Halloween.Ghost.Value = ED.PieceMode.Off;
-                ED.Halloween.ZombieHead.Value = ED.PieceMode.Event;
+                ED.Halloween.ZombieHead.Value = ED.PieceMode.Off;
                 ED.Plugin.Enabled.Value = true;
-                ED.Events.Halloween.Mode.Value = ED.EventMode.Auto;
-                ED.Events.Halloween.Start.Value = "";
-                ED.Events.Halloween.End.Value = "";
                 EdRun.Attach();
+                EdRun.Arrange();
                 ED.Decorations.OnSettingChanged(null, EventArgs.Empty);
             }
             Test.Info($"{combinations} combinations of the settings{(EdRun.ForceWorks ? ", each with the game's dates as today, made Halloween and made not Halloween" : ", with the game's dates as today only")}");
@@ -229,47 +228,68 @@ namespace GK2QOLMods.Tests
             today.Say();
         }
 
-        // The two leaks of 2026-11-15, by name. The game's own ShouldLoad and Resolve only ask the gate, and the mod
-        // answers the gate with the Ghost setting: a ghost on Always put the decorations up at a load and swapped the
-        // zombie head out of season. And the other way round: no part's own Always starts the ghost.
+        // The leak of 2026-11-15, by name. The game's own ShouldLoad and Resolve only ask the gate, and the mod answers
+        // the gate with the Ghost setting (the gate is what the ghost's scripts ask). So one part's setting could
+        // reach another: then, a ghost on "Always" put the decorations up and swapped the head out of season; with
+        // parts that are "With Halloween" or "Never", the same leak would make the ghost switched off take the
+        // decorations and the head with it, and a part switched off must not stop the ghost either. Asked twice: with
+        // Halloween on Always (the mod's own answers), and by date with the game's own dates saying Halloween (the
+        // parts then run the game's own code, which is where the leak was).
         internal static IEnumerator Leaks()
         {
             if (!EdRun.Ready()) yield break;
             EdRun.Arrange();
             try
             {
-                if (!EdRun.OutOfSeason())
-                {
-                    Test.Skip("the game's dates say Halloween today and can't be made to say otherwise: an out-of-season leak can't show");
-                    yield break;
-                }
                 HalloweenConditionalLoadContentPart condition = Condition();
                 List<int[]> heads = HeadPairs();
-                int head = heads.Count > 0 ? heads[0][0] : 1051;
                 GameLogicDef startRow = EdWorld.GhostRow("halloween_npc_ghost_start_action");
+                if (condition == null || heads.Count == 0 || startRow == null || startRow.condition == null)
+                {
+                    Test.Fail("the game's condition for the decorations, its head table or the ghost's evening row isn't there (the test before this one says which)");
+                    yield break;
+                }
+                int head = heads[0][0], shown = heads[0][1];
+                bool Heard() => TemporaryEventDates.IsHalloweenEvent() && startRow.condition.EvaluateBool();
+                bool Deaf() => !TemporaryEventDates.IsHalloweenEvent() && !startRow.condition.EvaluateBool();
 
-                // out of season, the ghost on Always, the rest following Halloween
-                // (no frame passes while the ghost's scripts hear Halloween: the game's own evening row could start its walk)
-                ED.Halloween.Decorations.Value = ED.PieceMode.Event;
-                ED.Halloween.Ghost.Value = ED.PieceMode.On;
-                Test.Check(TemporaryEventDates.IsHalloweenEvent(), "out of season with the ghost on Always: the ghost's scripts are told it is Halloween");
-                Test.Check(condition != null && !condition.ShouldLoad() && !EdWorld.Up, $"the decorations stay down: not asked for at a load ({condition != null && condition.ShouldLoad()}), not up in the world ({EdWorld.Up})");
-                Test.Check(HalloweenHeadSkinOverride.Resolve(head) == head && !HalloweenHeadSkinOverride.IsReplaced(head), $"and zombie head {head} is shown as itself ({HalloweenHeadSkinOverride.Resolve(head)})");
+                foreach (bool byDate in new[] { false, true })
+                {
+                    string when = byDate ? "by date, the game's dates saying Halloween" : "Halloween on Always";
+                    if (byDate)
+                    {
+                        ED.Events.Halloween.Mode.Value = ED.EventMode.Auto;
+                        if (!EdRun.InSeason())
+                        {
+                            Test.Info("the game's dates can't be made to say Halloween here: the by-date half, where the parts run the game's own code, isn't asked");
+                            break;
+                        }
+                    }
 
-                // the decorations on Always, the ghost following Halloween
-                ED.Halloween.Ghost.Value = ED.PieceMode.Event;
-                ED.Halloween.Decorations.Value = ED.PieceMode.On;
-                yield return Test.Frames(2);
-                bool row = startRow != null && startRow.condition != null && startRow.condition.EvaluateBool();
-                Test.Check(EdWorld.Up && !TemporaryEventDates.IsHalloweenEvent() && !row, $"out of season with the decorations on Always: they are up ({EdWorld.Up}), and the ghost's scripts are told it isn't Halloween (gate {TemporaryEventDates.IsHalloweenEvent()}, its evening row {row})");
-                Test.Check(HalloweenHeadSkinOverride.Resolve(head) == head, $"zombie head {head} is shown as itself");
+                    // the ghost on Never, the decorations and the head with Halloween
+                    ED.Halloween.Ghost.Value = ED.PieceMode.Off;
+                    ED.Halloween.Decorations.Value = ED.PieceMode.Event;
+                    ED.Halloween.ZombieHead.Value = ED.PieceMode.Event;
+                    yield return Test.Frames(2);
+                    Test.Check(Deaf() && condition.ShouldLoad() && EdWorld.Up && HalloweenHeadSkinOverride.Resolve(head) == shown,
+                        $"{when}, the ghost on Never: its scripts hear no Halloween ({Deaf()}), and the decorations are still asked for at a load ({condition.ShouldLoad()}) and up ({EdWorld.Up}), head {head} still shown as {HalloweenHeadSkinOverride.Resolve(head)}");
 
-                // the head on Always alone
-                ED.Halloween.Decorations.Value = ED.PieceMode.Off;
-                ED.Halloween.ZombieHead.Value = ED.PieceMode.On;
-                yield return Test.Frames(2);
-                Test.Check((HalloweenHeadSkinOverride.Resolve(head) != head) == (heads.Count > 0) && !TemporaryEventDates.IsHalloweenEvent() && !EdWorld.Up && condition != null && !condition.ShouldLoad(),
-                    $"out of season with the zombie head on Always: head {head} is shown as {HalloweenHeadSkinOverride.Resolve(head)}, the ghost's scripts hear no Halloween, the decorations stay down");
+                    // (from here no frame passes: the ghost's scripts hear Halloween)
+                    // the decorations on Never, the ghost and the head with Halloween
+                    ED.Halloween.Decorations.Value = ED.PieceMode.Off;
+                    ED.Halloween.Ghost.Value = ED.PieceMode.Event;
+                    Test.Check(Heard() && !condition.ShouldLoad() && !EdWorld.Up && HalloweenHeadSkinOverride.Resolve(head) == shown,
+                        $"{when}, the decorations on Never: they are down ({!EdWorld.Up}) and not asked for at a load ({!condition.ShouldLoad()}), the ghost's scripts still hear Halloween ({Heard()}), head {head} still shown as {HalloweenHeadSkinOverride.Resolve(head)}");
+
+                    // the head on Never, the ghost and the decorations with Halloween
+                    ED.Halloween.ZombieHead.Value = ED.PieceMode.Off;
+                    ED.Halloween.Decorations.Value = ED.PieceMode.Event;
+                    Test.Check(HalloweenHeadSkinOverride.Resolve(head) == head && Heard() && condition.ShouldLoad() && EdWorld.Up,
+                        $"{when}, the zombie head on Never: head {head} is shown as itself ({HalloweenHeadSkinOverride.Resolve(head)}), the ghost's scripts still hear Halloween ({Heard()}), the decorations are up ({EdWorld.Up})");
+                    ED.Halloween.Ghost.Value = ED.PieceMode.Off;
+                    ED.Halloween.Decorations.Value = ED.PieceMode.Off;
+                    yield return Test.Frames(2);
+                }
             }
             finally
             {
@@ -290,33 +310,33 @@ namespace GK2QOLMods.Tests
                     Test.Warn("the game's head table has no swap to test with (or its list couldn't be read)");
                     yield break;
                 }
-                ED.Halloween.ZombieHead.Value = ED.PieceMode.On;
+                int head = heads[0][0], shown = heads[0][1];
+                Test.Check(HalloweenHeadSkinOverride.Resolve(head) == head && !HalloweenHeadSkinOverride.IsReplaced(head), $"Halloween on Always, the zombie head on Never: head {head} is shown as itself");
+                ED.Halloween.ZombieHead.Value = ED.PieceMode.Event;
                 var wrong = new List<string>();
                 foreach (int[] p in heads)
                 {
                     if (HalloweenHeadSkinOverride.Resolve(p[0]) != p[1] || !HalloweenHeadSkinOverride.IsReplaced(p[0]) || HalloweenHeadSkinOverride.ResolveDropIconId(p[0].ToString("D4")) != p[1].ToString("D4"))
                         wrong.Add($"{p[0]} shown as {HalloweenHeadSkinOverride.Resolve(p[0])}, not {p[1]}");
                 }
-                Test.Check(wrong.Count == 0, $"on Always: {heads.Count - wrong.Count} of the table's {heads.Count} head(s) shown as its Halloween head, its lying zombie's picture too{EdWorld.Some(wrong)}");
+                Test.Check(wrong.Count == 0, $"with Halloween, Halloween on Always: {heads.Count - wrong.Count} of the table's {heads.Count} head(s) shown as its Halloween head, its lying zombie's picture too{EdWorld.Some(wrong)}");
                 const int other = 987654;
                 Test.Check(HalloweenHeadSkinOverride.Resolve(other) == other && !HalloweenHeadSkinOverride.IsReplaced(other) && HalloweenHeadSkinOverride.ResolveDropIconId("abc") == "abc" && HalloweenHeadSkinOverride.ResolveDropIconId("") == "",
                     "a head the table doesn't name is shown as itself, and a picture name that isn't a head is left as it is");
                 yield return null;
 
-                ED.Halloween.ZombieHead.Value = ED.PieceMode.Off;
-                EdRun.Season(true);
-                Test.Check(HalloweenHeadSkinOverride.Resolve(heads[0][0]) == heads[0][0], $"on Never: head {heads[0][0]} is shown as itself{(EdRun.SeasonNow ? ", with the game's dates saying Halloween" : "")}");
-                ED.Halloween.ZombieHead.Value = ED.PieceMode.On;
                 ED.Events.Halloween.Mode.Value = ED.EventMode.Off;
-                Test.Check(HalloweenHeadSkinOverride.Resolve(heads[0][0]) == heads[0][0], "on Always but Halloween on Never: shown as itself (Never is the whole event)");
+                Test.Check(HalloweenHeadSkinOverride.Resolve(head) == head, "with Halloween, Halloween on Never: shown as itself");
                 ED.Events.Halloween.Mode.Value = ED.EventMode.Auto;
-                ED.Halloween.ZombieHead.Value = ED.PieceMode.Event;
                 EdRun.Season(true);
-                bool said1 = EdRun.SeasonNow, swapped1 = HalloweenHeadSkinOverride.Resolve(heads[0][0]) == heads[0][1];
+                bool said1 = EdRun.SeasonNow, swapped1 = HalloweenHeadSkinOverride.Resolve(head) == shown;
+                ED.Halloween.ZombieHead.Value = ED.PieceMode.Off;
+                bool neverInSeason = HalloweenHeadSkinOverride.Resolve(head) == head;
+                ED.Halloween.ZombieHead.Value = ED.PieceMode.Event;
                 EdRun.Season(false);
-                bool said2 = EdRun.SeasonNow, swapped2 = HalloweenHeadSkinOverride.Resolve(heads[0][0]) == heads[0][1];
-                Test.Check(swapped1 == said1 && swapped2 == said2,
-                    $"with Halloween: swapped when the game's dates say Halloween (they say {said1}: swapped {swapped1}; they say {said2}: swapped {swapped2})");
+                bool said2 = EdRun.SeasonNow, swapped2 = HalloweenHeadSkinOverride.Resolve(head) == shown;
+                Test.Check(swapped1 == said1 && swapped2 == said2 && neverInSeason,
+                    $"with Halloween, Halloween by date: swapped when the game's dates say Halloween (they say {said1}: swapped {swapped1}; they say {said2}: swapped {swapped2}); on Never it is shown as itself then too ({neverInSeason})");
             }
             finally
             {

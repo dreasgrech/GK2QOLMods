@@ -161,7 +161,7 @@ scrolls to the tech and frames its card. Ctrl+F puts the cursor in the box.
 
 The game shows its temporary events by the PC's date (Halloween: 24 October to 7 November). Each event gets a mode:
 `Auto` (the game's dates, or your own), `On` (every day) or `Off` (never). Halloween's mode covers its decorations,
-the ghost's night walks in the village and the Halloween zombie head, and each of the three can also be set on its own.
+the ghost's night walks in the village and the Halloween zombie head, and each of the three can be switched off on its own.
 
 - Decorations per area (village, port, your grounds, your house, tavern, ...) and per kind (pumpkins, garlands,
   scarecrows, pies, bats, ...), the candle glow, and walk-through decorations.

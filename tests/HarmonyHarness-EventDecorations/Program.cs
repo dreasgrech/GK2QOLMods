@@ -9,7 +9,7 @@ using System.Runtime.Serialization; using BepInEx.Configuration; using BepInEx.L
 // HalloweenConditionalLoadContentPart.ShouldLoad: the decorations at load; HalloweenHeadSkinOverride.Resolve: the head)
 // and the options window's "On today" line are compared with a model of the rules written here, apart from the mod's code:
 //   the event today = mod off: the game's dates; Always: yes; Never: no; By date: own dates if both are valid, else the game's
-//   a part         = mod off: the game's dates; event Never: no; part Always: yes; part Never: no; With Halloween: the event today
+//   a part         = mod off: the game's dates; part Never: no; With Halloween: the event today (a part has no "Always": taken out 2026-11-18)
 // The table runs three times: with the game's own date check as it is today (read before anything is patched), then forced
 // to "Halloween" and to "not Halloween" (a prefix on its private IsMonthDayInInclusiveRange), so both directions of every
 // rule are exercised on any date: a setting forcing a part on out of season, and one taking it off in season. The force
@@ -94,7 +94,7 @@ class P
             ("first day only", Md(now.AddDays(-1)), "", false, false),
             ("not a date", "13-45", Md(now.AddDays(1)), false, false),
         };
-        string[] modes = { "Auto", "On", "Off" }, pieces = { "Event", "On", "Off" };
+        string[] modes = { "Auto", "On", "Off" }, pieces = { "Event", "Off" };
         Type modeT = mode.SettingType, pieceT = deco.SettingType;
 
         foreach (bool? forced in new bool?[] { null, true, false })
@@ -119,7 +119,7 @@ class P
 
             // the model
             bool evToday = !en ? gameToday : m == "On" ? true : m == "Off" ? false : d.Valid ? d.In : gameToday;
-            bool Piece(string v) => !en ? gameToday : m == "Off" ? false : v == "On" ? true : v == "Off" ? false : evToday;
+            bool Piece(string v) => !en ? gameToday : v == "Off" ? false : evToday;
 
             // what the game gets; the gate through reflection: Main was compiled before the patches, and the JIT inlines the
             // tiny gate into it (a direct call here never reached the patch: 288 false failures, 2026-11-15)
@@ -152,7 +152,7 @@ class P
             {
                 // the head expected swapped: Resolve must go for the game's table. Outside the game that shows as Unity's code
                 // throwing (the game's own Resolve, the part following the event) or as the mod's prefix catching it and
-                // marking the table unreadable (the part on Always); either way the decision was "swap". The swap itself
+                // marking the table unreadable (the part with Halloween, Halloween on Always); either way the decision was "swap". The swap itself
                 // needs the running game.
                 bool wentForTable;
                 try
@@ -174,8 +174,8 @@ class P
             Check(line.Contains("decorations") == Piece(dv), $"{at} On today \"{line}\": decorations expected {(Piece(dv) ? "listed" : "not listed")}");
             Check(line.Contains("ghost") == Piece(gv), $"{at} On today \"{line}\": ghost expected {(Piece(gv) ? "listed" : "not listed")}");
             Check(line.Contains("zombie head") == Piece(hv), $"{at} On today \"{line}\": zombie head expected {(Piece(hv) ? "listed" : "not listed")}");
-            bool decoAlways = en && Piece(dv) && dv == "On" && !evToday;
-            Check(line.Contains("decorations (set to Always)") == decoAlways, $"{at} On today \"{line}\": \"set to Always\" on the decorations expected {decoAlways}");
+            bool nothing = !Piece(dv) && !Piece(gv) && !Piece(hv);
+            Check(line.StartsWith("Halloween: off") == nothing, $"{at} On today \"{line}\": \"off\" expected {nothing}");
             bool datesNote = en && m == "Auto" && (d.Name == "first day only" || d.Name == "not a date");
             Check(line.Contains("don't count") == datesNote, $"{at} On today \"{line}\": the own-dates note expected {datesNote}");
             Check(line.EndsWith("(the game's own dates)") == !en, $"{at} On today \"{line}\": \"(the game's own dates)\" expected {!en}");

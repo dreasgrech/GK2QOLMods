@@ -85,8 +85,8 @@ namespace GK2QOLMods.Tests
                 UI.SettingsPage.Row r = Row(page, p);
                 if (r != null && r.ChoiceLabels != null) choices.Add(string.Join("/", r.ChoiceLabels));
             }
-            Test.Check(string.Join("; ", choices) == "By date/Always/Never; With Halloween/Always/Never; With Halloween/Always/Never; With Halloween/Always/Never",
-                $"the choices say what they do, in the cfg's order (Auto, On, Off; Event, On, Off): {string.Join("; ", choices)}");
+            Test.Check(string.Join("; ", choices) == "By date/Always/Never; With Halloween/Never; With Halloween/Never; With Halloween/Never",
+                $"the choices say what they do, in the cfg's order (Auto, On, Off for Halloween; Event, Off for a part, which has no Always): {string.Join("; ", choices)}");
             string status = null, today = null;
             foreach (UI.SettingsPage.Row r in page.Rows)
             {
@@ -130,6 +130,7 @@ namespace GK2QOLMods.Tests
             try
             {
                 EdRun.Season(false);
+                ED.Events.Halloween.Mode.Value = ED.EventMode.Auto;
                 ED.Halloween.Decorations.Value = ED.PieceMode.Event;
                 List<string> w = Wrong(page, key => true);
                 Test.Check(w.Count == 0, $"Halloween by date, the parts following it: every row can be used{EdWorld.Some(w)}");
@@ -145,9 +146,9 @@ namespace GK2QOLMods.Tests
                 ED.Halloween.Decorations.Value = ED.PieceMode.Off;
                 w = Wrong(page, key => !IsDetail(key));
                 Test.Check(w.Count == 0, $"the decorations on Never: their areas, kinds, glow and blocking are greyed, nothing else{EdWorld.Some(w)}");
-                ED.Halloween.Decorations.Value = ED.PieceMode.On;
+                ED.Halloween.Decorations.Value = ED.PieceMode.Event;
                 w = Wrong(page, key => true);
-                Test.Check(w.Count == 0, $"the decorations on Always: all usable again{EdWorld.Some(w)}");
+                Test.Check(w.Count == 0, $"the decorations with Halloween again: all usable again{EdWorld.Some(w)}");
                 ED.Halloween.Decorations.Value = ED.PieceMode.Off;
                 ED.Plugin.Enabled.Value = false;
                 w = Wrong(page, key => key == "Enabled");
@@ -246,7 +247,7 @@ namespace GK2QOLMods.Tests
             EdRun.Arrange();
             try
             {
-                ED.Halloween.Decorations.Value = ED.PieceMode.On;
+                ED.Halloween.Decorations.Value = ED.PieceMode.Event;
                 yield return null;
                 EdWorld.Survey s = EdWorld.Look();
                 Transform group = s != null ? s.Group("HalloweenVillage") : null;
@@ -278,15 +279,19 @@ namespace GK2QOLMods.Tests
                 UI.OptionsWindow.TestRefresh();
                 yield return Test.Frames(1);
                 bool greyed = UI.OptionsWindow.TestRowGreyed(village), down = !EdWorld.Up;
-                ED.Halloween.Decorations.Value = ED.PieceMode.On;
+                ED.Halloween.Decorations.Value = ED.PieceMode.Event;
                 UI.OptionsWindow.TestRefresh();
                 yield return Test.Frames(1);
                 Test.Check(greyed && down && !UI.OptionsWindow.TestRowGreyed(village) && EdWorld.Up,
                     $"the decorations set to Never with the window open: the village's row greys ({greyed}) and they come down ({down}); to Always: usable again and up ({EdWorld.Up})");
+                ED.Events.Halloween.Mode.Value = ED.EventMode.Auto;
+                UI.OptionsWindow.TestRefresh();
+                yield return Test.Frames(1);
+                bool usable = !UI.OptionsWindow.TestRowGreyed(Row(page, "Start")) && !UI.OptionsWindow.TestRowGreyed(Row(page, "End"));
                 ED.Events.Halloween.Mode.Value = ED.EventMode.On;
                 UI.OptionsWindow.TestRefresh();
                 yield return Test.Frames(1);
-                Test.Check(UI.OptionsWindow.TestRowGreyed(Row(page, "Start")) && UI.OptionsWindow.TestRowGreyed(Row(page, "End")), "Halloween set to Always: the two date rows grey");
+                Test.Check(usable && UI.OptionsWindow.TestRowGreyed(Row(page, "Start")) && UI.OptionsWindow.TestRowGreyed(Row(page, "End")), $"Halloween set to By date: the two date rows can be used ({usable}); set to Always: they grey");
                 UI.OptionsWindow.TestStepBack();
                 yield return Test.Frames(2);
                 Test.Check(!UI.OptionsWindow.IsOpen && ControlsFree(), "closed again, the controls given back");
@@ -379,18 +384,18 @@ namespace GK2QOLMods.Tests
                     bool world = line.Contains("decorations") == EdWorld.Up;
                     if (line != want || !world) wrong.Add($"{when}: \"{line}\"{(line != want ? $" (expected \"{want}\")" : "")}{(world ? "" : $" while the decorations are {(EdWorld.Up ? "up" : "down")}")}");
                 }
-                Reads("Halloween: off", "everything off, out of season");
-                ED.Halloween.Decorations.Value = ED.PieceMode.On;
-                Reads("Halloween: decorations (set to Always)", "the decorations on Always, out of season");
+                Reads("Halloween: off", "Halloween on Always, every part on Never");
+                ED.Halloween.Decorations.Value = ED.PieceMode.Event;
+                Reads("Halloween: decorations", "Halloween on Always, the decorations with it");
                 // the same settings as the log's start line names them: the parts that don't follow the event
                 string described = ED.Events.Describe();
-                ED.Events.Halloween.Mode.Value = ED.EventMode.On;
+                ED.Halloween.ZombieHead.Value = ED.PieceMode.Event;
                 Reads("Halloween: decorations, zombie head", "Halloween on Always, the ghost on Never");
                 ED.Halloween.Ghost.Value = ED.PieceMode.Event; // no frame passes while the ghost's Halloween is on
                 Reads("Halloween: decorations, ghost, zombie head", "Halloween on Always, every part with it");
                 ED.Halloween.Ghost.Value = ED.PieceMode.Off;
                 ED.Events.Halloween.Mode.Value = ED.EventMode.Off;
-                Reads("Halloween: off", "Halloween on Never, the decorations on Always");
+                Reads("Halloween: off", "Halloween on Never, the decorations and the head with it");
                 ED.Events.Halloween.Mode.Value = ED.EventMode.Auto;
                 ED.Halloween.Decorations.Value = ED.PieceMode.Off;
                 ED.Events.Halloween.Start.Value = "10-01";
@@ -407,7 +412,7 @@ namespace GK2QOLMods.Tests
                 ED.Plugin.Enabled.Value = true;
                 Test.Check(wrong.Count == 0, $"\"On today\" reads as it should in {(EdRun.ForceWorks ? 8 : 7) - wrong.Count} of {(EdRun.ForceWorks ? 8 : 7)} settings, and names the decorations exactly when they are up{EdWorld.Some(wrong, 8)}");
                 Test.Check(statusOff == "Off: \"Mod enabled\" is unchecked", $"Status with the mod switched off: \"{statusOff}\"");
-                Test.Check(described == "Halloween (Auto; decorations On, ghost Off)", $"the log's start line would name the same settings as \"{described}\" (the decorations on Always, the ghost on Never)");
+                Test.Check(described == "Halloween (On; ghost Off, zombie head Off)", $"the log's start line would name the same settings as \"{described}\" (Halloween on Always, the ghost and the zombie head on Never)");
                 yield return null;
             }
             finally

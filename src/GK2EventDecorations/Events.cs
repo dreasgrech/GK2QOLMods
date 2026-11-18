@@ -144,8 +144,8 @@ namespace GK2EventDecorations
             Halloween = new GameEvent(HalloweenName);
             Halloween.Bind(config,
                 "By date (Auto): Halloween on the game's own dates (24 October to 7 November), or on your own dates below. " +
-                "Always (On): every day. Never (Off): no Halloween at all, decorations, ghost and zombie head included, whatever they " +
-                "are set to. Otherwise each of those follows this (With Halloween) or is set to Always or Never on its own.",
+                "Always (On): every day. Never (Off): no Halloween at all. Its decorations, ghost and zombie head each show " +
+                "with Halloween, or can be switched off on their own (Never).",
                 " (24 October to 7 November)");
         }
 

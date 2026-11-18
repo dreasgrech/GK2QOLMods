@@ -88,7 +88,7 @@ namespace GK2QOLMods.Tests
                 bool Rows(bool yes) => evening.condition.EvaluateBool() == yes && morning.condition.EvaluateBool() == yes;
                 // no frame passes while the answer is yes: the game's own evening row can't start the ghost under the test
                 EdRun.Season(false);
-                ED.Halloween.Ghost.Value = ED.PieceMode.On;
+                ED.Halloween.Ghost.Value = ED.PieceMode.Event; // Halloween is on Always where a test starts
                 bool always = Heard() && Rows(true);
                 ED.Events.Halloween.Mode.Value = ED.EventMode.Off;
                 bool eventNever = !Heard() && Rows(false);
@@ -96,18 +96,20 @@ namespace GK2QOLMods.Tests
                 ED.Halloween.Ghost.Value = ED.PieceMode.Off;
                 EdRun.Season(true);
                 bool never = !Heard() && Rows(false);
+                ED.Events.Halloween.Mode.Value = ED.EventMode.On;
+                bool neverThoughAlways = !Heard() && Rows(false);
+                ED.Events.Halloween.Mode.Value = ED.EventMode.Auto;
                 ED.Halloween.Ghost.Value = ED.PieceMode.Event;
                 bool said1 = EdRun.SeasonNow, heard1 = Heard(), rows1 = Rows(said1);
                 EdRun.Season(false);
                 bool said2 = EdRun.SeasonNow, heard2 = Heard(), rows2 = Rows(said2);
                 ED.Events.Halloween.Mode.Value = ED.EventMode.On;
                 bool eventAlways = Heard() && Rows(true);
-                ED.Events.Halloween.Mode.Value = ED.EventMode.Auto;
                 ED.Halloween.Ghost.Value = ED.PieceMode.Off;
-                Test.Check(always, $"the ghost on Always{(EdRun.SeasonNow ? "" : ", out of season")}: its script and both its rows hear Halloween");
-                Test.Check(never, $"on Never{(EdRun.ForceWorks ? ", in season" : "")}: they hear none");
-                Test.Check(eventNever, "on Always but Halloween on Never: none (Never is the whole event)");
-                Test.Check(heard1 == said1 && heard2 == said2 && rows1 && rows2 && eventAlways, $"with Halloween: what the event says (the game's dates say {said1}: heard {heard1}; they say {said2}: heard {heard2}; Halloween on Always: heard {eventAlways})");
+                Test.Check(always, $"the ghost with Halloween, Halloween on Always{(EdRun.SeasonNow ? "" : ", out of season")}: its script and both its rows hear Halloween");
+                Test.Check(never && neverThoughAlways, $"the ghost on Never: they hear none, {(EdRun.ForceWorks ? "in season by the game's dates" : "by date")} ({never}) and with Halloween on Always ({neverThoughAlways})");
+                Test.Check(eventNever, "the ghost with Halloween, Halloween on Never: none");
+                Test.Check(heard1 == said1 && heard2 == said2 && rows1 && rows2 && eventAlways, $"with Halloween, Halloween by date: what the game's dates say (they say {said1}: heard {heard1}; they say {said2}: heard {heard2}); on Always again: heard {eventAlways}");
             }
             finally
             {
@@ -131,10 +133,10 @@ namespace GK2QOLMods.Tests
                 yield return Test.Frames(2);
                 Test.Check(g.AtHome && !g.Moving, $"the ghost on Never: told to start its evening, it is at home ({g.FromHome:0.0} from its home point): its script's first step asks, hears no, and takes it home");
 
-                ED.Halloween.Ghost.Value = ED.PieceMode.On;
+                ED.Halloween.Ghost.Value = ED.PieceMode.Event;
                 g.Data.FireEvent(Start);
                 yield return Test.Frames(2);
-                Test.Check(!g.AtHome, $"on Always: told to start, it is out in the village ({g.FromHome:0} from its home point)");
+                Test.Check(!g.AtHome, $"the ghost with Halloween, Halloween on: told to start, it is out in the village ({g.FromHome:0} from its home point)");
                 Wait walking = Test.Until(() => g.Moving, 10f);
                 yield return walking;
                 if (walking.Met) Test.Pass("and walks to a point of the village");
@@ -166,7 +168,7 @@ namespace GK2QOLMods.Tests
             try
             {
                 EdRun.Season(false); // "the mod switched off" below then hears no Halloween from the game's dates either
-                ED.Halloween.Ghost.Value = ED.PieceMode.On;
+                ED.Halloween.Ghost.Value = ED.PieceMode.Event;
                 g.Data.FireEvent(Start);
                 Wait walking = Test.Until(() => g.Moving, 10f);
                 yield return walking;

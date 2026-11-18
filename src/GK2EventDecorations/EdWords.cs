@@ -8,8 +8,8 @@ namespace GK2EventDecorations
     // were English in every language until 2026-11-18. Listed for the translators' template through UiOwner.OwnWords
     // (Plugin.BindConfig); keys stay as they are once released (a translation is found by its key).
     // The names inside the lines are not words of their own but the window's: the event's name is its tab's
-    // (section.halloween), "Always" a part's own choice (Decorations.choice.1), "Mod enabled" the switch's label
-    // (Enabled.label), so a line always names a thing as the row beside it does.
+    // (section.halloween), "Mod enabled" the switch's label (Enabled.label), so a line always names a thing as the
+    // row beside it does.
     internal static class EdWords
     {
         // ---- "On today"
@@ -25,8 +25,6 @@ namespace GK2EventDecorations
             "the \"On today\" line: zombies get the Halloween head today (an item of the same list)");
         internal static readonly Word TodayAnd = new Word("today.and", "{0}, {1}",
             "the \"On today\" line: how two items of the list are joined, e.g. \"decorations, ghost\"; {0} and {1}: items (or a list so far and the next item)");
-        internal static readonly Word TodaySetTo = new Word("today.set_to", "{0} (set to {1})",
-            "the \"On today\" line: a part that shows only because its own option says so, though the event is off today; {0}: the part (decorations), {1}: the option's choice, already translated (Always)");
         internal static readonly Word TodayNote = new Word("today.with_note", "{0} ({1})",
             "the \"On today\" line with a remark after it; {0}: the line so far, {1}: the remark (the sentence below)");
         internal static readonly Word TodayDatesDontCount = new Word("today.dates_dont_count",
@@ -60,7 +58,7 @@ namespace GK2EventDecorations
 
         internal static readonly List<Word> All = new List<Word>
         {
-            TodayEvent, TodayOff, TodayDecorations, TodayGhost, TodayZombieHead, TodayAnd, TodaySetTo, TodayNote, TodayDatesDontCount, TodayGameDates,
+            TodayEvent, TodayOff, TodayDecorations, TodayGhost, TodayZombieHead, TodayAnd, TodayNote, TodayDatesDontCount, TodayGameDates,
             StatusActive, StatusOff, StatusNotStarted, StatusCheckFailed, StatusMissing, StatusChangedStop, StatusChangedRun, StatusPatchFailed
         };
     }

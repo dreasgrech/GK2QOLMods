@@ -4,17 +4,18 @@ Written 2026-11-18, when the in-game suite was built for the mod's first release
 which covers everything in it"). This page is the map from each part of the mod to what checks it, and the list of
 what nothing checks, with the reason for each. Keep it current when the mod or its tests change.
 
-**State: the suite's first run in the game passed whole (2026-11-18 16:03, game 1.012.9): 45 tests, 226 checks, 0
-failed, 0 warnings, none skipped. The mod changed after it the same day (no auto-detected events; "On today" and
-Status in the game's language), and its tests with it; the second run, on that build, passed whole too (16:59: 45
-tests, 233 checks, 0 failed, 0 warnings, none skipped).** The runs are at the end of this page.
+**State: the suite passed whole on the mod as it is now (2026-11-18 18:54, game 1.012.9): 46 tests, 238 checks, 0
+failed, 0 warnings, none skipped. That is the fourth run of the day; the mod changed twice between them (no
+auto-detected events, "On today" and Status in the game's language; then a part of Halloween without Always) and a
+test over time was added, and every run on every one of those builds passed whole.** The runs are at the end of this
+page.
 
 ## The checks there are
 
 | Check | Where | Runs |
 |---|---|---|
-| The in-game suite, 45 tests | `tools/GK2QOLMods.Tests/EventDecorations/` | In the game, from GK2 Mod Test Bench's panel (F4): Run on the row "GK2 Event Decorations" |
-| The truth table, 2430 combinations of the settings in three seasons | `tests/HarmonyHarness-EventDecorations` | Offline (`tools/release-scans.sh`), .NET Framework, the built DLL's real patches on the game's real methods |
+| The in-game suite, 46 tests | `tools/GK2QOLMods.Tests/EventDecorations/` | In the game, from GK2 Mod Test Bench's panel (F4): Run on the row "GK2 Event Decorations" |
+| The truth table, 720 combinations of the settings in three seasons (2430 while a part had three choices) | `tests/HarmonyHarness-EventDecorations` | Offline (`tools/release-scans.sh`), .NET Framework, the built DLL's real patches on the game's real methods |
 | The mod's game code: one event gate, the members it patches | `tests/CecilScan-EventDecorations`, the dependency manifest (`tools/DepManifest verify`) | Offline, `release-scans.sh` |
 | No framework type outside `FrameworkLink`, every patch class listed | `tests/FrameworkScan` | Offline, `release-scans.sh` |
 | No LINQ | `tests/NoLinqScan`, the build | Offline |
@@ -79,7 +80,7 @@ playing, `none` not checked by anything.
 
 | Part | Checked by |
 |---|---|
-| `PieceOn`, `EventOff`, `DecorationsOn`, `ScriptsOn`, `Untouched` | T the table (2430 combinations where the season can be forced, 810 otherwise); T the three leaks by name; H |
+| `PieceOn`, `EventOff`, `DecorationsOn`, `ScriptsOn`, `Untouched` | T the table (720 combinations where the season can be forced, 240 otherwise); T "no part's setting reaches another"; H |
 | `DecorationsCanShow` | T The options window: "which rows are greyed when" |
 | `Overrides` | T The options window: "On today and Status" (the start line's wording for one setting) |
 | The two gate patches | T the table (called as the game calls them), T The ghost (its script and its two balance rows) |
@@ -184,7 +185,15 @@ session's log, in `C:\ClaudeCodeTemp\GK2-event-decorations-tests-2026-11-18`).
 
 Not in this run: the suite without GK2 Mod Framework (owed), and another language set in the game.
 
-**After that run, 2026-11-18 evening (the user's two decisions): the mod and the tests changed.** The mod no longer finds events by itself, and "On today" and Status are in the game's language (18 words
+**After the second run, the same day, a third change (the user's pick after reading "Halloween: decorations (set to
+Always)" beside "Halloween: By date" as a bug): a part of Halloween is "With Halloween" or "Never", with no Always
+of its own.** In the tests: where every changing test starts is now Halloween on Always with all three parts on
+Never (nothing shows), and a test switches on the part it is about; the table has 720 combinations (two choices a
+part) and no "(set to Always)"; the leak test asks each part on Never while the other two show, with Halloween on
+Always and by date in season; the offline truth table follows. Still 45 tests. **That build is deployed and has not
+run in the game yet.**
+
+**After the first run, 2026-11-18 (the user's two decisions): the mod and the tests changed.** The mod no longer finds events by itself, and "On today" and Status are in the game's language (18 words
 of the mod's own, ten languages). In the tests: "an event a later game adds (a made-up one) is answered by its own
 mode and dates" became "an event a later game adds is left to the game: named, not switched"; the language test
 "in every language each row has its text ..." now also reads the two lines in each language; every test that reads
@@ -218,5 +227,26 @@ suite's row: **45 of 45 tests, 233 passed, 0 failed, 0 warnings, 0 skipped.** Re
 - The mod's log outside the provoked warnings: clean. Player.log has one exception in that session, the game's own:
   `InvalidKeyException ... No Location found for Key=45a023dc...` in the main menu, long before the run; the key
   is named in the game's own `UICodeModsWindow` (its Mods window asks for an asset this build doesn't have).
+
+**2026-11-18 17:56, the user, the build of the third change (a part has no Always).** Run on the suite's row: **45 of
+45 tests, 234 passed, 0 failed, 0 warnings, 0 skipped**, in 267 frames at 120 fps (a little over two seconds). Read
+from `BepInEx\GK2ModTestBench-runs\20261118-175659.log`. In those frames the mod put the decorations up 38 times and
+took them down 39 times, said what shows 82 times, answered the table's 720 combinations on eight questions each,
+opened its options window 4 times and read its ten languages twice; its log held 16 warnings, the 16 provoked.
+
+The user's question after it: the whole suite lasts two seconds, are we testing everything? It is that short because
+nothing in the mod waits: a setting acts within its frame, and the tests look in that frame or two frames on. What
+such a run can't see is something of the game's undoing a switch a moment later. Added for that (2026-11-18): "what
+was switched stays so while the game runs on (seven seconds)", which switches an area, a kind, the bats, the glow and
+the blocking off, leaves the game running for 3 s and looks again, then everything on for 2 s, then taken down for
+2 s. 46 tests with it.
+
+**2026-11-18 18:54, the user, the same build of the mod with the test over time.** Run on the suite's row: **46 of 46
+tests, 238 passed, 0 failed, 0 warnings, 0 skipped.** Read from `BepInEx\GK2ModTestBench-runs\20261118-185407.log`.
+The new test's four checks: 73 things switched off (the village, the pumpkins, the bats, the glow, the blocking) were
+exactly the same 73 after 3 s of the game running (356 frames), the same set of decorations standing, the bats' 3
+zones still working; everything on again and nothing off after 2 s (239 frames); taken down and still down after 2 s
+(240 frames), nothing of them in the world, no warning of the mod's meanwhile. So nothing of the game's undoes a
+switch within seconds.
 
 Still not run: the suite without GK2 Mod Framework, and another language set in the game.

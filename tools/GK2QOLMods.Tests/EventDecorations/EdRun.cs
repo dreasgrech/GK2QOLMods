@@ -235,9 +235,11 @@ namespace GK2QOLMods.Tests
         // ------------------------------------------------------------------ where every changing test starts
 
         // The settings every test that changes one starts from, whatever the player has and whatever the test before
-        // left: the mod on, Halloween by date with no dates of the player's, the decorations and the ghost on Never
-        // (nothing goes up in the world and the game's own evening row can't start the ghost's walk under a test),
-        // every area and kind on, the mod's own texts in English. The decorations first, so nothing is put up on the way.
+        // left: the mod on, Halloween on Always with no dates of the player's and all three of its parts on Never
+        // (nothing goes up in the world, the game's own evening row can't start the ghost's walk under a test, no
+        // zombie is drawn with the Halloween head), every area and kind on, the mod's own texts in English. A test
+        // then switches on the part it is about (set to "With Halloween", it shows at once: Halloween is on). The
+        // decorations first, so nothing is put up on the way.
         internal static void Arrange()
         {
             Attach();
@@ -249,10 +251,10 @@ namespace GK2QOLMods.Tests
             }
             ED.Halloween.Decorations.Value = ED.PieceMode.Off;
             ED.Halloween.Ghost.Value = ED.PieceMode.Off;
-            ED.Halloween.ZombieHead.Value = ED.PieceMode.Event;
+            ED.Halloween.ZombieHead.Value = ED.PieceMode.Off;
             ED.Plugin.Enabled.Value = true;
             ED.Plugin.SendGhostHome.Value = true;
-            ED.Events.Halloween.Mode.Value = ED.EventMode.Auto;
+            ED.Events.Halloween.Mode.Value = ED.EventMode.On;
             ED.Events.Halloween.Start.Value = "";
             ED.Events.Halloween.End.Value = "";
             foreach (ED.Halloween.Area a in ED.Halloween.Areas) a.Entry.Value = true;

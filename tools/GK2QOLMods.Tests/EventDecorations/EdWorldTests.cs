@@ -23,11 +23,11 @@ namespace GK2QOLMods.Tests
         private static EdWorld.Survey PutUp()
         {
             EdRun.Arrange();
-            Deco = ED.PieceMode.On;
+            Deco = ED.PieceMode.Event;
             EdWorld.Survey s = EdWorld.Look();
             if (s == null || s.Root == null)
             {
-                Test.Fail(s == null ? "the decorations didn't go up with Decorations on Always" : $"the decorations have no {EdWorld.StaticRoot} any more: the game laid them out anew");
+                Test.Fail(s == null ? "the decorations didn't go up with Halloween on Always and the decorations with it" : $"the decorations have no {EdWorld.StaticRoot} any more: the game laid them out anew");
                 return null;
             }
             return s;
@@ -54,13 +54,13 @@ namespace GK2QOLMods.Tests
             }
             try
             {
-                Test.Check(!EdWorld.Up && EdWorld.Copies() == 0, $"with Decorations on Never they are down (up: {EdWorld.Up}, {EdWorld.Copies()} set(s) in the world)");
+                Test.Check(!EdWorld.Up && EdWorld.Copies() == 0, $"Halloween on Always, the decorations on Never: they are down (up: {EdWorld.Up}, {EdWorld.Copies()} set(s) in the world)");
                 string saveBefore = EdWorld.SaveCounts();
                 int mark = EdRun.Mark;
                 var watch = System.Diagnostics.Stopwatch.StartNew();
-                Deco = ED.PieceMode.On;
+                Deco = ED.PieceMode.Event;
                 double upMs = watch.Elapsed.TotalMilliseconds;
-                Test.Check(EdWorld.Up, "set to Always: up in the same frame, without a load");
+                Test.Check(EdWorld.Up, "the decorations set to With Halloween: up in the same frame, without a load");
                 yield return Test.Frames(2);
                 GameObject content = EdWorld.Content();
                 Test.Check(content != null && content.activeInHierarchy && EdWorld.Copies() == 1 && EdRun.Count("Halloween decorations put up.", mark) == 1,
@@ -99,7 +99,7 @@ namespace GK2QOLMods.Tests
             EdRun.Detach(); // the mod doesn't hear the setting: the load below is the game's own, untouched
             try
             {
-                Deco = ED.PieceMode.On; // the part's own check at a load asks the mod, which now says yes
+                Deco = ED.PieceMode.Event; // the part's own check at a load asks the mod, which now says yes
                 bool loaded = owner.TryLoadSceneDataContentByName(EdWorld.ContentName, out SceneWgoContentData _);
                 EdWorld.Survey fresh = EdWorld.Look();
                 Test.Check(loaded && fresh != null && fresh.Root != null, "loaded by the game's own call, the mod not told");
@@ -408,15 +408,16 @@ namespace GK2QOLMods.Tests
             EdRun.Arrange();
             try
             {
+                ED.Events.Halloween.Mode.Value = ED.EventMode.Auto; // By date: the game's dates decide, as they do with the mod off
                 ED.Halloween.Decorations.Value = ED.PieceMode.Event;
                 if (!EdRun.InSeason())
                 {
                     // today's real season, out of it: the mod off leaves them down as the game does
-                    ED.Halloween.Decorations.Value = ED.PieceMode.On;
+                    ED.Events.Halloween.Mode.Value = ED.EventMode.On;
                     yield return null;
                     bool wasUp = EdWorld.Up;
                     ED.Plugin.Enabled.Value = false;
-                    Test.Check(wasUp && !EdWorld.Up, "out of season (the game's dates can't be made to say Halloween here): the decorations on Always are up, and with the mod switched off they are taken down, as the game has it");
+                    Test.Check(wasUp && !EdWorld.Up, "out of season (the game's dates can't be made to say Halloween here): with Halloween on Always the decorations are up, and with the mod switched off they are taken down, as the game has it");
                     Test.Info("the other half (in season with the mod off: up, and as the game made them) needs the forced season");
                     yield break;
                 }
@@ -465,13 +466,16 @@ namespace GK2QOLMods.Tests
             string Md(DateTime d) => $"{d.Month:D2}-{d.Day:D2}";
             try
             {
-                // Halloween on Never is the whole event
-                ED.Halloween.Decorations.Value = ED.PieceMode.On;
+                // Halloween says when, the part says whether: up needs both
+                ED.Halloween.Decorations.Value = ED.PieceMode.Event;
                 bool up1 = EdWorld.Up;
                 ED.Events.Halloween.Mode.Value = ED.EventMode.Off;
-                bool down = !EdWorld.Up;
-                ED.Events.Halloween.Mode.Value = ED.EventMode.Auto;
-                Test.Check(up1 && down && EdWorld.Up, $"Decorations on Always: up ({up1}); Halloween set to Never takes them down whatever that says ({down}); By date again: up ({EdWorld.Up})");
+                bool down1 = !EdWorld.Up;
+                ED.Events.Halloween.Mode.Value = ED.EventMode.On;
+                bool up2 = EdWorld.Up;
+                ED.Halloween.Decorations.Value = ED.PieceMode.Off;
+                bool down2 = !EdWorld.Up;
+                Test.Check(up1 && down1 && up2 && down2, $"Halloween on Always with the decorations: up ({up1}); Halloween set to Never: down ({down1}); Always again: up ({up2}); the decorations set to Never: down ({down2})");
                 yield return Test.Frames(2);
 
                 // following Halloween: Always, the player's own dates, the game's dates
@@ -532,7 +536,7 @@ namespace GK2QOLMods.Tests
                 yield return null;
 
                 EdRun.Detach(); // a load is not a changed setting: the mod's part is its patch after the game's step
-                ED.Halloween.Decorations.Value = ED.PieceMode.On;
+                ED.Halloween.Decorations.Value = ED.PieceMode.Event;
                 EdRun.Switch("Village").Value = false;
                 EdRun.Switch("Pies").Value = false;
                 ED.Halloween.Glow.Value = false;
@@ -572,7 +576,7 @@ namespace GK2QOLMods.Tests
                 // as they should be: nothing said
                 int mark = EdRun.Mark;
                 ED.Decorations.OnGameStarted();
-                ED.Halloween.Decorations.Value = ED.PieceMode.On;
+                ED.Halloween.Decorations.Value = ED.PieceMode.Event;
                 ED.Decorations.OnGameStarted();
                 Test.Check(EdWorld.Up && EdRun.Count("After loading", mark) == 0, $"down with the settings saying down, then up with them saying up: nothing to put right, nothing said ({EdRun.Count("After loading", mark)} line(s))");
                 yield return Test.Frames(2);
@@ -610,6 +614,59 @@ namespace GK2QOLMods.Tests
             }
         }
 
+        // ------------------------------------------------------------------ over time
+
+        // Every other test looks in the frame of the change, or two frames on: the whole suite is over in a few seconds.
+        // That is right for what the mod does (a setting acts within its frame), but it can't see something of the
+        // game's undoing it a moment later: a script on a decoration switching its light back on, the game's streaming
+        // putting a hidden group back, a set of decorations coming back after it was taken down. So here the game is
+        // left to run for seconds at a time, and what was switched is looked at again.
+        internal static IEnumerator Stays()
+        {
+            if (!EdRun.Ready()) yield break;
+            EdWorld.Survey s = PutUp();
+            if (s == null) yield break;
+            try
+            {
+                EdRun.Switch("Village").Value = false;
+                EdRun.Switch("Pumpkins").Value = false;
+                EdRun.Switch(EdWorld.BatsKey).Value = false;
+                ED.Halloween.Glow.Value = false;
+                ED.Halloween.BlockWay.Value = false;
+                string off = string.Join("|", EdWorld.Off(s));
+                int n = EdWorld.Off(s).Count, frame = Time.frameCount, unexpected = EdRun.Unexpected.Count;
+                yield return Test.Seconds(3f);
+                EdWorld.Survey later = EdWorld.Look();
+                string offLater = later != null ? string.Join("|", EdWorld.Off(later)) : "(down)";
+                int zones = 0;
+                if (later != null) foreach (Collider c in later.OtherColliders) if (c.enabled) zones++;
+                Test.Check(later != null && later.Root == s.Root && offLater == off && EdWorld.Copies() == 1,
+                    $"the village, the pumpkins, the bats, the glow and the blocking switched off ({n} things), the game left to run for 3 s ({Time.frameCount - frame} frames): the same set of decorations stands and exactly the same things are off{(offLater == off ? "" : ": now " + offLater)}");
+                Test.Check(later != null && zones == later.OtherColliders.Count, $"the bats' zones are still working after it ({zones} of {(later != null ? later.OtherColliders.Count : 0)})");
+
+                EdRun.Switch("Village").Value = true;
+                EdRun.Switch("Pumpkins").Value = true;
+                EdRun.Switch(EdWorld.BatsKey).Value = true;
+                ED.Halloween.Glow.Value = true;
+                ED.Halloween.BlockWay.Value = true;
+                frame = Time.frameCount;
+                yield return Test.Seconds(2f);
+                later = EdWorld.Look();
+                List<string> offNow = EdWorld.Off(later);
+                Test.Check(later != null && offNow.Count == 0 && EdWorld.Copies() == 1, $"everything on again and left for 2 s ({Time.frameCount - frame} frames): nothing is off{EdWorld.Some(offNow)}");
+
+                ED.Halloween.Decorations.Value = ED.PieceMode.Off;
+                frame = Time.frameCount;
+                yield return Test.Seconds(2f);
+                Test.Check(!EdWorld.Up && EdWorld.Copies() == 0 && EdRun.Unexpected.Count == unexpected,
+                    $"taken down and left for 2 s ({Time.frameCount - frame} frames): they stay down, nothing of them in the world ({EdWorld.Copies()}), no warning of the mod's meanwhile ({EdRun.Unexpected.Count - unexpected})");
+            }
+            finally
+            {
+                EdRun.Arrange();
+            }
+        }
+
         // ------------------------------------------------------------------ many times over
 
         internal static IEnumerator ManyTimes()
@@ -627,7 +684,7 @@ namespace GK2QOLMods.Tests
                 for (int k = 0; k < times && !Test.Aborted; k++)
                 {
                     watch.Restart();
-                    ED.Halloween.Decorations.Value = ED.PieceMode.On;
+                    ED.Halloween.Decorations.Value = ED.PieceMode.Event;
                     double ms = watch.Elapsed.TotalMilliseconds;
                     up += ms;
                     if (ms > worstUp) worstUp = ms;
@@ -647,7 +704,7 @@ namespace GK2QOLMods.Tests
                 Test.Info($"a put-up took {up / times:0.0} ms on average (the worst {worstUp:0.0}), a take-down {down / times:0.0} ms");
 
                 // a switch flipped while they are up: what one click in the options window costs
-                ED.Halloween.Decorations.Value = ED.PieceMode.On;
+                ED.Halloween.Decorations.Value = ED.PieceMode.Event;
                 yield return null;
                 ConfigEntry<bool> village = EdRun.Switch("Village");
                 watch.Restart();

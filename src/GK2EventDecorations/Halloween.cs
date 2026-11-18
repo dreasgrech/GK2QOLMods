@@ -6,10 +6,13 @@ using LazyBearTechnology;
 
 namespace GK2EventDecorations
 {
+    // A part of Halloween: shown with the event, or never. There is no "always" for a part (taken out 2026-11-18): a
+    // part set to it showed while Halloween itself was off, and "Halloween: By date" beside decorations up all year
+    // read as a bug, twice, to the mod's own user. Halloween's mode says when; a part only says whether it takes part.
+    // Decorations all year without the ghost: Halloween on Always, the ghost on Never.
     internal enum PieceMode
     {
         Event, // whatever the event's Mode says today
-        On,
         Off
     }
 
@@ -78,16 +81,14 @@ namespace GK2EventDecorations
         {
             Decorations = config.Bind(Section, "Decorations", PieceMode.Event,
                 "The decorations (pumpkins, garlands, scarecrows, candles, bats) in the village, the port, the dungeons, your " +
-                "grounds and most interiors. With Halloween (Event): while Halloween is on. Always (On): every day, whatever the " +
-                "date. Never (Off): not at all. Halloween set to Never turns them off whatever this says.");
+                "grounds and most interiors. With Halloween (Event): while Halloween is on. Never (Off): not at all.");
             Ghost = config.Bind(Section, "Ghost", PieceMode.Event,
                 "The ghost that walks through the village at night (and any other script the game runs for Halloween). " +
-                "With Halloween (Event): while Halloween is on. Always (On): every day. Never (Off): not at all. Halloween set to " +
-                "Never turns it off whatever this says. Takes effect at its next step or evening.");
+                "With Halloween (Event): while Halloween is on. Never (Off): not at all. Takes effect at its next step or evening.");
             ZombieHead = config.Bind(Section, "ZombieHead", PieceMode.Event,
                 "Zombies with one particular head get the game's Halloween zombie head instead. With Halloween (Event): while " +
-                "Halloween is on. Always (On): every day. Never (Off): not at all. Halloween set to Never turns it off whatever this " +
-                "says. Pictures already drawn change when the game redraws them (e.g. the next load).");
+                "Halloween is on. Never (Off): not at all. Pictures already drawn change when the game redraws them (e.g. the " +
+                "next load).");
             for (int i = 0; i < Areas.Count; i++)
             {
                 Area a = Areas[i];
@@ -105,23 +106,10 @@ namespace GK2EventDecorations
                 "worked out when a save loads, so they follow at the next load.");
         }
 
-        // A piece's answer: Halloween's mode Off is the whole event off, every piece with it (the options window greys
-        // them, OptionsPage); otherwise the piece's own On / Off, or Event: the mode's answer today.
+        // A piece's answer: never when it is set to Off; otherwise the event's answer today (its mode and dates).
         internal static bool PieceOn(ConfigEntry<PieceMode> piece)
         {
-            if (EventOff())
-            {
-                return false;
-            }
-            switch (piece.Value)
-            {
-                case PieceMode.On:
-                    return true;
-                case PieceMode.Off:
-                    return false;
-                default:
-                    return Events.Halloween.IsOn();
-            }
+            return piece.Value != PieceMode.Off && Events.Halloween.IsOn();
         }
 
         // Halloween's mode is Off (with the mod's settings in use): nothing of the event, whatever the pieces say.
@@ -133,7 +121,7 @@ namespace GK2EventDecorations
 
         internal static bool DecorationsOn() => Plugin.Enabled.Value ? PieceOn(Decorations) : Events.GameDates(Events.Halloween);
 
-        // The pieces that don't follow the event, for the log line at start: "decorations On, ghost Off"; "" when all do.
+        // The pieces that don't follow the event, for the log line at start: "decorations Off, ghost Off"; "" when all do.
         internal static string Overrides()
         {
             string s = "";
@@ -238,7 +226,8 @@ namespace GK2EventDecorations
     {
         // Untouched: the game's own ShouldLoad runs, which is only `return TemporaryEventDates.IsHalloweenEvent()` (1.012).
         // That gate answers with the Ghost setting (the patches above), so it runs bypassed: the game's real date check,
-        // or Ghost "Always" would put the decorations up out of season too (found 2026-11-15).
+        // or the ghost set to Never would take the decorations down in season too (the leak found 2026-11-15, then
+        // with a ghost on "Always" putting them up out of season).
         private static bool Prefix(ref bool __result, out bool __state)
         {
             __state = false;

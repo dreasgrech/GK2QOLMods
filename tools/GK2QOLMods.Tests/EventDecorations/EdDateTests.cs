@@ -35,6 +35,7 @@ namespace GK2QOLMods.Tests
         {
             if (!EdRun.Ready()) yield break;
             EdRun.Arrange();
+            H.Mode.Value = ED.EventMode.Auto; // the player's dates count By date
             DateTime now = DateTime.Now;
             try
             {
@@ -73,6 +74,7 @@ namespace GK2QOLMods.Tests
         {
             if (!EdRun.Ready()) yield break;
             EdRun.Arrange();
+            H.Mode.Value = ED.EventMode.Auto; // the player's dates count By date
             DateTime now = DateTime.Now;
             try
             {
@@ -101,6 +103,7 @@ namespace GK2QOLMods.Tests
         {
             if (!EdRun.Ready()) yield break;
             EdRun.Arrange();
+            H.Mode.Value = ED.EventMode.Auto; // the player's dates count By date
             DateTime now = DateTime.Now;
             try
             {
@@ -125,6 +128,7 @@ namespace GK2QOLMods.Tests
         {
             if (!EdRun.Ready()) yield break;
             EdRun.Arrange();
+            H.Mode.Value = ED.EventMode.Auto; // the player's dates count By date
             DateTime now = DateTime.Now, a = now.AddDays(-1), b = now.AddDays(1);
             try
             {

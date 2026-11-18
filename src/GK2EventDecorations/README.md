@@ -11,8 +11,9 @@ Choose when and how the game's temporary events show. The game turns them on by 
 | Always / `On` | The event every day of the year. |
 | Never / `Off` | Never, even on its dates: the whole event, whatever its parts are set to. |
 
-Halloween is three things in the game, each of which can also be set on its own: With Halloween (`Event`, follow the
-mode), Always (`On`, whatever the date) or Never (`Off`). `Off` as the mode is the whole event off, whatever the three are set to; the options window greys
+Halloween is three things in the game. The mode above says when Halloween is on; each of the three then shows With
+Halloween (`Event`) or is switched off on its own with Never (`Off`). A part has no "Always" of its own: for
+decorations all year without the ghost, set Halloween to Always and the ghost to Never. `Off` as the mode is the whole event off; the options window greys
 them then, and greys the areas and kinds whenever the decorations can't show:
 
 - **Decorations**: pumpkins, garlands, scarecrows, pies, candles and lanterns, bats and glowing eyes, in the village,
