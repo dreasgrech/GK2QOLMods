@@ -185,14 +185,33 @@ Nothing changes for players.
   Portuguese, Russian, Polish, Turkish, Japanese, Simplified Chinese, Korean: every row, choice, heading and
   description (75 lines) and the Status row. Written and proofread as Tech Tree Search's (one translator and one
   second reader a language, the game's own words for its places and things, only characters the language's font
-  holds). The "On today" line's value and the statuses stay English (decided 2026-11-16). Not yet seen in the game.
+  holds). The "On today" line's value and the statuses stayed English then (decided 2026-11-16; translated
+  2026-11-18, below). Not yet seen in the game.
 - The Astrologer area's description says "Inside the astrologer's tower." (it said "house"; the game's own name of
   the place is the Astrologer's Tower; found by the translators, 2026-11-17).
 - Development (2026-11-17): the DLL grants the mods' in-game test plugin its internals by name (`TestAccess.cs`,
   `InternalsVisibleTo("GK2QOLMods.Tests")`; under Development below), and the decorations' content name is internal
   for it (`Decorations.ContentName`). Nothing changes for players.
 - With Halloween off, a ghost the game left standing in the village is sent home.
-- An event a later game update adds gets its own Auto / On / Off setting by itself.
+- An event a later game update adds is left to the game (2026-11-18, the user: "we can't have the mod auto detect
+  new events because this is something that we should do"). Until then the mod looked for every other event check
+  of the game's at its start and gave each a cfg section, a tab "(new event)" with By date / Always / Never and own
+  dates, and a patch on the check: switches for game content nobody had read, which could place or start things
+  that end up in a save, and code that had never met a second event (the game has only Halloween). Now the mod
+  switches Halloween alone; another event shows on the game's own dates, as without the mod, and is named once in
+  the log ("The game has N event(s) this version of the mod doesn't know (...)"). `tests/CecilScan-EventDecorations`
+  names a new event at every game update; its options come with a version written for it.
+- "On today" and Status in the game's language (2026-11-18, the user's yes; they were English in every language,
+  being built in code and not a row's label or description). 18 words of the mod's own (`EdWords`, through the
+  window library's `UiOwner.OwnWords`): the pieces of the "On today" line (the event with what shows, the list's
+  items and how they are joined, "set to Always", the remark about dates that don't count, "the game's own dates")
+  and the statuses (Active, Off with the switch's name, not started, and the five sentences of a start that
+  failed, each with its number). The names inside the lines are the window's own, so a line names a thing as its
+  row does: the event as its tab, "Always" as the part's choice, "Mod enabled" as the switch's label. The remark
+  about dates was reworded so it needs no brackets inside the line's own: "your own dates don't count: both are
+  needed, as month-day like 10-24, so the game's dates apply". `Languages\en.csv` has 115 lines; the ten languages
+  written and proofread as before (one translator and one second reader a language). `Plugin.Status` stays English
+  for the log and for the framework's build confirmation.
 - Optional GK2 Mod Framework integration: the mod in the game's Mods menu, its Settings button opening the mod's own
   options window (below).
 - Own dates for Auto (Start / End, month-day, may wrap the new year), for every event.
@@ -264,6 +283,19 @@ Nothing changes for players.
   **First run in the game (the user, 2026-11-18 16:03, game 1.012.9): 45 of 45 tests, 226 checks passed, 0 failed, 0
   warnings, none skipped**; the mod's send-home fix for the ghost seen working for the first time. Nothing changes
   for players.
+  - The same evening, with the mod's two changes (Event Decorations, Unreleased): the made-up-event test became "an
+    event a later game adds is left to the game: named, not switched" (the mod's list of a gates class's other
+    events, asked of the game's class and of a made-up one; no patch, no cfg section, no tab for such an event); the
+    language test also reads "On today" and Status in each of the ten languages (the event named as its tab,
+    "Always" as the part's own choice, the switch by its label, no sentence left English); every test that reads the
+    two lines' English pins English first. **Second run in the game (the user, 2026-11-18 16:59): 45 of 45 tests,
+    233 checks passed, 0 failed, 0 warnings, none skipped.**
+  - Found by the offline translation scan on the new lines, and fixed in the window library's own checkout (the
+    mods get it when the library's pointer moves): a shipped text that quotes a name with straight quotes and has
+    no comma (`status.off`, "Off: "Mod enabled" is unchecked", in four languages) was shown with its doubled quotes
+    and the closing one when a translator had deleted the CSV's opening quote; such a row is now left out, with the
+    warning. The library's scan with the fix passes over this repository's files and over GK2 Donkey API's (231 of
+    231 catalogue cases, no failing edit). Until the pointer moves, `release-scans.sh` fails on that one scan here.
 - **Game update 1.012.9 (Steam build 26734308), re-audited 2026-11-18** (`docs/game-update-26734308.md`): nothing
   the mods here use changed (Built Count, Global Storage, Tech Tree Search and Event Decorations identical on every
   member; Owned Count with its one changed member as since 1.012). Everything compiles and was rebuilt and deployed

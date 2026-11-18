@@ -33,7 +33,7 @@ Check(gates.Any(g => g.Parameters.Count == 1 && g.Parameters[0].ParameterType.Fu
 var events = dates?.Methods.Where(x => x.IsStatic && x.IsPublic && x.ReturnType.FullName == "System.Boolean" && x.Name.StartsWith("Is") && x.Name.EndsWith("Event") && x.Name.Length > 7)
   .Select(x => x.Name.Substring(2, x.Name.Length - 7)).Distinct().OrderBy(x => x).ToList() ?? new List<string>();
 Console.WriteLine("INFO events in the game: " + string.Join(", ", events));
-foreach (var e in events.Where(e => e != "Halloween")) Console.WriteLine("NOTE new event " + e + ": handled generically; look at its content");
+foreach (var e in events.Where(e => e != "Halloween")) Console.WriteLine("NOTE new event " + e + ": the mod leaves it to the game (no switch, named in the log); read its content, then add its options in a new version");
 
 // The pieces' own targets: the decorations' condition and the head table.
 var cond = game.GetType("HalloweenConditionalLoadContentPart");

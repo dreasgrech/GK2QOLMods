@@ -91,7 +91,7 @@ namespace GK2QOLMods.Tests
             s.Add(Languages, "in the game's own language every character of the window has a glyph", EdLanguageTests.Glyphs);
 
             s.Add(Others, "with GK2 Mod Framework: its Settings button opens the mod's own window", EdOtherTests.ModsMenu);
-            s.Add(Others, "an event a later game adds (a made-up one) is answered by its own mode and dates", EdOtherTests.FutureEvent);
+            s.Add(Others, "an event a later game adds is left to the game: named, not switched (a made-up one)", EdOtherTests.LaterEvent);
 
             s.AddLast("nothing went wrong in the mod during the run but what the tests provoked", EdClosingTests.NoFaults);
             s.AddVeryLast("the player's settings, the decorations, the ghost and the game are as the run found them", EdClosingTests.AsFound);
@@ -112,6 +112,14 @@ namespace GK2QOLMods.Tests
         {
             languageWas = UI.Texts.LanguageOverride;
             languageKept = true;
+        }
+
+        // The language the run found the mod's windows in (null: the game's own), for the test that needs that one.
+        internal static void GameLanguage()
+        {
+            if (!languageKept || UI.Texts.LanguageOverride == languageWas) return;
+            UI.Texts.LanguageOverride = languageWas;
+            UI.Texts.Forget();
         }
 
         internal static void LanguageBack()

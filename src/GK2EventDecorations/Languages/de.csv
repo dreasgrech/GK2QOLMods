@@ -4,6 +4,7 @@ section.general,Allgemein,General,a section
 section.halloween,Halloween,Halloween,a section
 Enabled.label,Mod aktiviert,Mod enabled,"General, a switch"
 Enabled.desc,"An: Die Events erscheinen so, wie es in ihrem jeweiligen Bereich eingestellt ist. Aus: Das Spiel entscheidet nach seinen eigenen Zeiträumen, wie ohne die Mod; deine Einstellungen bleiben erhalten, bis du die Mod wieder einschaltest.","On: the events show as set on their tabs. Off: the game decides by its own dates, as without the mod; your settings are kept for when you switch it back on.","General, a switch: its description"
+info.status.label,Status,Status,the Status row a settings page may have (what the mod is doing right now): its label
 info.status.desc,"Ob die Mod läuft. Hat ein Spielupdate den Spielcode geändert, auf den sie angewiesen ist, steht das hier, und die Mod bleibt aus, bis es eine aktualisierte Version gibt.","Whether the mod is running. After a game update that changed the game code it relies on, it says so here and stays off until an updated version.","General, an info line: its description"
 info.on_today.label,Heute aktiv,On today,"General, an info line"
 info.on_today.desc,"Was von jedem Event heute erscheint, mit den aktuellen Einstellungen.","What of each event shows today, with the settings as they are now.","General, an info line: its description"
@@ -95,4 +96,21 @@ row.none,Keine,None,a key option with no key; an empty name; no babies
 row.no_choice,(keine),(none),a list with nothing to choose
 key.same_as,Gleiche Taste wie {0},Same key as {0},"under a key option; {0}: another option, or another mod's setting"
 key.clashes_with,Konflikt mit {0} ({1}),Clashes with {0} ({1}),"under a key option; {0}: another option or mod's setting, {1}: its key"
-info.status.label,Status,Status,the Status row a settings page may have (what the mod is doing right now): its label
+today.event,{0}: {1},{0}: {1},"the ""On today"" line; {0}: the event's name (Halloween), {1}: what of it shows today (the words below), e.g. ""Halloween: decorations, ghost"""
+today.off,aus,off,"the ""On today"" line when nothing of the event shows today: ""Halloween: off"""
+today.decorations,Dekorationen,decorations,"the ""On today"" line: the Halloween decorations show today (lower case in English: an item of a list after ""Halloween:"")"
+today.ghost,Gespenst,ghost,"the ""On today"" line: the ghost walks tonight (an item of the same list)"
+today.zombie_head,Zombiekopf,zombie head,"the ""On today"" line: zombies get the Halloween head today (an item of the same list)"
+today.and,"{0}, {1}","{0}, {1}","the ""On today"" line: how two items of the list are joined, e.g. ""decorations, ghost""; {0} and {1}: items (or a list so far and the next item)"
+today.set_to,"{0} (auf ""{1}"" gestellt)",{0} (set to {1}),"the ""On today"" line: a part that shows only because its own option says so, though the event is off today; {0}: the part (decorations), {1}: the option's choice, already translated (Always)"
+today.with_note,{0} ({1}),{0} ({1}),"the ""On today"" line with a remark after it; {0}: the line so far, {1}: the remark (the sentence below)"
+today.dates_dont_count,"dein eigener Zeitraum zählt nicht: Beide Tage sind nötig, als Monat-Tag, z. B. 10-24, daher gilt der Zeitraum des Spiels","your own dates don't count: both are needed, as month-day like 10-24, so the game's dates apply","a remark shown in brackets after the ""On today"" line (the brackets are added around it: use none inside it): the player typed only one of the two dates, or something that is not a date; 10-24 is an example of the form (month-day) and stays as it is"
+today.game_dates,{0} (nach dem Zeitraum des Spiels),{0} (the game's own dates),"the ""On today"" line while the mod is switched off: what shows is decided by the game's own dates; {0}: the line so far"
+status.active,Aktiv,Active,the Status line: the mod is running
+status.off,"Aus: ""{0}"" ist nicht angehakt","Off: ""{0}"" is unchecked","the Status line while the player has switched the mod off; {0}: the switch's name, already translated (Mod enabled)"
+status.not_started,nicht gestartet,not started,the Status line before the mod has started (hardly ever seen)
+status.check_failed,Deaktiviert: Die Mod konnte den Spielcode nicht prüfen (siehe BepInEx/LogOutput.log).,Disabled: its check of the game's code could not run (see BepInEx/LogOutput.log).,the Status line: the mod switched itself off at start; BepInEx/LogOutput.log is a file's path and stays as it is
+status.missing,"Deaktiviert: Dem Spiel fehlt, was diese Mod nutzt ({0} Teil(e) des Spielcodes). Aktualisiere die Mod.",Disabled: the game no longer has what this mod uses ({0} member(s)). Update the mod.,the Status line after a game update the mod doesn't work with; {0}: a number (how many pieces of the game's code are gone)
+status.changed_stop,"Deaktiviert: Das Spiel hat {0} Teil(e) des Spielcodes geändert, die diese Mod nutzt, und Safety.StopOnChangedGameCode ist eingeschaltet.","Disabled: the game changed {0} member(s) this mod uses, and Safety.StopOnChangedGameCode is set.",the Status line after a game update; {0}: a number; Safety.StopOnChangedGameCode is a setting's name in the cfg file and stays as it is
+status.changed_run,"Läuft trotzdem: Das Spiel hat seit dieser Version {0} Teil(e) des Spielcodes geändert, die diese Mod nutzt. Eine neu geprüfte Version der Mod steht noch aus.",Running anyway: the game changed {0} member(s) this mod uses since this build. A re-audited build is pending.,"the Status line after a game update, the mod still running; {0}: a number"
+status.patch_failed,Deaktiviert: Das Patchen ist fehlgeschlagen (siehe BepInEx/LogOutput.log).,Disabled: patching failed (see BepInEx/LogOutput.log).,the Status line: the mod could not hook into the game at start; BepInEx/LogOutput.log is a file's path and stays as it is

@@ -4,6 +4,7 @@ section.general,常规,General,a section
 section.halloween,万圣节,Halloween,a section
 Enabled.label,启用模组,Mod enabled,"General, a switch"
 Enabled.desc,开启：各活动按其标签页中的设置显示。关闭：由游戏按自带的日期决定，与未安装模组时相同。你的设置会被保留，以便你重新开启时使用。,"On: the events show as set on their tabs. Off: the game decides by its own dates, as without the mod; your settings are kept for when you switch it back on.","General, a switch: its description"
+info.status.label,状态,Status,the Status row a settings page may have (what the mod is doing right now): its label
 info.status.desc,模组是否正在运行。如果游戏更新改动了它所依赖的游戏代码，这里会说明，并且模组会保持关闭，直到发布更新后的版本。,"Whether the mod is running. After a game update that changed the game code it relies on, it says so here and stays off until an updated version.","General, an info line: its description"
 info.on_today.label,今日显示,On today,"General, an info line"
 info.on_today.desc,按当前的设置，每个活动今天会显示哪些内容。,"What of each event shows today, with the settings as they are now.","General, an info line: its description"
@@ -95,4 +96,21 @@ row.none,无,None,a key option with no key; an empty name; no babies
 row.no_choice,（无）,(none),a list with nothing to choose
 key.same_as,与{0}按键相同,Same key as {0},"under a key option; {0}: another option, or another mod's setting"
 key.clashes_with,与{0}（{1}）冲突,Clashes with {0} ({1}),"under a key option; {0}: another option or mod's setting, {1}: its key"
-info.status.label,状态,Status,the Status row a settings page may have (what the mod is doing right now): its label
+today.event,{0}：{1},{0}: {1},"the ""On today"" line; {0}: the event's name (Halloween), {1}: what of it shows today (the words below), e.g. ""Halloween: decorations, ghost"""
+today.off,关闭,off,"the ""On today"" line when nothing of the event shows today: ""Halloween: off"""
+today.decorations,装饰,decorations,"the ""On today"" line: the Halloween decorations show today (lower case in English: an item of a list after ""Halloween:"")"
+today.ghost,幽灵,ghost,"the ""On today"" line: the ghost walks tonight (an item of the same list)"
+today.zombie_head,僵尸头,zombie head,"the ""On today"" line: zombies get the Halloween head today (an item of the same list)"
+today.and,{0}、{1},"{0}, {1}","the ""On today"" line: how two items of the list are joined, e.g. ""decorations, ghost""; {0} and {1}: items (or a list so far and the next item)"
+today.set_to,{0}（设为{1}）,{0} (set to {1}),"the ""On today"" line: a part that shows only because its own option says so, though the event is off today; {0}: the part (decorations), {1}: the option's choice, already translated (Always)"
+today.with_note,{0}（{1}）,{0} ({1}),"the ""On today"" line with a remark after it; {0}: the line so far, {1}: the remark (the sentence below)"
+today.dates_dont_count,自定日期无效，两个日期都需填写，格式为月-日，例如10-24，因此使用游戏自带的日期,"your own dates don't count: both are needed, as month-day like 10-24, so the game's dates apply","a remark shown in brackets after the ""On today"" line (the brackets are added around it: use none inside it): the player typed only one of the two dates, or something that is not a date; 10-24 is an example of the form (month-day) and stays as it is"
+today.game_dates,{0}（游戏自带的日期）,{0} (the game's own dates),"the ""On today"" line while the mod is switched off: what shows is decided by the game's own dates; {0}: the line so far"
+status.active,运行中,Active,the Status line: the mod is running
+status.off,已关闭：未勾选“{0}”,"Off: ""{0}"" is unchecked","the Status line while the player has switched the mod off; {0}: the switch's name, already translated (Mod enabled)"
+status.not_started,未启动,not started,the Status line before the mod has started (hardly ever seen)
+status.check_failed,已停用：无法运行对游戏代码的检查（参见BepInEx/LogOutput.log）。,Disabled: its check of the game's code could not run (see BepInEx/LogOutput.log).,the Status line: the mod switched itself off at start; BepInEx/LogOutput.log is a file's path and stays as it is
+status.missing,已停用：游戏中已不再有此模组所用的内容（{0}个成员）。请更新模组。,Disabled: the game no longer has what this mod uses ({0} member(s)). Update the mod.,the Status line after a game update the mod doesn't work with; {0}: a number (how many pieces of the game's code are gone)
+status.changed_stop,已停用：游戏变更了此模组所用的{0}个成员，且Safety.StopOnChangedGameCode已开启。,"Disabled: the game changed {0} member(s) this mod uses, and Safety.StopOnChangedGameCode is set.",the Status line after a game update; {0}: a number; Safety.StopOnChangedGameCode is a setting's name in the cfg file and stays as it is
+status.changed_run,仍在运行：自此版本以来，游戏变更了此模组所用的{0}个成员。重新审核过的版本尚待发布。,Running anyway: the game changed {0} member(s) this mod uses since this build. A re-audited build is pending.,"the Status line after a game update, the mod still running; {0}: a number"
+status.patch_failed,已停用：打补丁失败（参见BepInEx/LogOutput.log）。,Disabled: patching failed (see BepInEx/LogOutput.log).,the Status line: the mod could not hook into the game at start; BepInEx/LogOutput.log is a file's path and stays as it is

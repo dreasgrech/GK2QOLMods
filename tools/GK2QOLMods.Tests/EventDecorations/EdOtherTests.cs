@@ -10,29 +10,32 @@ using BepInEx.Configuration;
 using GK2ModTestBench;
 using HarmonyLib;
 using ED = EDasm::GK2EventDecorations;
+using UI = EDasm::GK2DreasUI;
 
 namespace GK2QOLMods.Tests
 {
-    // A made-up event's gates, standing in for one a later game adds: named and shaped as TemporaryEventDates' own
-    // (public static bool Is<Name>Event, without parameters or with one date).
+    // A made-up class of event gates, standing in for the game's TemporaryEventDates after a later update: two gates
+    // shaped as the game's own (public static bool Is<Name>Event, without parameters or with one date), Halloween's,
+    // and things that only look like gates.
     internal static class EdMadeUpGates
     {
         internal static bool Answer;
-        internal static int Asked;
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public static bool IsBenchTestEvent()
-        {
-            Asked++;
-            return Answer;
-        }
+        public static bool IsBenchTestEvent() => Answer;
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public static bool IsBenchDatedEvent(DateTime date)
-        {
-            Asked++;
-            return Answer;
-        }
+        public static bool IsBenchDatedEvent(DateTime date) => Answer;
+
+        public static bool IsBenchDatedEvent() => Answer;     // the same event's other gate: named once
+
+        public static bool IsHalloweenEvent() => Answer;      // the one the mod knows: not "another"
+
+        public static int IsNumberEvent() => 1;               // not a yes or no
+        public static bool IsTwoThingsEvent(DateTime a, int b) => Answer; // not a gate's parameters
+        public static bool IsEvent() => Answer;               // no name
+        public static bool HasBenchEvent() => Answer;         // not Is...
+        internal static bool IsHiddenEvent() => Answer;       // not public
     }
 
     internal static class EdOtherTests
@@ -74,123 +77,70 @@ namespace GK2QOLMods.Tests
 
         // ------------------------------------------------------------------ an event a later game adds
 
-        // The mod finds every Is<Name>Event gate on the game's TemporaryEventDates at its start and answers each by its
-        // own mode and dates. The game has only Halloween's, so that code has never met a second event. Here one is
-        // made up: an event object as the mod makes them, put into the mod's own table of found events (private:
-        // reached by name), its gate a method of this file, patched with the mod's own prefix for found events.
-        // What this can't reach is the finding itself (Events.Bind's walk over the game's type) and the new event's tab
-        // in the options window, both of which run only at the mod's start against the game's own class.
-        internal static IEnumerator FutureEvent()
+        // The mod switches Halloween, which was read through before it got its switches (what it places, starts and
+        // saves). An event a later game adds is left to the game on purpose (the user, 2026-11-18): the mod gives the
+        // player no setting for it and puts no patch on it; it names it once in the log, and its options come with a
+        // version of the mod written for it. The one piece of code for that is the mod's list of a gates class's other
+        // events, asked of the game's class at start; here it is asked of the game's and of a made-up one.
+        internal static IEnumerator LaterEvent()
         {
             if (!EdRun.Ready()) yield break;
             EdRun.Arrange();
-            Test.Check(ED.Events.All.Count == 1, ED.Events.All.Count == 1
-                ? "the game has one event today, Halloween: the rest of this test makes one up"
-                : $"the game has {ED.Events.All.Count} events now: {ED.Events.Describe()}. A new one needs its own look (its tab, its decorations, these tests)");
+            List<string> game = ED.Events.OtherGates(typeof(TemporaryEventDates));
+            const string said = "event(s) this version of the mod doesn't know";
+            bool inLog = SessionLogHas(said);
+            Test.Check(game.Count == 0, game.Count == 0
+                ? "the game has no event besides Halloween today"
+                : $"the game has {game.Count} event(s) this version of the mod doesn't know: {string.Join(", ", game)}. Each is left to the game; read what it does, then give it its options in a new version");
+            Test.Check(inLog == (game.Count > 0), game.Count > 0 ? $"the mod named them in the log at its start ({inLog})" : $"and the mod's start says nothing about unknown events ({!inLog})");
+            yield return null;
 
-            FieldInfo tableField = AccessTools.Field(typeof(ED.Events), "discovered");
-            MethodInfo prefix = AccessTools.Method(typeof(ED.Events), "GenericPrefix");
-            var table = tableField != null ? tableField.GetValue(null) as Dictionary<string, ED.GameEvent> : null;
-            if (table == null || prefix == null)
-            {
-                Test.Fail("the mod's table of found events (Events.discovered) or its prefix for them (Events.GenericPrefix) isn't there under that name any more: this test needs the new name");
-                yield break;
-            }
+            List<string> made = ED.Events.OtherGates(typeof(EdMadeUpGates));
+            Test.Check(string.Join(", ", made) == "BenchDated, BenchTest",
+                $"asked of a made-up class of gates, the mod names its two other events, each once, and nothing that only looks like a gate (Halloween's own, a number, two parameters, no name, not \"Is\", not public): {string.Join(", ", made)}");
+
+            // named is all: no patch, no setting, no tab, no word in "On today"
             MethodInfo plain = typeof(EdMadeUpGates).GetMethod(nameof(EdMadeUpGates.IsBenchTestEvent));
-            MethodInfo dated = typeof(EdMadeUpGates).GetMethod(nameof(EdMadeUpGates.IsBenchDatedEvent));
-            string cfgPath = Path.Combine(BepInEx.Paths.CachePath, "gk2-eventdecorations-tests-" + Guid.NewGuid().ToString("N") + ".cfg");
-            var cfg = new ConfigFile(cfgPath, false) { SaveOnConfigSet = false }; // never written
-            var e = new ED.GameEvent("BenchTest", false);
-            var e2 = new ED.GameEvent("BenchDated", false);
-            e.Bind(cfg, "a made-up event", "");
-            e2.Bind(cfg, "a made-up event asked with a date", "");
-            e.GameGate = plain;
-            e2.GameGate = dated;
-            e2.GameGateTakesDate = true;
-            var harmony = new Harmony(Plugin.Guid + ".madeup");
-            DateTime now = DateTime.Now;
-            string Md(DateTime d) => $"{d.Month:D2}-{d.Day:D2}";
-            // through reflection, as a caller compiled before the patch would never be: the JIT may have put the tiny
-            // method into this one already
-            bool Ask() => (bool)plain.Invoke(null, null);
-            bool AskDated() => (bool)dated.Invoke(null, new object[] { DateTime.Now });
-            try
-            {
-                table["BenchTest"] = e;
-                table["BenchDated"] = e2;
-                harmony.Patch(plain, prefix: new HarmonyMethod(prefix));
-                harmony.Patch(dated, prefix: new HarmonyMethod(prefix));
-
-                // By date without dates of the player's: the game's own check runs
-                EdMadeUpGates.Answer = true;
-                bool yes = Ask() && AskDated();
-                EdMadeUpGates.Answer = false;
-                bool no = !Ask() && !AskDated();
-                Test.Check(yes && no, $"a found event left By date: the game's own check answers (it says yes: {yes}; it says no: {no})");
-
-                // Always and Never, against the game's answer
-                e.Mode.Value = ED.EventMode.On;
-                e2.Mode.Value = ED.EventMode.On;
-                int asked = EdMadeUpGates.Asked;
-                bool always = Ask() && AskDated() && EdMadeUpGates.Asked == asked;
-                EdMadeUpGates.Answer = true;
-                e.Mode.Value = ED.EventMode.Off;
-                e2.Mode.Value = ED.EventMode.Off;
-                bool never = !Ask() && !AskDated();
-                Test.Check(always && never, $"set to Always it is on though the game says no, without the game's check being run ({always}); set to Never it is off though the game says yes ({never})");
-
-                // the game's own answer is still to be had past the mod (what "Mod enabled" off and the status line use)
-                bool past = ED.Events.GameDates(e) && ED.Events.GameDates(e2);
-                Test.Check(past && ED.Events.Bypass == 0, $"the game's own answer can still be asked past the mod ({past}), with and without a date, and the way past closes again ({ED.Events.Bypass})");
-                yield return null;
-
-                // the player's own dates
-                e.Mode.Value = ED.EventMode.Auto;
-                e.Start.Value = Md(now.AddDays(-1));
-                e.End.Value = Md(now.AddDays(1));
-                EdMadeUpGates.Answer = false;
-                bool inWindow = Ask();
-                e.End.Value = Md(now.AddDays(20));
-                e.Start.Value = Md(now.AddDays(10));
-                EdMadeUpGates.Answer = true;
-                bool outOfWindow = !Ask();
-                e.Start.Value = "";
-                e.End.Value = "";
-                Test.Check(inWindow && outOfWindow, $"By date with the player's own dates: on inside them though the game says no ({inWindow}), off outside them though it says yes ({outOfWindow})");
-
-                // "Mod enabled" off: the game's answer whatever the mode
-                e.Mode.Value = ED.EventMode.Off;
-                EdRun.Detach(); // the mod's switch alone, the decorations left out of it
-                ED.Plugin.Enabled.Value = false;
-                EdMadeUpGates.Answer = true;
-                bool modOff = Ask() && e.IsOn();
-                ED.Plugin.Enabled.Value = true;
-                EdRun.Attach();
-                Test.Check(modOff, $"with the mod switched off the game's own answer comes through, whatever the event is set to ({modOff})");
-
-                // how it is said: the start line of the log and the "On today" line
-                e.Mode.Value = ED.EventMode.On;
-                ED.Events.All.Add(e);
-                string described = ED.Events.Describe(), today = ED.OptionsPage.Today();
-                e.Mode.Value = ED.EventMode.Off;
-                string todayOff = ED.OptionsPage.Today();
-                Test.Check(described.Contains("BenchTest (On, new in this game version)") && today.Contains(" · BenchTest: on") && todayOff.Contains(" · BenchTest: off"),
-                    $"the log's start line names it as new (\"{described}\"), and \"On today\" has it after Halloween (\"{today}\")");
-            }
-            finally
-            {
-                ED.Events.All.Remove(e);
-                ED.Events.All.Remove(e2);
-                harmony.UnpatchSelf();
-                table.Remove("BenchTest");
-                table.Remove("BenchDated");
-                EdRun.Arrange();
-            }
-            HarmonyLib.Patches left = Harmony.GetPatchInfo(plain);
-            int prefixes = left != null ? left.Prefixes.Count : 0;
+            HarmonyLib.Patches info = Harmony.GetPatchInfo(plain);
+            int patches = info != null ? info.Prefixes.Count + info.Postfixes.Count + info.Finalizers.Count + info.Transpilers.Count : 0;
             EdMadeUpGates.Answer = true;
-            Test.Check(!table.ContainsKey("BenchTest") && !table.ContainsKey("BenchDated") && ED.Events.All.IndexOf(e) < 0 && prefixes == 0 && Ask() && !ED.OptionsPage.Today().Contains("BenchTest"),
-                $"the made-up event is gone again: out of the mod's table and lists, its gate unpatched ({prefixes} prefix(es)) and answering for itself, \"On today\" without it");
+            bool yes = (bool)plain.Invoke(null, null);
+            EdMadeUpGates.Answer = false;
+            bool no = !(bool)plain.Invoke(null, null);
+            Test.Check(patches == 0 && yes && no, $"and that is all it does with them: {patches} patch(es) on such a gate, which answers for itself ({yes}, {no})");
+            var sections = new List<string>();
+            foreach (ConfigDefinition d in EdRun.Cfg.Keys) if (!sections.Contains(d.Section)) sections.Add(d.Section);
+            sections.Sort(StringComparer.Ordinal);
+            var tabs = new List<string>();
+            UI.SettingsPage page = EdRun.Page();
+            if (page != null)
+            {
+                foreach (UI.SettingsPage.Row r in page.Rows)
+                {
+                    string tab = r.ShownSection ?? r.Section;
+                    if (page.InOptions(r) && !tabs.Contains(tab)) tabs.Add(tab);
+                }
+            }
+            string today = ED.OptionsPage.Today();
+            Test.Check(string.Join(", ", sections) == "General, Halloween, Safety" && string.Join(", ", tabs) == "General, Halloween" && today == "Halloween: off",
+                $"the mod's settings are Halloween's alone: the cfg's sections {string.Join(", ", sections)}; the window's tabs {string.Join(", ", tabs)}; \"On today\" reads \"{today}\"");
+        }
+
+        // A line of the mod's in this session's log file holding the text (the mod's start is before any run).
+        private static bool SessionLogHas(string text)
+        {
+            string path = Path.Combine(BepInEx.Paths.BepInExRootPath, "LogOutput.log");
+            if (!File.Exists(path)) return false;
+            using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            using (var reader = new StreamReader(stream))
+            {
+                string line;
+                while ((line = reader.ReadLine()) != null)
+                {
+                    if (line.IndexOf(":GK2 Event Decorations]", StringComparison.Ordinal) >= 0 && line.IndexOf(text, StringComparison.Ordinal) >= 0) return true;
+                }
+            }
+            return false;
         }
     }
 }

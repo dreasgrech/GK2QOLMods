@@ -67,15 +67,7 @@ namespace GK2EventDecorations
             page.EnableWhen(h, "CandleGlow", Halloween.DecorationsCanShow);
             page.EnableWhen(h, "BlockTheWay", Halloween.DecorationsCanShow);
 
-            // an event a game update added after this version (Events.Bind found it): its own tab
-            for (int i = 0; i < Events.All.Count; i++)
-            {
-                GameEvent e = Events.All[i];
-                if (!e.Known)
-                {
-                    EventRows(page, e, e.Name + " (new event)");
-                }
-            }
+            // (An event a later game adds has no tab: it is left to the game until a version of the mod knows it, Events.)
 
             // With "Mod enabled" off every event follows the game's dates and the decorations are as the game made them:
             // every row but that switch is greyed (its value kept).
@@ -106,50 +98,43 @@ namespace GK2EventDecorations
             page.EnableWhen(e.Name, "End", auto);
         }
 
-        // The "On today" line: per event what shows today, e.g. "Halloween: decorations, ghost, zombie head" or
-        // "Halloween: off"; with the mod off, the game's own answer, said as such.
+        // The "On today" line: what of Halloween shows today, e.g. "Halloween: decorations, ghost, zombie head" or
+        // "Halloween: off"; with the mod off, the game's own answer, said as such. In the game's language: its words are
+        // the mod's own (EdWords), and the names in it the window's (the tab's name, a part's "Always" choice), so the
+        // line names a thing as the row beside it does.
         internal static string Today()
         {
             bool mod = Plugin.Enabled.Value;
-            string s = "";
-            for (int i = 0; i < Events.All.Count; i++)
-            {
-                GameEvent e = Events.All[i];
-                string what;
-                if (e == Events.Halloween)
-                {
-                    bool today = mod ? e.IsOn() : Events.GameDates(e); // the event itself, by its mode and dates
-                    what = Join(Part(mod ? Halloween.DecorationsOn() : today, Halloween.Decorations, "decorations", mod, today),
-                                Part(mod ? Halloween.PieceOn(Halloween.Ghost) : today, Halloween.Ghost, "ghost", mod, today),
-                                Part(mod ? Halloween.PieceOn(Halloween.ZombieHead) : today, Halloween.ZombieHead, "zombie head", mod, today));
-                }
-                else
-                {
-                    what = e.IsOn() ? "on" : "off";
-                }
-                string note = mod ? e.DatesNote() : null;
-                s += (i == 0 ? "" : " · ") + e.Name + ": " + what + (note != null ? " (" + note + ")" : "");
-            }
-            return mod ? s : s + " (the game's own dates)";
+            GameEvent e = Events.Halloween;
+            bool today = mod ? e.IsOn() : Events.GameDates(e); // the event itself, by its mode and dates
+            string what = Join(Part(mod ? Halloween.DecorationsOn() : today, Halloween.Decorations, EdWords.TodayDecorations, "Decorations", mod, today),
+                               Part(mod ? Halloween.PieceOn(Halloween.Ghost) : today, Halloween.Ghost, EdWords.TodayGhost, "Ghost", mod, today),
+                               Part(mod ? Halloween.PieceOn(Halloween.ZombieHead) : today, Halloween.ZombieHead, EdWords.TodayZombieHead, "ZombieHead", mod, today));
+            string s = EdWords.TodayEvent.Format(Texts.Of(Texts.Api, "section.halloween", Events.HalloweenName), what);
+            if (mod && e.DatesDontCount()) s = EdWords.TodayNote.Format(s, EdWords.TodayDatesDontCount.Text);
+            return mod ? s : EdWords.TodayGameDates.Format(s);
         }
 
         // A part that shows: its name, and "(set to Always)" when only its own setting shows it, the event being off today
-        // (the decorations left on Always showed out of season, 2026-11-15). Null: it doesn't show.
-        private static string Part(bool on, ConfigEntry<PieceMode> piece, string name, bool mod, bool eventToday)
+        // (the decorations left on Always showed out of season, 2026-11-15); "Always" as that part's own row says it
+        // (its second choice). Null: it doesn't show.
+        private static string Part(bool on, ConfigEntry<PieceMode> piece, Word name, string rowKey, bool mod, bool eventToday)
         {
             if (!on)
             {
                 return null;
             }
-            return mod && !eventToday && piece.Value == PieceMode.On ? name + " (set to Always)" : name;
+            return mod && !eventToday && piece.Value == PieceMode.On
+                ? EdWords.TodaySetTo.Format(name.Text, Texts.Of(Texts.Api, rowKey + ".choice.1", "Always"))
+                : name.Text;
         }
 
         private static string Join(string a, string b, string c)
         {
-            string s = a ?? "";
-            if (b != null) s += (s.Length > 0 ? ", " : "") + b;
-            if (c != null) s += (s.Length > 0 ? ", " : "") + c;
-            return s.Length == 0 ? "off" : s;
+            string s = a;
+            if (b != null) s = s == null ? b : EdWords.TodayAnd.Format(s, b);
+            if (c != null) s = s == null ? c : EdWords.TodayAnd.Format(s, c);
+            return s ?? EdWords.TodayOff.Text;
         }
     }
 }

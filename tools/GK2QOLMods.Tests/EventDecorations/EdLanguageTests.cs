@@ -102,11 +102,40 @@ namespace GK2QOLMods.Tests
             }
             string was = UI.Texts.LanguageOverride;
             List<string> ids = Shipped(out string _);
+            // for the two lines the mod builds itself: the decorations on Always, out of season where that can be had,
+            // so "On today" reads "Halloween: decorations (set to Always)", every kind of piece in it
+            EdRun.Arrange();
+            bool outOfSeason = EdRun.OutOfSeason();
+            ED.Halloween.Decorations.Value = ED.PieceMode.On;
+            string englishLine = ED.OptionsPage.Today(), englishOff = "Off: \"Mod enabled\" is unchecked";
+            UI.SettingsPage.Row decorations = page.RowOfKey("Halloween", "Decorations"), enabled = page.RowOfKey("General", "Enabled");
             try
             {
                 foreach (string id in ids)
                 {
                     Language(id);
+                    // "On today" names the event as its tab does, the part by the mod's word, "Always" as the part's own
+                    // row says it; Status names the switch by its label; and no sentence of the two lines is left English
+                    string line = ED.OptionsPage.Today(), status = ED.Plugin.StatusShown();
+                    EdRun.Detach(); // the mod's switch alone, for its Status word: the decorations stay as they are
+                    ED.Plugin.Enabled.Value = false;
+                    string statusOff = ED.Plugin.StatusShown();
+                    ED.Plugin.Enabled.Value = true;
+                    EdRun.Attach();
+                    int sentencesSame = 0;
+                    var left = new List<string>();
+                    foreach (UI.Word w in ED.EdWords.All)
+                    {
+                        if (w.English.Split(' ').Length < 3 || w.Text != w.English) continue; // a pattern or a single word may be the same
+                        sentencesSame++;
+                        left.Add(w.Key);
+                    }
+                    bool lineOk = decorations != null && line.Contains(UI.Texts.Section(page, "Halloween")) && line.Contains(ED.EdWords.TodayDecorations.Text) &&
+                                  (!outOfSeason || (line.Contains(UI.Texts.Choice(decorations, 1)) && line != englishLine));
+                    bool statusOk = !string.IsNullOrEmpty(status) && enabled != null && statusOff.Contains(UI.Texts.Label(enabled)) && statusOff != englishOff && ED.EdWords.StatusMissing.Format(3).Contains("3");
+                    Test.Check(lineOk && statusOk && sentencesSame == 0,
+                        $"{id}: \"On today\" reads \"{line}\", Status \"{status}\" and, switched off, \"{statusOff}\"; {sentencesSame} of the two lines' sentences left in English{EdWorld.Some(left)}");
+
                     int rows = 0, empty = 0, labelsSame = 0, descriptionsSame = 0, described = 0;
                     foreach (UI.SettingsPage.Row r in page.Rows)
                     {
@@ -137,6 +166,7 @@ namespace GK2QOLMods.Tests
             finally
             {
                 Language(was);
+                EdRun.Arrange();
             }
         }
 
@@ -171,6 +201,7 @@ namespace GK2QOLMods.Tests
             yield return EdWindowTests.Free();
             if (!EdWindowTests.Clear) yield break;
             EdRun.Arrange();
+            EdHolds.GameLanguage(); // Arrange pins English; this test is about the language the game is in, with its font
             string language = UI.Texts.Language;
             try
             {

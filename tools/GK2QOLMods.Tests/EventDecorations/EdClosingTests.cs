@@ -85,7 +85,7 @@ namespace GK2QOLMods.Tests
             }
             Test.Check(!UI.OptionsWindow.IsOpen && LazyWindowsStackController.ActiveWindow == null && MainGame.IsGamePaused == foundPaused,
                 $"no window is left open and the game {(foundPaused ? "is paused as it was" : "runs")}");
-            Test.Check(ED.Events.Bypass == 0 && !EdRun.Detached && ED.Events.All.Count >= 1 && ED.Plugin.Status == "Active", "the mod is as it was: running, listening to its settings, its patches answering");
+            Test.Check(ED.Events.Bypass == 0 && !EdRun.Detached && ED.Events.Halloween != null && ED.Plugin.Status == "Active", "the mod is as it was: running, listening to its settings, its patches answering");
         }
     }
 }

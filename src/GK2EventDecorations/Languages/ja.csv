@@ -4,6 +4,7 @@ section.general,一般,General,a section
 section.halloween,ハロウィン,Halloween,a section
 Enabled.label,MOD を有効にする,Mod enabled,"General, a switch"
 Enabled.desc,オン：各イベントはそれぞれのタブの設定どおりに表示されます。オフ：MOD がない場合と同じく、ゲーム本来の日付に従います。設定は保持され、再びオンにしたときに使われます。,"On: the events show as set on their tabs. Off: the game decides by its own dates, as without the mod; your settings are kept for when you switch it back on.","General, a switch: its description"
+info.status.label,状態,Status,the Status row a settings page may have (what the mod is doing right now): its label
 info.status.desc,MOD が動作しているかどうか。MOD が依存するゲームコードを変更するゲームのアップデートがあった場合は、ここにそう表示され、MOD の更新版が出るまでオフのままになります。,"Whether the mod is running. After a game update that changed the game code it relies on, it says so here and stays off until an updated version.","General, an info line: its description"
 info.on_today.label,今日の表示,On today,"General, an info line"
 info.on_today.desc,現在の設定で、各イベントのうち今日表示されるもの。,"What of each event shows today, with the settings as they are now.","General, an info line: its description"
@@ -95,4 +96,21 @@ row.none,なし,None,a key option with no key; an empty name; no babies
 row.no_choice,（なし）,(none),a list with nothing to choose
 key.same_as,{0}と同じキー,Same key as {0},"under a key option; {0}: another option, or another mod's setting"
 key.clashes_with,{0}（{1}）と競合,Clashes with {0} ({1}),"under a key option; {0}: another option or mod's setting, {1}: its key"
-info.status.label,状態,Status,the Status row a settings page may have (what the mod is doing right now): its label
+today.event,{0}：{1},{0}: {1},"the ""On today"" line; {0}: the event's name (Halloween), {1}: what of it shows today (the words below), e.g. ""Halloween: decorations, ghost"""
+today.off,オフ,off,"the ""On today"" line when nothing of the event shows today: ""Halloween: off"""
+today.decorations,装飾,decorations,"the ""On today"" line: the Halloween decorations show today (lower case in English: an item of a list after ""Halloween:"")"
+today.ghost,幽霊,ghost,"the ""On today"" line: the ghost walks tonight (an item of the same list)"
+today.zombie_head,ゾンビの頭,zombie head,"the ""On today"" line: zombies get the Halloween head today (an item of the same list)"
+today.and,{0}、{1},"{0}, {1}","the ""On today"" line: how two items of the list are joined, e.g. ""decorations, ghost""; {0} and {1}: items (or a list so far and the next item)"
+today.set_to,{0}（「{1}」に設定）,{0} (set to {1}),"the ""On today"" line: a part that shows only because its own option says so, though the event is off today; {0}: the part (decorations), {1}: the option's choice, already translated (Always)"
+today.with_note,{0}（{1}）,{0} ({1}),"the ""On today"" line with a remark after it; {0}: the line so far, {1}: the remark (the sentence below)"
+today.dates_dont_count,独自の日付は無効です。開始と終了の両方を 10-24 のように月-日で入力する必要があります。そのため、ゲーム本来の日付が適用されます,"your own dates don't count: both are needed, as month-day like 10-24, so the game's dates apply","a remark shown in brackets after the ""On today"" line (the brackets are added around it: use none inside it): the player typed only one of the two dates, or something that is not a date; 10-24 is an example of the form (month-day) and stays as it is"
+today.game_dates,{0}（ゲーム本来の日付）,{0} (the game's own dates),"the ""On today"" line while the mod is switched off: what shows is decided by the game's own dates; {0}: the line so far"
+status.active,動作中,Active,the Status line: the mod is running
+status.off,オフ：「{0}」のチェックが外れています,"Off: ""{0}"" is unchecked","the Status line while the player has switched the mod off; {0}: the switch's name, already translated (Mod enabled)"
+status.not_started,開始前,not started,the Status line before the mod has started (hardly ever seen)
+status.check_failed,無効：ゲームコードの確認を実行できませんでした（BepInEx/LogOutput.log を参照）。,Disabled: its check of the game's code could not run (see BepInEx/LogOutput.log).,the Status line: the mod switched itself off at start; BepInEx/LogOutput.log is a file's path and stays as it is
+status.missing,無効：この MOD が使用するゲームコードの部分がゲームからなくなりました（{0} 個）。MOD を更新してください。,Disabled: the game no longer has what this mod uses ({0} member(s)). Update the mod.,the Status line after a game update the mod doesn't work with; {0}: a number (how many pieces of the game's code are gone)
+status.changed_stop,無効：この MOD が使用するゲームコードの部分 {0} 個がゲームで変更され、Safety.StopOnChangedGameCode がオン (true) に設定されています。,"Disabled: the game changed {0} member(s) this mod uses, and Safety.StopOnChangedGameCode is set.",the Status line after a game update; {0}: a number; Safety.StopOnChangedGameCode is a setting's name in the cfg file and stays as it is
+status.changed_run,そのまま動作中：このバージョン以降、この MOD が使用するゲームコードの部分 {0} 個がゲームで変更されました。変更後のゲームコードで確認済みの新しいバージョンは準備中です。,Running anyway: the game changed {0} member(s) this mod uses since this build. A re-audited build is pending.,"the Status line after a game update, the mod still running; {0}: a number"
+status.patch_failed,無効：パッチの適用に失敗しました（BepInEx/LogOutput.log を参照）。,Disabled: patching failed (see BepInEx/LogOutput.log).,the Status line: the mod could not hook into the game at start; BepInEx/LogOutput.log is a file's path and stays as it is

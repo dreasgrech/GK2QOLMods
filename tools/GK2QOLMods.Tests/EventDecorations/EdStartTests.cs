@@ -19,7 +19,7 @@ namespace GK2QOLMods.Tests
         internal static IEnumerator Running()
         {
             Test.Check(ED.Plugin.Status == "Active", $"its status is \"{ED.Plugin.Status}\" (Active when it started without a fault)");
-            Test.Check(ED.Events.All.Count > 0 && ED.Events.All[0] == ED.Events.Halloween && ED.Events.Halloween != null, $"{ED.Events.All.Count} event(s) of the game known, Halloween the first");
+            Test.Check(ED.Events.Halloween != null && ED.Events.Halloween.Mode != null, "it knows the game's Halloween, with its settings bound");
             Test.Info($"the settings: mod {(ED.Plugin.Enabled.Value ? "enabled" : "off")}; {ED.Events.Describe()}");
             Test.Info($"the game's own dates say {(EdRun.RealSeason ? "it is" : "it isn't")} Halloween today ({DateTime.Now:yyyy-MM-dd}); the tests can make them say either: {(EdRun.ForceWorks ? "yes" : "no")} ({EdRun.ForceWhy})");
             yield return null;
@@ -78,8 +78,8 @@ namespace GK2QOLMods.Tests
                 methods++;
                 names.Add((m.DeclaringType != null ? m.DeclaringType.Name + "." : "") + m.Name);
             }
-            int expected = ED.Plugin.PatchClasses.Length + (ED.Events.All.Count - 1); // one class a method, and a found event's gate each
-            Test.Check(methods >= expected, $"{methods} game method(s) carry the mod's patches for its {ED.Plugin.PatchClasses.Length} patch classes and {ED.Events.All.Count - 1} found event(s): {string.Join(", ", names)}");
+            int expected = ED.Plugin.PatchClasses.Length; // one class a method, and nothing else: no event the mod doesn't know is patched
+            Test.Check(methods == expected, $"{methods} game method(s) carry the mod's patches, one for each of its {expected} patch classes and no other: {string.Join(", ", names)}");
         }
 
         // ------------------------------------------------------------------ the settings

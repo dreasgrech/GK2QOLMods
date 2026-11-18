@@ -4,6 +4,7 @@ section.general,일반,General,a section
 section.halloween,핼러윈,Halloween,a section
 Enabled.label,모드 사용,Mod enabled,"General, a switch"
 Enabled.desc,켬: 각 이벤트 탭에서 설정한 대로 이벤트가 표시됩니다. 끔: 모드가 없을 때처럼 게임 기본 날짜에 따라 게임이 정합니다. 설정은 다시 켤 때를 위해 유지됩니다.,"On: the events show as set on their tabs. Off: the game decides by its own dates, as without the mod; your settings are kept for when you switch it back on.","General, a switch: its description"
+info.status.label,상태,Status,the Status row a settings page may have (what the mod is doing right now): its label
 info.status.desc,"모드가 실행 중인지 보여 줍니다. 모드가 사용하는 게임 코드를 바꾼 게임 업데이트가 있으면 여기에 그 사실이 표시되고, 업데이트된 버전이 나올 때까지 모드는 꺼진 상태로 유지됩니다.","Whether the mod is running. After a game update that changed the game code it relies on, it says so here and stays off until an updated version.","General, an info line: its description"
 info.on_today.label,오늘 켜진 항목,On today,"General, an info line"
 info.on_today.desc,현재 설정으로 오늘 각 이벤트의 무엇이 표시되는지 보여 줍니다.,"What of each event shows today, with the settings as they are now.","General, an info line: its description"
@@ -95,4 +96,21 @@ row.none,없음,None,a key option with no key; an empty name; no babies
 row.no_choice,(없음),(none),a list with nothing to choose
 key.same_as,{0}의 키와 같음,Same key as {0},"under a key option; {0}: another option, or another mod's setting"
 key.clashes_with,{0}의 키({1})와 충돌,Clashes with {0} ({1}),"under a key option; {0}: another option or mod's setting, {1}: its key"
-info.status.label,상태,Status,the Status row a settings page may have (what the mod is doing right now): its label
+today.event,{0}: {1},{0}: {1},"the ""On today"" line; {0}: the event's name (Halloween), {1}: what of it shows today (the words below), e.g. ""Halloween: decorations, ghost"""
+today.off,꺼짐,off,"the ""On today"" line when nothing of the event shows today: ""Halloween: off"""
+today.decorations,장식,decorations,"the ""On today"" line: the Halloween decorations show today (lower case in English: an item of a list after ""Halloween:"")"
+today.ghost,유령,ghost,"the ""On today"" line: the ghost walks tonight (an item of the same list)"
+today.zombie_head,좀비 머리,zombie head,"the ""On today"" line: zombies get the Halloween head today (an item of the same list)"
+today.and,"{0}, {1}","{0}, {1}","the ""On today"" line: how two items of the list are joined, e.g. ""decorations, ghost""; {0} and {1}: items (or a list so far and the next item)"
+today.set_to,{0} (설정: {1}),{0} (set to {1}),"the ""On today"" line: a part that shows only because its own option says so, though the event is off today; {0}: the part (decorations), {1}: the option's choice, already translated (Always)"
+today.with_note,{0} ({1}),{0} ({1}),"the ""On today"" line with a remark after it; {0}: the line so far, {1}: the remark (the sentence below)"
+today.dates_dont_count,직접 정한 날짜는 적용되지 않음: 첫날과 마지막 날 모두 10-24 같은 월-일 형식으로 입력해야 하므로 게임 기본 날짜가 적용됨,"your own dates don't count: both are needed, as month-day like 10-24, so the game's dates apply","a remark shown in brackets after the ""On today"" line (the brackets are added around it: use none inside it): the player typed only one of the two dates, or something that is not a date; 10-24 is an example of the form (month-day) and stays as it is"
+today.game_dates,{0} (게임 기본 날짜),{0} (the game's own dates),"the ""On today"" line while the mod is switched off: what shows is decided by the game's own dates; {0}: the line so far"
+status.active,실행 중,Active,the Status line: the mod is running
+status.off,꺼짐: '{0}' 체크 해제됨,"Off: ""{0}"" is unchecked","the Status line while the player has switched the mod off; {0}: the switch's name, already translated (Mod enabled)"
+status.not_started,시작되지 않음,not started,the Status line before the mod has started (hardly ever seen)
+status.check_failed,비활성화됨: 게임 코드 확인을 실행하지 못했습니다(BepInEx/LogOutput.log 참조).,Disabled: its check of the game's code could not run (see BepInEx/LogOutput.log).,the Status line: the mod switched itself off at start; BepInEx/LogOutput.log is a file's path and stays as it is
+status.missing,비활성화됨: 이 모드가 사용하는 게임 코드가 게임에서 사라졌습니다(사라진 부분 {0}개). 모드를 업데이트하세요.,Disabled: the game no longer has what this mod uses ({0} member(s)). Update the mod.,the Status line after a game update the mod doesn't work with; {0}: a number (how many pieces of the game's code are gone)
+status.changed_stop,"비활성화됨: 이 모드가 사용하는 게임 코드 중 {0}개 부분이 게임에서 바뀌었고, Safety.StopOnChangedGameCode가 켜져 있습니다.","Disabled: the game changed {0} member(s) this mod uses, and Safety.StopOnChangedGameCode is set.",the Status line after a game update; {0}: a number; Safety.StopOnChangedGameCode is a setting's name in the cfg file and stays as it is
+status.changed_run,그래도 실행 중: 이 버전 이후 게임에서 이 모드가 사용하는 게임 코드 중 {0}개 부분이 바뀌었습니다. 바뀐 게임 코드에 맞춰 확인된 모드의 새 버전을 준비 중입니다.,Running anyway: the game changed {0} member(s) this mod uses since this build. A re-audited build is pending.,"the Status line after a game update, the mod still running; {0}: a number"
+status.patch_failed,비활성화됨: 패치에 실패했습니다(BepInEx/LogOutput.log 참조).,Disabled: patching failed (see BepInEx/LogOutput.log).,the Status line: the mod could not hook into the game at start; BepInEx/LogOutput.log is a file's path and stays as it is

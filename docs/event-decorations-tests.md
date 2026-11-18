@@ -5,7 +5,9 @@ which covers everything in it"). This page is the map from each part of the mod 
 what nothing checks, with the reason for each. Keep it current when the mod or its tests change.
 
 **State: the suite's first run in the game passed whole (2026-11-18 16:03, game 1.012.9): 45 tests, 226 checks, 0
-failed, 0 warnings, none skipped.** The runs are at the end of this page.
+failed, 0 warnings, none skipped. The mod changed after it the same day (no auto-detected events; "On today" and
+Status in the game's language), and its tests with it; the second run, on that build, passed whole too (16:59: 45
+tests, 233 checks, 0 failed, 0 warnings, none skipped).** The runs are at the end of this page.
 
 ## The checks there are
 
@@ -58,7 +60,7 @@ playing, `none` not checked by anything.
 |---|---|
 | The settings bound (every key, its default) | T The mod: "every setting is in the cfg ..." (its own list of all 30; a setting without a line there fails it) |
 | The dependency check passing, the patches applied, the start line in the log | T The mod: "running", "every game method ... carries its patch", "nothing ... at warning level or above in this session's log"; S the manifest |
-| `StatusShown` | T The options window: "On today and Status" |
+| `StatusShown` (the status as a word of the mod's, in the game's language) | T The options window: "On today and Status"; T Languages. The five sentences of a start that failed are read as words (each language has its line, the number kept) but never shown by a real failed start: **none in the game** |
 | The window's frame step (`UiHost.LateUpdate`) | T through every window test |
 | A start that fails: a game member gone or changed (`StopOnChangedGameCode`), patching throwing | **none in the game** (it would need a changed game); the shared check's own rules are `docs/dependency-check.md`'s |
 | `OnDestroy`, `OnApplicationQuit` | **none** (BepInEx never destroys a plugin; quitting ends the run) |
@@ -68,10 +70,10 @@ playing, `none` not checked by anything.
 | Part | Checked by |
 |---|---|
 | `IsOn`, the player's dates: what is a date, both needed, inclusive ends, past the new year | T The player's own dates (4 tests); H |
-| `UsesGameDates`, `CustomWindow`, `DatesNote` | T The player's own dates; T What the game is told (the table's "On today"); H |
+| `UsesGameDates`, `CustomWindow`, `DatesDontCount` | T The player's own dates; T What the game is told (the table's "On today"); H |
 | `GameDates` and `Bypass` (the game's own answer past the mod) | T As the player has it; T the table (closed again after every call); H |
-| A found event's answer: `Answer`, `GenericPrefix`, `GameDates` for it (with and without a date), `EventName`, `Describe`'s "new in this game version", "On today" for it | T Other mods and later games: a **made-up** event, put into the mod's own table by name |
-| The finding itself: `Events.Bind`'s walk over the game's `TemporaryEventDates`, `PatchDiscovered` over what it found | **none**: it runs once at the mod's start against the game's own class, which has only Halloween's gate. S CecilScan says when the game gains another. A seam to pass another class in would be a change to the mod |
+| `OtherGates`: the events a class of gates has besides Halloween (asked of the game's class at start, for one line in the log) | T Other mods and later games: asked of the game's class (none today, and the start said nothing) and of a **made-up** class with two gates and seven things that only look like gates; and that naming is all the mod does: no patch on such a gate, no cfg section, no tab, no word in "On today" |
+| The line in the log for an event the mod doesn't know (`Plugin.SayOtherEvents`) | **none in the game** while the game has no other event (the test reads the session's log and expects no such line); S CecilScan names a new event at a game update |
 
 ### `Halloween.cs`
 
@@ -118,7 +120,7 @@ playing, `none` not checked by anything.
 | The greying rules | T "which rows are greyed when" (five settings of mode, part and mod switch, against the test's own rule) |
 | `Today` | T the table (what it names), T "On today and Status" (its exact words in eight settings, and that it names the decorations exactly when they are up) |
 | The window opened, drawn, a switch pressed, Defaults, closed | T "the window opens ...", "a switch pressed ...", "Defaults ..." |
-| A found event's tab ("(new event)") | **none** (made at the mod's start from what `Events.Bind` found) |
+| A tab for an event the mod doesn't know | there is none, by design (2026-11-18); T Other mods and later games checks the window has the two tabs only |
 | Typing a date into the text rows | **hand** (a test can't type; the library writes a text row when the typing ends, so a half-typed date is never read) |
 
 ### `FrameworkLink.cs`
@@ -137,7 +139,7 @@ playing, `none` not checked by anything.
 | Each shipped file found beside the DLL and read without a complaint, a current line for every word | T Languages: "every shipped language ..." (in the game, from the deployed folder); S TranslationScan, l10n-sync |
 | A text for every row in every language, the sentences that take a value still taking it | T Languages: "in every language each row has its text ..." |
 | Every character having a glyph | T Languages: "in the game's own language ...": **only for the language the game is in** (the fonts are the game's for its language). For another language: set the game to it and run that test |
-| "On today" and Status are English in every language | not a test: they are built in the code, not from the words files (noted for the user, 2026-11-18) |
+| "On today" and Status in the game's language (the mod's own 18 words, `EdWords`) | T Languages: "in every language each row has its text ...": per language the two lines as they read, the event named as its tab, "Always" as the part's own choice, the switch by its label, no sentence left English, a number still in its place; T the table and "On today and Status" read them in English (pinned by `EdRun.Arrange`); S TranslationScan, l10n-sync |
 | How it reads and looks | **hand** |
 
 ## What only playing shows
@@ -181,3 +183,40 @@ session's log, in `C:\ClaudeCodeTemp\GK2-event-decorations-tests-2026-11-18`).
   at home, no window open.
 
 Not in this run: the suite without GK2 Mod Framework (owed), and another language set in the game.
+
+**After that run, 2026-11-18 evening (the user's two decisions): the mod and the tests changed.** The mod no longer finds events by itself, and "On today" and Status are in the game's language (18 words
+of the mod's own, ten languages). In the tests: "an event a later game adds (a made-up one) is answered by its own
+mode and dates" became "an event a later game adds is left to the game: named, not switched"; the language test
+"in every language each row has its text ..." now also reads the two lines in each language; every test that reads
+the lines' English pins English first (`EdRun.Arrange`), the glyph test goes back to the game's own language. Still
+45 tests. Offline: the truth table passes with the changed mod; the translation scan passes with a fix to the window
+library's reader (below), which the mods get when the library's pointer moves.
+
+A finding of that work, in the window library: the scan's "a text's opening quote deleted" failed on five of the new
+lines (German, Polish, Turkish, Brazilian Portuguese: `status.off`, German `today.set_to`). They are the first
+shipped texts that quote a name with straight quotes and have no comma: with the CSV's opening quote deleted by a
+translator, the reader took the rest as a plain text and would have shown it with its doubled quotes and the
+closing one. Fixed in the library's own checkout (`TranslationFiles.ParseCsv`: a doubled quote in a text that isn't
+in quotes marks the row's quoting broken, and the row is left out with the warning). The library's scan with the
+fix, over this repository: 231 of 231 catalogue cases, 14,513 edited rows, 0 failing; over GK2 Donkey API's: 231 of
+231, 43,475 edited rows, 0 failing.
+
+**2026-11-18 16:59, the user, the changed build (the same game, save and settings as the first run).** Run on the
+suite's row: **45 of 45 tests, 233 passed, 0 failed, 0 warnings, 0 skipped.** Read from
+`BepInEx\GK2ModTestBench-runs\20261118-165945.log` (a copy beside the first run's).
+
+- Everything of the first run again, with the same numbers (the table 2430 of 2430 on every answer; the world 12,
+  140, 44, 104 and 3; a put-up 20 to 26 ms; the ghost out, walking, home, and sent home once; 16 warnings, all 16
+  provoked).
+- An event a later game adds: the game has none besides Halloween and the mod's start said nothing of one; asked of
+  the made-up class, the mod named its two events (BenchDated, BenchTest), each once, and none of the seven things
+  that only look like a gate; no patch on such a gate; the cfg's sections General, Halloween, Safety, the window's
+  tabs General, Halloween.
+- The two lines in the ten languages, each read from the deployed file (115 lines each), e.g. German "Halloween:
+  Dekorationen (auf "Immer" gestellt)" and "Aus: "Mod aktiviert" ist nicht angehakt"; French "Halloween :
+  décorations (réglage : Toujours)"; Japanese "ハロウィン：装飾（「常に」に設定）"; no sentence left English in any.
+- The mod's log outside the provoked warnings: clean. Player.log has one exception in that session, the game's own:
+  `InvalidKeyException ... No Location found for Key=45a023dc...` in the main menu, long before the run; the key
+  is named in the game's own `UICodeModsWindow` (its Mods window asks for an asset this build doesn't have).
+
+Still not run: the suite without GK2 Mod Framework, and another language set in the game.

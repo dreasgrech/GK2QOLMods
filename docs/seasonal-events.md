@@ -87,7 +87,9 @@ A new plugin (own project, own GUID `dreas.gk2.eventdecorations`, built as GK2 E
 2. **Optional per-piece switches** (if wanted): decorations via `HalloweenConditionalLoadContentPart.ShouldLoad`,
    head swap via `HalloweenHeadSkinOverride.Resolve`, ghost via the gate only (its two triggers and its graph use
    nothing else).
-3. **Discovery, so future events are covered:**
+3. **Discovery, so future events are covered** (built 2026-11-11, **taken out 2026-11-18** at the user's word: an
+   event nobody has read gets no switch; the mod names it in the log and leaves it to the game, and
+   `tests/CecilScan-EventDecorations` names it at the game update. What follows is the proposal as it was)**:**
    - every public static `bool Is*Event()` on `TemporaryEventDates` becomes an event row (name from the method);
    - every concrete `ConditionalLoadContentPart` subclass, and the `conditionalLoads` entries of
      `MainGame.Instance.gameSceneConfigs`, are listed at start (logged; a new one we don't know gets a warning, as

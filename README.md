@@ -168,7 +168,7 @@ the ghost's night walks in the village and the Halloween zombie head, and each o
 - Changes apply at once: the decorations go up or down without reloading.
 - Nothing is written into the save; removing the mod returns every event to its dates.
 - With the event off, a ghost the game left standing in the village is sent home.
-- An event a later game update adds gets the same `Auto` / `On` / `Off` row by itself.
+- An event a later game update adds is left to the game until a version of the mod knows it.
 - Settings window: a "GK2 Event Decorations" button in the game's Settings window opens an options window: a General
   tab (Mod enabled, Status, On today) and one tab per event (the window code is GK2 Donkey API's, the `lib/GK2DreasUI`
   submodule, compiled in).

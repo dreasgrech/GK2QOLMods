@@ -50,7 +50,7 @@ namespace GK2QOLMods.Tests
                 // only By date: Always and Never don't look at them
                 Dates(Md(now.AddDays(10)), Md(now.AddDays(20)));
                 H.Mode.Value = ED.EventMode.On;
-                Test.Check(OnAgainstTheGame(true) && H.DatesNote() == null, "Halloween on Always with dates that leave today out: on, and nothing said about the dates");
+                Test.Check(OnAgainstTheGame(true) && !H.DatesDontCount(), "Halloween on Always with dates that leave today out: on, and nothing said about the dates");
                 Dates(Md(now.AddDays(-1)), Md(now.AddDays(1)));
                 H.Mode.Value = ED.EventMode.Off;
                 Test.Check(!OnAgainstTheGame(false), "Halloween on Never with dates that take today in: off");
@@ -164,12 +164,12 @@ namespace GK2QOLMods.Tests
                         EdRun.Season(false);
                         bool said2 = EdRun.SeasonNow, on2 = H.IsOn();
                         bool gameDecides = H.CustomWindow() == null && H.UsesGameDates() && on1 == said1 && on2 == said2;
-                        if (!gameDecides || H.DatesNote() == null) taken.Add($"\"{s}\"");
+                        if (!gameDecides || !H.DatesDontCount()) taken.Add($"\"{s}\"");
                         if (EdRun.Count("dates are month-day", mark) != before + 1) silent.Add($"\"{s}\" ({EdRun.Count("dates are month-day", mark) - before} line(s))");
                     }
                     // as the last day too
                     Dates(Md(a), "13-45");
-                    if (H.CustomWindow() != null || H.DatesNote() == null) taken.Add("a last day \"13-45\"");
+                    if (H.CustomWindow() != null || !H.DatesDontCount()) taken.Add("a last day \"13-45\"");
                 }
                 Test.Check(taken.Count == 0, $"{bad.Length + 1 - taken.Count} of {bad.Length + 1} things that aren't a date leave the game's own dates in charge, with the window's line saying so{EdWorld.Some(taken)}");
                 Test.Check(silent.Count == 0, $"each is said in the log once{EdWorld.Some(silent)}");
@@ -178,12 +178,12 @@ namespace GK2QOLMods.Tests
                 // one of the two alone (the other still to be typed): the game's dates, no warning, the line says why
                 int warned = EdRun.Count("dates are month-day");
                 Dates(Md(a), "");
-                bool firstOnly = H.CustomWindow() == null && H.UsesGameDates() && H.DatesNote() != null;
+                bool firstOnly = H.CustomWindow() == null && H.UsesGameDates() && H.DatesDontCount();
                 Dates("", Md(b));
-                bool lastOnly = H.CustomWindow() == null && H.UsesGameDates() && H.DatesNote() != null;
+                bool lastOnly = H.CustomWindow() == null && H.UsesGameDates() && H.DatesDontCount();
                 Test.Check(firstOnly && lastOnly && EdRun.Count("dates are month-day") == warned, $"the first day alone ({firstOnly}) or the last alone ({lastOnly}): the game's dates, said in the window's line, no warning in the log");
                 Dates("", "");
-                Test.Check(H.DatesNote() == null, "no dates at all: nothing to say about them");
+                Test.Check(!H.DatesDontCount(), "no dates at all: nothing to say about them");
             }
             finally
             {

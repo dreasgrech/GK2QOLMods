@@ -237,10 +237,16 @@ namespace GK2QOLMods.Tests
         // The settings every test that changes one starts from, whatever the player has and whatever the test before
         // left: the mod on, Halloween by date with no dates of the player's, the decorations and the ghost on Never
         // (nothing goes up in the world and the game's own evening row can't start the ghost's walk under a test),
-        // every area and kind on. The decorations first, so nothing is put up on the way.
+        // every area and kind on, the mod's own texts in English. The decorations first, so nothing is put up on the way.
         internal static void Arrange()
         {
             Attach();
+            // the mod's two lines ("On today", Status) are in the game's language, and the tests read their English
+            if (UI.Texts.LanguageOverride != "en")
+            {
+                UI.Texts.LanguageOverride = "en";
+                UI.Texts.Forget();
+            }
             ED.Halloween.Decorations.Value = ED.PieceMode.Off;
             ED.Halloween.Ghost.Value = ED.PieceMode.Off;
             ED.Halloween.ZombieHead.Value = ED.PieceMode.Event;

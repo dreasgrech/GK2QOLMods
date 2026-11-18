@@ -4,6 +4,7 @@ section.general,Genel,General,a section
 section.halloween,Cadılar Bayramı,Halloween,a section
 Enabled.label,Mod etkin,Mod enabled,"General, a switch"
 Enabled.desc,"Açık: etkinlikler, sekmelerindeki ayarlara göre gösterilir. Kapalı: mod yokmuş gibi oyun kendi tarihlerine göre karar verir; ayarların, modu yeniden açtığında kullanılmak üzere saklanır.","On: the events show as set on their tabs. Off: the game decides by its own dates, as without the mod; your settings are kept for when you switch it back on.","General, a switch: its description"
+info.status.label,Durum,Status,the Status row a settings page may have (what the mod is doing right now): its label
 info.status.desc,Modun çalışıp çalışmadığı. Dayandığı oyun kodunu değiştiren bir oyun güncellemesinden sonra bunu burada söyler ve güncellenmiş bir sürüm çıkana kadar kapalı kalır.,"Whether the mod is running. After a game update that changed the game code it relies on, it says so here and stays off until an updated version.","General, an info line: its description"
 info.on_today.label,Bugün açık,On today,"General, an info line"
 info.on_today.desc,Şu anki ayarlarla her etkinlikten bugün neyin gösterildiği.,"What of each event shows today, with the settings as they are now.","General, an info line: its description"
@@ -95,4 +96,21 @@ row.none,Yok,None,a key option with no key; an empty name; no babies
 row.no_choice,(yok),(none),a list with nothing to choose
 key.same_as,Aynı tuş: {0},Same key as {0},"under a key option; {0}: another option, or another mod's setting"
 key.clashes_with,Çakışıyor: {0} ({1}),Clashes with {0} ({1}),"under a key option; {0}: another option or mod's setting, {1}: its key"
-info.status.label,Durum,Status,the Status row a settings page may have (what the mod is doing right now): its label
+today.event,{0}: {1},{0}: {1},"the ""On today"" line; {0}: the event's name (Halloween), {1}: what of it shows today (the words below), e.g. ""Halloween: decorations, ghost"""
+today.off,kapalı,off,"the ""On today"" line when nothing of the event shows today: ""Halloween: off"""
+today.decorations,süslemeler,decorations,"the ""On today"" line: the Halloween decorations show today (lower case in English: an item of a list after ""Halloween:"")"
+today.ghost,hayalet,ghost,"the ""On today"" line: the ghost walks tonight (an item of the same list)"
+today.zombie_head,zombi kafası,zombie head,"the ""On today"" line: zombies get the Halloween head today (an item of the same list)"
+today.and,"{0}, {1}","{0}, {1}","the ""On today"" line: how two items of the list are joined, e.g. ""decorations, ghost""; {0} and {1}: items (or a list so far and the next item)"
+today.set_to,{0} ({1} olarak ayarlanmış),{0} (set to {1}),"the ""On today"" line: a part that shows only because its own option says so, though the event is off today; {0}: the part (decorations), {1}: the option's choice, already translated (Always)"
+today.with_note,{0} ({1}),{0} ({1}),"the ""On today"" line with a remark after it; {0}: the line so far, {1}: the remark (the sentence below)"
+today.dates_dont_count,"kendi tarihlerin sayılmıyor: ikisi de gerekir, ay-gün olarak, ör. 10-24, bu yüzden oyunun kendi tarihleri geçerli","your own dates don't count: both are needed, as month-day like 10-24, so the game's dates apply","a remark shown in brackets after the ""On today"" line (the brackets are added around it: use none inside it): the player typed only one of the two dates, or something that is not a date; 10-24 is an example of the form (month-day) and stays as it is"
+today.game_dates,{0} (oyunun kendi tarihleri),{0} (the game's own dates),"the ""On today"" line while the mod is switched off: what shows is decided by the game's own dates; {0}: the line so far"
+status.active,Etkin,Active,the Status line: the mod is running
+status.off,"Kapalı: ""{0}"" işaretli değil","Off: ""{0}"" is unchecked","the Status line while the player has switched the mod off; {0}: the switch's name, already translated (Mod enabled)"
+status.not_started,başlatılmadı,not started,the Status line before the mod has started (hardly ever seen)
+status.check_failed,Devre dışı: modun oyun kodu denetimi çalıştırılamadı (bkz. BepInEx/LogOutput.log).,Disabled: its check of the game's code could not run (see BepInEx/LogOutput.log).,the Status line: the mod switched itself off at start; BepInEx/LogOutput.log is a file's path and stays as it is
+status.missing,Devre dışı: bu modun kullandığı şeyler artık oyunda yok ({0} oyun kodu öğesi). Modu güncelle.,Disabled: the game no longer has what this mod uses ({0} member(s)). Update the mod.,the Status line after a game update the mod doesn't work with; {0}: a number (how many pieces of the game's code are gone)
+status.changed_stop,"Devre dışı: oyun, bu modun kullandığı {0} oyun kodu öğesini değiştirdi ve Safety.StopOnChangedGameCode açık.","Disabled: the game changed {0} member(s) this mod uses, and Safety.StopOnChangedGameCode is set.",the Status line after a game update; {0}: a number; Safety.StopOnChangedGameCode is a setting's name in the cfg file and stays as it is
+status.changed_run,"Yine de çalışıyor: oyun, bu sürümden beri bu modun kullandığı {0} oyun kodu öğesini değiştirdi. Yeniden denetlenmiş bir sürüm bekleniyor.",Running anyway: the game changed {0} member(s) this mod uses since this build. A re-audited build is pending.,"the Status line after a game update, the mod still running; {0}: a number"
+status.patch_failed,Devre dışı: oyuna yama uygulanamadı (bkz. BepInEx/LogOutput.log).,Disabled: patching failed (see BepInEx/LogOutput.log).,the Status line: the mod could not hook into the game at start; BepInEx/LogOutput.log is a file's path and stays as it is

@@ -394,7 +394,7 @@ namespace GK2QOLMods.Tests
                 ED.Events.Halloween.Mode.Value = ED.EventMode.Auto;
                 ED.Halloween.Decorations.Value = ED.PieceMode.Off;
                 ED.Events.Halloween.Start.Value = "10-01";
-                Reads("Halloween: off (your own dates don't count (both needed, as month-day like 10-24): the game's dates apply)", "a first day without a last");
+                Reads("Halloween: off (your own dates don't count: both are needed, as month-day like 10-24, so the game's dates apply)", "a first day without a last");
                 ED.Events.Halloween.Start.Value = "";
                 ED.Plugin.Enabled.Value = false;
                 Reads("Halloween: off (the game's own dates)", "the mod switched off, out of season");

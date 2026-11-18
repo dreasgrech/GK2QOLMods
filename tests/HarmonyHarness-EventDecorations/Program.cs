@@ -76,7 +76,6 @@ class P
         // the mod's patches, as Plugin.StartMod applies them
         var h = new Harmony("harness.eventdecorations");
         foreach (var t in (Type[])plugin.GetField("PatchClasses", BF).GetValue(null)) h.PatchAll(t);
-        T("Events").GetMethod("PatchDiscovered", BF).Invoke(null, new object[] { h });
         Console.WriteLine("INFO patched: " + string.Join(", ", h.GetPatchedMethods().Select(m => m.DeclaringType.Name + "." + m.Name)));
         var force = new Harmony("harness.eventdecorations.force");
         force.Patch(typeof(TemporaryEventDates).GetMethod("IsMonthDayInInclusiveRange", BF), prefix: new HarmonyMethod(typeof(P).GetMethod(nameof(ForceGameDates), BF)));

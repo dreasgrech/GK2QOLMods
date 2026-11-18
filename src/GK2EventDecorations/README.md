@@ -29,8 +29,10 @@ them then, and greys the areas and kinds whenever the decorations can't show:
   dates.
 - **The ghost goes home.** When it's off, a ghost left standing in the village is sent home (`SendGhostHome`, cfg
   only). The game itself leaves it there when the save was made during its walk home in the morning.
-- **Later events.** If a game update adds another event (game 1.012 already holds Christmas and Easter food items, not obtainable yet), the
-  mod finds it and gives it its own `Mode`, `Start` and `End`.
+- **Later events.** If a game update adds another event (game 1.012 already holds Christmas and Easter food items, not
+  obtainable yet), this version leaves it to the game: it shows on the game's own dates, as without the mod, and the
+  mod names it once in the log. Its options come with a version of the mod written for it, once what the event
+  places, starts and saves has been read (as Halloween's was).
 - **Settings window.** The game's **Settings** window (main menu or ESC) has a **GK2 Event Decorations** button: an
   options window in the game's own look: **General** ("Mod enabled", a Status line, and an "On today" line saying
   what of each event shows today) and one tab per event, **Halloween** (its mode and own dates, then the headings
