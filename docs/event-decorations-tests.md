@@ -254,4 +254,21 @@ at `eb42f77`).** Run on the suite's row: **46 of 46 tests, 238 passed, 0 failed,
 (`20261118-203222.log`); the mod's log held 16 warnings, the 16 provoked. Tech Tree Search's row a minute before: 7
 tests, 15 passed, 0 failed (`20261118-203148.log`). The user opened the options window by hand after it.
 
-Still not run: the suite without GK2 Mod Framework, and another language set in the game.
+**2026-11-19, the release rehearsal of 1.0.0, the user playing the release zip** (two starts; the checklist's
+section 7 has them). Of "What only playing shows", seen by hand:
+
+- 1, in part: a real load with the decorations up (start 2: the game's own "Added conditional scene content" at the
+  load, 140 of 140 items). A load with them down is every load out of season on By date (start 1).
+- 2, in part: the decorations up and down at once, the pumpkins off, the glow off (start 1). The walk-through was
+  not switched: no line of the run has fewer than 104 blocking colliders.
+- 4, in part: the ghost out at night on Always, met in the village (start 2, the page's picture).
+- 5, in part: the Framework's Settings button opened the options window (start 2).
+- 6: a date typed into the window, a mistyped one too (start 1: "11-1A" gave the mod's warning and the game's
+  dates, then 11-01 to 11-20 put the decorations up).
+- 8, in part: the window in Japanese, every text drawn (start 1); beside GK2 Saddle Up 0.17.3 the mod's row shows
+  its word in Japanese (start 2).
+
+Still open: the suite without GK2 Mod Framework (the mod itself ran without it in start 1) and the glyph test with
+another language set in the game; the walk-through by hand; the zombie head on a zombie (not seen: whether a zombie
+of the user's has head 1051 was not checked); the ghost's morning walk and a save made during it, loaded with
+Halloween off; the game's own Mods window line for the mod as a Workshop item (at the upload).

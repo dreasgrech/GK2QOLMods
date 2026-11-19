@@ -1,0 +1,87 @@
+[center][size=6][b][color=#f0b45a]GK2 Event Decorations[/color][/b][/size]
+[size=4]Halloween in Graveyard Keeper 2 when you want it: on the game's dates, on your own, all year, or never.[/size]
+
+[size=3]The game puts up its Halloween from 24 October to 7 November, by your PC's date: decorations in the village and beyond, a ghost walking at night, a Halloween head for zombies. This mod hands you the switch, and lets you pick which decorations show and where.[/size]
+
+[img]https://raw.githubusercontent.com/dreasgrech/GK2QOLMods/main/media/event-decorations/halloween.png[/img][/center]
+[line]
+[size=3][b]Out of season nothing changes until you choose.[/b] The mod starts on [b]By date[/b], the game's own dates. For Halloween today, open the options and set [b]Halloween[/b] to [b]Always[/b].[/size]
+
+[line]
+[size=5][b][color=#f0b45a]What you get[/color][/b][/size]
+
+[size=4][b]Halloween when you want it[/b][/size]
+[list]
+[*][size=3][b]By date[/b]: the game's dates, or your own: type a first and a last day as month-day ([i]10-01[/i] to [i]11-30[/i]; over the new year works too).[/size][/*]
+[*][size=3][b]Always[/b]: every day of the year.[/size][/*]
+[*][size=3][b]Never[/b]: no Halloween, on its dates too.[/size][/*]
+[/list]
+
+[size=4][b]It switches at once[/b][/size]
+[size=3]The decorations go up or come down the moment you change the setting. No reload, no restart. The same street on Never and on Always:[/size]
+
+[center][img]https://raw.githubusercontent.com/dreasgrech/GK2QOLMods/main/media/event-decorations/street-plain.png[/img]
+
+[img]https://raw.githubusercontent.com/dreasgrech/GK2QOLMods/main/media/event-decorations/street-halloween.png[/img][/center]
+
+[size=4][b]Pick the parts[/b][/size]
+[size=3]Halloween is three things in the game, and each can stay out on its own: the decorations, the ghost that walks through the village at night, and the Halloween head some zombies get.[/size]
+
+[center][img]https://raw.githubusercontent.com/dreasgrech/GK2QOLMods/main/media/event-decorations/ghost.png[/img][/center]
+
+[size=4][b]Pick the places[/b][/size]
+[size=3]Decorations on or off for each area: the village, the port, your grounds, your house, the tavern, the restaurant, the barracks outside and inside, the astrologer's tower, the warehouse and the dungeons.[/size]
+
+[size=4][b]Pick the kinds[/b][/size]
+[size=3]Pumpkins, garlands, scarecrows, pies, plants, other props, bats and glowing eyes: each on or off. The candle and lantern glow can go out while the decorations stay. And if a pumpkin stands in your way, the decorations can be made walk-through (villagers keep walking round them until the next load).[/size]
+
+[center][img]https://raw.githubusercontent.com/dreasgrech/GK2QOLMods/main/media/event-decorations/night.png[/img][/center]
+
+[size=4][b]What shows today[/b][/size]
+[size=3]The options' first tab has an [b]On today[/b] line: what of Halloween shows right now, with your settings as they are.[/size]
+
+[size=4][b]In your language[/b][/size]
+[size=3]The options follow the game's language: English, German, Spanish, French, Brazilian Portuguese, Russian, Polish, Turkish, Japanese, Simplified Chinese and Korean.[/size]
+
+[size=4][b]Nothing added to your save[/b][/size]
+[size=3]The decorations are scenery the game puts up when a save loads, never saved objects. A save made with the mod loads fine without it.[/size]
+
+[size=4][b]Later events[/b][/size]
+[size=3]Halloween is the only event the game has today. If a game update adds another one, this version leaves it to the game: it shows on the game's dates, and its options come with an update of the mod.[/size]
+
+[line]
+[size=5][b][color=#f0b45a]Settings[/color][/b][/size]
+
+[size=3]In the game's [b]Settings[/b] window (in the pause menu and the main menu), the [b]GK2 Event Decorations[/b] row opens the mod's own options. Press [b]Open[/b].[/size]
+
+[center][img]https://raw.githubusercontent.com/dreasgrech/GK2QOLMods/main/media/event-decorations/settings-row.png[/img][/center]
+
+[size=3]The [b]General[/b] tab has the mod's switch, its status and the On today line. The [b]Halloween[/b] tab has everything else: when, your own dates, the parts, the areas and the kinds. Every row has a description, and [b]Defaults[/b] sets a tab back.[/size]
+
+[center][img]https://raw.githubusercontent.com/dreasgrech/GK2QOLMods/main/media/event-decorations/options-halloween.png[/img][/center]
+
+[size=3]If you have [url=https://www.nexusmods.com/graveyardkeeper2/mods/42]GK2 Mod Framework[/url] installed, the mod's [b]Settings[/b] button in its Mods menu opens these options too. The framework is optional; the same file works without it.[/size]
+
+[size=3]Everything is also in [i]BepInEx\config\dreas.gk2.eventdecorations.cfg[/i] (written on the first start; change it with the game closed).[/size]
+
+[line]
+[size=5][b][color=#f0b45a]Install[/color][/b][/size]
+
+[list=1]
+[*][size=3][b]Game v1.011 or newer ships BepInEx: if your game folder has a [i]BepInEx[/i] folder, there is nothing to install[/b].
+
+Otherwise (an older build), install the [url=https://www.nexusmods.com/site/mods/115]BepInEx 5 mod[/url] (or download from [url=https://github.com/BepInEx/BepInEx/releases]official repo[/url], v5.4.23 or newer) into the game folder and start the game once.[/size]
+
+[center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/BepInEx-files.png?v=2[/img][/center]
+[/*]
+[*][size=3]Extract the download into the game folder (where [i]GraveyardKeeper2.exe[/i] is). It adds the folder [b]GK2EventDecorations[/b] to [i]BepInEx\plugins[/i] (the mod's file and its [i]Languages[/i] folder).[/size]
+[/*]
+[*][size=3]Start the game, open [b]Settings[/b] and press [b]Open[/b] on the GK2 Event Decorations row. Set [b]Halloween[/b] to [b]Always[/b] and the decorations go up in your save.[/size][/*]
+[/list]
+[size=3][b]Safe for your save.[/b] The mod adds nothing to it. Saves made with it load without it.
+
+[b]Game updates.[/b] Built for game v1.012.9. After a game update the mod checks the game's code at start. If the game changed or removed something the mod uses, the mod stays off until an updated version: the options' Status line and the log say so, and Halloween follows the game's dates meanwhile.
+
+[b]Uninstall.[/b] Delete the folder [b]GK2EventDecorations[/b] from [i]BepInEx\plugins[/i]. If you had Halloween on outside the game's dates, do this first: load your save, set Halloween to [b]Never[/b], play on for a minute or two and save. That sends the ghost home if it was out in the village; without the mod it would stand there until the next Halloween.
+
+[b]Found a bug?[/b] Report it in this page's Bugs tab and attach [i]BepInEx\LogOutput.log[/i] from the game folder (it is rewritten each time the game starts, so grab it right after the problem).[/size]

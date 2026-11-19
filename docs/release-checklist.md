@@ -174,3 +174,32 @@ Committed and pushed by the user (`e4f5724`), then uploaded the same night. The 
 Steam's public file details (2026-11-19 00:45): updated 00:41:20, 346,843 bytes = the staged plugin folder and
 `modinfo.json` to the byte (13 files), the description identical to the staged one (4,705 characters), public, and
 the page pictures answer from `main`. The Nexus upload on 421 is the user's (the page refuses automated reads).
+
+Run 2026-11-19 for Event Decorations 1.0.0 (game 1.012.9; the mod's first release, a new Nexus page and a new
+Workshop item): the READMEs and the changelog brought in line with the mod, the two notes and both page texts;
+`build-dist.sh GK2EventDecorations` 0 warnings; `release-scans.sh GK2EventDecorations` 19 of 19 green;
+`make-release-zip.py GK2EventDecorations`: `GK2-Event-Decorations-1.0.0.zip` 180,545 bytes (the DLL 291,328 bytes
+and 11 language files); `rehearsal-test.sh` passed with this zip. The rehearsal with `tools/rehearsal.sh`, the
+user playing:
+- **Start 1** (the mod alone, no cfg, no GK2 Mod Framework; 18:40 to 18:49): 1.0.0 loaded on "Halloween (Auto)", its
+  row in the Settings window, "On today" saying Halloween is off; in a save, Halloween set to Always: the decorations
+  up at once (12 of 12 groups, 140 items, 44 glows, 104 blocking colliders), the pumpkins off (71 of 140), the glow
+  off (0 of 44), Defaults, own dates typed (11-01 to 11-20: up), the game's language switched through Turkish, Korean and
+  Chinese to Japanese (each file read whole, no line missing) and the window seen in Japanese. One warning, a provoked one: a date mistyped as "11-1A"
+  ("dates are month-day like 10-24; using the game's own dates"). The game's own log: four exceptions, all after the
+  quit was asked for, in the game's own teardown (`DayNightDependentSound.OnDisable`, `UICraftHintWidget`,
+  `UIObjectBubble.Hide` twice); the decorations' bundle holds no `DayNightDependentSound` (read with UnityPy). The
+  saves identical. Every page picture but the ghost's is from this start (`media/README.md`).
+- **Start 2** (the cfg start 1 left, Halloween on Always; GK2 Mod Framework, Tech Tree Search 1.1.0 and GK2 Saddle Up
+  0.17.3 from their zips; 18:55 to 19:02): the four mods loaded, the Framework "Compatible" for each; three rows of
+  ours in one strip (Saddle Up's copy of the window library keeps it, each mod makes its own row in it); the options
+  opened from the row and from the Framework's Settings button (over `GK2ModsMenuWindow`); **a save loaded with the
+  decorations up** (the game's own "Added conditional scene content [RuinedTemple_ContentPart_6_HalloweenData]" at
+  the load, then 140 of 140 items); **the ghost out at night** (the game's `halloween_npc_ghost_start_action`, its
+  steps, the keeper beside it: the page's ghost picture); the decorations taken down and put up once more from the
+  window. In Japanese the rows of this mod and of Tech Tree Search show their word, Saddle Up 0.17.3's own row an
+  empty box (its known fault, for Saddle Up's next version). No warning or error from any mod; the game's log has
+  the same four exceptions after the quit as in start 1. The saves identical. Not seen by hand: the Halloween zombie
+  head (whether a zombie of the user's has the one head the game swaps, 1051, was not checked; the in-game suite
+  checks every row of the game's table), the walk-through, the ghost's morning walk home
+  (`docs/event-decorations-tests.md` has what stays open).

@@ -1,0 +1,8 @@
+GK2 Event Decorations 1.0.0
+
+- First release. Built for game 1.012.9.
+- Halloween on the game's dates, on your own dates, always, or never. It switches at once, no reload.
+- The decorations, the ghost walking at night and the Halloween zombie head can each stay out.
+- Decorations on or off by area and by kind. The candle glow can go out, and the decorations can be made walk-through.
+- The options are in the game's Settings window: the GK2 Event Decorations row, press Open. In the game's 11 languages.
+- Out of season nothing changes until you set Halloween to Always.

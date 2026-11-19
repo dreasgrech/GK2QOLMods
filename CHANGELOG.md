@@ -180,7 +180,29 @@ Nothing changes for players.
 
 ## Event Decorations
 
-### Unreleased (1.0.0)
+### 1.0.0 (2026-11-19)
+
+The first release. Built for game 1.012.9 (Steam build 26734308), for Nexus Mods and the Steam Workshop (the same
+DLL, with a `Languages\` folder beside it). What it is:
+
+- Halloween when the player chooses: By date (the game's dates, 24 October to 7 November, or their own first and
+  last day), Always or Never. The default is By date, so out of season nothing changes until they pick Always.
+- Its three parts each With Halloween or Never: the decorations, the ghost walking at night, the Halloween zombie
+  head.
+- The decorations by area (11) and by kind (7), the candle and lantern glow, and whether they block the way.
+- A change applies at once: the decorations go up or come down without a reload.
+- An options window opened from a "GK2 Event Decorations" row in the game's Settings window (General with "Mod
+  enabled", Status and "On today"; the Halloween tab), in the game's 11 languages. With GK2 Mod Framework, its
+  Settings button opens the same window.
+- While Halloween is off, a ghost the game left standing in the village is sent home.
+- The mod adds nothing to a save. `Safety.StopOnChangedGameCode` is on by default: after a game update that changed
+  game code the mod uses, it stays off until an updated version.
+- A later game's event is named once in the log and left to the game.
+
+**How it got there, 2026-11-11 to 2026-11-18.** None of the states below was released. The entries stand as they
+were written, the later ones overruling the earlier: the modes were first called Auto / On / Off (the cfg's values
+still), the row in the Settings window was a button until 2026-11-18, a part had an "Always" until the same day,
+and the mod found and switched other events itself until then.
 
 - New mod: choose when the game's temporary events show. Halloween gets a mode: Auto (the game's dates, 24 October
   to 7 November), On (every day) or Off (never). It covers the decorations, the ghost's night walks and the
@@ -279,6 +301,27 @@ Nothing changes for players.
 
 ## Development
 
+- **Event Decorations 1.0.0: the release prep** (2026-11-19, the user: "let's prepare the seasonal mod for release
+  ... so we get it done and out"). The texts brought in line with the mod as it is: the mod's README still gave a
+  part three values and said other events get a mode by reflection (both taken out 2026-11-18), the main README
+  spoke of "each event" and "one tab per event", and the mod's Unreleased was the build's history, contradicting
+  itself; it is now the 1.0.0 entry with what the mod is first and the history under it, marked as such. Said in the
+  READMEs and on the pages for the first time: out of season nothing changes until Halloween is set to Always (the
+  default is By date), and what to do before removing the mod (the ghost's place is saved; without the mod nothing
+  sends a ghost standing in the village home). No label or description of the window changed: the eleven language
+  files are as committed. New: the page texts (`media/GK2_EventDecorations_Nexus.txt`, `_Workshop.txt`, the Workshop
+  one 5,533 bytes, without the Framework) and the two notes (`docs/nexus/event-decorations-1.0.0-*`).
+  `build-dist.sh GK2EventDecorations` 0 warnings (the DLL 291,328 bytes, its manifest 133 entries, identical with
+  game 1.012.9), `release-scans.sh GK2EventDecorations` 19 of 19 green, `make-release-zip.py GK2EventDecorations`:
+  `release/GK2-Event-Decorations-1.0.0.zip` 180,545 bytes (the DLL and 11 language files) and the Workshop folder
+  staged (no preview picture yet); `rehearsal-test.sh GK2EventDecorations <the Saddle Up 0.17.3 zip>` passed. The
+  mod's 46 tests were last run in the full bench run of 2026-11-18 23:49 (251 tests in 4 suites, 2470 passed, 0
+  failed), on the window library as it is at `777d2b2`. The rehearsal the same evening, the user playing (the
+  checklist's section 7 has both starts): alone on no cfg without GK2 Mod Framework, then on Always beside the
+  Framework, Tech Tree Search 1.1.0 and GK2 Saddle Up 0.17.3 with a save loading while the decorations are up and
+  the ghost met at night; no warning or error but one provoked by a mistyped date, the saves identical. The page
+  pictures are from it (`media/event-decorations/`, seven and the header; the Workshop preview and seven gallery
+  cuts in `media/workshop/GK2EventDecorations/`).
 - **Tech Tree Search 1.1.0: the release prep, and a rehearsal script** (2026-11-18). The versions raised (`Plugin.cs`,
   the csproj, the READMEs, `dist/README.md`), the mod's Unreleased closed, the two notes (`docs/nexus/`), the two page
   texts (the Settings section now tells of the row and the options window, with two pictures to come from the

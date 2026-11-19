@@ -10,10 +10,11 @@ steps are in [`docs/release-checklist.md`](../docs/release-checklist.md). Copy t
 | `GK2BuiltCount.dll` | 1.0.6 | 25910882 (1.010), built 2026-10-13 |
 | `GK2OwnedCount.dll` | 1.0.4 | 25910882 (1.010), built 2026-10-13 |
 | `GK2TechTreeSearch.dll` | 1.1.0 | 26734308 (1.012.9), built 2026-11-19; its `Languages\` folder is in the zip (`release/`), not here |
+| `GK2EventDecorations.dll` | 1.0.0 | 26734308 (1.012.9), built 2026-11-19; its `Languages\` folder is in the zip (`release/`), not here |
 
 - **The donkey mods** (formerly GK2 Mounts and the showcase) are in [GK2DonkeyAPI](https://github.com/dreasgrech/GK2DonkeyAPI).
 - **Game updates:** each plugin compares the game members it uses with the installed game at startup: identical, it runs; changed, it runs with a warning in the log (Global Storage without extending storage) until a re-audited build; gone, it stops.
 
-**The Mods menu:** Global Storage, Built Count, Owned Count and Tech Tree Search also show in the game's
+**The Mods menu:** Global Storage, Built Count, Owned Count, Tech Tree Search and Event Decorations also show in the game's
 Mods menu when [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) is installed. The framework
 is optional, and it isn't included here.

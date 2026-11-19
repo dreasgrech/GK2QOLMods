@@ -68,7 +68,7 @@ namespace GK2EventDecorations
         private void Awake()
         {
             Log = Logger;
-            // The window code's owner (lib\GK2DreasUI): the settings page in the options window, opened from a button in
+            // The window code's owner (lib\GK2DreasUI): the settings page in the options window, opened from a row in
             // the game's Settings window. First thing after the logger, before anything of the windows runs.
             UiOwner.Guid = Guid;
             UiOwner.DisplayName = "GK2 Event Decorations";

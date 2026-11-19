@@ -10,7 +10,7 @@ so you can install any subset.
 | [Move Building](#move-building) | retired | Picked up a built building and put it down elsewhere; the game does it itself since 1.011. |
 | [Owned Count](#owned-count) | 1.0.4 | Item tooltips show how many of that item you own across inventory and every chest. |
 | [Tech Tree Search](#tech-tree-search) | 1.1.0 | A search box on the Tech Tree page: find a tech by name, or by what it unlocks, and jump to it. |
-| [Event Decorations](#event-decorations) | unreleased | Choose when the game's temporary events (Halloween) show: by its dates, every day, or never. |
+| [Event Decorations](#event-decorations) | 1.0.0 | Choose when the game's Halloween shows: on its dates or your own, every day, or never; and which decorations, where. |
 
 **Looking for the donkey?** The rideable donkey and cart (GK2 Saddle Up, and the GK2 Donkey API it's built on) moved
 to their own repo on 2026-10-02, with their history: [GK2DonkeyAPI](https://github.com/dreasgrech/GK2DonkeyAPI). Until
@@ -161,19 +161,21 @@ scrolls to the tech and frames its card. Ctrl+F puts the cursor in the box.
 
 `GK2EventDecorations.dll` · GUID `dreas.gk2.eventdecorations` · [source and README](src/GK2EventDecorations/)
 
-The game shows its temporary events by the PC's date (Halloween: 24 October to 7 November). Each event gets a mode:
-`Auto` (the game's dates, or your own), `On` (every day) or `Off` (never). Halloween's mode covers its decorations,
-the ghost's night walks in the village and the Halloween zombie head, and each of the three can be switched off on its own.
+The game shows its Halloween by the PC's date (24 October to 7 November). With this mod it has a mode: By date
+(`Auto`: the game's dates, or your own), Always (`On`) or Never (`Off`). The mode covers its decorations, the
+ghost's night walks in the village and the Halloween zombie head, and each of the three can be switched off on its
+own. Out of season nothing changes until the mode is set to Always.
 
 - Decorations per area (village, port, your grounds, your house, tavern, ...) and per kind (pumpkins, garlands,
   scarecrows, pies, bats, ...), the candle glow, and walk-through decorations.
 - Changes apply at once: the decorations go up or down without reloading.
-- Nothing is written into the save; removing the mod returns every event to its dates.
+- The mod adds nothing to the save; removing it returns Halloween to the game's dates.
 - With the event off, a ghost the game left standing in the village is sent home.
 - An event a later game update adds is left to the game until a version of the mod knows it.
 - Settings window: a "GK2 Event Decorations" row in the game's Settings window opens an options window: a General
-  tab (Mod enabled, Status, On today) and one tab per event (the window code is GK2 Donkey API's, the `lib/GK2DreasUI`
+  tab (Mod enabled, Status, On today) and the Halloween tab (the window code is GK2 Donkey API's, the `lib/GK2DreasUI`
   submodule, compiled in).
+- In the game's language: the window's texts in the game's 10 other languages (`Languages\<id>.csv` beside the DLL).
 - Optional: with [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) installed, the mod is in the
   game's Mods menu too, and its Settings button opens the same window. The same DLL works without it.
 

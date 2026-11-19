@@ -5,7 +5,7 @@ using GK2Shared;
 
 namespace GK2EventDecorations
 {
-    // The rows of the options window (the window code, lib\GK2DreasUI: a "GK2 Event Decorations" button in the game's
+    // The rows of the options window (the window code, lib\GK2DreasUI: a "GK2 Event Decorations" row in the game's
     // Settings window). Every row binds the same section, key and type as the mod's own Config.Bind (Plugin, Events,
     // Halloween), so BepInEx hands the page the entries bound there and the window edits the values the mod reads; the
     // page keeps the cfg's sections as named (numberSections: false), and a section is a tab: General, one tab per event
