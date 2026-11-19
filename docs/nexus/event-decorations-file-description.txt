@@ -1,0 +1,6 @@
+The GK2 Event Decorations mod, laid out as a BepInEx\plugins directory.
+
+BepInEx 5 is now shipped with the game.
+Mod manager or manual install into the game folder.
+
+See the Changelog tab for changes between updates.

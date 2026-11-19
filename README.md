@@ -159,7 +159,8 @@ scrolls to the tech and frames its card. Ctrl+F puts the cursor in the box.
 
 ### Event Decorations
 
-`GK2EventDecorations.dll` · GUID `dreas.gk2.eventdecorations` · [source and README](src/GK2EventDecorations/)
+`GK2EventDecorations.dll` · GUID `dreas.gk2.eventdecorations` · [source and README](src/GK2EventDecorations/) ·
+[on the Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3842586770)
 
 The game shows its Halloween by the PC's date (24 October to 7 November). With this mod it has a mode: By date
 (`Auto`: the game's dates, or your own), Always (`On`) or Never (`Off`). The mode covers its decorations, the

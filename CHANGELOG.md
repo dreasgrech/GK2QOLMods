@@ -183,7 +183,9 @@ Nothing changes for players.
 ### 1.0.0 (2026-11-19)
 
 The first release. Built for game 1.012.9 (Steam build 26734308), for Nexus Mods and the Steam Workshop (the same
-DLL, with a `Languages\` folder beside it). What it is:
+DLL, with a `Languages\` folder beside it). Uploaded 2026-11-19 (`3441f6a`): a new Nexus page (the user's) and a
+new Workshop item, 3842586770, created 20:45 and checked through Steam's public file details (489,052 bytes, the
+staged folder to the byte; the description the staged one; public). What it is:
 
 - Halloween when the player chooses: By date (the game's dates, 24 October to 7 November, or their own first and
   last day), Always or Never. The default is By date, so out of season nothing changes until they pick Always.

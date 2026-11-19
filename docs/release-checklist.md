@@ -124,6 +124,9 @@ The page text is `media/GK2_<Mod>_Nexus.txt` (BBCode), its pictures in `media/<m
 show only once `media/` is pushed. The first run of section 5 is done with the zip extracted into the game folder
 (the loose dev DLL moved out first: two copies of a plugin would load twice).
 
+The text under a file on the page's Files tab (the upload form's file description) is
+`docs/nexus/<name>-file-description.txt` (the user's wording, 2026-11-19; the same for every version).
+
 **The Steam Workshop** (Tech Tree Search 1.0.2 the first, 2026-11-13; the facts in `docs/mods-window-and-workshop.md`).
 The same run of `make-release-zip.py` stages `workshop\<Mod>\` (not in git): the plugin folder as the zip holds it,
 `modinfo.json` (id = the plugin GUID, name, version: the game's Mods window reads them), and the uploader's own files,
@@ -203,3 +206,10 @@ user playing:
   head (whether a zombie of the user's has the one head the game swaps, 1051, was not checked; the in-game suite
   checks every row of the game's table), the walk-through, the ghost's morning walk home
   (`docs/event-decorations-tests.md` has what stays open).
+Committed and pushed by the user (`3441f6a`), then uploaded the same evening. The Workshop item, new: 3842586770
+("Upload complete" in Player.log), read through Steam's public file details (2026-11-19 21:30): created 20:45:38,
+489,052 bytes = the staged plugin folder and `modinfo.json` to the byte (13 files), the description identical to the
+staged one (5,640 characters), the tag Mod, a preview, public; the seven page pictures answer from `main` with the
+local files' sizes. The Nexus page, new, is the user's (the site refuses automated reads); its file description is
+`docs/nexus/event-decorations-file-description.txt`. Not done on this machine: subscribing to the item (the
+game's Mods window line, the sync's copy lines).
