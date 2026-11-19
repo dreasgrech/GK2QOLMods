@@ -170,3 +170,7 @@ byte-identical in `dist/`, the zip and `workshop\GK2TechTreeSearch\`, and 11 lan
 - **Start 3** (beside GK2 Saddle Up 0.17.2, a copy of the window library from before the rows): the mod's row under
   the game's rows, Saddle Up's red button above OK, the window whole, both opened; no warning or error.
 The saves identical after each start.
+Committed and pushed by the user (`e4f5724`), then uploaded the same night. The Workshop item 3839100125, read through
+Steam's public file details (2026-11-19 00:45): updated 00:41:20, 346,843 bytes = the staged plugin folder and
+`modinfo.json` to the byte (13 files), the description identical to the staged one (4,705 characters), public, and
+the page pictures answer from `main`. The Nexus upload on 421 is the user's (the page refuses automated reads).

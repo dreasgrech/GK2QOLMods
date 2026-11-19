@@ -75,7 +75,8 @@ Built for game 1.012.9 (Steam build 26734308), on Nexus Mods and the Steam Works
 `Languages\` folder beside it). For players: an options window opened from a row in the game's Settings window, the
 mod in the game's 10 other languages, and two fixes for Japanese, Chinese and Korean (the result list's font, whole
 names found). Settings carry over: the cfg keeps its sections and keys (`General`, `Layout`, `Safety`, the same
-binds as 1.0.2).
+binds as 1.0.2). Uploaded 2026-11-19 (`e4f5724`): the Workshop item 3839100125 updated 00:41, checked through
+Steam's public file details (346,843 bytes, the staged folder to the byte; the description the staged one).
 
 - A settings window: the game's Settings window has a "GK2 Tech Tree Search" row under the game's own (a button above
   its OK button until 2026-11-18, never released; under Development below), its "Open" opening an options window in the
