@@ -14,7 +14,7 @@ namespace GK2EventDecorations
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "dreas.gk2.eventdecorations";
-        public const string Version = "1.0.0";
+        public const string Version = "1.0.1";
 
         // No pinned game build: at start GameDependencies compares every game member this DLL uses (the gk2deps.txt
         // manifest tools/DepManifest embedded after the build) with the installed game; docs/dependency-check.md.
@@ -75,7 +75,15 @@ namespace GK2EventDecorations
             UiOwner.Log = Log;
             UiOwner.InGame = InGame;
             UiOwner.StatusText = StatusShown;
+            // A settings file 1.0.0 wrote (it lacks the DateForm line): its two dates, month-day there, are turned round to
+            // day-month. Asked before anything is bound, done after the binding and before anything listens to the
+            // settings; the settings page's one save at Publish writes the dates and the line together.
+            bool monthDayFile = OldDates.FileIsMonthDay(Config.ConfigFilePath);
             BindConfig();
+            if (monthDayFile)
+            {
+                OldDates.Turn(Events.Halloween, Log);
+            }
             Status = StartMod(); // not "Start": Unity would call that itself on the first frame and patch twice
             FrameworkLink.TryRegister(Config, page); // with the framework: its Settings button opens the options window
             page.Publish(); // the page reaches the windows the frame after, when every plugin's Awake has run
@@ -132,6 +140,7 @@ namespace GK2EventDecorations
                 "At start the mod compares every game member it uses with the installed game. A member that is gone always stops the mod. " +
                 "True (the default): a member whose code changed stops it too, until an updated build. False: it runs anyway, with a warning in the log.");
             GameDependencies.Bind(Config); // Safety.StopOnChangedGameCode (the entry above), Safety.LastDependencyCheck
+            OldDates.Bind(Config); // General.DateForm: cfg only; a file without it is 1.0.0's (Awake turns its dates round)
             OptionsPage.Declare(page); // the rows, in the window's order
         }
 

@@ -28,8 +28,8 @@ namespace GK2EventDecorations
         internal static readonly Word TodayNote = new Word("today.with_note", "{0} ({1})",
             "the \"On today\" line with a remark after it; {0}: the line so far, {1}: the remark (the sentence below)");
         internal static readonly Word TodayDatesDontCount = new Word("today.dates_dont_count",
-            "your own dates don't count: both are needed, as month-day like 10-24, so the game's dates apply",
-            "a remark shown in brackets after the \"On today\" line (the brackets are added around it: use none inside it): the player typed only one of the two dates, or something that is not a date; 10-24 is an example of the form (month-day) and stays as it is");
+            "your own dates don't count: both are needed, as day-month like 24-10, so the game's dates apply",
+            "a remark shown in brackets after the \"On today\" line (the brackets are added around it: use none inside it): the player typed only one of the two dates, or the settings file holds something that is not a date; 24-10 is an example of the form (day-month: 24 October) and stays as it is");
         internal static readonly Word TodayGameDates = new Word("today.game_dates", "{0} (the game's own dates)",
             "the \"On today\" line while the mod is switched off: what shows is decided by the game's own dates; {0}: the line so far");
 

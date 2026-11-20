@@ -398,8 +398,8 @@ namespace GK2QOLMods.Tests
                 Reads("Halloween: off", "Halloween on Never, the decorations and the head with it");
                 ED.Events.Halloween.Mode.Value = ED.EventMode.Auto;
                 ED.Halloween.Decorations.Value = ED.PieceMode.Off;
-                ED.Events.Halloween.Start.Value = "10-01";
-                Reads("Halloween: off (your own dates don't count: both are needed, as month-day like 10-24, so the game's dates apply)", "a first day without a last");
+                ED.Events.Halloween.Start.Value = "01-10";
+                Reads("Halloween: off (your own dates don't count: both are needed, as day-month like 24-10, so the game's dates apply)", "a first day without a last");
                 ED.Events.Halloween.Start.Value = "";
                 ED.Plugin.Enabled.Value = false;
                 Reads("Halloween: off (the game's own dates)", "the mod switched off, out of season");
@@ -417,6 +417,127 @@ namespace GK2QOLMods.Tests
             }
             finally
             {
+                EdRun.Arrange();
+            }
+        }
+
+        // ------------------------------------------------------------------ the date boxes
+
+        // A row's text box in the open window.
+        private static TMPro.TMP_InputField Box(UI.SettingsPage.Row row)
+        {
+            GameObject go = UI.OptionsWindow.TestRowObject(row);
+            return go != null ? go.GetComponentInChildren<TMPro.TMP_InputField>(true) : null;
+        }
+
+        // What the box holds after these keys, one by one, through the box's own filter and limit (a test can't press keys).
+        private static string Typed(TMPro.TMP_InputField box, string keys)
+        {
+            string text = "";
+            foreach (char c in keys)
+            {
+                if (box.characterLimit > 0 && text.Length >= box.characterLimit) break;
+                char kept = box.onValidateInput != null ? box.onValidateInput(text, text.Length, c) : c;
+                if (kept != '\0') text += kept;
+            }
+            return text;
+        }
+
+        // The typing ended with this in the box (Enter, a click elsewhere): the box's own handler. A text the box is
+        // given from code is not filtered (only typed and pasted characters are: Typed), so this also asks what happens
+        // to a text the filter would never have let in.
+        private static void Enter(TMPro.TMP_InputField box, string text)
+        {
+            box.text = text;
+            box.onEndEdit.Invoke(box.text);
+        }
+
+        // The user typed "11-1A" into 1.0.0's date box and it stayed there (2026-11-19). Since 1.0.1 the two boxes take
+        // digits and the dash, five characters, and what isn't a day of the year when the typing ends is refused.
+        internal static IEnumerator DateBoxes()
+        {
+            if (!EdRun.Ready()) yield break;
+            UI.SettingsPage page = EdRun.Page();
+            if (page == null)
+            {
+                Test.Fail("the mod made no settings page");
+                yield break;
+            }
+            yield return Free();
+            if (!Clear) yield break;
+            EdRun.Arrange();
+            try
+            {
+                ED.GameEvent h = ED.Events.Halloween;
+                h.Mode.Value = ED.EventMode.Auto; // the dates count, their rows are not greyed
+                UI.OptionsWindow.Open(page);
+                yield return Test.Frames(2);
+                if (!UI.OptionsWindow.IsShown)
+                {
+                    Test.Fail("the options window did not open");
+                    yield break;
+                }
+                UI.OptionsWindow.TestShowSection(Halloween);
+                yield return Test.Frames(2);
+                TMPro.TMP_InputField from = Box(Row(page, "Start")), to = Box(Row(page, "End"));
+                Test.Check(from != null && to != null && from != to, "the two date rows each have a text box");
+                if (from == null || to == null) yield break;
+                Test.Check(from.characterLimit == 5 && to.characterLimit == 5 && from.onValidateInput != null && to.onValidateInput != null,
+                    $"each box takes five characters ({from.characterLimit}, {to.characterLimit}) and has a filter on what is typed");
+
+                // typing: letters, blanks and other marks never get into the box
+                string keys = Typed(from, "2a4 /-.1A0xyz99");
+                Test.Check(keys == "24-10", $"the keys 2 a 4 blank / - . 1 A 0 x y z 9 9 leave \"{keys}\" in the box (digits and the dash, five characters)");
+                Enter(from, "11-1A");
+                Test.Check(from.text == "" && h.Start.Value == "", $"\"11-1A\" in the box when the typing ends (it can't be typed, but a text can be put there) is refused: the box says \"{from.text}\" again, the setting stays \"{h.Start.Value}\"");
+
+                // the typing ended: a day of the year is kept and tidied, anything else refused, the box back to what it held
+                var wrong = new List<string>();
+                void Ends(TMPro.TMP_InputField box, BepInEx.Configuration.ConfigEntry<string> entry, string typed, string want)
+                {
+                    Enter(box, typed);
+                    if (entry.Value != want || box.text != want) wrong.Add($"\"{typed}\": the setting \"{entry.Value}\", the box \"{box.text}\" (expected \"{want}\")");
+                }
+                Ends(from, h.Start, "24-10", "24-10");
+                Ends(from, h.Start, "10-24", "24-10"); // 1.0.0's way round: there is no month 24
+                Ends(from, h.Start, "31-4", "24-10");  // April has 30 days
+                Ends(from, h.Start, "45-13", "24-10");
+                Ends(from, h.Start, "24-", "24-10");
+                Ends(from, h.Start, "2410", "24-10");
+                Ends(from, h.Start, "1-11", "01-11");  // tidied
+                Ends(from, h.Start, "29-2", "29-02");
+                Ends(to, h.End, "7-11", "07-11");
+                Ends(to, h.End, "99-99", "07-11");
+                Ends(to, h.End, "", "");               // emptied: no own date
+                Ends(to, h.End, "30-11", "30-11");
+                Test.Check(wrong.Count == 0, $"12 texts left in a box when the typing ends: a day of the year is kept, written day-month with two digits each; anything else is refused and the box says again what it held{EdWorld.Some(wrong, 12)}");
+                Test.Check(h.CustomWindow() == "29-02 to 30-11", $"the mod reads the two boxes as \"{h.CustomWindow()}\"");
+                yield return null;
+
+                // a value the box could not have typed (a settings file of 1.0.0, the file by hand): shown whole, and
+                // left alone when the box is only visited
+                using (EdRun.Expect("dates are day-month"))
+                {
+                    h.Start.Value = "11-1A";
+                    // the window reads its rows' settings again on a timer of its own, not every frame (the first run
+                    // of this test waited two frames, found the box unchanged and wrote its old text over the
+                    // setting itself, 2026-11-19): asked for here, as a window opened on this value would show it
+                    UI.OptionsWindow.TestRefresh();
+                    yield return null;
+                    string shown = from.text;
+                    from.onEndEdit.Invoke(from.text); // the cursor put in and taken out, nothing typed
+                    bool mismatch = h.DatesDontCount();
+                    Test.Check(shown == "11-1A" && h.Start.Value == "11-1A" && from.text == "11-1A" && mismatch,
+                        $"\"11-1A\" already in the settings is shown whole (\"{shown}\") and stays when the box is only visited (the setting \"{h.Start.Value}\"); the \"On today\" line says the dates don't count ({mismatch})");
+                    Enter(from, "11-1"); // the player takes the letter out
+                    Test.Check(h.Start.Value == "11-01" && from.text == "11-01", $"with the letter taken out it is a date and is kept: \"{h.Start.Value}\"");
+                }
+                yield return Test.Frames(2);
+                Test.Check(from.text == h.Start.Value && to.text == h.End.Value, $"two frames on, the boxes still say what the settings hold (\"{from.text}\", \"{to.text}\")");
+            }
+            finally
+            {
+                if (UI.OptionsWindow.IsOpen) UI.OptionsWindow.TestClose(back: true);
                 EdRun.Arrange();
             }
         }

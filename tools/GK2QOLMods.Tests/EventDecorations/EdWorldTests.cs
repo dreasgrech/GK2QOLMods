@@ -463,7 +463,7 @@ namespace GK2QOLMods.Tests
             if (!EdRun.Ready()) yield break;
             EdRun.Arrange();
             DateTime now = DateTime.Now;
-            string Md(DateTime d) => $"{d.Month:D2}-{d.Day:D2}";
+            string Dm(DateTime d) => $"{d.Day:D2}-{d.Month:D2}";
             try
             {
                 // Halloween says when, the part says whether: up needs both
@@ -486,11 +486,11 @@ namespace GK2QOLMods.Tests
                 ED.Events.Halloween.Mode.Value = ED.EventMode.Auto;
                 Test.Check(always && EdWorld.Up == EdRun.SeasonNow, $"Decorations with Halloween: Halloween on Always puts them up ({always}); By date they follow the game's dates ({(EdRun.SeasonNow ? "Halloween: up" : "not Halloween: down")}, up {EdWorld.Up})");
                 yield return Test.Frames(2);
-                ED.Events.Halloween.Start.Value = Md(now.AddDays(-1));
-                ED.Events.Halloween.End.Value = Md(now.AddDays(1));
+                ED.Events.Halloween.Start.Value = Dm(now.AddDays(-1));
+                ED.Events.Halloween.End.Value = Dm(now.AddDays(1));
                 bool inWindow = EdWorld.Up;
-                ED.Events.Halloween.End.Value = Md(now.AddDays(20));     // the last day first: today stays inside on the way
-                ED.Events.Halloween.Start.Value = Md(now.AddDays(10));
+                ED.Events.Halloween.End.Value = Dm(now.AddDays(20));     // the last day first: today stays inside on the way
+                ED.Events.Halloween.Start.Value = Dm(now.AddDays(10));
                 bool movedAway = !EdWorld.Up;
                 EdRun.Season(true);
                 bool outOfWindow = !EdWorld.Up;

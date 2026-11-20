@@ -19,6 +19,8 @@ namespace GK2EventDecorations
         // part left on On showed the decorations out of season). The cfg keeps its values; each description names both.
         private static readonly string[] ModeLabels = { "By date", "Always", "Never" };          // EventMode Auto, On, Off
         private static readonly string[] PieceLabels = { "With Halloween", "Never" };            // PieceMode Event, Off
+        internal const string DateChars = "0123456789-";
+        internal const int DateLength = 5;
 
         internal static void Declare(SettingsPage page)
         {
@@ -91,8 +93,11 @@ namespace GK2EventDecorations
         private static void EventRows(SettingsPage page, GameEvent e, string label)
         {
             page.Choice(e.Name, "Mode", EventMode.Auto, label, e.Mode.Description.Description, labels: ModeLabels);
-            page.Text(e.Name, "Start", "", "Your own dates: from (month-day)", e.Start.Description.Description);
-            page.Text(e.Name, "End", "", "Your own dates: to (month-day)", e.End.Description.Description);
+            // A date box takes digits and the dash, five characters ("24-10"), and what isn't a day of the year when the
+            // typing ends is refused: the box says again what it held (the user typed "11-1A" into 1.0.0's free text box
+            // and it stayed, 2026-11-19).
+            page.Text(e.Name, "Start", "", "Your own dates: from (day-month)", e.Start.Description.Description, allowed: DateChars, limit: DateLength, accept: GameEvent.TypedDate);
+            page.Text(e.Name, "End", "", "Your own dates: to (day-month)", e.End.Description.Description, allowed: DateChars, limit: DateLength, accept: GameEvent.TypedDate);
             Func<bool> auto = () => e.Mode.Value == EventMode.Auto;
             page.EnableWhen(e.Name, "Start", auto);
             page.EnableWhen(e.Name, "End", auto);

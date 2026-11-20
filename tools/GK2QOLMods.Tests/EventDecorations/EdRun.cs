@@ -331,7 +331,7 @@ namespace GK2QOLMods.Tests
             return null;
         }
 
-        // A warning this test provokes on purpose: `using (EdRun.Expect("dates are month-day")) { ... }`.
+        // A warning this test provokes on purpose: `using (EdRun.Expect("dates are day-month")) { ... }`.
         internal static IDisposable Expect(string part) => new Expectation(part);
 
         private sealed class Expectation : IDisposable

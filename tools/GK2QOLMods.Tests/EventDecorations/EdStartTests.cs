@@ -88,7 +88,7 @@ namespace GK2QOLMods.Tests
         // gains without a line here fails the test: it has no test either.
         private static readonly string[][] Known =
         {
-            new[] { "General", "Enabled", "True" },
+            new[] { "General", "Enabled", "True" }, new[] { "General", "DateForm", "day-month" },
             new[] { "Halloween", "Mode", "Auto" }, new[] { "Halloween", "Start", "" }, new[] { "Halloween", "End", "" },
             new[] { "Halloween", "Decorations", "Event" }, new[] { "Halloween", "Ghost", "Event" }, new[] { "Halloween", "ZombieHead", "Event" },
             new[] { "Halloween", "Village", "True" }, new[] { "Halloween", "Port", "True" }, new[] { "Halloween", "PlayerZone", "True" },
@@ -102,8 +102,9 @@ namespace GK2QOLMods.Tests
             new[] { "Safety", "StopOnChangedGameCode", "True" }, new[] { "Safety", "LastDependencyCheck", null }
         };
 
-        // In the cfg only, by design: a fix and the safety switch (Plugin.BindConfig says why each has no row).
-        private static readonly string[] NoRow = { "SendGhostHome", "StopOnChangedGameCode", "LastDependencyCheck" };
+        // In the cfg only, by design: a fix, the safety switch and the line that says how the dates are written
+        // (Plugin.BindConfig says why each has no row).
+        private static readonly string[] NoRow = { "SendGhostHome", "StopOnChangedGameCode", "LastDependencyCheck", "DateForm" };
 
         internal static IEnumerator Settings()
         {

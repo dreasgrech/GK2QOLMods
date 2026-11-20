@@ -10,7 +10,7 @@ so you can install any subset.
 | [Move Building](#move-building) | retired | Picked up a built building and put it down elsewhere; the game does it itself since 1.011. |
 | [Owned Count](#owned-count) | 1.0.4 | Item tooltips show how many of that item you own across inventory and every chest. |
 | [Tech Tree Search](#tech-tree-search) | 1.1.0 | A search box on the Tech Tree page: find a tech by name, or by what it unlocks, and jump to it. |
-| [Event Decorations](#event-decorations) | 1.0.0 | Choose when the game's Halloween shows: on its dates or your own, every day, or never; and which decorations, where. |
+| [Event Decorations](#event-decorations) | 1.0.1 | Choose when the game's Halloween shows: on its dates or your own, every day, or never; and which decorations, where. |
 
 **Looking for the donkey?** The rideable donkey and cart (GK2 Saddle Up, and the GK2 Donkey API it's built on) moved
 to their own repo on 2026-10-02, with their history: [GK2DonkeyAPI](https://github.com/dreasgrech/GK2DonkeyAPI). Until

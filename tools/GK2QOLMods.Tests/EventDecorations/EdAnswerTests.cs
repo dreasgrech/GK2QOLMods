@@ -111,15 +111,15 @@ namespace GK2QOLMods.Tests
             int head = heads.Count > 0 ? heads[0][0] : 1051, shown = heads.Count > 0 ? heads[0][1] : 1051;
 
             DateTime now = DateTime.Now;
-            string Md(DateTime d) => $"{d.Month:D2}-{d.Day:D2}";
+            string Dm(DateTime d) => $"{d.Day:D2}-{d.Month:D2}";
             // own dates: none; a window around today; one well away from today; only the first day; a first day that isn't a date
             var dates = new (string Name, string Start, string End, bool Valid, bool In)[]
             {
                 ("none", "", "", false, false),
-                ("around today", Md(now.AddDays(-1)), Md(now.AddDays(1)), true, true),
-                ("away from today", Md(now.AddDays(10)), Md(now.AddDays(20)), true, false),
-                ("first day only", Md(now.AddDays(-1)), "", false, false),
-                ("not a date", "13-45", Md(now.AddDays(1)), false, false)
+                ("around today", Dm(now.AddDays(-1)), Dm(now.AddDays(1)), true, true),
+                ("away from today", Dm(now.AddDays(10)), Dm(now.AddDays(20)), true, false),
+                ("first day only", Dm(now.AddDays(-1)), "", false, false),
+                ("not a date", "45-13", Dm(now.AddDays(1)), false, false)
             };
             ED.EventMode[] modes = { ED.EventMode.Auto, ED.EventMode.On, ED.EventMode.Off };
             ED.PieceMode[] pieces = { ED.PieceMode.Event, ED.PieceMode.Off };
@@ -140,7 +140,7 @@ namespace GK2QOLMods.Tests
             EdRun.Detach();
             try
             {
-                using (EdRun.Expect("dates are month-day"))
+                using (EdRun.Expect("dates are day-month"))
                 {
                     foreach (bool? forced in seasons)
                     foreach (bool en in new[] { true, false })

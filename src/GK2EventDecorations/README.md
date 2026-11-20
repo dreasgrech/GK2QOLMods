@@ -7,7 +7,7 @@ Halloween (24 October to 7 November) is the only one it has. With this mod Hallo
 
 | Mode (window / cfg) | What happens |
 |---|---|
-| By date / `Auto` (default) | The game's own dates, or your own (`Start` / `End`, e.g. `10-01` to `11-30`). |
+| By date / `Auto` (default) | The game's own dates, or your own (`Start` / `End` as day-month, e.g. `01-10` to `30-11`). |
 | Always / `On` | The event every day of the year. |
 | Never / `Off` | Never, even on its dates: the whole event, whatever its parts are set to. |
 
@@ -47,6 +47,9 @@ them then, and greys the areas and kinds whenever the decorations can't show:
   unless the mode is `Auto`, and everything but "Mod enabled" is greyed while that is off. A change applies at once, as from the
   cfg. The window code is shared with GK2 Donkey API and GK2 Tech Tree Search (`lib\GK2DreasUI`, a git submodule
   compiled into this DLL: nothing to install).
+- **Your own dates** are typed day-month (`24-10` is 24 October; month-day in 1.0.0, whose dates 1.0.1 converts at
+  its first start). A date box takes digits and the dash, and a text that is no day of the year is not kept: the box
+  says again what it held.
 - **In the game's language.** The window follows the game's language: English, German, Spanish, French, Brazilian
   Portuguese, Russian, Polish, Turkish, Japanese, Simplified Chinese and Korean (`Languages\<id>.csv` beside the
   DLL).
@@ -59,11 +62,13 @@ them then, and greys the areas and kinds whenever the decorations can't show:
 ```
 [General]
 Enabled = true               # off: Halloween follows the game's dates
+DateForm = day-month         # written by the mod, leave it: a file without this line is 1.0.0's (month-day dates),
+                             # and its two dates are turned round once so the same days stay set
 
 [Halloween]
 Mode = Auto                  # Auto / On / Off
-Start =                      # Auto only: own dates as month-day, e.g. 10-01 (empty: the game's 10-24)
-End =                        #                                    e.g. 11-30 (empty: the game's 11-07); may wrap the new year
+Start =                      # Auto only: own dates as day-month, e.g. 01-10 (empty: the game's 24-10)
+End =                        #                                    e.g. 30-11 (empty: the game's 07-11); may wrap the new year
 Decorations = Event          # Event (with Halloween) / Off (never), the three parts
 Ghost = Event
 ZombieHead = Event

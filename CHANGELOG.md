@@ -180,6 +180,38 @@ Nothing changes for players.
 
 ## Event Decorations
 
+### 1.0.1 (2026-11-19)
+
+Built for game 1.012.9, a day after 1.0.0, for two things the user found in its date boxes ("i typed 11-1A to test it
+out and the mod let me do that, which seemed weird"; then: "change it from month-day to day-month and migrate any
+settings ... so we keep existing inputs").
+
+- **Your own dates are written day-month**: `24-10` is 24 October (1.0.0: month-day, `10-24`). The two rows are
+  "Your own dates: from (day-month)" and "to (day-month)"; their descriptions, the "On today" remark and the log say
+  day-month, in English and the ten languages (five lines each, the language's own words for month-day swapped and
+  the example dates turned round by one rule, written through the translation writer, read by a second reader:
+  50 of 50 as they should be).
+- **Dates set in 1.0.0 are converted, once, so the same days stay set**: `11-01` to `11-20` becomes `01-11` to
+  `20-11`. A settings file 1.0.0 wrote is known by what it lacks: the line `[General] DateForm`, which every later
+  version writes (cfg only). Only a file that was there before the start without that line is converted; the line's
+  value decides nothing, so nothing that puts a default back can turn the dates round a second time. The dates and
+  the line are written in one save. What 1.0.0 itself did not take as a date (`11-1A`, or `24-10`, typed the other
+  way round already) is left as it is; one line in the log says what was done with each date.
+- **Fixed: the date boxes took any text.** A box takes digits and the dash, five characters at most; when the typing
+  ends (Enter, a click elsewhere), a text that is no day of the year is refused and the box says again what it held
+  (`13-40`, `31-4`, `24-`), a day is kept and tidied (`1-11` becomes `01-11`), an emptied box means no own date. A
+  value already in the settings that the box could not have typed (a leftover of 1.0.0, the cfg by hand) is shown
+  whole and left alone until it is changed; for it the warning in the log and the "On today" remark stay.
+- Development: the window library's text row takes three optional things for this (`allowed`, `limit`, `accept`;
+  a text row without them is the free text box it was). `Events.cs`: `ParseDayMonth`, `TypedDate` (the box's check)
+  and `OldDates` (the conversion; `ParseMonthDay` reads a date as 1.0.0 did, for it alone). Tests: every date in the
+  in-game suite and in the offline truth table turned round, with dates that are valid one way only (`24-10` taken,
+  `10-24` and `11-30` refused); new in the suite "the date boxes take digits and the dash, and refuse what is no day
+  of the year" (the open window's own boxes: the filter key by key, twelve texts at the end of typing, a stored
+  `11-1A` shown and left alone) and "a settings file of 1.0.0 keeps its days" (nine 1.0.0 files, a first start, a
+  later file, each started three times, on scratch files); the same nine files and ten typed texts in
+  `tests/HarmonyHarness-EventDecorations`, which runs in the release scans without the game.
+
 ### 1.0.0 (2026-11-19)
 
 The first release. Built for game 1.012.9 (Steam build 26734308), for Nexus Mods and the Steam Workshop (the same

@@ -13,7 +13,7 @@ The game puts up its Halloween from 24 October to 7 November, by your PC's date:
 
 [h3]Halloween when you want it[/h3]
 [list]
-[*][b]By date[/b]: the game's dates, or your own: type a first and a last day as month-day ([i]10-01[/i] to [i]11-30[/i]; over the new year works too).
+[*][b]By date[/b]: the game's dates, or your own: type a first and a last day as day-month ([i]01-10[/i] to [i]30-11[/i]; over the new year works too).
 [*][b]Always[/b]: every day of the year.
 [*][b]Never[/b]: no Halloween, on its dates too.
 [/list]

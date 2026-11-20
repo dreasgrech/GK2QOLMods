@@ -55,6 +55,7 @@ namespace GK2QOLMods.Tests
             s.Add(Dates, "the first and the last day count", EdDateTests.Ends);
             s.Add(Dates, "dates may run past the new year", EdDateTests.NewYear);
             s.Add(Dates, "what is read as a date and what isn't; one date alone", EdDateTests.Forms);
+            s.Add(Dates, "a settings file of 1.0.0 keeps its days: its month-day dates turned to day-month once (scratch files)", EdDateTests.Upgrade);
 
             s.Add(Told, "the tests can make the game's own dates say Halloween or not", EdAnswerTests.Force);
             s.Add(Told, "every combination of the settings: the gate, the decorations at a load, the zombie head, the ghost's rows, \"On today\"", EdAnswerTests.Table);
@@ -86,6 +87,7 @@ namespace GK2QOLMods.Tests
             s.Add(Window, "a switch pressed in the window changes the world under it at once", EdWindowTests.Pressed);
             s.Add(Window, "Defaults sets the Halloween tab back, after asking", EdWindowTests.Defaults);
             s.Add(Window, "\"On today\" and Status say what is so", EdWindowTests.Lines);
+            s.Add(Window, "the date boxes take digits and the dash, and refuse what is no day of the year", EdWindowTests.DateBoxes);
 
             s.Add(Languages, "every shipped language is found and read without a complaint, with a current line for every word", EdLanguageTests.Files);
             s.Add(Languages, "in every language each row has its text and the sentences are translated", EdLanguageTests.Words);

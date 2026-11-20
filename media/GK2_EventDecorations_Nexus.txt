@@ -12,7 +12,7 @@
 
 [size=4][b]Halloween when you want it[/b][/size]
 [list]
-[*][size=3][b]By date[/b]: the game's dates, or your own: type a first and a last day as month-day ([i]10-01[/i] to [i]11-30[/i]; over the new year works too).[/size][/*]
+[*][size=3][b]By date[/b]: the game's dates, or your own: type a first and a last day as day-month ([i]01-10[/i] to [i]30-11[/i]; over the new year works too).[/size][/*]
 [*][size=3][b]Always[/b]: every day of the year.[/size][/*]
 [*][size=3][b]Never[/b]: no Halloween, on its dates too.[/size][/*]
 [/list]

@@ -83,16 +83,16 @@ class P
         MethodInfo gateNoDate = typeof(TemporaryEventDates).GetMethod(nameof(TemporaryEventDates.IsHalloweenEvent), Type.EmptyTypes);
         MethodInfo gateWithDate = typeof(TemporaryEventDates).GetMethod(nameof(TemporaryEventDates.IsHalloweenEvent), new[] { typeof(DateTime) });
         var part = (HalloweenConditionalLoadContentPart)FormatterServices.GetUninitializedObject(typeof(HalloweenConditionalLoadContentPart));
-        string Md(DateTime d) => $"{d.Month:D2}-{d.Day:D2}";
+        string Dm(DateTime d) => $"{d.Day:D2}-{d.Month:D2}";
         DateTime now = DateTime.Now;
         // own dates: none; a window around today; one well away from today; only the first day; a first day that isn't a date
         var dates = new (string Name, string Start, string End, bool Valid, bool In)[]
         {
             ("none", "", "", false, false),
-            ("around today", Md(now.AddDays(-1)), Md(now.AddDays(1)), true, true),
-            ("away from today", Md(now.AddDays(10)), Md(now.AddDays(20)), true, false),
-            ("first day only", Md(now.AddDays(-1)), "", false, false),
-            ("not a date", "13-45", Md(now.AddDays(1)), false, false),
+            ("around today", Dm(now.AddDays(-1)), Dm(now.AddDays(1)), true, true),
+            ("away from today", Dm(now.AddDays(10)), Dm(now.AddDays(20)), true, false),
+            ("first day only", Dm(now.AddDays(-1)), "", false, false),
+            ("not a date", "45-13", Dm(now.AddDays(1)), false, false),
         };
         string[] modes = { "Auto", "On", "Off" }, pieces = { "Event", "Off" };
         Type modeT = mode.SettingType, pieceT = deco.SettingType;
@@ -186,10 +186,81 @@ class P
         try { File.Delete(cfgPath); } catch { }
         // the only warnings the table may cause: the invalid own date (once per value), and the head table unreadable outside the
         // game (the swap checks reach for it on purpose)
-        var unexpected = warnings.Where(w => w == null || !w.Contains("dates are month-day") && !w.Contains("head table could not be read")).ToList();
+        var unexpected = warnings.Where(w => w == null || !w.Contains("dates are day-month") && !w.Contains("head table could not be read")).ToList();
         Check(unexpected.Count == 0, "unexpected warnings: " + string.Join(" | ", unexpected.Take(5)));
+        SettingsOf100(T);
         foreach (string f in failures) Console.WriteLine("FAIL " + f);
         Console.WriteLine(fails == 0 ? $"ALL PASS ({checks} checks over {combinations} combinations)" : $"FAILURES: {fails} of {checks} checks");
         return fails == 0 ? 0 : 1;
+    }
+
+    // A settings file of 1.0.0 (its dates month-day, no DateForm line) at the first start of a later version, and at
+    // the starts after: the dates' steps of Plugin.Awake on scratch files (is the file 1.0.0's, asked before anything
+    // is bound; the binding; the dates turned round if it was; one save). Since 1.0.1 a date is day-month (the user,
+    // 2026-11-19: "migrate any settings ... so we keep existing inputs").
+    static void SettingsOf100(Func<string, Type> T)
+    {
+        Type old = T("OldDates"), gameEvent = T("GameEvent");
+        string dir = Path.Combine(Path.GetTempPath(), "gk2-eventdecorations-harness-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        (string Start, string End, bool WasOld, string Text) Start(string path)
+        {
+            bool was = (bool)old.GetMethod("FileIsMonthDay", BF).Invoke(null, new object[] { path });
+            var cfg = new ConfigFile(path, false) { SaveOnConfigSet = false };
+            object e = Activator.CreateInstance(gameEvent, BF, null, new object[] { "Halloween" }, null);
+            gameEvent.GetMethod("Bind", BF).Invoke(e, new object[] { cfg, "the mode", "" });
+            old.GetMethod("Bind", BF).Invoke(null, new object[] { cfg });
+            if (was) old.GetMethod("Turn", BF).Invoke(null, new object[] { e, null });
+            cfg.Save();
+            string s = ((ConfigEntry<string>)gameEvent.GetField("Start", BF).GetValue(e)).Value, en = ((ConfigEntry<string>)gameEvent.GetField("End", BF).GetValue(e)).Value;
+            return (s, en, was, File.ReadAllText(path));
+        }
+        string File100(string s, string e) => "[General]\r\n\r\nEnabled = true\r\n\r\n[Halloween]\r\n\r\nMode = Auto\r\n\r\nStart = " + s + "\r\n\r\nEnd = " + e + "\r\n";
+        try
+        {
+            var cases = new (string Name, string Start, string End, string WantStart, string WantEnd)[]
+            {
+                ("both dates", "11-01", "11-20", "01-11", "20-11"),
+                ("the game's own Halloween typed in", "10-24", "11-07", "24-10", "07-11"),
+                ("a window past the new year", "12-20", "01-06", "20-12", "06-01"),
+                ("written with slashes and no zeros", "10/1", "11/30", "01-10", "30-11"),
+                ("the first date only", "10-24", "", "24-10", ""),
+                ("the last date only", "", "11-07", "", "07-11"),
+                ("no dates", "", "", "", ""),
+                ("something 1.0.0 took for no date beside a date", "11-1A", "11-20", "11-1A", "20-11"),
+                ("a date 1.0.0 took for none, being day-month already", "24-10", "11-07", "24-10", "07-11"),
+            };
+            int n = 0;
+            foreach (var c in cases)
+            {
+                string path = Path.Combine(dir, "case" + n++ + ".cfg");
+                File.WriteAllText(path, File100(c.Start, c.End));
+                var first = Start(path);
+                Check(first.WasOld, $"settings of 1.0.0, {c.Name}: the file without a DateForm line is taken as 1.0.0's");
+                Check(first.Start == c.WantStart && first.End == c.WantEnd, $"settings of 1.0.0, {c.Name}: \"{c.Start}\", \"{c.End}\" became \"{first.Start}\", \"{first.End}\" (expected \"{c.WantStart}\", \"{c.WantEnd}\")");
+                Check(first.Text.Contains("DateForm = day-month") && first.Text.Contains("Start = " + c.WantStart) && first.Text.Contains("End = " + c.WantEnd), $"settings of 1.0.0, {c.Name}: the file holds the dates and the DateForm line after the one save");
+                var second = Start(path);
+                var third = Start(path);
+                Check(!second.WasOld && !third.WasOld && second.Start == c.WantStart && second.End == c.WantEnd && third.Start == c.WantStart && third.End == c.WantEnd,
+                    $"settings of 1.0.0, {c.Name}: untouched at the next two starts (taken as 1.0.0's {second.WasOld}, {third.WasOld}; \"{second.Start}\", \"{second.End}\"; \"{third.Start}\", \"{third.End}\")");
+            }
+            var fresh = Start(Path.Combine(dir, "fresh.cfg"));
+            Check(!fresh.WasOld && fresh.Start == "" && fresh.End == "" && fresh.Text.Contains("DateForm = day-month"), $"a first start with no settings file: not taken as 1.0.0's ({fresh.WasOld}), the DateForm line written");
+            string later = Path.Combine(dir, "later.cfg");
+            File.WriteAllText(later, "[General]\r\n\r\nDateForm = anything\r\n\r\n[Halloween]\r\n\r\nStart = 01-11\r\n\r\nEnd = 05-12\r\n");
+            var l = Start(later);
+            Check(!l.WasOld && l.Start == "01-11" && l.End == "05-12", $"a file with the DateForm line, whatever it says, is not 1.0.0's: its dates stay (\"{l.Start}\", \"{l.End}\")");
+            // the options window's check of a typed date (the window library's Row.TextAccept)
+            MethodInfo typed = gameEvent.GetMethod("TypedDate", BF);
+            string Typed(string t) => (string)typed.Invoke(null, new object[] { t });
+            foreach (var (text, want) in new[] { ("24-10", "24-10"), ("1-11", "01-11"), ("29-2", "29-02"), ("", ""), ("10-24", null), ("31-4", null), ("45-13", null), ("24-", null), ("2410", null), ("11-1A", null) })
+            {
+                Check(Typed(text) == want, $"a date typed into the window, \"{text}\": {(Typed(text) == null ? "refused" : "kept as \"" + Typed(text) + "\"")} (expected {(want == null ? "refused" : "\"" + want + "\"")})");
+            }
+        }
+        finally
+        {
+            try { Directory.Delete(dir, true); } catch { }
+        }
     }
 }
